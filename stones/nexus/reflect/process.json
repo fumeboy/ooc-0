@@ -1,0 +1,30 @@
+{
+  "root": {
+    "id": "node_3_mn4m4hgh",
+    "title": "selfmeta",
+    "status": "doing",
+    "children": [],
+    "actions": [],
+    "hooks": [
+      {
+        "id": "hook_mn4m4hgh_wbtj",
+        "when": "when_stack_pop",
+        "type": "inject_message",
+        "handler": "summary"
+      },
+      {
+        "id": "hook_mn4m4hgh_o9kr",
+        "when": "when_yield",
+        "type": "inject_message",
+        "handler": "summary"
+      },
+      {
+        "id": "hook_mn4m4hgh_cdg6",
+        "when": "when_yield",
+        "type": "inject_message",
+        "handler": "declare_running_processes"
+      }
+    ]
+  },
+  "focusId": "node_3_mn4m4hgh"
+}

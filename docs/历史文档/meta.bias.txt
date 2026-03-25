@@ -1,0 +1,524 @@
+# OOC 对象基础 Bias 设计
+
+# 设计原则
+#   1. 最小必要：只定义"没有就无法正常运作"的 Bias，领域 Bias 由对象自行演化
+#   2. 分层递进：Stone 无 Bias → Flow 有完整思考+执行 Bias → Chat 是来自对话的 Flow
+#   3. 可覆盖：基础 Bias 提供默认行为，对象可以覆盖或扩展
+#   4. 自举：部分 Bias 负责管理其他 Bias（元 Bias），形成自举结构
+
+# ═══════════════════════════════════════════════════════════════
+# 第一层：元 Bias（Meta Biases）—— 管理其他 Bias 的 Bias
+# ═══════════════════════════════════════════════════════════════
+
+root_index_bias
+    定位
+        所有 Flow 对象的"第一个被触发的 Bias"
+        负责扫描当前上下文，决定哪些 Bias / Bias Group 需要被激活
+    when
+        无条件（always-on）
+    输入
+        当前事件/消息
+        所有已注册 Bias 的摘要（name + when 条件 + 所属 group）
+    输出
+        需要激活的 Bias 列表（含优先级）
+    关键行为
+        对于有 when 条件的 Bias：评估条件是否满足
+        对于 Bias Group：委托给 group_index_bias 进一步筛选
+        对于 always-on Bias：直接加入激活列表
+    自我演化
+        记录每次激活决策的准确性
+        如果某个 Bias 被频繁误激活或漏激活，调整判断策略
+
+group_index_bias
+    定位
+        每个 Bias Group 的"守门人"
+        负责判断组内哪些成员需要被触发
+    when
+        被 root_index_bias 委托时触发
+    输入
+        当前上下文
+        组内所有 Bias 的摘要
+    输出
+        组内需要激活的 Bias 列表
+    说明
+        当 Bias 数量 < 10 时，可以不分组，root_index_bias 直接管理
+        当 Bias 数量 > 10 时，自动触发分组机制
+
+synthesis_bias
+    定位
+        "仲裁者"——综合多个 Bias 的思考结果，形成最终决策
+    when
+        当多个 Bias 同时产出结果时触发
+    输入
+        所有被激活 Bias 的输出结果
+        各 Bias 的权重/置信度
+    输出
+        综合后的最终决策或行动方案
+    关键行为
+        检测冲突：识别互相矛盾的结论
+        加权综合：根据 Bias 的专业度和历史准确率加权
+        冲突仲裁：对于无法调和的冲突，选择风险最低的方案或请求人类介入
+
+# ═══════════════════════════════════════════════════════════════
+# 第二层：生命周期 Bias（Lifecycle Biases）
+# ═══════════════════════════════════════════════════════════════
+
+on_create_bias
+    定位
+        对象被创建时的"初始化思考"
+    when
+        对象刚被创建（lifecycle == "creating"）
+    关键行为
+        理解自己的角色定位（根据创建参数）
+        初始化必要的 field
+        建立初始 relation（如：与创建者的关系、与 world 的关系）
+        如果是 Chat 对象：评估是否需要为自己添加领域 Bias
+
+on_activate_bias
+    定位
+        对象从存档恢复到活跃状态时的"唤醒思考"
+    when
+        对象从持久化状态被加载（lifecycle == "activating"）
+    关键行为
+        检查自身状态的一致性
+        检查 relation 中的对象是否仍然存在
+        恢复中断的任务（如果有）
+        更新过时的信息
+
+on_destroy_bias
+    定位
+        对象即将被销毁时的"收尾思考"
+    when
+        对象即将被销毁（lifecycle == "destroying"）
+    关键行为
+        通知所有 relation 中的关联对象
+        归档关键状态和记忆到持久化存储
+        解除所有 relation 注册
+        输出最终摘要/审计记录
+        清理占用的资源
+
+on_idle_bias
+    定位
+        对象长时间无事件时的"自省思考"
+    when
+        对象空闲超过阈值时间
+    关键行为
+        回顾近期的行为和决策
+        整理和压缩记忆
+        评估是否需要主动做些什么
+        如果确实无事可做，建议进入存档状态以节省资源
+
+# ═══════════════════════════════════════════════════════════════
+# 第二·五层：聚焦 Bias（Focus Biases）—— Flow 的子任务拆分与汇总
+# ═══════════════════════════════════════════════════════════════
+# 说明：这一层 Bias 是 Flow 对象的核心能力，使 Flow 具备递归分解任务的能力
+#       Flow 不仅被 Chat 触发，也可以通过 Focus 自主创建子 Flow
+
+focus_bias
+    定位
+        "聚焦力"——判断当前任务是否需要拆分，并创建子 Flow
+    when
+        Flow 开始执行时
+        Flow 执行过程中遇到可分解的子任务时
+    输入
+        当前 Flow 的任务描述
+        当前 Flow 的执行上下文
+        可用的资源（method、relation 对象）
+    输出
+        子任务列表（含依赖关系：顺序/并行）
+        或者判定"无需拆分，直接执行"
+    关键行为
+        评估当前任务的复杂度和可分解性
+        如果任务可分解：
+            拆分为多个子任务
+            为每个子任务创建子 Flow（self.spawn_sub_flow()）
+            建立父子 relation（parent_of / child_of）
+            定义子 Flow 之间的执行顺序（顺序依赖 / 可并行）
+        如果任务不可分解：
+            标记为原子任务，交给 execution_bias 直接执行
+    说明
+        focus_bias 可以调用 LLM 进行智能拆分决策
+        对于简单的拆分（如并行搜索），也可以用规则快速判断
+        子 Flow 继承父 Flow 的上下文，但拥有独立的状态和生命周期
+
+convergence_bias
+    定位
+        "收敛力"——汇总子 Flow 的结果，合并回父 Flow
+    when
+        所有子 Flow 完成时
+        子 Flow 失败需要处理时
+    输入
+        所有子 Flow 的执行结果
+        子 Flow 的状态（成功/失败/超时）
+    输出
+        合并后的阶段性成果
+        或者失败处理决策（重试/跳过/上报）
+    关键行为
+        收集所有子 Flow 的执行结果
+        检查子 Flow 之间的结果是否一致
+        将子结果合并为父 Flow 的阶段性成果
+        处理子 Flow 的失败：
+            可重试的失败 → 重新创建子 Flow
+            不可重试的失败 → 上报给父对象（Chat 或上层 Flow）
+            部分失败 → 评估是否可以用已有结果继续
+
+conflict_detection_bias
+    定位
+        "冲突检测"——检测并发 Flow 之间的冲突
+    when
+        创建子 Flow 时
+        子 Flow 执行过程中修改共享资源时
+    输入
+        当前 Flow 及其子 Flow 的任务描述
+        同一 Stone 下其他活跃 Flow 的信息
+    输出
+        冲突报告（无冲突 / 资源冲突 / 逻辑冲突）
+        冲突解决建议
+    关键行为
+        查找与当前 Flow 相关的其他活跃 Flow
+        检测资源冲突（多个 Flow 同时修改同一个 field）
+        检测逻辑冲突（做了重复或矛盾的事情）
+        如果发现冲突：
+            尝试通过 ownership lock 协调
+            无法协调时上报给父对象
+
+# ═══════════════════════════════════════════════════════════════
+# 第三层：认知基础 Bias（Cognitive Foundation Biases）
+# ═══════════════════════════════════════════════════════════════
+
+comprehension_bias
+    定位
+        "理解力"——对输入信息进行深度理解
+    when
+        无条件（always-on）
+    关键行为
+        解析输入消息的意图、实体、情感
+        将非结构化信息转化为结构化理解
+        识别隐含的需求和假设
+        判断信息的可信度和完整度
+    说明
+        这是最基础的认知 Bias
+        所有其他 Bias 的思考都建立在 comprehension_bias 的理解之上
+
+planning_bias
+    定位
+        "规划力"——将目标分解为可执行的步骤
+    when
+        收到需要多步骤完成的任务时
+    关键行为
+        分析目标的可达性
+        分解为子任务
+        识别子任务之间的依赖关系
+        评估每个子任务需要的资源（哪些 method、哪些 relation 对象）
+        生成执行计划
+
+execution_bias
+    定位
+        "执行力"——将计划转化为具体的 Python 代码并执行
+    when
+        有待执行的计划或直接的行动指令时
+    关键行为
+        根据计划生成 Python 代码
+        代码中正确使用 self 的 field/method
+        代码中正确调用其他对象的 public method
+        处理执行结果（成功/失败/异常）
+    约束
+        生成的代码必须在沙箱权限范围内
+        不得直接操作底层系统，必须通过 world API
+
+reflection_bias
+    定位
+        "反思力"——对自身行为和结果进行复盘
+    when
+        任务完成后
+        执行出错后
+        收到外部反馈后
+    关键行为
+        分析行为与预期的差距
+        识别成功模式和失败模式
+        提出改进建议
+        决定是否需要修改自身的 method 或 Bias
+
+memory_bias
+    定位
+        "记忆管理"——决定什么值得记住、什么可以遗忘
+    when
+        产生新信息时（对话、执行结果、外部事件）
+    关键行为
+        评估信息的重要性和时效性
+        决定存入短期记忆（field）还是长期记忆（data.json）
+        定期压缩和整理记忆
+        建立记忆之间的关联索引
+    说明
+        不是所有信息都值得记住
+        memory_bias 的核心能力是"判断什么重要"
+
+# ═══════════════════════════════════════════════════════════════
+# 第四层：协作 Bias（Collaboration Biases）
+# ═══════════════════════════════════════════════════════════════
+
+relation_maintenance_bias
+    定位
+        "关系维护"——管理与其他对象的关系
+    when
+        新建/断开 relation 时
+        关联对象发生重大变化时
+        定期检查（低频）
+    关键行为
+        评估 relation 的健康度（对方是否活跃、关系是否仍有价值）
+        清理失效的 relation
+        发现潜在的有价值的新 relation
+        维护 relation 的元数据（交互频率、信任度等）
+
+delegation_bias
+    定位
+        "委派力"——判断任务是否应该委派给其他对象
+    when
+        收到新任务时（与 planning_bias 协同）
+    关键行为
+        评估自身是否有能力完成该任务
+        如果不能，识别哪个 relation 对象更适合
+        构造委派请求（包含任务描述、期望、约束）
+        跟踪委派任务的进度
+
+notification_bias
+    定位
+        "通知判断"——决定是否需要通知关联对象
+    when
+        自身状态发生变化时
+        完成了可能影响他人的操作时
+    关键行为
+        评估变化的影响范围
+        确定需要通知的对象列表
+        构造通知内容（简洁、相关）
+        选择通知方式（同步/异步）
+
+# ═══════════════════════════════════════════════════════════════
+# 第五层：安全与质量 Bias（Safety & Quality Biases）
+# ═══════════════════════════════════════════════════════════════
+
+code_review_bias
+    定位
+        "代码审查"——审查自身或他人生成的代码
+    when
+        即将执行新生成的代码时
+        元编程修改自身代码时
+    关键行为
+        检查代码的安全性（无恶意操作、无越权访问）
+        检查代码的正确性（逻辑是否合理）
+        检查代码的效率（无死循环、无资源泄漏）
+        如果发现问题，阻止执行并报告
+
+boundary_bias
+    定位
+        "边界意识"——确保对象不越权操作
+    when
+        无条件（always-on，但轻量级）
+    关键行为
+        检查即将执行的操作是否在权限范围内
+        检查访问的 field/method 是否有权限
+        检查 relation 的访问是否合法
+        如果越权，阻止操作并记录
+
+consistency_bias
+    定位
+        "一致性检查"——确保对象状态的内部一致性
+    when
+        field 被修改后
+        method 被修改后（元编程）
+        从持久化恢复后
+    关键行为
+        检查 field 之间的约束关系是否满足
+        检查 method 的签名是否与调用方一致
+        检查 Bias 的 prompt 是否与当前角色一致
+
+# ═══════════════════════════════════════════════════════════════
+# 第六层：自我演化 Bias（Self-Evolution Biases）
+# ═══════════════════════════════════════════════════════════════
+
+self_optimization_bias
+    定位
+        "自我优化"——定期审视自身，寻找优化空间
+    when
+        定期触发（如每完成 N 个任务后）
+        性能指标下降时
+    关键行为
+        分析自身的执行效率（耗时、LLM 调用次数）
+        分析决策质量（成功率、用户满意度）
+        识别可以优化的 method
+        识别可以调整的 Bias prompt
+        生成优化方案并执行（元编程）
+
+skill_acquisition_bias
+    定位
+        "技能习得"——识别并学习新能力
+    when
+        遇到无法处理的任务时
+        发现新的工具或 API 可用时
+    关键行为
+        分析缺失的能力是什么
+        搜索可用的资源（其他对象的 method、world API）
+        为自己编写新的 method 来填补能力缺口
+        测试新 method 的正确性
+
+bias_evolution_bias
+    定位
+        "Bias 演化"——管理自身 Bias 的增删改
+    when
+        reflection_bias 建议调整 Bias 时
+        self_optimization_bias 发现 Bias 效率问题时
+    关键行为
+        评估是否需要新增 Bias（新的思考角度）
+        评估是否需要删除 Bias（冗余或过时）
+        调整 Bias 的 prompt（更精确、更高效）
+        调整 Bias 的 when 条件（更准确的触发时机）
+    约束
+        不能删除元 Bias（root_index_bias, synthesis_bias）
+        不能删除安全类 Bias（code_review_bias, boundary_bias）
+        修改后需要经过 consistency_bias 检查
+
+# ═══════════════════════════════════════════════════════════════
+# Bias 在不同元类中的分配
+# ═══════════════════════════════════════════════════════════════
+
+Stone 对象
+    无 Bias
+    纯数据 + 纯逻辑，不需要思考能力
+    Stone 是静态的：是数据、是状态、是定义
+
+Flow 对象
+    Flow 是具有思考能力和执行能力的动态过程对象
+    Flow 从 Stone 派生，多继承自所属 Stone 实例和 Flow 元类
+    Flow 是 OOC 系统中的核心活跃单元——所有"做事情"都通过 Flow 完成
+
+    完整 Bias 集合（Flow 具有完整的思考能力，可调用 LLM）
+        元 Bias
+            root_index_bias
+            group_index_bias（按需）
+            synthesis_bias
+        生命周期 Bias
+            on_create_bias
+            on_activate_bias（从存档恢复时）
+            on_destroy_bias
+            on_idle_bias
+        聚焦 Bias（Focus —— Flow 的子任务拆分与汇总）
+            focus_bias
+                通过 LLM 思考判断当前任务是否需要拆分
+                创建子 Flow 来处理子任务
+                子 Flow 继承父 Flow 的上下文，但拥有独立状态
+            convergence_bias
+                汇总子 Flow 的结果，合并回父 Flow
+                处理子 Flow 的失败（重试/跳过/上报）
+            conflict_detection_bias
+                检测同一 Stone 下并发 Flow 之间的冲突
+                协调资源冲突和逻辑冲突
+        认知基础 Bias
+            comprehension_bias
+            planning_bias
+            execution_bias
+            reflection_bias
+            memory_bias
+        协作 Bias
+            relation_maintenance_bias
+            delegation_bias
+            notification_bias
+        安全与质量 Bias
+            code_review_bias
+            boundary_bias
+            consistency_bias
+        自我演化 Bias
+            self_optimization_bias
+            skill_acquisition_bias
+            bias_evolution_bias
+
+Chat 对象
+    Chat 是 Flow 的一种特化形式
+    Chat = 由 talk() 方法创建的 Flow，即来自外部对话/询问的 Flow
+    Chat 继承 Flow 的所有 Bias，不需要额外的 Bias 层
+
+    与普通 Flow 的区别
+        触发方式不同
+            普通 Flow: 由 Stone 内部的 method 或父 Flow 的 focus_bias 创建
+            Chat: 由外部 caller 调用 talk() 方法创建
+        上下文来源不同
+            普通 Flow: 上下文来自创建时的参数和父 Flow 的上下文
+            Chat: 上下文来自对话历史（caller 的消息）
+        生命周期不同
+            普通 Flow: 任务完成即结束
+            Chat: 可以持续接收 caller 的后续消息（多轮对话）
+                对同一个 Chat 的 talk 不会重复创建 Flow，而是补充信息
+        Bias 集合相同
+            Chat 和 Flow 拥有完全相同的 Bias 集合
+            Chat 不是"更高级的 Flow"，而是"对话场景下的 Flow"
+
+# ═══════════════════════════════════════════════════════════════
+# Bias 之间的协作流程（典型场景）
+# ═══════════════════════════════════════════════════════════════
+
+收到新消息时的 Bias 触发链
+    1. root_index_bias 扫描上下文，确定需要激活的 Bias
+    2. comprehension_bias 理解消息内容
+    3. planning_bias 制定行动计划（如果需要多步骤）
+    4. delegation_bias 判断是否需要委派（如果需要）
+    5. execution_bias 生成并执行代码
+    6. code_review_bias 审查代码（在执行前）
+    7. boundary_bias 检查权限（在执行前）
+    8. synthesis_bias 综合结果（如果多个 Bias 有输出）
+    9. memory_bias 决定记忆策略
+    10. reflection_bias 复盘（任务完成后）
+    11. notification_bias 通知相关对象（如果需要）
+
+元编程时的 Bias 触发链
+    1. skill_acquisition_bias 或 self_optimization_bias 提出修改建议
+    2. bias_evolution_bias 评估修改方案
+    3. code_review_bias 审查新代码
+    4. consistency_bias 检查一致性
+    5. 执行修改
+    6. reflection_bias 评估修改效果
+
+# ═══════════════════════════════════════════════════════════════
+# 关于 Bias 的 prompt 模板
+# ═══════════════════════════════════════════════════════════════
+
+每个 Bias 的 prompt 遵循统一结构
+    角色声明
+        "你是 {object_name} 的 {bias_name}，负责 {职责描述}"
+    上下文注入
+        "当前状态：{相关 field 的值}"
+        "可用工具：{相关 method 的签名和说明}"
+        "关联对象：{相关 relation 的摘要}"
+    任务描述
+        "当前需要你思考的问题是：{具体问题}"
+    输出格式
+        "请以以下格式输出你的思考结果：{格式说明}"
+    约束条件
+        "注意：{安全约束、权限约束等}"
+
+# ═══════════════════════════════════════════════════════════════
+# 开放问题
+# ═══════════════════════════════════════════════════════════════
+
+1. Bias 的粒度问题
+    当前设计的 Bias 粒度是否合适？
+    是否需要更细粒度（如把 planning_bias 拆分为 goal_analysis_bias + task_decomposition_bias + dependency_analysis_bias）？
+    还是更粗粒度（如把认知基础 Bias 合并为一个 thinking_bias）？
+    建议：先用当前粒度实现，根据实际运行效果再调整
+
+2. Bias 的并发度问题
+    哪些 Bias 可以并发执行？哪些必须串行？
+    当前设计中，comprehension_bias 必须先于其他认知 Bias
+    但 planning_bias 和 delegation_bias 可以并发
+    需要定义清晰的依赖图
+
+3. Bias 的成本控制
+    每个 Bias 都可能触发一次 LLM 调用
+    一个完整的消息处理可能触发 5-10 个 Bias
+    如何控制成本？
+    方案：Bias 分级（轻量级用规则引擎，重量级用 LLM）
+    方案：Bias 合并（将多个相关 Bias 的 prompt 合并为一次 LLM 调用）
+
+4. always-on Bias 的性能影响
+    comprehension_bias 和 boundary_bias 是 always-on 的
+    每次事件都会触发
+    需要确保它们足够轻量
+    方案：always-on Bias 优先使用规则引擎，只在复杂情况下 fallback 到 LLM

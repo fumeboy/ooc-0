@@ -1,0 +1,18 @@
+    1. OOC World 具有一个 HOME 目录，比如 .ooc 目录，放置 OOC World 的所有对象的文件
+    2. OOC World 可以创建多个工作区 Workspace, 工作区是 OOC Objects 产生影响的区域, 工作区可以创建在 HOME 目录内，也可以创建在 HOME 目录外
+    3. 工作区是活动区域的配置，限制了可操作的文件目录、可访问的网站、可执行的命令等
+    4. 工作区可以有多个 OOC Stone Object 共同工作，同一个 OOC Stone Object 可以归属在多个 workspace
+    5. OOC Stone Object 具有私人 workspace，也就是它自己的持久化目录
+    6. workspace 可以嵌套：OOC World 的 HOME 目录就是 supervisor 的工作区，它可以控制整个 OOC World
+    7. OOC Stone Object 以 Flow 形式进入 workspace 工作，并且一个 workspace 下只有一个 该 Stone 对象的 Flow 对象。Flow 对象也必须归属于一个 workspace。
+    8. Flow 对象在 workspace 下的活动可以产生数据 和 更多 OOC Stone 、Flow 对象
+    9. workspace 本身是一个 Stone 对象，它维护 workspace 的一些公共工作，比如文档管理、垃圾回收（及时删除失效的 OOC 对象等）；这一点也对应前面说的，OOC Stone Object 具有私人 workspace，也就是它自己的持久化目录。
+    10. workspace 下创建的对象不会注册到全局，而是只注册到 local(当前 workspace)，除非显式与 supervisor 对话，由它创造 global 对象
+    11. Flow 对象元编程产生的字段、方法不会注册到全局，而是只注册到 local(当前 workspace), 除非显式与 super self 对象，由它进行自我更新
+    12. 两个 workspace 对象可以相互通信，以这两个 workspace 对象相互 talk 的方式 （但一般不会有这种需求）
+    13. 在 workspace 下执行 getObject, 获取的是指定 Stone 对象在该 workspace 下的 Flow 对象
+    14. 去除 class Chat，将通信对象整合到 class Flow 中，与其他对象的聊天记录以 context window 的形式存在 
+    15. Flow 的对象内部具有 Focus 单元，每个 Focus 单元单独具有 target、context配置、process events、biases 配置，每个 Focus 都可以并行执行，也可以受 Flow 调度先后执行，也可以受 Flow 控制暂停
+    16. 每个 Focus 具有 Effects 表示执行过程中产生的“改变”、“影响”、“结果”；Focus 的 context 配置中允许访问其他 Focus 的 Effects， 这样可以了解其他 Focus 的执行状态。
+    17. Flow 具有初始 Focus, 这个 Focus 的 target 是补充信息（对应 pre_thinking 类型的 bias）
+    18. Flow 可以制定 plan, plan 包含了如何设置 focus，每个 focus 配置什么样的 bias 和 context，以及 focus 的执行顺序 ；制定后的 plan 会作为 context windows 中的一个 window 出现。

@@ -1,0 +1,741 @@
+# OOC 系统运行模拟：Deep Research 场景
+# 场景：用户要求研究 "Rust 语言在嵌入式系统中的应用现状与趋势"
+
+# ═══════════════════════════════════════════════════════════════
+# 前提：OOC 世界初始状态
+# ═══════════════════════════════════════════════════════════════
+
+# 世界中已存在的对象：
+#   world                    — OOC 核心，提供系统 API
+#   world.filesystem         — filesystem Extension Object (Stone)
+#   world.browser            — browser Extension Object (Stone)
+#   user                     — 代表用户的 Stone Object
+#
+# 说明：
+#   Chat 是由 talk() 创建的 Flow，即来自外部对话的 Flow
+#   Flow 具有完整的思考能力（Bias + LLM），是 OOC 系统的核心活跃单元
+#   Flow 可以通过 Focus 机制自主创建子 Flow，形成 Flow 派生树
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 0: 用户发起研究请求
+# ═══════════════════════════════════════════════════════════════
+
+[EVENT] user → world.send_message("请深入研究 Rust 语言在嵌入式系统中的应用现状与趋势，输出一份研究报告")
+
+# world 收到消息后，通过 talk() 创建一个 Chat（即对话 Flow）来处理
+# user 向 world 的 talk() 触发了一个 Chat Flow
+
+[BIAS: world.delegation_bias]
+    输入: "深入研究 Rust 语言在嵌入式系统中的应用现状与趋势"
+    思考: 这是一个 deep research 任务，需要创建一个专门的 researcher Stone 对象
+    输出: 创建 researcher Stone，然后通过 talk() 向它发起研究请求
+
+[ACTION] world.create_object(
+    name="researcher",
+    meta_class="Stone",
+    params={
+        "role": "深度研究员",
+        "capabilities": ["research", "analysis", "report_writing"]
+    }
+)
+
+# user 向 researcher 发起 talk()，创建 Chat Flow（researcher_001）
+
+[ACTION] user.talk(researcher, "请深入研究 Rust 语言在嵌入式系统中的应用现状与趋势，输出一份研究报告")
+    → researcher 派生 Chat Flow: researcher_001
+    → researcher_001 多继承自 researcher(Stone) 和 Flow 元类
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 1: researcher 对象创建与初始化
+# ═══════════════════════════════════════════════════════════════
+
+[LIFECYCLE] researcher_001: creating
+
+[BIAS: researcher_001.on_create_bias]
+    输入: params（role, task, requester）
+    思考:
+        我是一个深度研究员
+        我的任务是研究 "Rust 语言在嵌入式系统中的应用现状与趋势"
+        我需要：
+            1. 能上网搜索和阅读资料 → 需要 browser Extension
+            2. 能保存研究笔记和最终报告 → 需要 filesystem Extension
+            3. 能组织和分析信息 → 需要自身的认知 Bias
+    行动:
+        # 初始化 field
+        self.task = "研究 Rust 语言在嵌入式系统中的应用现状与趋势"
+        self.status = "initializing"
+        self.notes = []          # 研究笔记
+        self.sources = []        # 信息来源
+        self.outline = None      # 报告大纲
+        self.report = None       # 最终报告
+
+        # 建立 relation
+        self.add_relation("requested_by", user)
+        self.add_relation("uses", world.browser)
+        self.add_relation("uses", world.filesystem)
+
+[LIFECYCLE] researcher_001: active
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 2: researcher 理解任务并制定研究计划
+# ═══════════════════════════════════════════════════════════════
+
+[EVENT] researcher_001 收到任务启动信号
+
+[BIAS: researcher_001.root_index_bias]
+    扫描当前上下文: 新任务到达，需要理解和规划
+    激活 Bias 列表:
+        1. comprehension_bias (always-on)
+        2. planning_bias (新任务需要规划)
+        3. boundary_bias (always-on, 轻量)
+
+[BIAS: researcher_001.comprehension_bias]
+    输入: "研究 Rust 语言在嵌入式系统中的应用现状与趋势"
+    思考:
+        主题: Rust + 嵌入式系统
+        研究维度:
+            - 现状：谁在用？用在哪？怎么用？
+            - 优势：相比 C/C++ 有什么优势？
+            - 挑战：有什么障碍和限制？
+            - 趋势：未来发展方向？
+            - 生态：工具链、库、社区
+        输出类型: 研究报告（结构化文档）
+    输出: 结构化的任务理解
+
+[BIAS: researcher_001.planning_bias]
+    输入: comprehension_bias 的输出
+    思考:
+        研究计划分为 4 个阶段：
+        Phase 1: 广度搜索 — 快速了解全貌
+            搜索关键词: "Rust embedded systems", "Rust 嵌入式", "Rust IoT"
+            目标: 收集 10-15 个高质量信息源
+        Phase 2: 深度阅读 — 逐一深入分析
+            对每个信息源进行深度阅读和笔记
+        Phase 3: 综合分析 — 交叉验证和归纳
+            整理笔记，形成报告大纲
+        Phase 4: 报告撰写 — 输出最终报告
+            按大纲撰写，保存为文件
+    输出: 4 阶段研究计划
+
+[BIAS: researcher_001.synthesis_bias]
+    输入: comprehension_bias + planning_bias 的输出
+    思考: 两个 Bias 的输出一致且互补，无冲突
+    输出: 确认执行计划
+
+[ACTION] researcher_001 执行代码:
+    self.status = "phase_1_searching"
+    self.plan = {
+        "phases": ["广度搜索", "深度阅读", "综合分析", "报告撰写"],
+        "current_phase": 0
+    }
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 2.5: researcher 通过 Focus 创建子 Flow
+# ═══════════════════════════════════════════════════════════════
+
+# researcher_001 是 Chat 对象，它的 focus_bias 是 LLM 驱动的升级版
+# 此时 focus_bias 被触发，将 4 阶段计划拆分为 4 个子 Flow
+
+[BIAS: researcher_001.focus_bias]
+    输入: self.plan（4 个阶段）
+    思考:
+        4 个阶段具有明确的顺序依赖：
+            Phase 1（广度搜索）→ Phase 2（深度阅读）→ Phase 3（综合分析）→ Phase 4（报告撰写）
+        每个阶段是一个独立的过程，适合拆分为子 Flow
+        Phase 1 和 Phase 2 内部的多个搜索/阅读任务可以并行
+    输出:
+        创建 4 个子 Flow，顺序依赖
+
+[ACTION] researcher_001 执行代码:
+    # 创建 4 个子 Flow
+    flow_search = self.spawn_sub_flow(
+        name="flow_search",
+        task="广度搜索：收集 10-15 个高质量信息源",
+        context={"queries": ["Rust embedded systems", "Rust vs C embedded", ...]}
+    )
+    flow_read = self.spawn_sub_flow(
+        name="flow_read",
+        task="深度阅读：逐一深入分析每个信息源",
+        depends_on=[flow_search]  # 依赖搜索结果
+    )
+    flow_analyze = self.spawn_sub_flow(
+        name="flow_analyze",
+        task="综合分析：交叉验证和归纳",
+        depends_on=[flow_read]
+    )
+    flow_write = self.spawn_sub_flow(
+        name="flow_write",
+        task="报告撰写：输出最终报告",
+        depends_on=[flow_analyze]
+    )
+
+# 此时 OOC 世界中的对象关系：
+#   researcher_001 (Chat)
+#       ├── flow_search (Flow)    [status: ready]
+#       ├── flow_read (Flow)      [status: blocked_by: flow_search]
+#       ├── flow_analyze (Flow)   [status: blocked_by: flow_read]
+#       └── flow_write (Flow)     [status: blocked_by: flow_analyze]
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 3: flow_search 执行 — 广度搜索
+# ═══════════════════════════════════════════════════════════════
+
+# flow_search 是 Flow 对象，具有完整的思考能力
+# 它通过 focus_bias 将搜索任务拆分为多个可并行的子 Flow
+
+[LIFECYCLE] flow_search: active
+
+[BIAS: flow_search.focus_bias]
+    输入: task="广度搜索", context.queries=[5 个搜索关键词]
+    思考: 5 个搜索查询相互独立，可以并行
+    输出: 创建 5 个并行子 Flow
+
+[ACTION] flow_search 执行代码:
+    for query in self.context["queries"]:
+        self.spawn_sub_flow(
+            name=f"search_{query[:20]}",
+            task=f"搜索: {query}",
+            parallel=True  # 标记为可并行
+        )
+
+# flow_search 的子 Flow 并行执行：
+#   flow_search (Flow)
+#       ├── search_rust_embedded (Flow) [parallel, active]
+#       ├── search_rust_vs_c (Flow)     [parallel, active]
+#       ├── search_rust_rtos (Flow)     [parallel, active]
+#       ├── search_rust_ecosystem (Flow) [parallel, active]
+#       └── search_rust_iot (Flow)      [parallel, active]
+
+# 每个 search 子 Flow 的 execution_bias 执行搜索：
+
+[BIAS: search_rust_embedded.execution_bias]
+    执行: results = world.browser.search("Rust embedded systems 2024 2025 state of art")
+
+# 5 个 search 子 Flow 并行执行，各自调用 browser.search：
+
+[ACTION] search_rust_embedded → world.browser.search("Rust embedded systems 2024 2025 state of art")
+    → 返回 Webpage Object 列表:
+        webpage_001: "The State of Rust in Embedded Systems - 2025 Survey"
+            url: "https://example.com/rust-embedded-survey-2025"
+            title: "The State of Rust in Embedded Systems - 2025 Survey"
+        webpage_002: "Rust for Embedded Development: A Comprehensive Guide"
+            url: "https://example.com/rust-embedded-guide"
+            title: "Rust for Embedded Development: A Comprehensive Guide"
+        webpage_003: "Why We Chose Rust for Our IoT Platform"
+            url: "https://example.com/rust-iot-case-study"
+            title: "Why We Chose Rust for Our IoT Platform"
+
+[ACTION] search_rust_vs_c → world.browser.search("Rust vs C embedded programming")
+    → 返回 Webpage Object 列表:
+        webpage_004: "Rust vs C for Embedded: Benchmarks and Analysis"
+        webpage_005: "Memory Safety in Embedded Systems: Rust's Promise"
+        webpage_006: "Migrating from C to Rust in Embedded Projects"
+
+[ACTION] search_rust_rtos → world.browser.search("Rust RTOS real-time operating system")
+    → 返回:
+        webpage_007: "Embassy: The Rust Async Framework for Embedded"
+        webpage_008: "RTIC: Real-Time Interrupt-driven Concurrency"
+        webpage_009: "Comparing Rust RTOS Frameworks"
+
+[ACTION] search_rust_ecosystem → world.browser.search("embedded Rust ecosystem tools libraries")
+    → 返回:
+        webpage_010: "The Embedded Rust Ecosystem in 2025"
+        webpage_011: "probe-rs, defmt, and the Embedded Rust Toolchain"
+        webpage_012: "HAL Libraries: Abstracting Hardware in Rust"
+
+[ACTION] search_rust_iot → world.browser.search("Rust IoT production use cases")
+    → 返回:
+        webpage_013: "Rust in Production: Embedded Case Studies"
+        webpage_014: "How Espressif Adopted Rust for ESP32"
+        webpage_015: "Automotive Rust: Safety-Critical Embedded Systems"
+
+# 5 个 search 子 Flow 全部完成，触发 flow_search 的 convergence_bias
+
+[BIAS: flow_search.convergence_bias]
+    输入: 5 个子 Flow 的结果（共 15 个 webpage 对象）
+    思考:
+        所有子 Flow 均成功
+        共收集 15 个信息源，满足目标（10-15 个）
+        无冲突（各子 Flow 搜索不同关键词，结果互补）
+    输出: 合并所有 webpage 引用，标记 flow_search 为完成
+
+[ACTION] flow_search 汇总结果:
+    self.result = {
+        "sources": [webpage_001 ~ webpage_015],
+        "count": 15,
+        "status": "success"
+    }
+
+[LIFECYCLE] flow_search: completed
+# flow_search 完成后，flow_read 的依赖解除，自动激活
+
+# 此时 researcher_001 的 sources 中有 15 个待阅读的信息源
+# 每个 webpage 对象与 researcher_001 自动建立了 relation
+
+[BIAS: researcher_001.memory_bias]
+    输入: 15 个搜索结果
+    思考:
+        这些都是初步搜索结果，属于短期记忆
+        暂时存在 self.sources 中
+        深度阅读后再决定哪些值得长期保存
+    行动: 无额外操作（已在 field 中）
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 4: flow_read 执行 — 深度阅读
+# ═══════════════════════════════════════════════════════════════
+
+# flow_read 的依赖（flow_search）已完成，自动激活
+
+[LIFECYCLE] flow_read: active
+
+[BIAS: flow_read.focus_bias]
+    输入: task="深度阅读 15 个信息源"
+    思考: 15 个阅读任务相互独立，可以并行（但受限于 browser 的 max_pages）
+    输出: 创建 15 个并行子 Flow（分批执行，每批 5 个）
+
+# flow_read 的子 Flow 分批并行执行阅读：
+# 第 1 批: webpage_001 ~ webpage_005（并行）
+# 第 2 批: webpage_006 ~ webpage_010（并行，等第 1 批完成后）
+# 第 3 批: webpage_011 ~ webpage_015（并行，等第 2 批完成后）
+
+# 以 webpage_001 的阅读子 Flow 为例：
+
+[LIFECYCLE] read_webpage_001 (Flow): active
+
+# Flow 具有完整的思考能力，包括 comprehension_bias
+# 所以阅读子 Flow 可以自主完成"读取 + 理解"
+
+[BIAS: read_webpage_001.execution_bias]
+    执行:
+        page = world.browser.open("https://example.com/rust-embedded-survey-2025")
+        content = page.extract_text()
+
+[BIAS: read_webpage_001.comprehension_bias]
+    输入: webpage_001 的文本内容
+    思考:
+        关键发现：
+        1. 现状：2025 年调查显示 42% 的嵌入式开发者已在项目中使用 Rust
+        2. 优势：内存安全、零成本抽象、现代工具链
+        3. 挑战：学习曲线、生态不够成熟、部分芯片支持不足
+        4. 趋势：Embassy 异步框架快速增长、ESP32 官方支持 Rust
+        5. 案例：多家汽车和航空企业开始试点
+    输出:
+        self.result = {
+            "url": "https://example.com/rust-embedded-survey-2025",
+            "title": "The State of Rust in Embedded Systems - 2025 Survey",
+            "key_points": [上述 5 点],
+            "quotes": ["42% of embedded developers...", ...],
+            "relevance_score": 0.95
+        }
+
+[LIFECYCLE] read_webpage_001: completed
+
+# （其余 14 个阅读子 Flow 类似执行，此处省略）
+# 每个子 Flow 都独立完成"读取 + 理解"，无需上报给父 Flow
+
+# 所有阅读子 Flow 完成后，触发 flow_read 的 convergence_bias
+
+[BIAS: flow_read.convergence_bias]
+    输入: 15 个子 Flow 的结果（已包含 key_points 和 relevance_score）
+    思考:
+        所有子 Flow 均成功
+        共提取 15 篇文章的结构化分析结果
+        高相关性（relevance > 0.8）: 10 篇
+        中相关性: 3 篇
+        低相关性: 2 篇
+    输出: 合并所有分析结果，标记 flow_read 为完成
+
+[LIFECYCLE] flow_read: completed
+
+# flow_read 完成后，结果收敛回 researcher_001
+
+[BIAS: researcher_001.memory_bias]
+    输入: flow_read 汇总的 15 条研究笔记
+    思考:
+        高相关性笔记（relevance > 0.8）: 10 条 → 保留完整内容
+        中相关性笔记（0.5 < relevance < 0.8）: 3 条 → 保留摘要
+        低相关性笔记（relevance < 0.5）: 2 条 → 仅保留标题和来源
+    行动:
+        将高相关性笔记标记为 "important"
+        压缩中低相关性笔记
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 5: flow_analyze 执行 — 综合分析
+# ═══════════════════════════════════════════════════════════════
+
+# flow_analyze 的依赖（flow_read）已完成，自动激活
+
+[LIFECYCLE] flow_analyze: active
+
+# flow_analyze 是 Flow，具有完整思考能力
+# focus_bias 判断"综合分析"是原子任务，不再拆分，直接由自身执行
+
+[BIAS: flow_analyze.focus_bias]
+    输入: task="综合分析：交叉验证和归纳"
+    思考: 综合分析是一个整体性任务，拆分会破坏分析的连贯性
+    输出: 标记为原子任务，由自身直接执行
+
+# flow_analyze 具有完整思考能力，自主完成综合分析
+
+[BIAS: flow_analyze.root_index_bias]
+    扫描: 综合分析阶段，所有笔记已就绪
+    激活:
+        1. comprehension_bias (always-on)
+        2. planning_bias (需要构建报告大纲)
+        3. reflection_bias (需要评估信息质量)
+        4. synthesis_bias (需要综合多源信息)
+
+[BIAS: flow_analyze.reflection_bias]
+    输入: 所有研究笔记
+    思考:
+        信息覆盖度评估：
+            ✓ 现状：充分（多个调查数据交叉验证）
+            ✓ 优势：充分（技术分析 + 实际案例）
+            △ 挑战：部分充分（缺少来自反对者的声音）
+            ✓ 趋势：充分（多个框架和厂商动态）
+            △ 生态：部分充分（工具链覆盖好，但库生态数据不足）
+        建议：
+            对"挑战"和"生态"两个维度进行补充搜索
+    输出: 需要补充搜索的建议
+
+[BIAS: flow_analyze.synthesis_bias]
+    输入: reflection_bias 的建议 + 当前笔记
+    思考:
+        reflection_bias 指出了信息缺口
+        但缺口不大，可以在报告中标注为"有待进一步研究"
+        或者进行一轮补充搜索
+    决策: 进行一轮快速补充搜索
+
+# --- 补充搜索 ---
+# flow_analyze 通过 focus_bias 创建补充搜索的子 Flow
+
+[BIAS: flow_analyze.focus_bias]
+    输入: 需要补充搜索 2 个维度
+    思考: 2 个补充搜索可以并行
+    输出: 创建 2 个并行子 Flow
+
+[ACTION] flow_analyze 创建子 Flow:
+    sub_flow_challenge = self.spawn_sub_flow(
+        task="补充搜索: Rust embedded challenges limitations criticism",
+        parallel=True
+    )
+    sub_flow_ecosystem = self.spawn_sub_flow(
+        task="补充搜索: Rust crates.io embedded library ecosystem stats",
+        parallel=True
+    )
+
+# 2 个子 Flow 并行执行补充搜索和阅读（每个子 Flow 自主完成搜索+理解）
+[ACTION] 补充搜索完成... (创建 webpage_016, webpage_017)
+
+[BIAS: flow_analyze.convergence_bias]
+    输入: 2 个补充搜索子 Flow 的结果
+    思考: 补充信息已收集，合并到分析结果中
+
+# --- 构建报告大纲 ---
+
+[BIAS: flow_analyze.planning_bias]
+    输入: 所有笔记（含补充）
+    思考:
+        报告大纲：
+        1. 摘要
+        2. 背景：为什么嵌入式系统需要 Rust
+            2.1 嵌入式系统的安全挑战
+            2.2 C/C++ 的历史包袱
+            2.3 Rust 的核心承诺
+        3. 现状：Rust 在嵌入式领域的采用情况
+            3.1 开发者调查数据
+            3.2 主要应用领域（IoT、汽车、航空、工业控制）
+            3.3 代表性项目和企业
+        4. 技术优势
+            4.1 内存安全与零成本抽象
+            4.2 现代工具链（cargo, probe-rs, defmt）
+            4.3 异步编程模型（Embassy）
+        5. 挑战与限制
+            5.1 学习曲线
+            5.2 芯片支持覆盖度
+            5.3 生态成熟度
+            5.4 与现有 C 代码的互操作
+        6. 关键框架与工具
+            6.1 Embassy
+            6.2 RTIC
+            6.3 esp-rs (ESP32)
+            6.4 HAL 抽象层
+        7. 趋势与展望
+            7.1 标准化进程
+            7.2 安全认证（ISO 26262, DO-178C）
+            7.3 社区增长
+        8. 结论与建议
+        9. 参考文献
+    输出: 报告大纲
+
+[ACTION] flow_analyze.result = {大纲 + 分析结果}
+
+[LIFECYCLE] flow_analyze: completed
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 6: flow_write 执行 — 报告撰写
+# ═══════════════════════════════════════════════════════════════
+
+# flow_write 的依赖（flow_analyze）已完成，自动激活
+
+[LIFECYCLE] flow_write: active
+
+# flow_write 通过 focus_bias 将撰写任务拆分为逐章撰写的子 Flow
+
+[BIAS: flow_write.focus_bias]
+    输入: 报告大纲（9 章）
+    思考: 每章可以独立撰写（但需要共享大纲和笔记作为上下文）
+    输出: 创建 9 个子 Flow，顺序执行（保证章节连贯性）
+
+[BIAS: flow_write.execution_bias]
+    思考: 需要按大纲逐章撰写，然后通过 filesystem 保存
+    生成代码:
+
+        # 逐章撰写
+        report_sections = []
+        for section in self.outline["sections"]:
+            # 找到与该章节相关的笔记
+            relevant_notes = [n for n in self.notes if n["relevance_to_section"](section)]
+
+            # 使用 LLM 撰写该章节
+            section_content = world.llm.call({
+                "role": "你是一位技术研究报告撰写专家",
+                "task": f"根据以下研究笔记，撰写报告的 '{section['title']}' 章节",
+                "notes": relevant_notes,
+                "style": "学术但易读，数据驱动，有具体案例"
+            })
+            report_sections.append(section_content)
+
+        # 组装完整报告
+        full_report = "\n\n".join(report_sections)
+        self.report = full_report
+
+        # 通过 filesystem Extension 保存报告
+        report_file = world.filesystem.create(
+            path="research/rust_embedded_report.md",
+            content=full_report
+        )
+
+        # 保存参考文献
+        references = "\n".join([
+            f"- [{s['title']}]({s['url']})" for s in self.sources
+        ])
+        ref_file = world.filesystem.create(
+            path="research/rust_embedded_references.md",
+            content=references
+        )
+
+        # 建立 relation
+        self.add_relation("produced", report_file)
+        self.add_relation("produced", ref_file)
+
+[ACTION] world.filesystem.create("research/rust_embedded_report.md", content=...)
+    → 创建 file_001 (Stone Object)
+    → file_001.path = "research/rust_embedded_report.md"
+    → file_001.content = "# Rust 语言在嵌入式系统中的应用现状与趋势\n\n## 摘要\n..."
+
+[ACTION] world.filesystem.create("research/rust_embedded_references.md", content=...)
+    → 创建 file_002 (Stone Object)
+
+[LIFECYCLE] flow_write: completed
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 7: 所有子 Flow 完成 — researcher_001 收敛、反思与通知
+# ═══════════════════════════════════════════════════════════════
+
+# 4 个子 Flow 全部完成，结果收敛回 researcher_001（Chat）
+# researcher_001 的 convergence_bias 汇总所有子 Flow 的成果
+
+[BIAS: researcher_001.convergence_bias]
+    输入: flow_search, flow_read, flow_analyze, flow_write 的结果
+    思考:
+        所有阶段均成功完成
+        最终产出: 2 个文件（报告 + 参考文献）
+    输出: 任务整体成功
+
+[BIAS: researcher_001.root_index_bias]
+    扫描: 报告已撰写完成
+    激活:
+        1. reflection_bias (任务完成后反思)
+        2. notification_bias (需要通知请求者)
+        3. memory_bias (需要整理记忆)
+
+[BIAS: researcher_001.reflection_bias]
+    输入: 整个研究过程
+    思考:
+        过程评估：
+            ✓ 搜索覆盖了 5 个维度，共 17 个信息源
+            ✓ 深度阅读提取了有效信息
+            ✓ 补充搜索填补了信息缺口
+            ✓ 报告结构清晰，数据充分
+        改进点：
+            - 下次可以先搜索学术论文（如 arxiv），不仅限于网页
+            - 可以增加与 C/C++ 的定量对比数据
+            - 搜索时可以并行处理多个查询以提高效率
+        自我优化建议：
+            为自己添加一个 "academic_search_bias"
+            调整 planning_bias 的 prompt，增加"信息源多样性"的考量
+    输出: 改进建议
+
+[BIAS: researcher_001.execution_bias] (响应 reflection_bias 的自我优化建议)
+    生成代码:
+        # 元编程：为自己添加新的 Bias
+        self.add_bias(
+            name="academic_search_bias",
+            prompt="在进行研究时，除了网页搜索，还应该搜索学术论文数据库...",
+            when="task_type == 'research'"
+        )
+
+        # 元编程：调整 planning_bias 的 prompt
+        self.biases["planning_bias"].update_prompt(
+            append="在制定研究计划时，确保信息源的多样性：网页、学术论文、官方文档、社区讨论"
+        )
+
+[BIAS: researcher_001.code_review_bias]
+    输入: 上述元编程代码
+    思考:
+        ✓ add_bias 操作合法，新 Bias 的 prompt 合理
+        ✓ update_prompt 操作合法，修改内容是增量的
+        ✓ 无安全风险
+    输出: 通过审查
+
+[BIAS: researcher_001.notification_bias]
+    输入: 任务完成
+    思考:
+        需要通知 user（请求者）
+        通知内容：研究完成，报告已保存
+    行动:
+
+        # 通知用户
+        user.receive_message({
+            "from": self.name,
+            "type": "task_complete",
+            "message": "研究报告已完成",
+            "deliverables": [
+                {"type": "report", "path": "research/rust_embedded_report.md"},
+                {"type": "references", "path": "research/rust_embedded_references.md"}
+            ],
+            "summary": "共检索 17 个信息源，报告涵盖现状、优势、挑战、工具生态和趋势 5 个维度"
+        })
+
+[BIAS: researcher_001.memory_bias]
+    输入: 整个研究过程
+    思考:
+        值得长期保存的：
+            - 研究方法论（搜索策略、阅读策略）
+            - 高质量信息源列表
+            - 报告大纲模板
+            - reflection_bias 的改进建议
+        可以遗忘的：
+            - 具体的网页内容（已在报告中引用）
+            - 中间过程的临时数据
+    行动:
+        # 持久化关键经验
+        self.save_to_long_term_memory({
+            "research_methodology": self.plan,
+            "high_quality_sources": [s for s in self.sources if s["relevance"] > 0.8],
+            "outline_template": self.outline,
+            "lessons_learned": reflection_bias.output["improvements"]
+        })
+
+        # 清理短期记忆
+        self.notes = []  # 笔记已整合到报告中，可以清理
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 8: researcher 进入空闲状态
+# ═══════════════════════════════════════════════════════════════
+
+[ACTION] researcher_001.status = "idle"
+
+# 一段时间后...
+
+[BIAS: researcher_001.on_idle_bias]
+    思考:
+        已经空闲了一段时间
+        没有新的研究任务
+        建议进入存档状态以节省资源
+        如果未来有新的研究任务，可以被重新激活
+        届时 on_activate_bias 会恢复状态
+    行动:
+        world.archive_object(self)
+
+[LIFECYCLE] researcher_001: archiving
+
+[BIAS: researcher_001.on_destroy_bias]  # 存档时也会触发
+    行动:
+        # 通知关联对象
+        # （user 不需要通知，因为任务已完成）
+        # 解除与 webpage 对象的 relation（webpage 可以被回收）
+        for page in self.get_relations("references"):
+            page.close()
+            self.remove_relation("references", page)
+
+[LIFECYCLE] researcher_001: archived (持久化到 data.json + code.py)
+
+# ═══════════════════════════════════════════════════════════════
+# 运行总结
+# ═══════════════════════════════════════════════════════════════
+
+# 本次 deep research 过程中：
+#
+# 创建的对象：
+#   - researcher_001 (Chat) — 由 user 的 talk() 创建的研究 Flow
+#   - flow_search (Flow) — 广度搜索阶段
+#       - search_rust_embedded ~ search_rust_iot (5 个并行子 Flow)
+#   - flow_read (Flow) — 深度阅读阶段
+#       - read_webpage_001 ~ read_webpage_015 (15 个分批并行子 Flow)
+#   - flow_analyze (Flow) — 综合分析阶段
+#       - sub_flow_challenge, sub_flow_ecosystem (2 个补充搜索子 Flow)
+#   - flow_write (Flow) — 报告撰写阶段
+#   - webpage_001 ~ webpage_017 (Stone) — 网页对象（由 browser Extension 创建）
+#   - file_001, file_002 (Stone) — 报告文件（由 filesystem Extension 创建）
+#   总计: 1 Chat + 25 Flow + 19 Stone = 45 个对象
+#
+# Flow 的 Focus 机制体现：
+#   - researcher_001 通过 focus_bias 拆分为 4 个阶段子 Flow（顺序依赖）
+#   - flow_search 通过 focus_bias 拆分为 5 个并行搜索子 Flow
+#   - flow_read 通过 focus_bias 拆分为 15 个分批并行阅读子 Flow
+#   - flow_analyze 通过 focus_bias 拆分为 2 个补充搜索子 Flow
+#   - 每个 Flow（包括子 Flow）都具有完整的思考能力
+#
+# Bias 触发统计（跨所有 Flow）：
+#   - root_index_bias: ~8 次（researcher_001 + 各阶段 Flow）
+#   - focus_bias: 5 次（researcher_001 + flow_search + flow_read + flow_analyze×2）
+#   - convergence_bias: 5 次（flow_search + flow_read + flow_analyze + flow_write + researcher_001）
+#   - comprehension_bias: ~18 次（分布在各阅读子 Flow 和分析 Flow 中）
+#   - planning_bias: 2 次（researcher_001 的研究计划 + flow_analyze 的报告大纲）
+#   - execution_bias: ~25 次（各子 Flow 的执行）
+#   - reflection_bias: 2 次（flow_analyze 的信息评估 + researcher_001 的任务反思）
+#   - synthesis_bias: 2 次（researcher_001 计划确认 + flow_analyze 信息缺口决策）
+#   - memory_bias: 3 次（搜索后 + 阅读后 + 任务完成后）
+#   - conflict_detection_bias: ~3 次（并行子 Flow 创建时）
+#   - notification_bias: 1 次（通知用户）
+#   - code_review_bias: 1 次（审查元编程代码）
+#   - on_create_bias: ~26 次（每个 Flow 创建时）
+#   - on_destroy_bias: ~26 次（每个 Flow 完成时）
+#   总计: 约 127 次 Bias 触发（分布在 26 个 Flow 中）
+#
+# LLM 调用次数：
+#   - 各 Flow 的 Bias 思考: ~60 次
+#   - 报告撰写: ~9 次（每章 1 次）
+#   总计: ~69 次 LLM 调用
+#
+# 自我演化：
+#   - 新增 1 个 Bias: academic_search_bias（在 researcher_001 上）
+#   - 优化 1 个 Bias: planning_bias（增加信息源多样性考量）
+#
+# 关键 Relation 链：
+#   user --talk()--> researcher_001 (Chat)
+#       ├── parent_of --> flow_search
+#       │       ├── parent_of --> search_rust_embedded ... (5 个)
+#       │       └── uses --> browser
+#       ├── parent_of --> flow_read
+#       │       ├── parent_of --> read_webpage_001 ... (15 个)
+#       │       └── uses --> browser
+#       ├── parent_of --> flow_analyze
+#       │       ├── parent_of --> sub_flow_challenge, sub_flow_ecosystem
+#       │       └── uses --> browser
+#       ├── parent_of --> flow_write
+#       │       └── uses --> filesystem
+#       ├── references --> webpage_001~017
+#       └── produced --> file_001, file_002

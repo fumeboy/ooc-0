@@ -1,0 +1,15 @@
+# 运行时数据
+flows/
+data.json
+server.json
+
+# 依赖
+kernel/web/node_modules/
+kernel/node_modules/
+
+# 环境
+.env
+
+# 系统
+.DS_Store
+*.log
