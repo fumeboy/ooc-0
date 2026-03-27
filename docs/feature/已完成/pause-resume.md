@@ -1,8 +1,8 @@
 # OOC Pause/Resume 功能设计方案
 
 <!--
-@ref .ooc/docs/哲学文档/gene.md#G4 — extends — ThinkLoop 暂停/恢复机制
-@referenced-by src/flow/thinkloop.ts — implemented-by — isPaused + _pendingOutput
+@ref docs/哲学文档/gene.md#G4 — extends — ThinkLoop 暂停/恢复机制
+@referenced-by kernel/src/flow/thinkloop.ts — implemented-by — isPaused + _pendingOutput
 -->
 
 ## 需求精确定义
@@ -162,15 +162,15 @@ CommandPalette 中：
 
 | 文件 | 改动 |
 |------|------|
-| `src/flow/thinkloop.ts` | 增加 `isPaused` 回调 + 暂停检查点 + pendingOutput 恢复逻辑 |
-| `src/world/scheduler.ts` | `run()` 入口 pausing 时退出 |
-| `src/world/world.ts` | 增加 `_pauseRequests` + `pauseObject/resumeObject/isPaused` + `resumeFlow` |
-| `src/server/server.ts` | 增加 pause/resume API 路由 |
-| `.ooc/web/src/api/client.ts` | 增加 `pauseObject()`/`resumeFlow()` |
-| `.ooc/web/src/api/types.ts` | FlowStatus 前端类型已有 pausing，无需改 |
-| `.ooc/web/src/features/FlowDetail.tsx` | 显示 paused context + pending output + 恢复按钮 |
-| `.ooc/web/src/components/CommandPalette.tsx` | pausing session 显示暂停标记 |
-| `tests/` | 新增 pause/resume 测试 |
+| `kernel/src/flow/thinkloop.ts` | 增加 `isPaused` 回调 + 暂停检查点 + pendingOutput 恢复逻辑 |
+| `kernel/src/world/scheduler.ts` | `run()` 入口 pausing 时退出 |
+| `kernel/src/world/world.ts` | 增加 `_pauseRequests` + `pauseObject/resumeObject/isPaused` + `resumeFlow` |
+| `kernel/src/server/server.ts` | 增加 pause/resume API 路由 |
+| `kernel/web/src/api/client.ts` | 增加 `pauseObject()`/`resumeFlow()` |
+| `kernel/web/src/api/types.ts` | FlowStatus 前端类型已有 pausing，无需改 |
+| `kernel/web/src/features/FlowDetail.tsx` | 显示 paused context + pending output + 恢复按钮 |
+| `kernel/web/src/components/CommandPalette.tsx` | pausing session 显示暂停标记 |
+| `kernel/tests/` | 新增 pause/resume 测试 |
 
 ### 9. 执行顺序
 

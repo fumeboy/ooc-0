@@ -1,7 +1,7 @@
 # Questions — OOC 系统的疑问与设计决策
 
 <!--
-@ref .ooc/docs/哲学文档/gene.md — references — 设计决策围绕 G1-G13 展开
+@ref docs/哲学文档/gene.md — references — 设计决策围绕 G1-G13 展开
 -->
 
 本文档是索引。每个问题的详细讨论见 `questions/` 子目录。
@@ -15,7 +15,7 @@
 | Q01 | 为什么需要 reply() 机制？ | ✅ 已解决 | [question_reply.md](questions/question_reply.md) |
 | Q02 | 为什么让对象自己编写 UI？ | ✅ 已解决 | [question_ui_ownership.md](questions/question_ui_ownership.md) |
 | Q03 | UI 文件为什么不在对象内存中？ | ✅ 已解决 | [question_ui_files.md](questions/question_ui_files.md) |
-| Q04 | 前端为什么放在 .ooc/web/？ | ✅ 已解决 | [question_frontend_location.md](questions/question_frontend_location.md) |
+| Q04 | 前端为什么放在 kernel/web/？ | ✅ 已解决 | [question_frontend_location.md](questions/question_frontend_location.md) |
 | Q05 | Context 格式为什么从 XML 改为文本？ | ✅ 已解决 | [question_context_format.md](questions/question_context_format.md) |
 | Q06 | 为什么给 Stone 提供 writeCode() 等方法？ | ✅ 已解决 | [question_stone_api.md](questions/question_stone_api.md) |
 | Q07 | 为什么 program 块之间不共享变量？ | ✅ 已解决 | [question_program_isolation.md](questions/question_program_isolation.md) |

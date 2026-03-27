@@ -36,7 +36,7 @@
 ```typescript
 // DynamicUI.tsx
 interface DynamicUIProps {
-  importPath: string;       // 动态 import 路径（相对于 .ooc/web/src/features/）
+  importPath: string;       // 动态 import 路径（相对于 kernel/web/src/features/）
   componentProps: any;      // 传给加载到的组件的 props
   fallback: React.ReactNode; // 加载失败时的降级视图
 }
@@ -101,7 +101,7 @@ flows/{sessionId}/flows/{objectName}/shared/ui  →  DynamicUI(flowPath, flowPro
 
 **fs.allow**：新增 `"../flows"` 以允许 Vite 访问 flow 目录下的 TSX 文件。（`"../stones"` 已存在。）
 
-**路径别名**：新增 `@ooc` alias 指向 `.ooc/web/src/`，使 Stone UI 和 Flow UI 组件都可以用简洁路径 import 前端模块：
+**路径别名**：新增 `@ooc` alias 指向 `kernel/web/src/`，使 Stone UI 和 Flow UI 组件都可以用简洁路径 import 前端模块：
 ```typescript
 // vite.config.ts resolve.alias
 { "@ooc": path.resolve(__dirname, "src") }

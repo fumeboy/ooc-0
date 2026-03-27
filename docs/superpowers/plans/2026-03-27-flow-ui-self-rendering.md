@@ -15,7 +15,7 @@
 ### Task 1: Vite config — add `fs.allow` and `@ooc` alias
 
 **Files:**
-- Modify: `.ooc/web/vite.config.ts`
+- Modify: `kernel/web/vite.config.ts`
 
 - [ ] **Step 1: Replace vite.config.ts with updated config**
 
@@ -55,20 +55,20 @@ export default defineConfig({
 
 - [ ] **Step 2: Verify Vite still starts**
 
-Run: `cd .ooc/web && npx vite --version`
+Run: `cd kernel/web && npx vite --version`
 Expected: prints version without error (config syntax is valid)
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add .ooc/web/vite.config.ts
+git add kernel/web/vite.config.ts
 git commit -m "feat: vite config — add ../flows fs.allow and @ooc path alias"
 ```
 
 ### Task 2: Add `FlowUIProps` type
 
 **Files:**
-- Modify: `.ooc/web/src/types/stone-ui.ts`
+- Modify: `kernel/web/src/types/stone-ui.ts`
 
 - [ ] **Step 1: Add FlowUIProps export**
 
@@ -85,20 +85,20 @@ export interface FlowUIProps {
 - [ ] **Step 2: Commit**
 
 ```bash
-git add .ooc/web/src/types/stone-ui.ts
+git add kernel/web/src/types/stone-ui.ts
 git commit -m "feat: add FlowUIProps type"
 ```
 
 ### Task 3: Refactor DynamicStoneUI → DynamicUI
 
 **Files:**
-- Create: `.ooc/web/src/features/DynamicUI.tsx`
-- Delete: `.ooc/web/src/features/DynamicStoneUI.tsx`
-- Modify: `.ooc/web/src/features/ViewRouter.tsx`
+- Create: `kernel/web/src/features/DynamicUI.tsx`
+- Delete: `kernel/web/src/features/DynamicStoneUI.tsx`
+- Modify: `kernel/web/src/features/ViewRouter.tsx`
 
 - [ ] **Step 1: Create `DynamicUI.tsx` as a new file**
 
-Create `.ooc/web/src/features/DynamicUI.tsx` with this content:
+Create `kernel/web/src/features/DynamicUI.tsx` with this content:
 
 ```tsx
 /**
@@ -108,7 +108,7 @@ Create `.ooc/web/src/features/DynamicUI.tsx` with this content:
  * - Stone: ../../../stones/{name}/shared/ui/index.tsx
  * - Flow:  ../../../flows/{sid}/flows/{name}/shared/ui/index.tsx
  *
- * @ref .ooc/docs/哲学文档/gene.md#G11 — implements — 对象 UI 自我表达
+ * @ref docs/哲学文档/gene.md#G11 — implements — 对象 UI 自我表达
  */
 import React, { Component, Suspense, useMemo } from "react";
 
@@ -139,7 +139,7 @@ class UIErrorBoundary extends Component<
 /**
  * 通用动态 UI 加载器
  *
- * @param importPath - 相对于 .ooc/web/src/features/ 的 import 路径
+ * @param importPath - 相对于 kernel/web/src/features/ 的 import 路径
  * @param componentProps - 传给加载到的组件的 props
  * @param fallback - 加载失败时的降级视图（可选）
  */
@@ -187,7 +187,7 @@ export function DynamicUI({
 
 - [ ] **Step 2: Update ViewRouter imports and usage**
 
-In `.ooc/web/src/features/ViewRouter.tsx`:
+In `kernel/web/src/features/ViewRouter.tsx`:
 
 Change import (line 17):
 ```typescript
@@ -216,19 +216,19 @@ Update usage (lines 96-101):
 - [ ] **Step 3: Delete old DynamicStoneUI.tsx**
 
 ```bash
-rm .ooc/web/src/features/DynamicStoneUI.tsx
+rm kernel/web/src/features/DynamicStoneUI.tsx
 ```
 
 - [ ] **Step 4: Verify no TypeScript errors**
 
-Run: `cd .ooc/web && npx tsc --noEmit 2>&1 | head -20`
+Run: `cd kernel/web && npx tsc --noEmit 2>&1 | head -20`
 Expected: no errors related to DynamicUI/DynamicStoneUI
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .ooc/web/src/features/DynamicUI.tsx .ooc/web/src/features/ViewRouter.tsx
-git rm .ooc/web/src/features/DynamicStoneUI.tsx
+git add kernel/web/src/features/DynamicUI.tsx kernel/web/src/features/ViewRouter.tsx
+git rm kernel/web/src/features/DynamicStoneUI.tsx
 git commit -m "refactor: DynamicStoneUI → DynamicUI generic loader"
 ```
 
@@ -237,7 +237,7 @@ git commit -m "refactor: DynamicStoneUI → DynamicUI generic loader"
 ### Task 4: ViewRouter — add flow-ui route, remove report route
 
 **Files:**
-- Modify: `.ooc/web/src/features/ViewRouter.tsx`
+- Modify: `kernel/web/src/features/ViewRouter.tsx`
 
 All changes in this task are applied to the same file in sequence.
 
@@ -306,26 +306,26 @@ import { ReportView } from "./ReportView";
 
 Delete the file:
 ```bash
-rm .ooc/web/src/features/ReportView.tsx
+rm kernel/web/src/features/ReportView.tsx
 ```
 
 - [ ] **Step 5: Verify no TypeScript errors**
 
-Run: `cd .ooc/web && npx tsc --noEmit 2>&1 | head -20`
+Run: `cd kernel/web && npx tsc --noEmit 2>&1 | head -20`
 Expected: no errors
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add .ooc/web/src/features/ViewRouter.tsx
-git rm .ooc/web/src/features/ReportView.tsx
+git add kernel/web/src/features/ViewRouter.tsx
+git rm kernel/web/src/features/ReportView.tsx
 git commit -m "feat: ViewRouter — add flow-ui route, remove report route and ReportView"
 ```
 
 ### Task 5: SessionFileTree — replace report node with ui node
 
 **Files:**
-- Modify: `.ooc/web/src/features/SessionFileTree.tsx`
+- Modify: `kernel/web/src/features/SessionFileTree.tsx`
 
 - [ ] **Step 1: Replace report virtual node injection with ui virtual node injection**
 
@@ -380,19 +380,19 @@ The `flowsDir` declaration is preserved so the `.stone` injection block at line 
 
 - [ ] **Step 2: Verify no TypeScript errors**
 
-Run: `cd .ooc/web && npx tsc --noEmit 2>&1 | head -20`
+Run: `cd kernel/web && npx tsc --noEmit 2>&1 | head -20`
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add .ooc/web/src/features/SessionFileTree.tsx
+git add kernel/web/src/features/SessionFileTree.tsx
 git commit -m "feat: SessionFileTree — replace report node with per-object ui node"
 ```
 
 ### Task 6: FlowView — add UI tab
 
 **Files:**
-- Modify: `.ooc/web/src/features/FlowView.tsx`
+- Modify: `kernel/web/src/features/FlowView.tsx`
 
 - [ ] **Step 1: Import DynamicUI and fetchSessionTree**
 
@@ -452,12 +452,12 @@ Add UI tab content after the Process tab content (after line 152):
 
 - [ ] **Step 4: Verify no TypeScript errors**
 
-Run: `cd .ooc/web && npx tsc --noEmit 2>&1 | head -20`
+Run: `cd kernel/web && npx tsc --noEmit 2>&1 | head -20`
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .ooc/web/src/features/FlowView.tsx
+git add kernel/web/src/features/FlowView.tsx
 git commit -m "feat: FlowView — add UI tab for Flow-level self-rendering"
 ```
 
@@ -466,7 +466,7 @@ git commit -m "feat: FlowView — add UI tab for Flow-level self-rendering"
 ### Task 7: Rewrite supervisor reporter trait
 
 **Files:**
-- Modify: `.ooc/stones/supervisor/traits/reporter/readme.md`
+- Modify: `stones/supervisor/traits/reporter/readme.md`
 
 - [ ] **Step 1: Rewrite the trait**
 
@@ -571,7 +571,7 @@ export default function SupervisorReport({ sessionId, objectName }) {
 - [ ] **Step 2: Commit**
 
 ```bash
-git add .ooc/stones/supervisor/traits/reporter/readme.md
+git add stones/supervisor/traits/reporter/readme.md
 git commit -m "feat: supervisor reporter trait — migrate from report.md to TSX self-rendering"
 ```
 

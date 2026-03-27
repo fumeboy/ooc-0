@@ -1,25 +1,25 @@
 # Agent Role Prompt 编写方法论
 
 > OOC 项目中所有 Agent 角色的 Prompt 编写规范。
-> 适用于 Claude Code 侧（`.claude/agents/*.md`）和 OOC 运行时侧（`.ooc/stones/*/readme.md`）。
+> 适用于 Claude Code 侧（`.claude/agents/*.md`）和 OOC 运行时侧（`stones/*/readme.md`）。
 
 <!--
-@ref .ooc/docs/哲学文档/gene.md — implements — Prompt as Object 哲学（G1 身份, G3 能力, G5 注意力, G9 行为, G12 成长）
-@ref .ooc/docs/哲学文档/meta.md — extends — 概念树四面（存在/认知/行动/成长）扩展为七层 prompt 架构
-@ref .ooc/docs/组织/README.md — references — 1+3 组织模型
+@ref docs/哲学文档/gene.md — implements — Prompt as Object 哲学（G1 身份, G3 能力, G5 注意力, G9 行为, G12 成长）
+@ref docs/哲学文档/meta.md — extends — 概念树四面（存在/认知/行动/成长）扩展为七层 prompt 架构
+@ref docs/组织/README.md — references — 1+3 组织模型
 @referenced-by .claude/agents/sophia.md — implemented-by
 @referenced-by .claude/agents/kernel.md — implemented-by
 @referenced-by .claude/agents/iris.md — implemented-by
 @referenced-by .claude/agents/nexus.md — implemented-by
 @referenced-by .claude/agents/bruce.md — implemented-by
 @referenced-by .claude/agents/d1.md — implemented-by
-@referenced-by .ooc/stones/supervisor/readme.md — implemented-by
-@referenced-by .ooc/stones/sophia/readme.md — implemented-by
-@referenced-by .ooc/stones/kernel/readme.md — implemented-by
-@referenced-by .ooc/stones/iris/readme.md — implemented-by
-@referenced-by .ooc/stones/nexus/readme.md — implemented-by
-@referenced-by .ooc/stones/bruce/readme.md — implemented-by
-@ref .ooc/docs/superpowers/specs/2026-03-24-agent-role-prompt-design.md — extends — 详细设计规范
+@referenced-by stones/supervisor/readme.md — implemented-by
+@referenced-by stones/sophia/readme.md — implemented-by
+@referenced-by stones/kernel/readme.md — implemented-by
+@referenced-by stones/iris/readme.md — implemented-by
+@referenced-by stones/nexus/readme.md — implemented-by
+@referenced-by stones/bruce/readme.md — implemented-by
+@ref docs/superpowers/specs/2026-03-24-agent-role-prompt-design.md — extends — 详细设计规范
 -->
 
 ---
@@ -165,7 +165,7 @@ meta.md 定义了对象的四个面：`Object = 存在 ∩ 认知 ∩ 行动 ∩
 | L6 协作协议 | 说明如何与 Supervisor 交互——通过 SendMessage 还是直接产出文件 |
 | 总长度 | 200-400 行（context window 要留给实际工作） |
 
-### OOC 运行时侧（`.ooc/stones/*/readme.md`）
+### OOC 运行时侧（`stones/*/readme.md`）
 
 OOC 系统内的活对象——在 ThinkLoop 中思考，通过 Effect 行动。
 

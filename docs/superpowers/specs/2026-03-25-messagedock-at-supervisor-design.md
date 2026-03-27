@@ -1,7 +1,7 @@
 <!--
-@ref .ooc/docs/哲学文档/meta.md — extends — 子树 6 Web UI 架构
-@ref .ooc/web/src/features/MessageSidebar.tsx — designs — MessageDock 改造
-@ref src/context/builder.ts — designs — Supervisor 全局消息注入
+@ref docs/哲学文档/meta.md — extends — 子树 6 Web UI 架构
+@ref kernel/web/src/features/MessageSidebar.tsx — designs — MessageDock 改造
+@ref kernel/src/context/builder.ts — designs — Supervisor 全局消息注入
 -->
 
 ---
@@ -15,7 +15,7 @@
 
 ## 1. MessageDock 去边框
 
-**文件**: `.ooc/web/src/features/MessageSidebar.tsx`
+**文件**: `kernel/web/src/features/MessageSidebar.tsx`
 
 - 容器：移除 `border-l border-[var(--border)]`
 - Header：移除 `border-b border-[var(--border)]`
@@ -23,7 +23,7 @@
 
 ## 2. MessageInput @对象自动补全
 
-**文件**: `.ooc/web/src/features/MessageSidebar.tsx`
+**文件**: `kernel/web/src/features/MessageSidebar.tsx`
 
 **交互流程**:
 1. 输入 `@` 触发下拉浮层（输入框上方）
@@ -42,7 +42,7 @@
 
 ## 3. Supervisor 全局消息时间线
 
-**文件**: `src/context/builder.ts`
+**文件**: `kernel/src/context/builder.ts`
 
 **方案**:
 - `buildContext` 中检测 `stone.name === "supervisor"` 且 `sessionDir` 存在

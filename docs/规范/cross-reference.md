@@ -64,18 +64,18 @@
  *
  * Flow 是 Stone 在执行任务时的动态派生。
  *
- * @ref .ooc/docs/哲学文档/gene.md#G2 — implements — Stone vs Flow 的动态形态
- * @ref .ooc/docs/哲学文档/gene.md#G4 — implements — ThinkLoop 思考-执行循环
- * @ref .ooc/docs/哲学文档/gene.md#G8 — implements — Effect 三种影响方向
- * @ref .ooc/docs/哲学文档/gene.md#G10 — implements — 不可变事件历史（actions）
- * @ref src/process/tree.ts — references — 行为树操作（focus, actions）
+ * @ref docs/哲学文档/gene.md#G2 — implements — Stone vs Flow 的动态形态
+ * @ref docs/哲学文档/gene.md#G4 — implements — ThinkLoop 思考-执行循环
+ * @ref docs/哲学文档/gene.md#G8 — implements — Effect 三种影响方向
+ * @ref docs/哲学文档/gene.md#G10 — implements — 不可变事件历史（actions）
+ * @ref kernel/src/process/tree.ts — references — 行为树操作（focus, actions）
  */
 ```
 
 ### 规则
 
 1. `@ref` 写在 JSDoc 块的末尾，与正文描述之间空一行
-2. 路径相对于项目根目录（`docs/`、`src/`、`.ooc/web/src/`）
+2. 路径相对于项目根目录（`docs/`、`kernel/src/`、`kernel/web/src/`）
 3. 文档锚点用 `#` 分隔（如 `gene.md#G2`）
 4. 每个 `@ref` 独占一行
 5. 纯导出文件（`index.ts` 只做 re-export）不需要引用声明
@@ -90,10 +90,10 @@
 # 行为树设计
 
 <!--
-@ref .ooc/docs/哲学文档/gene.md#G9 — extends — 行为树的详细设计
-@ref .ooc/docs/哲学文档/gene.md#G5 — references — 结构化遗忘机制
-@referenced-by src/process/tree.ts — implemented-by
-@referenced-by src/flow/thinkloop.ts — implemented-by
+@ref docs/哲学文档/gene.md#G9 — extends — 行为树的详细设计
+@ref docs/哲学文档/gene.md#G5 — references — 结构化遗忘机制
+@referenced-by kernel/src/process/tree.ts — implemented-by
+@referenced-by kernel/src/flow/thinkloop.ts — implemented-by
 -->
 
 正文内容...
@@ -116,9 +116,9 @@
 /**
  * ProcessView —— 行为树可视化组件
  *
- * @ref .ooc/docs/哲学文档/gene.md#G9 — renders — 行为树结构与 focus 状态
- * @ref .ooc/docs/哲学文档/gene.md#G10 — renders — 节点上的 action 历史
- * @ref src/types/process.ts — references — ProcessNode, Process 类型定义
+ * @ref docs/哲学文档/gene.md#G9 — renders — 行为树结构与 focus 状态
+ * @ref docs/哲学文档/gene.md#G10 — renders — 节点上的 action 历史
+ * @ref kernel/src/types/process.ts — references — ProcessNode, Process 类型定义
  */
 ```
 
@@ -138,8 +138,8 @@
 不要求一次性补全所有文件。按以下优先级逐步完善：
 
 1. **P0 — 哲学文档**：gene.md 的每个 G# 节（G1-G13）需要 `@referenced-by` 列表（这是引用网络的枢纽）
-2. **P1 — 核心源码**：`src/` 下的核心模块补全 `@ref`
-3. **P2 — 前端组件**：`.ooc/web/src/` 下的组件补 `@ref`
+2. **P1 — 核心源码**：`kernel/src/` 下的核心模块补全 `@ref`
+3. **P2 — 前端组件**：`kernel/web/src/` 下的组件补 `@ref`
 4. **P3 — 架构/设计文档**：`docs/架构/`、`docs/设计/` 补双向引用
 5. **P4 — 实验文档**：`docs/实验/` 补 `@ref`（validates 关系）
 
@@ -157,19 +157,19 @@
 
 ```bash
 # 查找所有前向引用
-grep -rn "@ref " src/ docs/ .ooc/web/src/
+grep -rn "@ref " kernel/src/ docs/ kernel/web/src/
 
 # 查找所有反向引用
-grep -rn "@referenced-by" src/ docs/ .ooc/web/src/
+grep -rn "@referenced-by" kernel/src/ docs/ kernel/web/src/
 
 # 查找引用了 G9 的所有文件
-grep -rn "@ref.*gene.md#G9" src/ docs/ .ooc/web/src/
+grep -rn "@ref.*gene.md#G9" kernel/src/ docs/ kernel/web/src/
 
 # 查找某个文件被谁引用
-grep -rn "@ref.*process/tree.ts" src/ docs/ .ooc/web/src/
+grep -rn "@ref.*process/tree.ts" kernel/src/ docs/ kernel/web/src/
 
 # 检查孤立文件（没有任何 @ref 的源码文件）
-for f in $(find src/ -name "*.ts" ! -name "index.ts"); do
+for f in $(find kernel/src/ -name "*.ts" ! -name "index.ts"); do
   grep -q "@ref" "$f" || echo "无引用: $f"
 done
 ```
@@ -189,11 +189,11 @@ done
 ## G9: 行为树是 Flow 的结构化计划与执行机制
 
 <!--
-@referenced-by src/process/tree.ts — implemented-by
-@referenced-by src/process/focus.ts — implemented-by
-@referenced-by src/process/render.ts — implemented-by
-@referenced-by src/flow/thinkloop.ts — implemented-by — 行为树 API 注入
-@referenced-by .ooc/web/src/features/ProcessView.tsx — rendered-by
+@referenced-by kernel/src/process/tree.ts — implemented-by
+@referenced-by kernel/src/process/focus.ts — implemented-by
+@referenced-by kernel/src/process/render.ts — implemented-by
+@referenced-by kernel/src/flow/thinkloop.ts — implemented-by — 行为树 API 注入
+@referenced-by kernel/web/src/features/ProcessView.tsx — rendered-by
 @referenced-by docs/设计/async-messaging.md — extended-by
 -->
 ```
@@ -204,21 +204,21 @@ done
 /**
  * 行为树核心操作 —— 节点增删改查 + focus 管理
  *
- * @ref .ooc/docs/哲学文档/gene.md#G9 — implements — 行为树结构与 focus 光标
- * @ref .ooc/docs/哲学文档/gene.md#G10 — implements — actions 挂载到节点
- * @ref src/types/process.ts — references — ProcessNode, Process 类型
+ * @ref docs/哲学文档/gene.md#G9 — implements — 行为树结构与 focus 光标
+ * @ref docs/哲学文档/gene.md#G10 — implements — actions 挂载到节点
+ * @ref kernel/src/types/process.ts — references — ProcessNode, Process 类型
  */
 ```
 
-### .ooc/web/src/features/ProcessView.tsx 的前向引用
+### kernel/web/src/features/ProcessView.tsx 的前向引用
 
 ```tsx
 /**
  * ProcessView —— 行为树可视化
  *
- * @ref .ooc/docs/哲学文档/gene.md#G9 — renders — 行为树节点状态与 focus
- * @ref .ooc/docs/哲学文档/gene.md#G11 — implements — UI 作为对象的面孔
- * @ref src/types/process.ts — references — ProcessNode 数据结构
+ * @ref docs/哲学文档/gene.md#G9 — renders — 行为树节点状态与 focus
+ * @ref docs/哲学文档/gene.md#G11 — implements — UI 作为对象的面孔
+ * @ref kernel/src/types/process.ts — references — ProcessNode 数据结构
  */
 ```
 

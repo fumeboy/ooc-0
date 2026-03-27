@@ -224,13 +224,13 @@ curl -X POST http://localhost:8080/api/talk/x -d '{"message":"hello"}'
 
 ```bash
 # 检查对象目录
-ls .ooc/objects/
-cat .ooc/objects/<name>/readme.md
-cat .ooc/objects/<name>/data.json
+ls stones/
+cat stones/<name>/readme.md
+cat stones/<name>/data.json
 
 # 检查 Flow 数据
-ls .ooc/objects/<name>/effects/
-cat .ooc/objects/<name>/effects/<taskId>/data.json
+ls stones/<name>/effects/
+cat stones/<name>/effects/<taskId>/data.json
 ```
 
 ---
@@ -273,7 +273,7 @@ cat .ooc/objects/<name>/effects/<taskId>/data.json
   ```json
   {"taskId":"task_xxx","status":"finished","messages":[...]}
   ```
-- 持久化验证: `.ooc/objects/greeter/effects/task_xxx/data.json` 存在且包含完整 actions
+- 持久化验证: `stones/greeter/effects/task_xxx/data.json` 存在且包含完整 actions
 ```
 
 ---

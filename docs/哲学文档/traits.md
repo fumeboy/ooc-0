@@ -1,11 +1,11 @@
 # Traits — Kernel Trait 设计
 
 <!--
-@ref .ooc/docs/哲学文档/gene.md#G3 — extends — Kernel Trait 的具体设计
-@ref .ooc/docs/哲学文档/gene.md#G13 — references — 认知栈 before/after 帧驱动 Trait 自动激活
-@referenced-by src/trait/loader.ts — implemented-by
-@referenced-by src/trait/activator.ts — implemented-by
-@referenced-by src/trait/registry.ts — implemented-by
+@ref docs/哲学文档/gene.md#G3 — extends — Kernel Trait 的具体设计
+@ref docs/哲学文档/gene.md#G13 — references — 认知栈 before/after 帧驱动 Trait 自动激活
+@referenced-by kernel/src/trait/loader.ts — implemented-by
+@referenced-by kernel/src/trait/activator.ts — implemented-by
+@referenced-by kernel/src/trait/registry.ts — implemented-by
 -->
 
 本文档是 kernel traits 的索引。每个 trait 的详细设计见 `traits/` 子目录。

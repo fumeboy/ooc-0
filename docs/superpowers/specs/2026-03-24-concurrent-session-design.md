@@ -4,9 +4,9 @@
 > 根因：`World` 类用单例 `this._session` 管理运行时状态，`notifySupervisor` 的 fire-and-forget 模式导致并发 session 互相覆盖。
 
 <!--
-@ref src/world/world.ts — fixes — session 竞态条件
-@ref src/world/router.ts — fixes — Routable 接口扩展
-@ref .ooc/docs/哲学文档/gene.md#G8 — references — 对象协作消息机制
+@ref kernel/src/world/world.ts — fixes — session 竞态条件
+@ref kernel/src/world/router.ts — fixes — Routable 接口扩展
+@ref docs/哲学文档/gene.md#G8 — references — 对象协作消息机制
 -->
 
 ---
@@ -210,14 +210,14 @@ private _ensureReflectFlow(stone: Stone, session: TaskSession): Flow {
 
 | 文件 | 改动 |
 |------|------|
-| `src/world/world.ts` | 4 个单例字段 → `_activeSessions` Map；三个主方法改造；`deliverMessage`/`deliverFromSelfMeta` 加 sessionId；`_loadExistingSubFlows`/`_ensureReflectFlow` 加 session 参数 |
-| `src/world/router.ts` | `Routable` 接口加 sessionId；`createCollaborationAPI` 加 sessionId 参数并闭包传递 |
+| `kernel/src/world/world.ts` | 4 个单例字段 → `_activeSessions` Map；三个主方法改造；`deliverMessage`/`deliverFromSelfMeta` 加 sessionId；`_loadExistingSubFlows`/`_ensureReflectFlow` 加 session 参数 |
+| `kernel/src/world/router.ts` | `Routable` 接口加 sessionId；`createCollaborationAPI` 加 sessionId 参数并闭包传递 |
 
 **不改的文件**：
-- `src/server/server.ts` — notifySupervisor 的 fire-and-forget 模式不再有问题
-- `src/flow/flow.ts` — Flow 类不变
-- `src/scheduler/` — Scheduler 类不变
-- `tests/` — 现有测试可能需要适配（如果直接访问了 `_session`）
+- `kernel/src/server/server.ts` — notifySupervisor 的 fire-and-forget 模式不再有问题
+- `kernel/src/flow/flow.ts` — Flow 类不变
+- `kernel/src/scheduler/` — Scheduler 类不变
+- `kernel/tests/` — 现有测试可能需要适配（如果直接访问了 `_session`）
 
 ---
 

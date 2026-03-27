@@ -1,7 +1,7 @@
 # Emergence — Gene 组合所涌现的能力
 
 <!--
-@ref .ooc/docs/哲学文档/gene.md — extends — 13 条基因组合涌现的高阶能力
+@ref docs/哲学文档/gene.md — extends — 13 条基因组合涌现的高阶能力
 @referenced-by docs/实验/exp-013-phase1-4-e2e.md — validated-by
 @referenced-by docs/实验/exp-029-g12-experience-sedimentation.md — validated-by
 -->

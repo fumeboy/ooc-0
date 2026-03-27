@@ -224,14 +224,14 @@ git commit -m "feat: progressive disclosure — trait catalog + focus 路径注�
 ### Task 4: 为所有现有 kernel traits 添加 description
 
 **Files:**
-- Modify: `.ooc/kernel/traits/computable/readme.md` (frontmatter)
-- Modify: `.ooc/kernel/traits/talkable/readme.md` (frontmatter)
-- Modify: `.ooc/kernel/traits/reflective/readme.md` (frontmatter)
-- Modify: `.ooc/kernel/traits/verifiable/readme.md` (frontmatter + hook)
-- Modify: `.ooc/kernel/traits/debuggable/readme.md` (frontmatter)
-- Modify: `.ooc/kernel/traits/plannable/readme.md` (frontmatter + 反合理化表)
-- Modify: `.ooc/kernel/traits/object_creation/readme.md` (frontmatter)
-- Modify: `.ooc/kernel/traits/web_search/readme.md` (frontmatter)
+- Modify: `kernel/traits/computable/readme.md` (frontmatter)
+- Modify: `kernel/traits/talkable/readme.md` (frontmatter)
+- Modify: `kernel/traits/reflective/readme.md` (frontmatter)
+- Modify: `kernel/traits/verifiable/readme.md` (frontmatter + hook)
+- Modify: `kernel/traits/debuggable/readme.md` (frontmatter)
+- Modify: `kernel/traits/plannable/readme.md` (frontmatter + 反合理化表)
+- Modify: `kernel/traits/object_creation/readme.md` (frontmatter)
+- Modify: `kernel/traits/web_search/readme.md` (frontmatter)
 
 - [ ] **Step 1: computable — 添加 description**
 
@@ -323,14 +323,14 @@ Expected: 全部 PASS
 - [ ] **Step 10: Commit**
 
 ```bash
-git add .ooc/kernel/traits/
+git add kernel/traits/
 git commit -m "feat: 所有 kernel traits 添加 description + verifiable hook 升级 + plannable 反合理化表"
 ```
 
 ### Task 5: 新增 testable trait
 
 **Files:**
-- Create: `.ooc/kernel/traits/testable/readme.md`
+- Create: `kernel/traits/testable/readme.md`
 
 - [ ] **Step 1: 创建 testable trait 目录和 readme.md**
 
@@ -399,14 +399,14 @@ Expected: 全部 PASS
 - [ ] **Step 3: Commit**
 
 ```bash
-git add .ooc/kernel/traits/testable/
+git add kernel/traits/testable/
 git commit -m "feat: 新增 testable kernel trait — TDD 红绿重构循环"
 ```
 
 ### Task 6: 新增 reviewable trait
 
 **Files:**
-- Create: `.ooc/kernel/traits/reviewable/readme.md`
+- Create: `kernel/traits/reviewable/readme.md`
 
 - [ ] **Step 1: 创建 reviewable trait 目录和 readme.md**
 
@@ -478,7 +478,7 @@ Expected: 全部 PASS
 - [ ] **Step 3: Commit**
 
 ```bash
-git add .ooc/kernel/traits/reviewable/
+git add kernel/traits/reviewable/
 git commit -m "feat: 新增 reviewable kernel trait — 两阶段审查"
 ```
 
@@ -496,5 +496,5 @@ Expected: 无错误
 
 - [ ] **Step 3: 验证 trait 加载**
 
-Run: `cd /Users/zhangzhefu/x/ooc && bun -e "import { loadAllTraits } from './src/trait/loader.js'; const t = await loadAllTraits('.ooc/stones/supervisor/traits', '.ooc/kernel/traits'); console.log(t.map(x => x.name + ': ' + (x.description || '(none)')))"`
+Run: `cd /Users/zhangzhefu/x/ooc && bun -e "import { loadAllTraits } from './kernel/src/trait/loader.js'; const t = await loadAllTraits('user/stones/supervisor/traits', 'kernel/traits'); console.log(t.map(x => x.name + ': ' + (x.description || '(none)')))"`
 Expected: 所有 kernel traits 显示 description

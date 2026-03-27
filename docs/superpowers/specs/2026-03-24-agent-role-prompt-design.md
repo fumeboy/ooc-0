@@ -3,15 +3,15 @@
 > 为 OOC 项目的所有 Agent 角色（开发侧 + 运行时侧）建立统一的 Prompt 编写方法论，并落地为具体的 agent 文件和对象 readme 优化。
 
 <!--
-@ref .ooc/docs/哲学文档/gene.md — implements — Prompt as Object 哲学（G1 身份, G3 能力, G5 注意力, G9 行为, G12 成长）
-@ref .ooc/docs/哲学文档/meta.md — extends — 概念树四面（存在/认知/行动/成长）扩展为七层 prompt 架构
-@ref .ooc/docs/组织/README.md — references — 1+3 组织模型
-@ref .ooc/stones/supervisor/readme.md — designs — 运行时 prompt 优化
-@ref .ooc/stones/sophia/readme.md — designs — 运行时 prompt 优化
-@ref .ooc/stones/kernel/readme.md — designs — 运行时 prompt 优化
-@ref .ooc/stones/iris/readme.md — designs — 运行时 prompt 优化
-@ref .ooc/stones/bruce/readme.md — designs — 运行时 prompt 优化
-@ref .ooc/stones/nexus/readme.md — designs — 运行时 prompt 优化
+@ref docs/哲学文档/gene.md — implements — Prompt as Object 哲学（G1 身份, G3 能力, G5 注意力, G9 行为, G12 成长）
+@ref docs/哲学文档/meta.md — extends — 概念树四面（存在/认知/行动/成长）扩展为七层 prompt 架构
+@ref docs/组织/README.md — references — 1+3 组织模型
+@ref stones/supervisor/readme.md — designs — 运行时 prompt 优化
+@ref stones/sophia/readme.md — designs — 运行时 prompt 优化
+@ref stones/kernel/readme.md — designs — 运行时 prompt 优化
+@ref stones/iris/readme.md — designs — 运行时 prompt 优化
+@ref stones/bruce/readme.md — designs — 运行时 prompt 优化
+@ref stones/nexus/readme.md — designs — 运行时 prompt 优化
 @referenced-by docs/规范/agent-prompt-methodology.md — extended-by — 精炼版方法论
 -->
 
@@ -165,11 +165,11 @@ meta.md 定义了对象的四个面：`Object = 存在 ∩ 认知 ∩ 行动 ∩
 | L6 协作协议 | 说明如何与 Supervisor 交互——通过 SendMessage 还是直接产出文件 |
 | 总长度 | 200-400 行（context window 要留给实际工作） |
 
-### OOC 运行时侧（`.ooc/stones/*/readme.md`）
+### OOC 运行时侧（`stones/*/readme.md`）
 
 OOC 系统内的活对象——在 ThinkLoop 中思考，通过 Effect 行动。
 
-> **路径说明**：gene.md (G7) 使用 `objects/` 作为概念名称，实际文件系统使用 `.ooc/stones/`。本 spec 以实际路径为准。
+> **路径说明**：gene.md (G7) 使用 `objects/` 作为概念名称，实际文件系统使用 `stones/`。本 spec 以实际路径为准。
 
 | 维度 | 约束 |
 |------|------|
@@ -210,7 +210,7 @@ OOC 系统内的活对象——在 ThinkLoop 中思考，通过 Effect 行动。
 - Candy 不单独做 agent 文件——作为 Bruce 的 Web 模式变体。spawn 时在 prompt 参数中指定 `模式: Web（Candy）`，Bruce agent 文件内包含 CLI/Web 双模式的行为差异说明
 - Alan Kay（Supervisor）不需要 agent 文件——已在 CLAUDE.md 中定义
 
-> **alan_kay vs supervisor 澄清**：`.ooc/stones/alan_kay/` 是 1+3 组织的总指挥（对应 CLAUDE.md 中的 Supervisor 角色），`.ooc/stones/supervisor/` 是 OOC 系统内面向用户的任务协调对象（接收用户消息、分发子任务、展示看板）。两者职责不同，本 spec 中"OOC 运行时侧"优化的是后者（supervisor），前者（alan_kay）的 prompt 由 CLAUDE.md 承载。
+> **alan_kay vs supervisor 澄清**：`stones/alan_kay/` 是 1+3 组织的总指挥（对应 CLAUDE.md 中的 Supervisor 角色），`stones/supervisor/` 是 OOC 系统内面向用户的任务协调对象（接收用户消息、分发子任务、展示看板）。两者职责不同，本 spec 中"OOC 运行时侧"优化的是后者（supervisor），前者（alan_kay）的 prompt 由 CLAUDE.md 承载。
 
 ### OOC 运行时侧（优化 6 个对象 readme）
 
@@ -245,12 +245,12 @@ OOC 系统内的活对象——在 ThinkLoop 中思考，通过 Effect 行动。
 | 5 | Nexus agent | `.claude/agents/nexus.md` | 新建 |
 | 6 | Bruce agent | `.claude/agents/bruce.md` | 新建 |
 | 7 | D1 agent | `.claude/agents/d1.md` | 新建 |
-| 8 | supervisor readme | `.ooc/stones/supervisor/readme.md` | 优化 |
-| 9 | sophia readme | `.ooc/stones/sophia/readme.md` | 优化 |
-| 10 | kernel readme | `.ooc/stones/kernel/readme.md` | 优化 |
-| 11 | iris readme | `.ooc/stones/iris/readme.md` | 优化 |
-| 12 | nexus readme | `.ooc/stones/nexus/readme.md` | 优化 |
-| 13 | bruce readme | `.ooc/stones/bruce/readme.md` | 优化 |
+| 8 | supervisor readme | `stones/supervisor/readme.md` | 优化 |
+| 9 | sophia readme | `stones/sophia/readme.md` | 优化 |
+| 10 | kernel readme | `stones/kernel/readme.md` | 优化 |
+| 11 | iris readme | `stones/iris/readme.md` | 优化 |
+| 12 | nexus readme | `stones/nexus/readme.md` | 优化 |
+| 13 | bruce readme | `stones/bruce/readme.md` | 优化 |
 
 > **方法论文档说明**：产出物 #1 是本 spec 的精炼版——去掉产出物清单和实施计划，保留七层架构、Prompt as Object 哲学、两侧适配指南、反模式清单，作为长期可引用的编写规范。
 
@@ -272,12 +272,12 @@ Phase 2: Claude Code agent 文件（6 个）
   → .claude/agents/d1.md
 
 Phase 3: OOC 对象 readme 优化（6 个）
-  → .ooc/stones/supervisor/readme.md
-  → .ooc/stones/sophia/readme.md
-  → .ooc/stones/kernel/readme.md
-  → .ooc/stones/iris/readme.md
-  → .ooc/stones/nexus/readme.md
-  → .ooc/stones/bruce/readme.md
+  → stones/supervisor/readme.md
+  → stones/sophia/readme.md
+  → stones/kernel/readme.md
+  → stones/iris/readme.md
+  → stones/nexus/readme.md
+  → stones/bruce/readme.md
 
 Phase 4: 验证
   → Claude Code agent 验证（每个 agent spawn 一次，执行典型任务）：
@@ -327,7 +327,7 @@ Phase 4: 验证
 
 我不负责：
 - 任何 src/ 下的代码（那是 Kernel 的事）
-- 任何 .ooc/web/ 下的前端（那是 Iris 的事）
+- 任何 kernel/web/ 下的前端（那是 Iris 的事）
 - 任何扩展 Trait 或功能对象（那是 Nexus 的事）
 - 具体的工程实现方案（我只回答"应不应该"，不回答"怎么实现"）
 
@@ -353,7 +353,7 @@ Phase 4: 验证
 
 ## L5: 行为铁律
 
-- 绝不修改 src/ 或 .ooc/web/ 下的任何代码——哲学层不碰工程实现
+- 绝不修改 kernel/src/ 或 kernel/web/ 下的任何代码——哲学层不碰工程实现
 - 绝不在没有检查基因一致性的情况下给出设计建议——每个回答都要引用具体基因编号
 - 必须在 questions.md 中记录重要的哲学决策——决策不能只存在于对话中
 

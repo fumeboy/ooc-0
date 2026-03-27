@@ -1,9 +1,9 @@
 <!--
-@ref .ooc/docs/哲学文档/meta.md — extends — 子树 5 Trait 架构
-@ref .ooc/docs/哲学文档/gene.md#G3 — implements — Trait 自我定义单元升级
-@ref .ooc/docs/哲学文档/gene.md#G13 — references — 认知栈作用域链（activateTrait 已实现）
-@ref src/trait/loader.ts — designs — frontmatter description 解析
-@ref src/context/builder.ts — designs — progressive disclosure 注入
+@ref docs/哲学文档/meta.md — extends — 子树 5 Trait 架构
+@ref docs/哲学文档/gene.md#G3 — implements — Trait 自我定义单元升级
+@ref docs/哲学文档/gene.md#G13 — references — 认知栈作用域链（activateTrait 已实现）
+@ref kernel/src/trait/loader.ts — designs — frontmatter description 解析
+@ref kernel/src/context/builder.ts — designs — progressive disclosure 注入
 -->
 
 # Trait 架构升级 — 吸收 Superpowers 精华
@@ -16,7 +16,7 @@
 1. **机制层**：context 效率（全量注入 vs 分层加载）
 2. **内容层**：工程纪律类 trait（验证、调试、测试、审查的编码化约束）
 
-注：运行时按需激活（`activateTrait`）已在 `src/flow/thinkloop.ts` 中实现，
+注：运行时按需激活（`activateTrait`）已在 `kernel/src/flow/thinkloop.ts` 中实现，
 存储在 `node.activatedTraits`，`computeScopeChain` 已合并。本 spec 不重复设计。
 
 核心洞察：superpowers 最有效的模式不是流程图，而是**反合理化表**（rationalization → counter）。
@@ -69,10 +69,10 @@ description: "思考-执行循环核心 API，Program 语法和方法定义"
 没有 description 的 trait fallback 到注入完整 readme（向后兼容）。
 
 **文件变更**：
-- `src/types/trait.ts` — TraitDefinition 新增 description 字段
-- `src/trait/loader.ts` — 从 frontmatter 解析 description
-- `src/context/builder.ts` — 构建 trait catalog window，focus trait 注入完整 readme
-- `src/context/formatter.ts` — 可能需要新增 trait catalog 渲染区域
+- `kernel/src/types/trait.ts` — TraitDefinition 新增 description 字段
+- `kernel/src/trait/loader.ts` — 从 frontmatter 解析 description
+- `kernel/src/context/builder.ts` — 构建 trait catalog window，focus trait 注入完整 readme
+- `kernel/src/context/formatter.ts` — 可能需要新增 trait catalog 渲染区域
 
 **always-on trait 与 progressive disclosure 的交互**：
 
@@ -85,8 +85,8 @@ description: "思考-执行循环核心 API，Program 语法和方法定义"
 这意味着 computable 和 talkable 在大多数场景下仍会注入完整 readme（因为几乎所有节点都需要它们），
 但 reflective、verifiable 等在非相关场景下只占一行 description。
 
-**注**：`activateTrait(name)` 运行时激活已在 `src/flow/thinkloop.ts:1290` 实现，
-存储在 `node.activatedTraits`，`src/process/cognitive-stack.ts:33-35` 的 `computeScopeChain` 已合并。
+**注**：`activateTrait(name)` 运行时激活已在 `kernel/src/flow/thinkloop.ts:1290` 实现，
+存储在 `node.activatedTraits`，`kernel/src/process/cognitive-stack.ts:33-35` 的 `computeScopeChain` 已合并。
 本 spec 不重复设计此功能。
 
 ---
