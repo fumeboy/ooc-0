@@ -3,8 +3,81 @@
 > 草稿文档。从 Object 出发，展开 OOC 的完整概念结构。
 
 <!--
-@ref .ooc/docs/哲学文档/gene.md — extends — 概念树形式的元分析
+@ref docs/哲学文档/gene.md — extends — 概念树形式的元分析
 -->
+
+---
+
+## 项目结构与 Git 仓库
+
+OOC 采用 **双仓库 + submodule** 结构。用户数据与内核代码分离，用户仓库通过 git submodule 引用内核。
+
+```
+ooc/                          ← user repo（用户仓库，git 根）
+├── CLAUDE.md                 ← 项目指令
+├── .env                      ← 环境变量（API Key 等）
+├── kernel/                   ← git submodule（内核仓库）
+│   ├── src/                  ← 后端源码（TypeScript, Bun runtime）
+│   │   ├── cli.ts            ← CLI 入口
+│   │   ├── server/           ← HTTP + SSE 服务
+│   │   ├── flow/             ← ThinkLoop, Flow
+│   │   ├── world/            ← World, Scheduler, Router
+│   │   ├── context/          ← Context 构建
+│   │   ├── process/          ← 行为树, 认知栈
+│   │   ├── stone/            ← Stone 操作
+│   │   ├── trait/            ← Trait 加载/激活
+│   │   ├── persistence/      ← 持久化读写
+│   │   ├── executable/       ← 沙箱执行器
+│   │   ├── thinkable/        ← LLM 配置
+│   │   └── types/            ← 类型定义
+│   ├── web/                  ← 前端源码（React + Vite + Jotai）
+│   │   └── src/
+│   │       ├── features/     ← 页面级组件
+│   │       ├── components/   ← 通用组件
+│   │       ├── store/        ← Jotai atoms
+│   │       ├── hooks/        ← React hooks
+│   │       ├── api/          ← API 客户端
+│   │       └── lib/          ← 工具函数
+│   ├── traits/               ← Kernel Traits（所有对象共享的基础能力）
+│   │   ├── computable/       ← 思考与执行
+│   │   ├── talkable/         ← 跨对象通信
+│   │   ├── reflective/       ← 记忆与反思
+│   │   ├── cognitive-style/  ← 认知栈思维模式（always-on）
+│   │   ├── plannable/        ← 任务规划
+│   │   └── ...
+│   ├── tests/                ← 单元测试（bun:test）
+│   └── package.json
+├── docs/                     ← 文档（哲学、架构、feature、规范）
+│   ├── meta.md               ← 本文件
+│   ├── 哲学文档/              ← gene.md, emergence.md, questions.md
+│   ├── 组织/                  ← 1+3 组织结构
+│   ├── feature/              ← Feature 设计文档
+│   ├── 规范/                  ← 编码规范、交叉引用
+│   └── superpowers/          ← specs/ + plans/
+├── stones/                   ← 对象持久化目录（每个对象一个子目录）
+│   ├── {name}/
+│   │   ├── .stone            ← 标记文件
+│   │   ├── readme.md         ← 身份
+│   │   ├── data.json         ← 动态数据
+│   │   ├── traits/           ← 用户自定义 Trait
+│   │   ├── reflect/          ← ReflectFlow 数据
+│   │   └── shared/           ← 共享文件
+│   └── ...
+└── flows/                    ← 会话数据（每个 session 一个子目录）
+    └── {taskId}/
+        └── flows/{name}/     ← 单个 Flow 的运行时数据
+```
+
+**运行方式**：从 user repo 根目录执行 `bun kernel/src/cli.ts start 8080`。
+
+**路径约定**：
+- 文档中引用后端代码：`kernel/src/...`
+- 文档中引用前端代码：`kernel/web/src/...`
+- 文档中引用 Kernel Traits：`kernel/traits/...`
+- 文档中引用测试：`kernel/tests/...`
+- 文档中引用对象目录：`stones/{name}/...`
+- 文档中引用会话数据：`flows/{taskId}/...`
+- 文档中引用其他文档：`docs/...`（相对于 user repo 根）
 
 ---
 
@@ -231,9 +304,9 @@ Object（对象）
 ### 子树 1: 持久化 — "对象如何存在于文件系统"（G7）
 
 ```
-.ooc/
-│
-├── stones/{name}/                  ── 一个 Stone = 一个目录
+stones/
+│                                       （位于 user repo 根目录下）
+├── {name}/                         ── 一个 Stone = 一个目录
 │   ├── .stone                      ── 标记文件（目录存在 → 对象存在）
 │   ├── readme.md                   ── 身份（who_am_i）
 │   ├── data.json                   ── 动态数据（键值对）
@@ -250,7 +323,7 @@ Object（对象）
     ├── process.json                ── 行为树（节点状态、actions 历史）
     └── shared/                     ── Flow 间共享数据
 
-代码: src/persistence/reader.ts（读）, src/persistence/writer.ts（写）
+代码: kernel/src/persistence/reader.ts（读）, kernel/src/persistence/writer.ts（写）
 ```
 
 ### 子树 2: 认知构建 — "Context 如何被组装"（G5, G13）
@@ -286,8 +359,8 @@ Context
     ├── 人工介入: 用户可查看、修改 llm.output.txt
     └── 恢复时: 读取 llm.output.txt 作为实际输出执行，然后删除两个临时文件
 
-代码: src/context/builder.ts（组装）, src/context/formatter.ts（格式化）
-      src/context/mirror.ts（Mirror）, src/context/history.ts（历史管理）
+代码: kernel/src/context/builder.ts（组装）, kernel/src/context/formatter.ts（格式化）
+      kernel/src/context/mirror.ts（Mirror）, kernel/src/context/history.ts（历史管理）
 ```
 
 ### 子树 3: 思考-执行 — "ThinkLoop 每一轮发生了什么"（G4, G9, G12, G13）
@@ -327,10 +400,10 @@ ThinkLoop
     └── 哲学意义: 实现 G12 沉淀循环的关键机制
                   经历 → reflect → ReflectFlow 审视 → 沉淀为 trait
 
-代码: src/flow/thinkloop.ts（循环引擎）, src/flow/flow.ts（ensureReflectFlow）
-      src/process/focus.ts（焦点推进）, src/process/tree.ts（行为树操作）
-      src/process/cognitive-stack.ts（认知栈）
-      src/world/world.ts（deliverToSelfMeta）, src/world/router.ts（talkToSelf）
+代码: kernel/src/flow/thinkloop.ts（循环引擎）, kernel/src/flow/flow.ts（ensureReflectFlow）
+      kernel/src/process/focus.ts（焦点推进）, kernel/src/process/tree.ts（行为树操作）
+      kernel/src/process/cognitive-stack.ts（认知栈）
+      kernel/src/world/world.ts（deliverToSelfMeta）, kernel/src/world/router.ts（talkToSelf）
 ```
 
 ### 子树 4: 协作 — "对象如何与其他对象交互"（G6, G8）
@@ -364,8 +437,8 @@ CollaborationAPI
         ├── 轮转调度：每个 Flow 执行一轮 ThinkLoop
         └── 检测终止条件：所有 Flow 都 done/waiting → Session 结束
 
-代码: src/world/router.ts（消息路由）, src/world/session.ts（Session 管理）
-      src/world/scheduler.ts（调度器）, src/world/world.ts（World 入口）
+代码: kernel/src/world/router.ts（消息路由）, kernel/src/world/session.ts（Session 管理）
+      kernel/src/world/scheduler.ts（调度器）, kernel/src/world/world.ts（World 入口）
 ```
 
 ### 子树 5: Trait — "能力如何定义、加载、生效"（G3, G13）
@@ -396,13 +469,13 @@ Trait
         ├── Trait 的 methods 注册为可调用 action
         └── ThinkLoop 执行时查找并调用
 
-代码: src/trait/loader.ts（加载）, src/trait/activator.ts（激活）
-      src/trait/registry.ts（方法注册）, src/types/trait.ts（类型定义）
+代码: kernel/src/trait/loader.ts（加载）, kernel/src/trait/activator.ts（激活）
+      kernel/src/trait/registry.ts（方法注册）, kernel/src/types/trait.ts（类型定义）
 ```
 
 #### Kernel Traits — 三层结构
 
-Kernel Traits 是所有对象共享的基础能力，位于 `.ooc/kernel/traits/`。
+Kernel Traits 是所有对象共享的基础能力，位于 `kernel/traits/`。
 它们按激活策略分为三层，组合起来定义了"作为 OOC 对象意味着什么"。
 
 ```
@@ -410,8 +483,8 @@ Kernel Traits
 │
 ├── 基座层（when: always）── 定义最小可行智能体
 │   │
-│   │   这四个 trait 始终激活，任何对象都具备。
-│   │   它们的组合 = 能思考 + 能交流 + 能成长 + 不自欺。
+│   │   这五个 trait 始终激活，任何对象都具备。
+│   │   它们的组合 = 能思考 + 能交流 + 能成长 + 不自欺 + 会拆解。
 │   │
 │   ├── computable   ── 思考与执行（G4）
 │   │       Think-Execute 循环、输出格式、可用 API。
@@ -429,6 +502,10 @@ Kernel Traits
 │   └── verifiable   ── 认识论诚实
 │           "没有验证证据，不做完成声明。"
 │           没有它，对象会自欺。
+│
+│   └── cognitive-style ── 认知栈思维模式（G13）
+│           教对象用行为树结构化思考：何时拆解、何时 push/pop 子帧。
+│           没有它，对象会把所有事情堆在一个节点里。
 │
 ├── 认知工具层（when: conditional）── 按需激活的思维策略
 │   │
@@ -657,8 +734,8 @@ Web UI 概念树
     └── MarkdownContent 自动识别并拦截 ooc:// 链接
         → 点击打开 OocLinkPreview 侧滑面板
 
-代码: .ooc/web/src/App.tsx, .ooc/web/src/features/, .ooc/web/src/components/
-      .ooc/web/src/store/, .ooc/web/src/api/client.ts
+代码: kernel/web/src/App.tsx, kernel/web/src/features/, kernel/web/src/components/
+      kernel/web/src/store/, kernel/web/src/api/client.ts
 ```
 
 ---
