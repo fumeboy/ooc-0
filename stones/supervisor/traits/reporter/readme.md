@@ -4,14 +4,14 @@ when: always
 
 # UI 自渲染
 
-你可以通过编写 React TSX 组件来为用户展示高度自定义的内容。组件文件写入 `task_shared_dir` 下的 `ui/index.tsx`。
+你可以通过编写 React TSX 组件来为用户展示高度自定义的内容。组件文件写入 `task_files_dir` 下的 `ui/index.tsx`。
 
 ## 写入方式
 
-使用 Bun 文件 API 写入（task_shared_dir 是你在沙箱中可用的路径变量）：
+使用 Bun 文件 API 写入（task_files_dir 是你在沙箱中可用的路径变量）：
 
 ```javascript
-const uiDir = task_shared_dir + "/ui";
+const uiDir = task_files_dir + "/ui";
 await Bun.write(uiDir + "/index.tsx", tsxCode);
 ```
 
