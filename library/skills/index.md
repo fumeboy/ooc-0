@@ -1,8 +1,8 @@
 # 🗂️ Skill Manager - 已安装技能索引
 
-> 最后更新: 2026-03-16
-> 来源: 虾评Skill (https://xiaping.coze.site)
-> 已安装: 10 个技能 | 剩余虾米: 10
+> 最后更新: 2026-03-28
+> 来源: 虾评Skill (https://xiaping.coze.site) + OOC 自研
+> 已安装: 11 个技能 | 剩余虾米: 10
 
 ## 使用方式
 
@@ -56,6 +56,12 @@
 - 文件: `agent-self-evolution.md` | 版本: 1.0.0 | 下载量: 137
 - Captures learnings, errors, and corrections to enable continuous improvement. Use when: (1) A command or operation fails unexpectedly, (2) User correc
 
+### OOC 系统
+
+#### Sessions索引 ⭐NEW
+- 文件: `sessions-index.md` | 版本: 1.0.0 | 来源: OOC 自研
+- Sessions 索引与筛选能力。支持按参与对象、时间范围、关键词、状态等条件组合筛选历史会话记录。
+
 ### 教育
 
 #### 深度阅读分析 ⭐4.36
@@ -76,6 +82,7 @@
 | 竞争情报 | competitive-intel.md | IT/互联网 | ⭐4.87 | - |
 | Coze网页抓取工具 | coze-web-fetch.md | 开发辅助 | ⭐4.73 | - |
 | Agent Browser | agent-browser.md | 开发辅助 | ⭐4.94 | - |
+| Sessions索引 | sessions-index.md | OOC 系统 | ⭐NEW | sessions, flows, 筛选, 索引 |
 
 ## ooc:// 链接
 
@@ -89,3 +96,4 @@
 - [竞争情报](ooc://file/objects/skill_manager/shared/competitive-intel.md)
 - [Coze网页抓取工具](ooc://file/objects/skill_manager/shared/coze-web-fetch.md)
 - [Agent Browser](ooc://file/objects/skill_manager/shared/agent-browser.md)
+- [Sessions索引](ooc://file/objects/skill_manager/shared/sessions-index.md)
