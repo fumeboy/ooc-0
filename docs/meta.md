@@ -44,6 +44,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── reflective/       ← 记忆与反思
 │   │   ├── cognitive-style/  ← 认知栈思维模式（always-on）
 │   │   ├── plannable/        ← 任务规划
+│   │   ├── library_index/    ← Library 资源查询
 │   │   └── ...
 │   ├── tests/                ← 单元测试（bun:test）
 │   └── package.json
@@ -54,6 +55,13 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   ├── feature/              ← Feature 设计文档
 │   ├── 规范/                  ← 编码规范、交叉引用
 │   └── superpowers/          ← specs/ + plans/
+├── library/                  ← 公共资源库（Library 对象）
+│   ├── .stone                ← 对象标记
+│   ├── readme.md             ← Library 身份定义
+│   ├── data.json             ← 资源计数
+│   ├── skills/               ← 公用 Skills（markdown 模板）
+│   ├── traits/               ← 公用 Traits（对象间可复用）
+│   └── ui-components/        ← 公用 UI 组件
 ├── stones/                   ← 对象持久化目录（每个对象一个子目录）
 │   ├── {name}/
 │   │   ├── .stone            ← 标记文件
@@ -61,7 +69,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── data.json         ← 动态数据
 │   │   ├── traits/           ← 用户自定义 Trait
 │   │   ├── reflect/          ← ReflectFlow 数据
-│   │   └── shared/           ← 共享文件
+│   │   └── files/            ← 共享文件（原 shared/，已重命名）
 │   └── ...
 └── flows/                    ← 会话数据（每个 session 一个子目录）
     └── {taskId}/
@@ -288,9 +296,11 @@ Object（对象）
     │       对象改变自己 → UI 自动改变。
     │
     └── 自渲染（G11 实现）
-            对象在 shared/ui/index.tsx 中编写 React 组件。
+            对象在 ui/index.tsx 中编写 React 组件（Stone 级别）。
+            Flow 级别在 files/ui/index.tsx 中编写。
             前端通过 Vite 原生 import 加载，自动热更新。
             无 ui/index.tsx 的对象使用通用视图（fallback）。
+            有自定义 UI 时默认展示 UI Tab。
             渲染失败时自动降级到通用视图。
 ```
 
@@ -314,14 +324,14 @@ stones/
 │   ├── reflect/                    ── ReflectFlow 的持久化目录
 │   │   ├── data.json               ── ReflectFlow 的运行时数据
 │   │   ├── process.json            ── ReflectFlow 的行为树
-│   │   └── shared/                 ── ReflectFlow 的共享数据
+│   │   └── files/                  ── ReflectFlow 的共享数据（原 shared/）
 │   └── (未来: memory.md)           ── 长期记忆
 │
 └── flows/{taskId}/flows/{name}/    ── 一个 Flow = 一个目录
     ├── .flow                       ── 标记文件（Flow 存活标志）
     ├── data.json                   ── Flow 的运行时数据
     ├── process.json                ── 行为树（节点状态、actions 历史）
-    └── shared/                     ── Flow 间共享数据
+    └── files/                     ── Flow 共享数据（原 shared/，已重命名）
 
 代码: kernel/src/persistence/reader.ts（读）, kernel/src/persistence/writer.ts（写）
 ```
@@ -435,6 +445,8 @@ CollaborationAPI
     └── Scheduler
         ├── 维护所有活跃 Flow 的队列
         ├── 轮转调度：每个 Flow 执行一轮 ThinkLoop
+        ├── 并发线程：同一 Flow 内多个 running thread 通过 Promise.all 并行执行
+        │       fork_threads / join_threads / finish_thread API
         └── 检测终止条件：所有 Flow 都 done/waiting → Session 结束
 
 代码: kernel/src/world/router.ts（消息路由）, kernel/src/world/session.ts（Session 管理）
@@ -454,8 +466,8 @@ Trait
 │   ├── hooks        ── 生命周期钩子（before_finish, before_wait, on_error）
 │   └── methods      ── 注册方法（ThinkLoop 中可调用的 actions）
 │
-├── 加载链路
-│   └── stones/{name}/traits/*.md
+├── 加载链路（三层，同名后者覆盖前者）
+│   └── 1. kernel/traits/ → 2. library/traits/ → 3. stones/{name}/traits/
 │       → loader.ts 解析 Trait 文件
 │       → TraitDefinition[]
 │
@@ -554,10 +566,14 @@ Web UI 概念树
 │   │       └── FileTree ── 通用文件目录树（Stones / World 模式）
 │   │               带 marker 图标：Box=stone, GitBranch=flow, Folder=普通目录
 │   │
-│   ├── Stage（舞台）── 主内容区（页中页，圆角卡片 + 纸质纹理背景）
-│   │   ├── TabBar ── IDE 风格文件标签栏（EditorTabs，多 tab 切换 + 关闭）
+│   ├── Stage（舞台）── 主内容区
+│   │   ├── EditorTabs ── IDE 风格文件标签栏（多 tab 切换 + 关闭）
+│   │   │       顶部路径面包屑 + 小圆角 label 样式 tab
+│   │   ├── Breadcrumb ── 路径面包屑导航（Header 与 Content 之间）
 │   │   ├── RefreshButton ── 手动刷新按钮
-│   │   └── ViewRouter ── 视图路由器（根据文件路径分发到对应视图）
+│   │   └── ViewRegistry ── 视图注册表（根据文件路径分发到对应视图）
+│   │           注册机制：match + priority + tabKey + tabLabel
+│   │           替代原 ViewRouter 的硬编码路由
 │   │
 │   └── MessageDock（消息坞）── 右侧消息面板（仅桌面端 Flows 模式）
 │       │   固定对话对象为 supervisor，可折叠/展开。
@@ -565,18 +581,20 @@ Web UI 概念树
 │       ├── StreamingIndicator ── 流式回复实时展示
 │       └── MessageInput ── 消息输入框
 │
-├── 视图路由（ViewRouter）── "打开什么路径，看到什么视图"
+├── 视图注册表（ViewRegistry）── "打开什么路径，看到什么视图"
 │   │
-│   │   路径 → 视图的映射规则：
+│   │   注册机制：每个视图组件注册 match/priority/tabKey/tabLabel。
+│   │   路径 → 按优先级匹配 → 渲染对应组件（props: { path }）。
+│   │   tabKey 决定是否复用已有 tab。
 │   │
-│   ├── stones/{name}          → StoneView（ObjectDetail 或 DynamicUI）
-│   ├── flows/{sessionId}      → ChatView（ChatPage）
-│   ├── flows/{sid}/flows/{name} → FlowView（Flow 详情，含 UI Tab）
-│   ├── flows/{sid}/flows/{name}/shared/ui → DynamicUI（Flow 自渲染 UI）
-│   ├── **/process.json        → ProcessJsonView（行为树查看器）
-│   ├── *.json                 → CodeViewer（CodeMirror JSON 高亮）
-│   ├── *.md                   → MarkdownViewer（Markdown 渲染）
-│   └── *                      → CodeViewer（CodeMirror 纯文本/代码高亮）
+│   ├── stones/{name}              → StoneView（ObjectDetail 或 DynamicUI）[priority: 50]
+│   ├── stones/{name}/reflect/     → ReflectFlowView（Process + Data）[priority: 80]
+│   ├── flows/{sessionId}          → SessionGantt（甘特图总览）[priority: 100]
+│   ├── flows/{sid}/flows/{name}   → FlowView（Flow 详情，含 Readme/Data/UI Tab）[priority: 100]
+│   ├── **/process.json            → ProcessJsonView（行为树查看器）[priority: 40]
+│   ├── *.json                     → CodeViewer（CodeMirror JSON 高亮）[priority: 0]
+│   ├── *.md                       → MarkdownViewer（Markdown 渲染）[priority: 0]
+│   └── *                          → CodeViewer（CodeMirror 纯文本/代码高亮）[priority: 0]
 │
 ├── 页面级视图 ── 占据 Stage 全部空间的完整页面
 │   │
@@ -595,6 +613,7 @@ Web UI 概念树
 │   │
 │   ├── StoneView（Stone 视图）── 对象的完整身份展示
 │   │   │   ObjectDetail 或 DynamicUI（自渲染优先）
+│   │   │   Header：左侧头像+名称，右侧按钮组 Tabs
 │   │   │
 │   │   ├── ObjectDetail ── 通用 Stone 详情页（多 Tab）
 │   │   │   ├── ReadmeTab ── ObjectReadmeView（两栏：左 readme + 右名片）
@@ -604,7 +623,6 @@ Web UI 概念树
 │   │   │   │   └── MethodsList ── Public Methods 列表
 │   │   │   ├── DataTab ── 数据键值对表格（复杂值可折叠展开）
 │   │   │   ├── EffectsTab ── Session 列表（点击进入 FlowDetail）
-│   │   │   ├── SharedTab ── 共享文件浏览器（双栏：文件列表 + 内容预览）
 │   │   │   ├── MemoryTab ── 长期记忆展示（Markdown 渲染）
 │   │   │   └── UITab ── 自渲染 UI 标签页（如果对象注册了自定义 UI）
 │   │   │
@@ -613,11 +631,21 @@ Web UI 概念树
 │   │           渲染失败自动降级到 fallback
 │   │
 │   ├── FlowView（Flow 视图）── 单个 Flow 对象的详情
-│   │   │   头部（对象名 + 状态 Badge）+ Tab 切换
+│   │   │   Header：左侧头像+名称+状态Badge，右侧按钮组 Tabs
 │   │   │
 │   │   ├── TimelineTab ── 时间线（消息 + actions 按时间排序）
 │   │   ├── ProcessTab ── 行为树视图（复用 ProcessView）
-│   │   └── UITab ── Flow 自渲染 UI（DynamicUI 加载 shared/ui/index.tsx）
+│   │   ├── ReadmeTab ── 对象 Readme（复用 ObjectReadmeView）
+│   │   ├── DataTab ── 分栏设计（左栏 Flow data + 右栏 Stone data）
+│   │   └── UITab ── Flow 自渲染 UI（DynamicUI 加载 files/ui/index.tsx）
+│   │
+│   ├── SessionGantt（Session 甘特图）── Session 级总览
+│   │   │   每行一个参与 Object，每个块代表一个 focus 事项（ProcessNode）
+│   │   │   块按开始时间排序后分列放置，固定宽度展示 title/summary
+│   │   │
+│   │   ├── GanttBlock ── 甘特图块（状态着色：done 绿/doing 琥珀/todo 灰）
+│   │   ├── SummaryModal ── 点击块弹出的模态卡片（summary + 跳转 Process tab）
+│   │   └── 图例 ── 状态颜色说明
 │   │
 │   └── FlowDetail（Flow 详情）── 嵌入式 Flow 查看（EffectsTab 内使用）
 │   │   ├── MessagesView ── 消息列表
@@ -734,7 +762,7 @@ Web UI 概念树
     └── MarkdownContent 自动识别并拦截 ooc:// 链接
         → 点击打开 OocLinkPreview 侧滑面板
 
-代码: kernel/web/src/App.tsx, kernel/web/src/features/, kernel/web/src/components/
+代码: kernel/web/src/App.tsx, kernel/web/src/router/, kernel/web/src/features/, kernel/web/src/components/
       kernel/web/src/store/, kernel/web/src/api/client.ts
 ```
 
