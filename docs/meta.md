@@ -55,11 +55,11 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   ├── feature/              ← Feature 设计文档
 │   ├── 规范/                  ← 编码规范、交叉引用
 │   └── superpowers/          ← specs/ + plans/
-├── library/                  ← 公共资源库（Library 对象）
+├── library/                  ← 公共资源库 + Skill 管理器（Library 对象）
 │   ├── .stone                ← 对象标记
-│   ├── readme.md             ← Library 身份定义
-│   ├── data.json             ← 资源计数
-│   ├── skills/               ← 公用 Skills（markdown 模板）
+│   ├── readme.md             ← Library 身份定义（含 Skill 市场交互能力）
+│   ├── data.json             ← 资源统计 + 已安装 Skill 索引 + 市场凭证
+│   ├── skills/               ← 公用 Skills（markdown 模板，含市场安装的 skill）
 │   ├── traits/               ← 公用 Traits（对象间可复用）
 │   └── ui-components/        ← 公用 UI 组件
 ├── stones/                   ← 对象持久化目录（每个对象一个子目录）
