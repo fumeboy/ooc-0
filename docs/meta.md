@@ -67,13 +67,15 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── .stone            ← 标记文件
 │   │   ├── readme.md         ← 身份
 │   │   ├── data.json         ← 动态数据
+│   │   ├── memory.md         ← 长期记忆
 │   │   ├── traits/           ← 用户自定义 Trait
 │   │   ├── reflect/          ← ReflectFlow 数据
-│   │   └── files/            ← 共享文件（原 shared/，已重命名）
+│   │   └── files/            ← 共享文件
 │   └── ...
 └── flows/                    ← 会话数据（每个 session 一个子目录）
     └── {taskId}/
-        └── flows/{name}/     ← 单个 Flow 的运行时数据
+        ├── .session.json     ← Session 元数据（title）
+        └── {name}/     ← 单个 Flow 的运行时数据
 ```
 
 **运行方式**：从 user repo 根目录执行 `bun kernel/src/cli.ts start 8080`。
@@ -320,18 +322,22 @@ stones/
 │   ├── .stone                      ── 标记文件（目录存在 → 对象存在）
 │   ├── readme.md                   ── 身份（who_am_i）
 │   ├── data.json                   ── 动态数据（键值对）
+│   ├── memory.md                   ── 长期记忆（跨任务持久存在）
 │   ├── traits/                     ── 能力定义（Trait 文件）
 │   ├── reflect/                    ── ReflectFlow 的持久化目录
 │   │   ├── data.json               ── ReflectFlow 的运行时数据
 │   │   ├── process.json            ── ReflectFlow 的行为树
-│   │   └── files/                  ── ReflectFlow 的共享数据（原 shared/）
-│   └── (未来: memory.md)           ── 长期记忆
+│   │   └── files/                  ── ReflectFlow 的共享数据
+│   └── files/                      ── 共享文件
 │
-└── flows/{taskId}/flows/{name}/    ── 一个 Flow = 一个目录
-    ├── .flow                       ── 标记文件（Flow 存活标志）
-    ├── data.json                   ── Flow 的运行时数据
-    ├── process.json                ── 行为树（节点状态、actions 历史）
-    └── files/                     ── Flow 共享数据（原 shared/，已重命名）
+└── flows/{taskId}/                 ── 一个 Session = 一个目录
+    ├── .session.json               ── Session 元数据（title 等）
+    └── flows/{name}/               ── 一个 Flow = 一个目录
+        ├── .flow                   ── 标记文件（Flow 存活标志）
+        ├── data.json               ── Flow 的运行时数据
+        ├── process.json            ── 行为树（节点状态、actions 历史）
+        ├── memory.md               ── 会话记忆（仅当前任务可见）
+        └── files/                  ── Flow 共享数据
 
 代码: kernel/src/persistence/reader.ts（读）, kernel/src/persistence/writer.ts（写）
 ```
