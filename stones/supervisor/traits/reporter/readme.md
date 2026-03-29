@@ -88,3 +88,24 @@ export default function SupervisorReport({ sessionId, objectName }) {
 - 不要省略历史进展记录
 - 即使任务失败也要更新 UI，标注失败原因
 - UI 面向人类用户，注重可读性和视觉层次
+
+## 验证 UI
+
+每次写入 ui/index.tsx 后，**必须验证文件能否编译成功**。使用 Bun Transpiler 检查：
+
+```javascript
+const uiPath = task_files_dir + "/ui/index.tsx";
+await Bun.write(uiPath, tsxCode);
+
+// 验证编译
+try {
+  const code = await Bun.file(uiPath).text();
+  new Bun.Transpiler({ loader: "tsx" }).transformSync(code);
+  print("UI 验证通过");
+} catch (e) {
+  print("UI 编译失败:", e.message);
+  // 根据错误信息修复 tsxCode 后重新写入
+}
+```
+
+如果编译失败，根据错误信息修复代码后重新写入并再次验证。不要跳过验证直接 [wait]。
