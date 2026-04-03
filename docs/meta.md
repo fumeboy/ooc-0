@@ -205,28 +205,45 @@ Object（对象）
 │   │
 │   ├── 栈帧语义
 │   │   │   每个 ProcessNode = 一个栈帧。
-│   │   │   操作借鉴编程语言的调用栈：
+│   │   │   操作使用段落标记格式，与 [talk]、[action] 保持一致：
 │   │   │
-│   │   ├── add_stack_frame ── 压栈：创建子节点
-│   │   ├── return ── 弹栈：执行 when_stack_pop hooks，完成当前帧
-│   │   ├── go ── 跳转：移动线程 focus，离开 doing 节点触发 when_yield
-│   │   ├── throw/catch ── 异常冒泡 + when_error hook
-│   │   ├── compress ── 折叠：将 actions 移到子帧，生成 summary
+│   │   ├── [cognize_stack_frame_push] ── 压栈：创建普通子栈帧
+│   │   │       支持属性段落：title（必填）、description、traits、outputs、outputDescription
+│   │   ├── [cognize_stack_frame_pop] ── 弹栈：执行 when_stack_pop hooks，完成当前帧
+│   │   │       支持属性段落：summary、artifacts（JSON 输出，合并到父节点 locals）
+│   │   ├── [reflect_stack_frame_push/pop] ── 进入/退出内联 reflect 子栈帧
+│   │   │       用于主动调整 plan、traits 或审视上文
+│   │   ├── [set_plan] ── 更新当前节点的 plan 文本（展示在认知栈区域）
+│   │   ├── stack_throw ── 抛出异常，触发 when_error hook
 │   │   └── defer = create_hook("when_stack_pop", handler)
 │   │           不引入独立概念，hook 系统统一处理。
-│   │           yield 是被动事件，不是主动操作。
+│   │
+│   ├── 节点类型与内联子节点
+│   │   │   区分普通子栈帧和内联子节点：
+│   │   │
+│   │   ├── frame ── 普通子栈帧（[cognize_stack_frame_push] 创建）
+│   │   │       独立生命周期，加入 todo 队列，触发 when_stack_pop 等 hooks
+│   │   ├── inline_before ── before hook 内联子节点（自动创建）
+│   │   │       在 [cognize_stack_frame_push] 时触发，完成后才执行原始 push
+│   │   ├── inline_after ── after hook 内联子节点（自动创建）
+│   │   │       在 [cognize_stack_frame_pop] 后触发，完成后回到父节点
+│   │   └── inline_reflect ── reflect 内联子节点（[reflect_stack_frame_push] 创建）
+│   │           主动触发，依附于父节点上下文
 │   │
 │   ├── Hook 时机扩展
 │   │   │   栈帧级生命周期回调，运行时通过 create_hook 注册。
 │   │   │
 │   │   ├── when_stack_push ── 新栈帧创建时
-│   │   ├── when_stack_pop ── 栈帧 return 时（defer 统一为此，LIFO 执行）
+│   │   ├── when_stack_pop ── 栈帧 pop 时（defer 统一为此，LIFO 执行）
 │   │   ├── when_yield ── focus 离开 doing 节点时（被动触发）
-│   │   ├── when_error ── throw 冒泡到当前帧时
-│   │   │
-│   │   └── Hook 类型
-│   │           inject_message ── 注入系统消息到 context
-│   │           create_todo ── 创建 todo 项到队列
+│   │   ├── when_error ── stack_throw 冒泡到当前帧时
+│   │   ├── before ── [cognize_stack_frame_push] 时（创建 inline_before 内联节点）
+│   │   ├── after ── [cognize_stack_frame_pop] 后（创建 inline_after 内联节点）
+│   │   └── reflect ── [reflect_stack_frame_push] 时
+│   │       │
+│   │       └── Hook 类型
+│   │               inject_message ── 注入系统消息到 context（内联节点中记录为 inject action）
+│   │               create_todo ── 创建 todo 项到队列
 │   │
 │   └── 注意力与遗忘（G5）
 │           Context 有容量限制。不是所有信息都能同时存在。
@@ -683,7 +700,7 @@ Web UI 概念树
 │   │   │   └── Toolbar ── 工具栏（Zoom-in / Copy / Ref 按钮）
 │   │   ├── CardBody ── 内容区
 │   │   │   ├── 普通类型 → MarkdownContent 渲染
-│   │   │   └── program 类型 → 双栏（Program 代码 + Output 结果）
+│   │   │   └── program/action 类型 → 默认单栏（只显示 input），Output 在 Maximize（Modal）中展示
 │   │   └── ZoomSheet ── 展开详情侧滑面板（Sheet）
 │   │
 │   └── TalkCard（对话卡片）── 展示单条对话消息
@@ -758,7 +775,9 @@ Web UI 概念树
 │   ├── flow:message ── 新消息事件
 │   ├── flow:action ── 新 Action 事件
 │   ├── flow:talk ── 流式对话事件
-│   └── flow:thought ── 流式思考事件
+│   ├── flow:thought ── 流式思考事件
+│   ├── stream:program ── 流式 program 事件
+│   └── stream:action ── 流式 action 事件
 │
 └── ooc:// 协议 ── 前端内部链接系统
     │   对象间导航的统一寻址方式

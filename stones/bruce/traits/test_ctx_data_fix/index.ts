@@ -1,1 +1,0 @@
-export function testCtxData(ctx) { ctx.setData("counter", 1); const v1 = ctx.data.counter; ctx.setData("counter", 2); const v2 = ctx.data.counter; return { v1, v2 }; }

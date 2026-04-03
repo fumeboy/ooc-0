@@ -91,6 +91,35 @@
 
 **根因**：对象跳过了验证步骤（违反 verifiable trait）
 
+### 模式 7：LLM 流式空内容与参数越界
+
+**症状**：简单请求（如 “hi”）也触发任务失败或“处理超时”，同时日志出现 HTTP 400
+
+**根因**：
+- 上游流式响应只返回 reasoning_content，客户端仅消费 delta.content 导致空输出
+- max_tokens 设为 400000，超过上游上限（<= 131072），触发 400
+- when_wait 注入后未再次输出 [wait]，被判定为超时
+
+**诊断线索**：
+- 终端出现 `HTTP 400 ... max_tokens ... <= 131072`
+- flow 中出现 “任务处理超时，未能完成”
+- llm.output.txt 为空或仅含 [thought]/[talk]/[wait]
+
+**修复方向**：
+- 限制 max_tokens 上限
+- 流式无 content 时回退到非流式或使用 reasoning_content
+- when_wait 注入后允许下一轮自动进入 waiting
+
+## 本次案例
+
+**触发**：supervisor 收到 “hi” 即失败
+
+**证据**：终端报 `HTTP 400 max_tokens ... 400000`；流式仅 reasoning_content；Flow 已回复但最终 failed
+
+**修复**：限制 max_tokens、流式回退、pendingWait 兜底
+
+**验证**：发送 “hi” 后 Flow 状态为 waiting，正常回复
+
 ## 诊断工具箱
 
 ### 快速扫描脚本
