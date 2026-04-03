@@ -9,7 +9,12 @@ kernel/node_modules/
 
 # 环境
 .env
+.claude/
+.superpowers/
 
 # 系统
 .DS_Store
 *.log
+
+# Worktrees
+.worktrees/

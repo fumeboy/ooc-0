@@ -1,30 +1,30 @@
 {
   "root": {
-    "id": "node_3_mnd9cmzd",
+    "id": "node_3_mndgifwl",
     "title": "selfmeta",
     "status": "doing",
     "children": [],
     "actions": [],
     "hooks": [
       {
-        "id": "hook_mnd9cmzd_3qzf",
+        "id": "hook_mndgifwl_kxmw",
         "when": "when_stack_pop",
         "type": "inject_message",
         "handler": "summary"
       },
       {
-        "id": "hook_mnd9cmzd_gtn2",
+        "id": "hook_mndgifwl_nb70",
         "when": "when_yield",
         "type": "inject_message",
         "handler": "summary"
       },
       {
-        "id": "hook_mnd9cmzd_3lje",
+        "id": "hook_mndgifwl_lopg",
         "when": "when_yield",
         "type": "inject_message",
         "handler": "declare_running_processes"
       }
     ]
   },
-  "focusId": "node_3_mnd9cmzd"
+  "focusId": "node_3_mndgifwl"
 }
