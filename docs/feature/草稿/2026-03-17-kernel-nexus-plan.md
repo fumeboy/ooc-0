@@ -86,7 +86,7 @@ src/server/server.ts                              — 修改: 飞书 webhook 回
 ```typescript
 const context: Record<string, unknown> = {
   sharedDir: flow.sharedDir,
-  taskId: flow.taskId,
+  sessionId: flow.sessionId,
   // 新增文件系统路径
   self_dir: stoneDir,
   self_traits_dir: join(stoneDir, "traits"),

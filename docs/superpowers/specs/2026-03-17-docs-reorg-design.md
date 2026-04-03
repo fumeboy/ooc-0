@@ -204,7 +204,7 @@ docs/
 
 | 术语 | 定义 | 基因 |
 |------|------|------|
-| **FlowData** | 动态对象的完整数据：taskId, stoneName, status, messages, process, actions | G2 |
+| **FlowData** | 动态对象的完整数据：sessionId, stoneName, status, messages, process, actions | G2 |
 | **FlowStatus** | 状态机：running / waiting / pausing / finished / failed | G2 |
 | **Action** | 不可变事件记录：type, timestamp, content, result, success | G10 |
 | **ActionType** | 事件类型：thought / program / message_in / message_out / pause / inject | G10 |

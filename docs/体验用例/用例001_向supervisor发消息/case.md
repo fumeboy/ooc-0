@@ -16,13 +16,13 @@ curl -s -X POST http://localhost:8080/api/talk/supervisor \
 
 ## 预期结果
 - API 返回 `success: true`
-- 返回有效的 `taskId`（格式 `task_YYYYMMDDHHMMSS_xxxx`）
+- 返回有效的 `sessionId`（格式 `session_YYYYMMDDHHMMSS_xxxx`）
 - `status` 为 `finished` 或 `waiting`
 - `messages` 数组包含 supervisor 的回复
 - `actions` 数组包含 thought 和/或 program 类型的 action
 
 ## 检查点
 - [ ] API 返回 success: true
-- [ ] taskId 格式正确
+- [ ] sessionId 格式正确
 - [ ] status 不是 running（说明 flow 正常结束）
 - [ ] supervisor 回复内容与其角色一致（桥梁/委派/协调）

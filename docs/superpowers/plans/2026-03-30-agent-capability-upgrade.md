@@ -31,7 +31,7 @@ interface MethodContext {
   getData(key: string): unknown;
   setData(key: string, value: unknown): void;
   print(...args: unknown[]): void;
-  readonly taskId: string;
+  readonly sessionId: string;
   readonly filesDir: string;
   // 新增
   readonly rootDir: string;      // world_dir（用户仓库根目录）
@@ -60,7 +60,7 @@ const methodCtx: MethodContext = Object.defineProperty(
       return stone.data[key];
     },
     print: printFn,
-    taskId: flow.taskId,
+    sessionId: flow.sessionId,
     filesDir: flow.filesDir,
     // 新增
     rootDir,
@@ -107,7 +107,7 @@ describe("MethodContext 扩展字段", () => {
       getData: () => undefined,
       setData: () => {},
       print: () => {},
-      taskId: "test-task",
+      sessionId: "test-task",
       filesDir: "/tmp/files",
       rootDir: "/Users/test/ooc",
       selfDir: "/Users/test/ooc/stones/supervisor",

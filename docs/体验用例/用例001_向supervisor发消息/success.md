@@ -8,7 +8,7 @@
 supervisor 正常回复："我是 Supervisor，用户与 OOC 对象生态之间的桥梁——你说什么，我来判断谁最合适处理，然后委派、追踪、汇总，让专业的人做专业的事。"
 
 返回数据：
-- taskId: task_20260324144915_jz21
+- sessionId: task_20260324144915_jz21
 - status: finished
 - actions 包含 thought + program
 - messages 包含完整的对话记录

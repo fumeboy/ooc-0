@@ -23,7 +23,7 @@ In `kernel/src/server/events.ts`, add the new event type to the union:
 
 ```typescript
 // Add after the "object:updated" line (line 27), before the semicolon
-  | { type: "flow:progress"; objectName: string; taskId: string; iterations: number; maxIterations: number; totalIterations: number; maxTotalIterations: number }
+  | { type: "flow:progress"; objectName: string; sessionId: string; iterations: number; maxIterations: number; totalIterations: number; maxTotalIterations: number }
 ```
 
 - [ ] **Step 2: Verify no type errors**
@@ -77,7 +77,7 @@ After `iteration++` (line 116), add:
       emitSSE({
         type: "flow:progress",
         objectName: stone.name,
-        taskId: flow.taskId,
+        sessionId: flow.sessionId,
         iterations: iteration,
         maxIterations: config.maxIterations,
         totalIterations: iteration,
@@ -136,7 +136,7 @@ After `entry.iterations++; totalIterations++;` (lines 144-145), add:
         emitSSE({
           type: "flow:progress",
           objectName: name,
-          taskId: entry.flow.taskId,
+          sessionId: entry.flow.sessionId,
           iterations: entry.iterations,
           maxIterations: this._config.maxIterationsPerFlow,
           totalIterations,
@@ -168,7 +168,7 @@ cd /Users/zhangzhefu/x/ooc/kernel && git add src/world/scheduler.ts && git commi
 In `kernel/web/src/api/types.ts`, add to the SSEEvent union (after line 138, before the semicolon):
 
 ```typescript
-  | { type: "flow:progress"; objectName: string; taskId: string; iterations: number; maxIterations: number; totalIterations: number; maxTotalIterations: number }
+  | { type: "flow:progress"; objectName: string; sessionId: string; iterations: number; maxIterations: number; totalIterations: number; maxTotalIterations: number }
 ```
 
 - [ ] **Step 2: Create `store/progress.ts` with flowProgressAtom**
@@ -187,7 +187,7 @@ import { atom } from "jotai";
 /** Flow 迭代进度 */
 export interface FlowProgress {
   objectName: string;
-  taskId: string;
+  sessionId: string;
   iterations: number;
   maxIterations: number;
   totalIterations: number;
@@ -247,10 +247,10 @@ Add a new case before the `stream:thought` case (around line 57):
 ```typescript
         case "flow:progress":
           /* 只跟踪当前活跃 session 的入口 Flow 进度（通过 ref 读取，避免 SSE 重连） */
-          if (event.taskId === activeSessionIdRef.current) {
+          if (event.sessionId === activeSessionIdRef.current) {
             setFlowProgress({
               objectName: event.objectName,
-              taskId: event.taskId,
+              sessionId: event.sessionId,
               iterations: event.iterations,
               maxIterations: event.maxIterations,
               totalIterations: event.totalIterations,
@@ -288,7 +288,7 @@ to:
           setLastFlowEvent(event);
           /* 清空进度（仅匹配当前跟踪的 Flow） */
           setFlowProgress((prev) =>
-            prev?.taskId === event.taskId ? null : prev,
+            prev?.sessionId === event.sessionId ? null : prev,
           );
           break;
 ```

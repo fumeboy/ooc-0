@@ -1,17 +1,17 @@
 # 用例 005: 取消卡住的 Flow
 
 ## 元信息
-- 覆盖功能: DELETE /api/flows/:taskId
+- 覆盖功能: DELETE /api/flows/:sessionId
 - 前置条件: 存在一个已完成或运行中的 flow
 - 优先级: P1
 
 ## 操作步骤
-1. 先创建一个对话获取 taskId
+1. 先创建一个对话获取 sessionId
 ```bash
 RESULT=$(curl -s -X POST http://localhost:8080/api/talk/supervisor \
   -H "Content-Type: application/json" \
   -d '{"message": "你好"}' --max-time 120)
-TASK_ID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['taskId'])")
+TASK_ID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['sessionId'])")
 ```
 
 2. 用 DELETE 取消该 flow

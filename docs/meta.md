@@ -73,7 +73,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   └── files/            ← 其他文件
 │   └── ...
 └── flows/                    ← 会话数据（每个 session 一个子目录）
-    └── {taskId}/
+    └── {sessionId}/
         ├── .session.json     ← Session 元数据（title）
         └── {name}/     ← 单个 Flow 的运行时数据
 ```
@@ -86,7 +86,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 - 文档中引用 Kernel Traits：`kernel/traits/...`
 - 文档中引用测试：`kernel/tests/...`
 - 文档中引用对象目录：`stones/{name}/...`
-- 文档中引用会话数据：`flows/{taskId}/...`
+- 文档中引用会话数据：`flows/{sessionId}/...`
 - 文档中引用其他文档：`docs/...`（相对于 user repo 根）
 
 ---
@@ -330,7 +330,7 @@ stones/
 │   │   └── files/                  ── ReflectFlow 的共享数据
 │   └── files/                      ── 共享文件
 │
-└── flows/{taskId}/                 ── 一个 Session = 一个目录
+└── flows/{sessionId}/                 ── 一个 Session = 一个目录
     ├── .session.json               ── Session 元数据（title 等）
     └── flows/{name}/               ── 一个 Flow = 一个目录
         ├── .flow                   ── 标记文件（Flow 存活标志）
@@ -349,7 +349,7 @@ Context
 │
 ├── 六个组成部分
 │   ├── whoAmI       ← stones/{name}/readme.md
-│   ├── process      ← flows/{taskId}/flows/{name}/process.json（当前行为树）
+│   ├── process      ← flows/{sessionId}/flows/{name}/process.json（当前行为树）
 │   ├── messages     ← pendingMessages 队列（来自其他对象的消息）
 │   ├── windows      ← Trait 定义的数据窗口（打开的文件/数据）
 │   ├── directory    ← stones/{name}/ 目录列表
@@ -406,12 +406,12 @@ ThinkLoop
 └── ReflectFlow — 对象的常驻自我反思
     │
     ├── 物理位置: stones/{name}/reflect/（data.json + process.json）
-    ├── 创建: Flow.ensureReflectFlow() — taskId 固定为 _reflect, isSelfMeta: true
+    ├── 创建: Flow.ensureReflectFlow() — sessionId 固定为 _reflect, isSelfMeta: true
     ├── 触发: 普通 Flow 调用 reflect(message)
     │         → World 投递消息到 ReflectFlow 的 pendingMessages
     ├── 执行: scheduler 调度 ReflectFlow，拥有独立行为树
     │         可修改 Stone 的 readme.md / data.json
-    ├── 回复: replyToFlow(taskId, message) — 回复发起对话的普通 Flow
+    ├── 回复: replyToFlow(sessionId, message) — 回复发起对话的普通 Flow
     │
     └── 哲学意义: 实现 G12 沉淀循环的关键机制
                   经历 → reflect → ReflectFlow 审视 → 沉淀为 trait
@@ -442,8 +442,8 @@ CollaborationAPI
 │   └── 处理完成后 reply → 消息回传发送方
 │
 ├── Session 管理
-│   └── TaskSession
-│       ├── 一个 taskId 对应一个 Session
+│   └── Session
+│       ├── 一个 sessionId 对应一个 Session
 │       ├── Session 管理同一任务中的多个 Flow（多个对象参与）
 │       └── Session 结束时清理所有 Flow 的 .flow 标记
 │

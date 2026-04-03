@@ -6,12 +6,12 @@
 - 优先级: P0
 
 ## 操作步骤
-1. 向对象发消息并获取 taskId
+1. 向对象发消息并获取 sessionId
 ```bash
 RESULT=$(curl -s -X POST http://localhost:8080/api/talk/sophia \
   -H "Content-Type: application/json" \
   -d '{"message": "持久化测试"}' --max-time 120)
-TASK_ID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['taskId'])")
+TASK_ID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['sessionId'])")
 ```
 
 2. 检查 session 目录结构

@@ -143,7 +143,7 @@ async resumeFlow(objectName: string, flowId: string): Promise<Flow> {
 |------|------|------|------|
 | POST | `/api/objects/:name/pause` | — | 设置暂停信号（异步，不阻塞） |
 | POST | `/api/objects/:name/resume` | `{ flowId }` | 恢复指定 Flow 的执行（阻塞，等待完成） |
-| GET | `/api/objects/:name/effects/:taskId` | — | 已有，返回 Flow 数据（含 `_pendingOutput` 和 `_pausedContext`） |
+| GET | `/api/objects/:name/effects/:sessionId` | — | 已有，返回 Flow 数据（含 `_pendingOutput` 和 `_pausedContext`） |
 
 ### 7. 前端展示
 
@@ -206,7 +206,7 @@ CommandPalette 中：
  │                        │                   │◄─ return ──────────│
  │                        │◄─ flow (pausing) ─│                    │
  │                        │                   │                    │
- │── GET /effects/taskId ─│                   │                    │
+ │── GET /effects/sessionId ─│                   │                    │
  │◄─ { _pendingOutput, _pausedContext } ──────│                    │
  │   (用户查看 context 和 LLM output)         │                    │
  │                        │                   │                    │

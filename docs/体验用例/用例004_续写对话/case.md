@@ -11,8 +11,8 @@
 RESULT=$(curl -s -X POST http://localhost:8080/api/talk/sophia \
   -H "Content-Type: application/json" \
   -d '{"message": "G1 基因是什么？"}' --max-time 120)
-TASK_ID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['taskId'])")
-echo "taskId: $TASK_ID"
+TASK_ID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['sessionId'])")
+echo "sessionId: $TASK_ID"
 ```
 
 2. 用 flowId 续写对话
@@ -26,13 +26,13 @@ curl -s -X POST http://localhost:8080/api/talk/sophia \
 3. 检查 flow 的消息历史是否包含两轮对话
 
 ## 预期结果
-- 续写请求返回相同的 taskId
+- 续写请求返回相同的 sessionId
 - sophia 保持上下文，回复中引用之前的 G1 内容
 - flow 的 messages 数组包含两轮完整对话
 - 持久化文件中消息历史完整
 
 ## 检查点
-- [ ] 续写返回相同 taskId
+- [ ] 续写返回相同 sessionId
 - [ ] sophia 回复有上下文连贯性
 - [ ] messages 包含两轮对话
 - [ ] 持久化文件正确

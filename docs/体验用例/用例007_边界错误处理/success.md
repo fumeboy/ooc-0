@@ -8,7 +8,7 @@
 1. 不存在的对象：返回错误信息 `对象 "nonexistent" 不存在`，服务器不崩溃
 2. 空消息：返回 `缺少 message 字段`
 3. 不存在的 flowId：返回错误信息
-4. 取消不存在的 flow：返回 `{"success": true, "data": {"taskId": "task_nonexistent", "cancelled": 0}}`
+4. 取消不存在的 flow：返回 `{"success": true, "data": {"sessionId": "task_nonexistent", "cancelled": 0}}`
 
 ## 证据
 - 所有错误请求返回合理的 JSON 错误响应

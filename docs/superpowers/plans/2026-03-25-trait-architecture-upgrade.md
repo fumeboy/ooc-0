@@ -182,7 +182,7 @@ test("trait catalog 包含所有非 never trait", () => {
     traits: [],
   };
   const flow: FlowData = {
-    taskId: "t1",
+    sessionId: "t1",
     stoneName: "researcher",
     status: "running",
     messages: [],

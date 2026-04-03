@@ -63,7 +63,7 @@ Phase 1 开始前需要完成以下基础设施变更：
 
 ### 0.1 扩展 MethodContext
 
-当前 `MethodContext`（`kernel/src/trait/registry.ts`）只提供 `data`, `getData`, `setData`, `print`, `taskId`, `filesDir`。工具 Trait 需要额外字段：
+当前 `MethodContext`（`kernel/src/trait/registry.ts`）只提供 `data`, `getData`, `setData`, `print`, `sessionId`, `filesDir`。工具 Trait 需要额外字段：
 
 ```typescript
 interface MethodContext {
@@ -72,7 +72,7 @@ interface MethodContext {
   getData(key: string): unknown;
   setData(key: string, value: unknown): void;
   print(...args: unknown[]): void;
-  taskId: string;
+  sessionId: string;
   filesDir: string;
 
   // 新增字段

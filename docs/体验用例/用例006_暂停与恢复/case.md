@@ -16,7 +16,7 @@ curl -s -X POST http://localhost:8080/api/stones/sophia/pause
 RESULT=$(curl -s -X POST http://localhost:8080/api/talk/sophia \
   -H "Content-Type: application/json" \
   -d '{"message": "测试暂停功能"}' --max-time 120)
-TASK_ID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['taskId'])")
+TASK_ID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['sessionId'])")
 ```
 
 3. 检查 flow 状态应为 pausing

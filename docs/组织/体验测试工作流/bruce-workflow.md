@@ -230,7 +230,7 @@ cat stones/<name>/data.json
 
 # 检查 Flow 数据
 ls stones/<name>/effects/
-cat stones/<name>/effects/<taskId>/data.json
+cat stones/<name>/effects/<sessionId>/data.json
 ```
 
 ---
@@ -271,7 +271,7 @@ cat stones/<name>/effects/<taskId>/data.json
 - 触发操作: `curl -X POST http://localhost:8080/api/talk/greeter -d '{"message":"你好"}'`
 - 返回结果:
   ```json
-  {"taskId":"task_xxx","status":"finished","messages":[...]}
+  {"sessionId":"task_xxx","status":"finished","messages":[...]}
   ```
 - 持久化验证: `stones/greeter/effects/task_xxx/data.json` 存在且包含完整 actions
 ```

@@ -18,15 +18,15 @@
 ```
 1. 用户 POST /api/talk/objectX
 2. await world.talk("objectX", msg, "human")
-   → this._session = new TaskSession(A)    // session A
+   → this._session = new Session(A)    // session A
    → scheduler.run()                        // 运行中...
    → this._session = null                   // 清理
 3. notifySupervisor(world, "objectX", msg, flowId)  // fire-and-forget, 不 await
    → world.talk("supervisor", notification, "human")
-   → this._session = new TaskSession(B)    // session B 开始
+   → this._session = new Session(B)    // session B 开始
 4. 用户快速发送第二条消息 POST /api/talk/objectY
    → await world.talk("objectY", msg, "human")
-   → this._session = new TaskSession(C)    // 覆盖 session B !!!
+   → this._session = new Session(C)    // 覆盖 session B !!!
 5. session B 的 deliverMessage 访问 this._session → 拿到 session C → 错乱
    或 session B 完成后 this._session = null → session C 的 allFlows() 崩溃
 ```
@@ -34,7 +34,7 @@
 ### 根因
 
 `World` 类用 4 个实例字段管理运行时状态，同一时间只能有一个 session：
-- `this._session: TaskSession | null`
+- `this._session: Session | null`
 - `this._scheduler: Scheduler | null`
 - `this._roundCounter: SharedRoundCounter | null`
 - `this._traitsCache: Map<string, LoadedTrait[]>`
@@ -54,7 +54,7 @@
 ```typescript
 /** 一次 talk 调用的完整运行时上下文 */
 interface SessionContext {
-  session: TaskSession;
+  session: Session;
   scheduler: Scheduler;
   roundCounter: SharedRoundCounter;
   traitsCache: Map<string, LoadedTrait[]>;
@@ -65,7 +65,7 @@ interface SessionContext {
 
 ```
 // 删除
-- private _session: TaskSession | null = null;
+- private _session: Session | null = null;
 - private _scheduler: Scheduler | null = null;
 - private _roundCounter: SharedRoundCounter | null = null;
 - private _traitsCache: Map<string, LoadedTrait[]> = new Map();
@@ -134,7 +134,7 @@ deliverMessage(targetName: string, message: string, from: string, replyTo?: stri
   }
 
   if (!session) {
-    throw new Error("[World] 没有活跃的 TaskSession");
+    throw new Error("[World] 没有活跃的 Session");
   }
   // ... 其余逻辑不变，用 session 替代 this._session
   // scheduler 也从 ctx 获取
@@ -150,10 +150,10 @@ private async _createAndRunFlow(...): Promise<Flow> {
   // ... 创建 flow ...
 
   // 创建 SessionContext
-  const session = new TaskSession(mainFlow.taskId, mainFlow.sessionDir);
+  const session = new Session(mainFlow.sessionId, mainFlow.sessionDir);
   const roundCounter = createSharedRoundCounter();
   const traitsCache = new Map<string, LoadedTrait[]>();
-  const sessionId = mainFlow.taskId;
+  const sessionId = mainFlow.sessionId;
 
   // 注册到 activeSessions
   const ctx: SessionContext = { session, scheduler: null!, roundCounter, traitsCache };
@@ -192,14 +192,14 @@ private _loadExistingSubFlows(sessionDir: string, excludeName?: string): void {
 }
 
 // 之后
-private _loadExistingSubFlows(session: TaskSession, sessionDir: string, excludeName?: string): void {
+private _loadExistingSubFlows(session: Session, sessionDir: string, excludeName?: string): void {
   // ... session.hasFlow(...)
 }
 ```
 
 同理 `_ensureReflectFlow`：
 ```typescript
-private _ensureReflectFlow(stone: Stone, session: TaskSession): Flow {
+private _ensureReflectFlow(stone: Stone, session: Session): Flow {
   // ... session.hasFlow(...) / session.register(...)
 }
 ```
