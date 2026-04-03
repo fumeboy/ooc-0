@@ -5,8 +5,6 @@
 @ref docs/哲学文档/gene.md#G3 — references — Trait 自我定义单元
 @ref docs/哲学文档/gene.md#G8 — references — Effect 与消息传递
 @ref docs/哲学文档/gene.md#G13 — references — 认知栈模型
-@ref .ooc/objects/nexus/shared/设计/tool-integration.md — extends — 工具接入框架
-@ref .ooc/objects/nexus/shared/设计/openclaw-skills-analysis.md — extends — OpenClaw Skill 分析
 -->
 
 ## 一、问题的本质

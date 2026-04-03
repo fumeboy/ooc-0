@@ -1,1 +1,0 @@
-export function testGetData(ctx) { ctx.setData("key1", "hello"); return ctx.getData("key1"); }

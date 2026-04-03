@@ -70,7 +70,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── memory.md         ← 长期记忆
 │   │   ├── traits/           ← 用户自定义 Trait
 │   │   ├── reflect/          ← ReflectFlow 数据
-│   │   └── files/            ← 共享文件
+│   │   └── files/            ← 其他文件
 │   └── ...
 └── flows/                    ← 会话数据（每个 session 一个子目录）
     └── {taskId}/

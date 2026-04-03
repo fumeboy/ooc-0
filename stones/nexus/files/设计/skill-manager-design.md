@@ -4,8 +4,6 @@
 @ref docs/哲学文档/gene.md#G1 — implements — 万物皆对象：skill 管理能力建模为独立对象
 @ref docs/哲学文档/gene.md#G7 — implements — 目录即存在：skill_manager 目录存在即服务可用
 @ref docs/哲学文档/gene.md#G8 — references — 消息传递：其他对象通过 talk 请求 skill
-@ref .ooc/objects/nexus/shared/设计/skill-in-ooc.md — extends — Skill 在 OOC 体系下的表示方式
-@ref .ooc/objects/nexus/shared/设计/openclaw-skills-analysis.md — extends — OpenClaw Skill 分析
 -->
 
 ## 为什么是一个独立对象
