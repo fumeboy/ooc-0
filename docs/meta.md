@@ -75,7 +75,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 └── flows/                    ← 会话数据（每个 session 一个子目录）
     └── {sessionId}/
         ├── .session.json     ← Session 元数据（title）
-        └── {name}/     ← 单个 Flow 的运行时数据
+        └── {name}/     ← 单个 Object 的运行时数据
 ```
 
 **运行方式**：从 user repo 根目录执行 `bun kernel/src/cli.ts start 8080`。
@@ -316,7 +316,7 @@ Object（对象）
     │
     └── 自渲染（G11 实现）
             对象在 ui/index.tsx 中编写 React 组件（Stone 级别）。
-            Flow 级别在 files/ui/index.tsx 中编写。
+            Flow 级别在 ui/pages/*.tsx 中编写。
             前端通过 Vite 原生 import 加载，自动热更新。
             无 ui/index.tsx 的对象使用通用视图（fallback）。
             有自定义 UI 时默认展示 UI Tab。
@@ -349,7 +349,7 @@ stones/
 │
 └── flows/{sessionId}/                 ── 一个 Session = 一个目录
     ├── .session.json               ── Session 元数据（title 等）
-    └── flows/{name}/               ── 一个 Flow = 一个目录
+    └── objects/{name}/              ── 一个 Flow = 一个目录
         ├── .flow                   ── 标记文件（Flow 存活标志）
         ├── data.json               ── Flow 的运行时数据
         ├── process.json            ── 行为树（节点状态、actions 历史）
@@ -366,7 +366,7 @@ Context
 │
 ├── 六个组成部分
 │   ├── whoAmI       ← stones/{name}/readme.md
-│   ├── process      ← flows/{sessionId}/flows/{name}/process.json（当前行为树）
+│   ├── process      ← flows/{sessionId}/objects/{name}/process.json（当前行为树）
 │   ├── messages     ← pendingMessages 队列（来自其他对象的消息）
 │   ├── windows      ← Trait 定义的数据窗口（打开的文件/数据）
 │   ├── directory    ← stones/{name}/ 目录列表
@@ -613,7 +613,7 @@ Web UI 概念树
 │   ├── stones/{name}              → StoneView（ObjectDetail 或 DynamicUI）[priority: 50]
 │   ├── stones/{name}/reflect/     → ReflectFlowView（Process + Data）[priority: 80]
 │   ├── flows/{sessionId}          → SessionGantt（甘特图总览）[priority: 100]
-│   ├── flows/{sid}/flows/{name}   → FlowView（Flow 详情，含 Readme/Data/UI Tab）[priority: 100]
+│   ├── flows/{sid}/objects/{name}   → FlowView（Flow 详情，含 Readme/Data/UI Tab）[priority: 100]
 │   ├── **/process.json            → ProcessJsonView（行为树查看器）[priority: 40]
 │   ├── *.json                     → CodeViewer（CodeMirror JSON 高亮）[priority: 0]
 │   ├── *.md                       → MarkdownViewer（Markdown 渲染）[priority: 0]
@@ -660,7 +660,7 @@ Web UI 概念树
 │   │   ├── ProcessTab ── 行为树视图（复用 ProcessView）
 │   │   ├── ReadmeTab ── 对象 Readme（复用 ObjectReadmeView）
 │   │   ├── DataTab ── 分栏设计（左栏 Flow data + 右栏 Stone data）
-│   │   └── UITab ── Flow 自渲染 UI（DynamicUI 加载 files/ui/index.tsx）
+│   │   └── UITab ── Flow 自渲染 UI（DynamicUI 加载 ui/pages/*.tsx）
 │   │
 │   ├── SessionGantt（Session 甘特图）── Session 级总览
 │   │   │   每行一个参与 Object，每个块代表一个 focus 事项（ProcessNode）
