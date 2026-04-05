@@ -1,6 +1,5 @@
 ---
-namespace: lark
-name: base
+name: lark/base
 type: how_to_use_tool
 version: 1.2.0
 when: never

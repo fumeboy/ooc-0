@@ -1,6 +1,5 @@
 ---
-namespace: ai
-name: text-deodorizer
+name: library/ai/text-deodorizer
 type: how_to_use_tool
 version: 1.0.0
 when: never

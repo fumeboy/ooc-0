@@ -1,6 +1,5 @@
 ---
-namespace: http
-name: client
+name: library/http/client
 type: how_to_use_tool
 version: 1.0.0
 when: always

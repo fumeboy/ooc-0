@@ -1,6 +1,5 @@
 ---
-namespace: lark
-name: doc
+name: lark/doc
 type: how_to_use_tool
 version: 1.0.0
 when: never

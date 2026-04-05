@@ -1,6 +1,5 @@
 ---
-namespace: sessions
-name: index
+name: library/sessions/index
 type: how_to_use_tool
 version: 1.0.0
 when: never

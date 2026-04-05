@@ -1,6 +1,5 @@
 ---
-namespace: lark
-name: im
+name: lark/im
 type: how_to_use_tool
 version: 1.0.0
 when: never

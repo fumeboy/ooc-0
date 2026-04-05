@@ -1,6 +1,5 @@
 ---
-namespace: lark
-name: sheets
+name: lark/sheets
 type: how_to_use_tool
 version: 1.1.0
 when: never

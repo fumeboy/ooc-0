@@ -1,6 +1,5 @@
 ---
-namespace: prd
-name: assistant
+name: library/prd/assistant
 type: how_to_use_tool
 version: 1.0.0
 when: never

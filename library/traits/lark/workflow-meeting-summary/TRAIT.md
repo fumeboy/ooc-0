@@ -1,6 +1,5 @@
 ---
-namespace: lark
-name: workflow-meeting-summary
+name: lark/workflow-meeting-summary
 type: how_to_use_tool
 version: 1.0.0
 when: never

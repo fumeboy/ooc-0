@@ -1,6 +1,5 @@
 ---
-namespace: lark
-name: workflow-standup-report
+name: lark/workflow-standup-report
 type: how_to_use_tool
 version: 1.0.0
 when: never
