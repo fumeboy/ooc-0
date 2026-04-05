@@ -1,5 +1,5 @@
 ---
-name: lark/whiteboard
+name: library/lark/whiteboard
 type: how_to_use_tool
 version: 1.0.0
 when: never

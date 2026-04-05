@@ -1,5 +1,5 @@
 ---
-name: lark/task
+name: library/lark/task
 type: how_to_use_tool
 version: 1.0.0
 when: never
