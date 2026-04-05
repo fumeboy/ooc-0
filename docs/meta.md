@@ -39,10 +39,9 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │       ├── api/          ← API 客户端
 │   │       └── lib/          ← 工具函数
 │   ├── traits/               ← Kernel Traits（所有对象共享的基础能力）
-│   │   ├── computable/       ← 思考与执行
-│   │   ├── talkable/         ← 跨对象通信
-│   │   ├── reflective/       ← 记忆与反思
-│   │   ├── cognitive-style/  ← 认知栈思维模式（always-on）
+│   │   ├── computable/       ← 思考与执行（树形：含 output_format, program_api, stack_api, multi_thread 子 trait）
+│   │   ├── talkable/         ← 跨对象通信（树形：含 cross_object, ooc_links, delivery 子 trait）
+│   │   ├── reflective/       ← 记忆与反思（树形：含 memory_api, reflect_flow 子 trait）
 │   │   ├── plannable/        ← 任务规划
 │   │   ├── library_index/    ← Library 资源查询
 │   │   └── ...
@@ -70,12 +69,20 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── memory.md         ← 长期记忆
 │   │   ├── traits/           ← 用户自定义 Trait
 │   │   ├── reflect/          ← ReflectFlow 数据
+│   │   ├── ui/               ← 自定义 UI 文件
 │   │   └── files/            ← 其他文件
 │   └── ...
 └── flows/                    ← 会话数据（每个 session 一个子目录）
     └── {sessionId}/
         ├── .session.json     ← Session 元数据（title）
-        └── {name}/     ← 单个 Object 的运行时数据
+        ├── readme.md         ← Session 工作状态摘要（supervisor 维护）
+        ├── objects/{name}/   ← 单个 Object 的运行时数据（原 flows/ 重命名）
+        ├── issues/           ← Issue 跟踪目录
+        │   ├── index.json    ← 轻量索引
+        │   └── issue-{id}.json ← 单条 issue 详情
+        └── tasks/            ← Task 跟踪目录
+            ├── index.json    ← 轻量索引
+            └── task-{id}.json  ← 单条 task 详情
 ```
 
 **运行方式**：从 user repo 根目录执行 `bun kernel/src/cli.ts start 8080`。
@@ -283,6 +290,34 @@ Object（对象）
 │           3. 其他对象的 flow 事件自动通知 supervisor
 │           Supervisor 通过自渲染 UI 展示任务看板。
 │
+├── 看板 ── 对象如何"管"？
+│   │
+│   ├── Issue（需求/问题）
+│   │   │   Session 级别的需求跟踪单元。多对多关联 Task。
+│   │   │   状态自由转换（无强制状态机），由 Supervisor 判断。
+│   │   │
+│   │   ├── 典型路径：讨论中 → 设计中 → 评审中 → 执行中 → 确认中 → 完成
+│   │   ├── Comment ── 不可变评论（author + content + mentions）
+│   │   ├── hasNewInfo ── 是否需要人类确认
+│   │   └── reportPages ── 关联的 report 页面
+│   │
+│   ├── Task（执行单元）
+│   │   │   Session 级别的执行跟踪单元。多对多关联 Issue。
+│   │   │
+│   │   ├── SubTask ── 子任务（id + title + assignee + status）
+│   │   ├── hasNewInfo ── 是否需要人类确认
+│   │   └── reportPages ── 关联的 report 页面
+│   │
+│   ├── 并发写入
+│   │   │   per-session 写入队列串行化 issues/tasks 文件的读写。
+│   │   │   三个写入者：supervisor trait、issue-discussion trait、后端 API。
+│   │   │
+│   │   └── session.serializedWrite(path, fn) ── 原子化读-改-写
+│   │
+│   └── Trait
+│       ├── session-kanban ── Supervisor 专属，管理 Issue/Task 结构性操作
+│       └── issue-discussion ── Kernel trait，所有对象共享，管理 Issue 评论
+│
 ├── 成长 ── 对象如何"变"？
 │   │
 │   ├── 经验沉淀（G12）
@@ -315,8 +350,9 @@ Object（对象）
     │       对象改变自己 → UI 自动改变。
     │
     └── 自渲染（G11 实现）
-            对象在 ui/index.tsx 中编写 React 组件（Stone 级别）。
-            Flow 级别在 ui/pages/*.tsx 中编写。
+            对象在 ui/index.tsx 中编写 React 组件（Stone 级别，唯一入口）。
+            Flow 级别在 ui/pages/*.tsx 中编写（多页演示，无 index.tsx）。
+            UI 路径从 files/ui/ 提升为 ui/（Stone 和 Flow 统一）。
             前端通过 Vite 原生 import 加载，自动热更新。
             无 ui/index.tsx 的对象使用通用视图（fallback）。
             有自定义 UI 时默认展示 UI Tab。
@@ -345,16 +381,26 @@ stones/
 │   │   ├── data.json               ── ReflectFlow 的运行时数据
 │   │   ├── process.json            ── ReflectFlow 的行为树
 │   │   └── files/                  ── ReflectFlow 的共享数据
-│   └── files/                      ── 共享文件
+│   ├── ui/                         ── 自渲染 UI（原 files/ui/）
+│   │   └── index.tsx               ── Stone 唯一主界面入口
+│   └── files/                      ── 其他共享文件
 │
 └── flows/{sessionId}/                 ── 一个 Session = 一个目录
     ├── .session.json               ── Session 元数据（title 等）
-    └── objects/{name}/              ── 一个 Flow = 一个目录
-        ├── .flow                   ── 标记文件（Flow 存活标志）
-        ├── data.json               ── Flow 的运行时数据
-        ├── process.json            ── 行为树（节点状态、actions 历史）
-        ├── memory.md               ── 会话记忆（仅当前任务可见）
-        └── files/                  ── Flow 共享数据
+    ├── readme.md                   ── Session 工作状态摘要
+    ├── objects/{name}/              ── 一个 Flow = 一个目录（原 flows/ 重命名）
+    │   ├── .flow                   ── 标记文件（Flow 存活标志）
+    │   ├── data.json               ── Flow 的运行时数据
+    │   ├── process.json            ── 行为树（节点状态、actions 历史）
+    │   ├── memory.md               ── 会话记忆（仅当前任务可见）
+    │   ├── ui/pages/               ── Flow 演示页面（原 files/ui/）
+    │   └── files/                  ── Flow 共享数据
+    ├── issues/                     ── Issue 跟踪
+    │   ├── index.json              ── 轻量索引（id, title, status, updatedAt）
+    │   └── issue-{id}.json         ── 单条 issue 完整数据
+    └── tasks/                      ── Task 跟踪
+        ├── index.json              ── 轻量索引
+        └── task-{id}.json          ── 单条 task 完整数据
 
 代码: kernel/src/persistence/reader.ts（读）, kernel/src/persistence/writer.ts（写）
 ```
@@ -403,11 +449,32 @@ ThinkLoop
 │
 ├── 单轮循环
 │   ├── 感知    ── builder.ts 组装 Context
-│   ├── 思考    ── LLM 基于 Context 生成 Program（JSON）
-│   ├── 解析    ── 校验 Program 格式，提取 actions
+│   ├── 思考    ── LLM 基于 Context 生成输出（Thinking Mode 双通道）
+│   │               Provider 返回 thinkingContent + assistantContent
+│   │               thinkingContent 自动映射为系统 thought action
+│   │               assistantContent 交由 parser 解析为执行协议
+│   ├── 解析    ── parser 解析 assistant 输出中的结构化协议
+│   │               仅识别 [program]/[talk]/[action]/stack ops/directives
+│   │               不再解析 [thought]（thought 来自 Provider 原生能力）
+│   │               assistant 输出中出现 [thought] 视为协议错误
 │   ├── 执行    ── 逐条执行 actions（文件操作/消息/Effect）
-│   ├── 记录    ── actions + output 写入 process.json
+│   ├── 记录    ── thought + actions + output 写入 process.json
 │   └── 投递    ── 检查 pendingMessages，推进 focus
+│
+├── Thinking Mode（双通道架构）
+│   │   thought 从"输出协议"迁移为"Provider 能力层产生的运行时语义"。
+│   │   三层职责分离：
+│   │
+│   ├── Provider 能力层 ── 开启 thinking、读取 thinking 输出、适配为统一结构
+│   │   └── LLMResult = { assistantContent, thinkingContent, usage }
+│   │       LLMStreamEvent = thinking_chunk | assistant_chunk | done
+│   ├── ThinkLoop 语义映射层 ── 将 thinkingContent 映射为系统 thought
+│   │   ├── 记录为 thought action（落盘 process.json）
+│   │   ├── 通过 SSE 发为 stream:thought
+│   │   └── 持久化顺序：thought → program/talk/action → 执行结果
+│   └── Parser 协议层 ── 只解析 assistant 最终输出中的结构化协议
+│       ├── 不再识别 [thought]
+│       └── assistant 输出 [thought] = 协议错误（deprecated_thought_section）
 │
 ├── 行为树操作
 │   ├── focus 推进     ── 完成当前节点 → 移动到下一个
@@ -434,6 +501,9 @@ ThinkLoop
                   经历 → reflect → ReflectFlow 审视 → 沉淀为 trait
 
 代码: kernel/src/flow/thinkloop.ts（循环引擎）, kernel/src/flow/flow.ts（ensureReflectFlow）
+      kernel/src/flow/parser.ts（协议解析，不含 [thought]）
+      kernel/src/thinkable/client.ts（Provider 双通道返回）
+      kernel/src/thinkable/config.ts（Thinking capability 配置）
       kernel/src/process/focus.ts（焦点推进）, kernel/src/process/tree.ts（行为树操作）
       kernel/src/process/cognitive-stack.ts（认知栈）
       kernel/src/world/world.ts（deliverToSelfMeta）, kernel/src/world/router.ts（talkToSelf）
@@ -482,12 +552,22 @@ CollaborationAPI
 Trait
 │
 ├── 定义结构（TraitDefinition）
-│   ├── name         ── 能力名称
+│   ├── name         ── 完整路径名（如 "kernel/computable", "lark/doc"）
 │   ├── description  ── 能力描述（注入 Context 让 LLM 理解）
 │   ├── bias         ── 思维偏置（影响 LLM 的决策倾向）
 │   ├── windows      ── 数据窗口（Trait 激活时自动打开的数据源）
 │   ├── hooks        ── 生命周期钩子（before_finish, before_wait, on_error）
-│   └── methods      ── 注册方法（ThinkLoop 中可调用的 actions）
+│   ├── methods      ── 注册方法（ThinkLoop 中可调用的 actions）
+│   ├── children     ── 子 trait ID 列表（树形结构时自动填充）
+│   └── parent       ── 父 trait ID（树形结构时自动填充）
+│
+├── 树形结构与 Progressive Disclosure
+│   │   Trait 支持任意深度的树形嵌套（如 kernel/computable/output_format）。
+│   │   三层加载策略减少 Context 注入量：
+│   │
+│   ├── Level 1 ── 精简注入（always-on 父 trait 的精简 TRAIT.md）
+│   ├── Level 2 ── 子 trait 描述可见（active 父 trait 的子 trait 一行描述）
+│   └── Level 3 ── 按需激活（readTrait/activateTrait 加载完整内容）
 │
 ├── 加载链路（三层，同名后者覆盖前者）
 │   └── 1. kernel/traits/ → 2. library/traits/ → 3. stones/{name}/traits/
@@ -518,49 +598,47 @@ Kernel Traits
 │
 ├── 基座层（when: always）── 定义最小可行智能体
 │   │
-│   │   这五个 trait 始终激活，任何对象都具备。
+│   │   这些 trait 始终激活，任何对象都具备。
 │   │   它们的组合 = 能思考 + 能交流 + 能成长 + 不自欺 + 会拆解。
+│   │   基座层 trait 采用树形结构：父 trait 精简注入，子 trait 按需激活。
 │   │
-│   ├── computable   ── 思考与执行（G4）
-│   │       Think-Execute 循环、输出格式、可用 API。
-│   │       没有它，对象无法行动。
+│   ├── kernel/computable ── 思考与执行（G4, G13）
+│   │   │   认知栈思维模式、输出格式速查、核心 API 签名。
+│   │   │   没有它，对象无法行动。
+│   │   │
+│   │   ├── kernel/computable/output_format  ── TOML 输出格式完整规范
+│   │   ├── kernel/computable/program_api    ── 完整 API 参考文档
+│   │   ├── kernel/computable/stack_api      ── 栈帧 push/pop 语义
+│   │   └── kernel/computable/multi_thread   ── 多线程 API
 │   │
-│   ├── talkable     ── 与他者建立关系（G6, G8）
-│   │       跨对象对话、函数调用协议、社交原则、共享文件。
-│   │       没有它，对象是孤岛。
+│   ├── kernel/talkable ── 与他者建立关系（G6, G8）
+│   │   │   消息发送、回复、社交原则。
+│   │   │   没有它，对象是孤岛。
+│   │   │
+│   │   ├── kernel/talkable/cross_object  ── 跨对象函数调用协议
+│   │   ├── kernel/talkable/ooc_links     ── ooc:// 链接和导航卡片
+│   │   └── kernel/talkable/delivery      ── 交付规范、协作交付
 │   │
-│   ├── reflective   ── 从经验中学习（G5, G12）
-│   │       记忆系统（三层）、reflect 沉淀通道、ReflectFlow 角色定义。
-│   │       没有它，对象不会成长。
-│   │       （已合并原 selfmeta trait — ReflectFlow 角色定义内联于此）
+│   ├── kernel/reflective ── 从经验中学习（G5, G12）
+│   │   │   reflect 沉淀通道、核心原则。
+│   │   │   没有它，对象不会成长。
+│   │   │
+│   │   ├── kernel/reflective/memory_api    ── 记忆 API（Flow Summary, Self/Session）
+│   │   └── kernel/reflective/reflect_flow  ── ReflectFlow 角色定义
 │   │
-│   └── verifiable   ── 认识论诚实
+│   └── kernel/verifiable ── 认识论诚实
 │           "没有验证证据，不做完成声明。"
 │           没有它，对象会自欺。
 │
-│   └── cognitive-style ── 认知栈思维模式（G13）
-│           教对象用行为树结构化思考：何时拆解、何时 push/pop 子帧。
-│           没有它，对象会把所有事情堆在一个节点里。
-│
 ├── 认知工具层（when: conditional）── 按需激活的思维策略
 │   │
-│   │   这些 trait 在特定场景下被认知栈激活。
-│   │   它们不定义对象"是什么"，而是提供"怎么做"的策略。
-│   │
-│   ├── plannable        ── 任务拆解（G9）
-│   │       复杂任务先拆解再执行，YAGNI 原则。
-│   │
-│   ├── debuggable       ── 系统化调试
-│   │       四阶段流程：根因调查 → 模式分析 → 假设测试 → 修复。
-│   │
-│   ├── object_creation  ── 创建新对象（G1）
-│   │       whoAmI 结构指南：身份、边界、方法、风格。
-│   │
-│   └── web_search       ── 外部信息获取（G10）
-│           search + fetchPage，唯一的工具型 trait。
+│   ├── kernel/plannable        ── 任务拆解（G9）
+│   ├── kernel/debuggable       ── 系统化调试
+│   ├── kernel/object_creation  ── 创建新对象（G1）
+│   └── kernel/web_search       ── 外部信息获取（G10）
 │
 └── 组合效应
-        基座四件套的交叉：
+        基座层的交叉：
         computable × talkable    = 能协作执行的智能体
         computable × reflective  = 能从错误中学习的智能体
         reflective × verifiable  = 不会把幻觉沉淀为经验的智能体
@@ -612,8 +690,10 @@ Web UI 概念树
 │   │
 │   ├── stones/{name}              → StoneView（ObjectDetail 或 DynamicUI）[priority: 50]
 │   ├── stones/{name}/reflect/     → ReflectFlowView（Process + Data）[priority: 80]
-│   ├── flows/{sessionId}          → SessionGantt（甘特图总览）[priority: 100]
-│   ├── flows/{sid}/objects/{name}   → FlowView（Flow 详情，含 Readme/Data/UI Tab）[priority: 100]
+│   ├── flows/{sessionId}          → SessionKanban（看板视图）[priority: 120]
+│   ├── flows/{sid}/issues/{id}    → IssueDetailView（Issue 详情页）[priority: 130]
+│   ├── flows/{sid}/tasks/{id}     → TaskDetailView（Task 详情页）[priority: 130]
+│   ├── flows/{sid}/objects/{name} → FlowView（Flow 详情，含 Readme/Data/UI Tab）[priority: 100]
 │   ├── **/process.json            → ProcessJsonView（行为树查看器）[priority: 40]
 │   ├── *.json                     → CodeViewer（CodeMirror JSON 高亮）[priority: 0]
 │   ├── *.md                       → MarkdownViewer（Markdown 渲染）[priority: 0]
@@ -622,7 +702,7 @@ Web UI 概念树
 ├── 页面级视图 ── 占据 Stage 全部空间的完整页面
 │   │
 │   ├── WelcomePage（欢迎页）── 无活跃 session 时的首页
-│   │       居中输入框 + @ 对象选择器 + 对象快捷卡片
+│   │       居中输入框
 │   │
 │   ├── ChatPage（对话页）── 用户与对象的主对话界面
 │   │   │   浮动输入框 + 对话时间线 + 对象信息面板
@@ -662,13 +742,35 @@ Web UI 概念树
 │   │   ├── DataTab ── 分栏设计（左栏 Flow data + 右栏 Stone data）
 │   │   └── UITab ── Flow 自渲染 UI（DynamicUI 加载 ui/pages/*.tsx）
 │   │
-│   ├── SessionGantt（Session 甘特图）── Session 级总览
-│   │   │   每行一个参与 Object，每个块代表一个 focus 事项（ProcessNode）
-│   │   │   块按开始时间排序后分列放置，固定宽度展示 title/summary
+│   ├── SessionKanban（Session 看板）── Session 级总览（替换原 SessionGantt）
+│   │   │   三栏布局：readme + Issues + Tasks
 │   │   │
-│   │   ├── GanttBlock ── 甘特图块（状态着色：done 绿/doing 琥珀/todo 灰）
-│   │   ├── SummaryModal ── 点击块弹出的模态卡片（summary + 跳转 Process tab）
-│   │   └── 图例 ── 状态颜色说明
+│   │   ├── ReadmePanel ── 左栏：readme.md 渲染（supervisor 维护的 session 摘要）
+│   │   ├── IssuesPanel ── 中栏：Issue 按状态分组展示
+│   │   │   ├── IssueCard ── Issue 卡片（标题 + 关联 task 数 + 参与者 + hasNewInfo 红点）
+│   │   │   └── 分组顺序：需确认 → 讨论中 → 设计中 → 评审中 → 执行中 → 确认中 → 完成 → 关闭
+│   │   ├── TasksPanel ── 右栏：Task 按状态分组展示
+│   │   │   ├── TaskCard ── Task 卡片（标题 + 子任务进度条 + hasNewInfo 红点）
+│   │   │   └── 分组顺序：执行中 → 完成 → 关闭
+│   │   └── 空分组不显示
+│   │
+│   ├── IssueDetailView（Issue 详情页）── Issue 讨论、评论、关联管理
+│   │   │   虚拟路径：flows/{sessionId}/issues/{issueId}
+│   │   │   Tabs：描述 | 评论 | 关联 Tasks | Reports
+│   │   │
+│   │   ├── DescriptionTab ── Issue 描述（Markdown 渲染）
+│   │   ├── CommentsTab ── 时间线评论列表 + 用户输入框
+│   │   ├── LinkedTasksTab ── 关联的 Task 列表
+│   │   └── ReportsTab ── 关联的 report pages（DynamicUI 加载 ui/pages/*.tsx）
+│   │
+│   └── TaskDetailView（Task 详情页）── Task 子任务、关联管理
+│       │   虚拟路径：flows/{sessionId}/tasks/{taskId}
+│       │   Tabs：描述 | 子任务列表 | 关联 Issues | Reports
+│       │
+│       ├── DescriptionTab ── Task 描述
+│       ├── SubTasksTab ── 子任务列表（pending/running/done 状态）
+│       ├── LinkedIssuesTab ── 关联的 Issue 列表
+│       └── ReportsTab ── 关联的 report pages
 │   │
 │   └── FlowDetail（Flow 详情）── 嵌入式 Flow 查看（EffectsTab 内使用）
 │   │   ├── MessagesView ── 消息列表
@@ -775,9 +877,10 @@ Web UI 概念树
 │   ├── flow:message ── 新消息事件
 │   ├── flow:action ── 新 Action 事件
 │   ├── flow:talk ── 流式对话事件
-│   ├── flow:thought ── 流式思考事件
+│   ├── flow:thought ── 流式思考事件（来源：Provider 原生 thinking，非 parser 产物）
 │   ├── stream:program ── 流式 program 事件
-│   └── stream:action ── 流式 action 事件
+│   ├── stream:action ── 流式 action 事件
+│   └── stream:thought ── 流式 thinking_chunk（来自 Provider thinking 通道）
 │
 └── ooc:// 协议 ── 前端内部链接系统
     │   对象间导航的统一寻址方式
@@ -789,6 +892,82 @@ Web UI 概念树
 
 代码: kernel/web/src/App.tsx, kernel/web/src/router/, kernel/web/src/features/, kernel/web/src/components/
       kernel/web/src/store/, kernel/web/src/api/client.ts
+```
+
+### 子树 7: 看板数据 — "Session 如何管理需求与任务"
+
+```
+Kanban
+│
+├── 数据结构
+│   ├── Issue（需求/问题讨论）
+│   │   ├── id                    ── 唯一标识，如 "ISSUE-001"
+│   │   ├── title                 ── 标题
+│   │   ├── status                ── 状态（自由转换，无强制状态机）
+│   │   │       discussing | designing | reviewing | executing | confirming | done | closed
+│   │   ├── description           ── 描述（markdown）
+│   │   ├── participants          ── 参与讨论的对象名称列表
+│   │   ├── taskRefs              ── 关联的 task id 列表（多对多）
+│   │   ├── reportPages           ── 关联的 report 页面路径
+│   │   ├── hasNewInfo            ── 是否有需要人类确认的新信息
+│   │   └── comments: Comment[]   ── 评论列表（不可变）
+│   │
+│   ├── Task（执行单元）
+│   │   ├── id                    ── 唯一标识，如 "TASK-001"
+│   │   ├── title                 ── 标题
+│   │   ├── status                ── running | done | closed
+│   │   ├── description           ── 描述（markdown）
+│   │   ├── issueRefs             ── 关联的 issue id 列表（多对多）
+│   │   ├── reportPages           ── 关联的 report 页面路径
+│   │   ├── subtasks: SubTask[]   ── 子任务列表
+│   │   └── hasNewInfo            ── 是否有需要人类确认的新信息
+│   │
+│   └── Comment（评论，不可变）
+│       ├── id, author, content
+│       ├── mentions              ── @的对象列表
+│       └── createdAt
+│
+├── 文件存储
+│   ├── issues/index.json         ── 轻量索引数组 [{id, title, status, updatedAt}]
+│   ├── issues/issue-{id}.json    ── 单条 issue 完整数据
+│   ├── tasks/index.json          ── 轻量索引数组
+│   └── tasks/task-{id}.json      ── 单条 task 完整数据
+│
+├── 写入者与并发控制
+│   ├── supervisor → session-kanban trait
+│   ├── 其他对象   → issue-discussion trait
+│   ├── 用户评论   → 后端 API (POST /api/session/{sid}/issues/{id}/comments)
+│   └── 并发安全   → session.serializedWrite(path, fn) 串行化读写
+│
+├── Trait
+│   ├── session-kanban（Supervisor 专属）
+│   │   │   位置：stones/supervisor/traits/session-kanban/
+│   │   │   通过 task_dir 变量定位 session 目录
+│   │   │
+│   │   ├── createIssue / updateIssueStatus / updateIssue / closeIssue
+│   │   ├── setIssueNewInfo
+│   │   ├── createTask / updateTaskStatus / updateTask
+│   │   ├── createSubTask / updateSubTask
+│   │   └── setTaskNewInfo
+│   │
+│   └── issue-discussion（Kernel trait，所有对象共享）
+│       │   位置：kernel/traits/issue-discussion/
+│       │   负责评论和讨论，通过 mentions 投递消息通知
+│       │
+│       ├── commentOnIssue(issueId, content, mentions?)
+│       ├── listIssueComments(issueId)
+│       └── getIssue(issueId)
+│
+└── 前端交互
+    ├── Kanban 视图 ── 三栏（readme + Issues + Tasks）
+    ├── Issue 详情页 ── 描述 | 评论 | 关联 Tasks | Reports
+    ├── Task 详情页 ── 描述 | 子任务 | 关联 Issues | Reports
+    └── hasNewInfo 重置 ── 打开详情页时自动清除红点
+
+代码: kernel/src/kanban/store.ts（数据读写）, kernel/src/kanban/methods.ts（session-kanban trait methods）
+      kernel/src/kanban/discussion.ts（issue-discussion trait methods）
+      kernel/web/src/features/SessionKanban.tsx, kernel/web/src/features/IssueDetailView.tsx
+      kernel/web/src/features/TaskDetailView.tsx, kernel/web/src/api/kanban.ts
 ```
 
 ---

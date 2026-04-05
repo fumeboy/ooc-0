@@ -29,3 +29,4 @@
 | E10: 对象的死亡与遗产 | 未验证 | — | [e_death_legacy.md](emergence/e_death_legacy.md) |
 | E11: Effect 循环 | 未验证 | — | [e_effect_cycle.md](emergence/e_effect_cycle.md) |
 | E12: UI 涌现 | 部分验证 | — | [e_ui_emergence.md](emergence/e_ui_emergence.md) |
+| E13: Progressive Disclosure | 待验证 | — | 树形 Trait + 三层加载 |
