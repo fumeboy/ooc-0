@@ -748,13 +748,13 @@ Web UI 概念树
 │   │   └── UITab ── Flow 自渲染 UI（DynamicUI 加载 ui/pages/*.tsx）
 │   │
 │   ├── SessionKanban（Session 看板）── Session 级总览（替换原 SessionGantt）
-│   │   │   三栏布局：readme + Issues + Tasks
+│   │   │   双栏布局：readme | Issues + Tasks（上下排列）
 │   │   │
 │   │   ├── ReadmePanel ── 左栏：readme.md 渲染（supervisor 维护的 session 摘要）
-│   │   ├── IssuesPanel ── 中栏：Issue 按状态分组展示
+│   │   ├── IssuesPanel ── 右栏上部：Issue 按状态分组展示
 │   │   │   ├── IssueCard ── Issue 卡片（标题 + 关联 task 数 + 参与者 + hasNewInfo 红点）
 │   │   │   └── 分组顺序：需确认 → 讨论中 → 设计中 → 评审中 → 执行中 → 确认中 → 完成 → 关闭
-│   │   ├── TasksPanel ── 右栏：Task 按状态分组展示
+│   │   ├── TasksPanel ── 右栏下部：Task 按状态分组展示
 │   │   │   ├── TaskCard ── Task 卡片（标题 + 子任务进度条 + hasNewInfo 红点）
 │   │   │   └── 分组顺序：执行中 → 完成 → 关闭
 │   │   └── 空分组不显示
