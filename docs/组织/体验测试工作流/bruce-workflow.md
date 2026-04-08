@@ -777,7 +777,7 @@ docs/体验用例/
 | 单次执行问题 | 对应 `success.md` 的「备注」或「历史」 |
 | 用例设计改进 | 更新对应 `case.md`，并记录变更原因 |
 | 跨用例的模式 | 补充到此工作流文档（bruce-workflow.md） |
-| 架构级反思 | `docs/哲学文档/questions.md` |
+| 架构级反思 | `docs/哲学文档/discussions.md` |
 
 ---
 

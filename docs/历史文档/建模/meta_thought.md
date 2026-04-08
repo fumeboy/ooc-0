@@ -13,7 +13,7 @@
 ### 判断：XML 是设计规范，运行时必须转换
 
 context.xml 中的 `<proc>`, `<do>`, `<thought>` 等标签是给人类读的设计文档，
-不应直接作为 LLM 的输入格式。理由来自项目自身的血泪教训（questions.md）：
+不应直接作为 LLM 的输入格式。理由来自项目自身的血泪教训（discussions.md）：
 
 > LLM 看到 XML 标签后会在输出中复制它们，导致语法错误。
 > 经历了多次格式迭代才稳定在 `>>> output:` 这种无闭合标记的格式上。
@@ -393,7 +393,7 @@ base 接口是"对象是什么"，kernel traits 是"对象能做什么"。
 ```
 
 任务完成后，整个 session 子目录可以归档或删除，shared/ 随之清理。
-这解决了 Flow 生命周期管理的问题（questions.md 中提到的"Flow 何时销毁"）：
+这解决了 Flow 生命周期管理的问题（discussions.md 中提到的"Flow 何时销毁"）：
 **任务完成 = session 目录归档 = 所有相关资源自动回收**。
 
 ---

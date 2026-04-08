@@ -57,7 +57,7 @@ docs/
 │   ├── emergence.md       # 12 条涌现能力（索引）
 │   ├── emergence/         # 涌现能力详情（12 个子文件）
 │   ├── model.md           # 形式化模型
-│   ├── questions.md       # 开放问题与设计决策
+│   ├── discussions.md       # 开放问题与设计决策
 │   ├── questions/         # 问题详情子目录
 │   ├── traits.md          # Kernel Trait 设计索引
 │   ├── traits/            # Kernel Trait 详情（6 个子文件）
@@ -133,7 +133,7 @@ docs/
 2. `哲学/model.md` — 形式化模型
 3. `系统/` 下所有设计文档
 4. `组织/README.md` — 1+3 模型
-5. `哲学/questions.md` — 开放问题
+5. `哲学/discussions.md` — 开放问题
 
 ---
 

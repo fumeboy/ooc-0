@@ -75,13 +75,13 @@ Step 5: 自测     → bun test，确认 0 fail
 Step 6: 文档     → 检查文档一致性
 Step 7: 提交     → git commit
 Step 8: 体验验证  → spawn Bruce 以用户身份体验新功能
-Step 9: 反思     → 更新 questions.md / emergence.md
+Step 9: 反思     → 更新 discussions.md / emergence.md
 ```
 
 # 文档管理规则
 
 0. 全局架构索引在 `docs/meta.md`
-1. 哲学文档在 `docs/哲学文档/` 下（gene.md, emergence.md, questions.md）
+1. 哲学文档在 `docs/哲学文档/` 下（gene.md, emergence.md, discussions.md）
 2. 学习笔记在 `docs/参考/` 下
 3. Feature 设计在 `docs/feature/` 下（已完成/进行中/草稿）
 4. 理想与现实在 `docs/理想与现实/` 下

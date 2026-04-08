@@ -1,0 +1,8 @@
+{
+  "name": "experience-test",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "playwright": "^1.59.1"
+  }
+}

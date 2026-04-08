@@ -4,7 +4,7 @@
 
 - 基因定义: `world_dir/docs/哲学文档/gene.md`（13 条基因）
 - 涌现能力: `world_dir/docs/哲学文档/emergence.md`
-- 开放问题: `world_dir/docs/哲学文档/questions.md`
+- 开放问题: `world_dir/docs/哲学文档/discussions.md`
 - 概念树: `world_dir/docs/meta.md`
 
 ## 组织文档

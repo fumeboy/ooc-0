@@ -49,7 +49,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   └── package.json
 ├── docs/                     ← 文档（哲学、架构、feature、规范）
 │   ├── meta.md               ← 本文件
-│   ├── 哲学文档/              ← gene.md, emergence.md, questions.md
+│   ├── 哲学文档/              ← gene.md, emergence.md, discussions.md
 │   ├── 组织/                  ← 1+3 组织结构
 │   ├── feature/              ← Feature 设计文档
 │   ├── 规范/                  ← 编码规范、交叉引用
