@@ -21,6 +21,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── cli.ts            ← CLI 入口
 │   │   ├── server/           ← HTTP + SSE 服务
 │   │   ├── flow/             ← ThinkLoop, Flow
+│   │   ├── thread/           ← 线程树架构（ThreadsTree, Engine, Scheduler）
 │   │   ├── world/            ← World, Scheduler, Router
 │   │   ├── context/          ← Context 构建
 │   │   ├── process/          ← 行为树, 认知栈
@@ -391,7 +392,10 @@ stones/
     ├── objects/{name}/              ── 一个 Flow = 一个目录（原 flows/ 重命名）
     │   ├── .flow                   ── 标记文件（Flow 存活标志）
     │   ├── data.json               ── Flow 的运行时数据
-    │   ├── process.json            ── 行为树（节点状态、actions 历史）
+    │   ├── process.json            ── 行为树（旧架构，节点状态、actions 历史）
+    │   ├── threads.json            ── 线程树索引（新架构，rootId + nodes 元数据）
+    │   ├── threads/{threadId}/     ── 线程运行时数据
+    │   │   └── thread.json         ── 单个线程的 actions、locals、plan
     │   ├── memory.md               ── 会话记忆（仅当前任务可见）
     │   ├── ui/pages/               ── Flow 演示页面（原 files/ui/）
     │   └── files/                  ── Flow 共享数据
@@ -403,6 +407,7 @@ stones/
         └── task-{id}.json          ── 单条 task 完整数据
 
 代码: kernel/src/persistence/reader.ts（读）, kernel/src/persistence/writer.ts（写）
+      kernel/src/persistence/thread-adapter.ts（线程树 → Process 转换）
 ```
 
 ### 子树 2: 认知构建 — "Context 如何被组装"（G5, G13）
@@ -702,7 +707,7 @@ Web UI 概念树
 ├── 页面级视图 ── 占据 Stage 全部空间的完整页面
 │   │
 │   ├── WelcomePage（欢迎页）── 无活跃 session 时的首页
-│   │       居中输入框
+│   │       系统介绍 + 对象概览卡片（名称 + talkable.whoAmI）+ 输入框
 │   │
 │   ├── ChatPage（对话页）── 用户与对象的主对话界面
 │   │   │   浮动输入框 + 对话时间线 + 对象信息面板
