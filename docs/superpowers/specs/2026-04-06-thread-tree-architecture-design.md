@@ -20,7 +20,7 @@ OOC 当前的多对象协作存在三个缺失：
 
 将行为树从"静态计划结构"重构为"动态线程树"：
 - **节点 = 线程 = 栈帧**：三者统一为同一个概念
-- **所有交互 = 创建子线程**：`create_sub_thread`、`create_sub_thread_on_node`、`talk` 本质相同
+- **所有交互 = 创建子线程**：`create_sub_thread`（含 `derive_from` 按需回忆）、`continue_sub_thread`（多次交互）、`talk` 本质相同
 - **执行视角 + 规划视角 = 始终共存**：每个线程同时具备两种视角，LLM 自然决策
 - **Issue = 共享 inbox**：多方协作复用现有 Issue/Comment 机制
 
@@ -28,7 +28,7 @@ OOC 当前的多对象协作存在三个缺失：
 
 1. **LLM 做判断** — 系统只做检测和通知，决策交给 LLM
 2. **一个原语统一所有** — 创建子节点 + 启动线程 = 唯一的执行原语
-3. **结构化遗忘** — 默认摘要，按需回忆（create_sub_thread_on_node）
+3. **结构化遗忘** — 默认摘要，按需回忆（`derive_from_which_thread`），多次交互（`continue_sub_thread`）
 4. **不考虑向后兼容** — 完全重构，以最优雅的方式实现
 
 ---
@@ -257,14 +257,20 @@ interface ThreadResult {
   status: "done" | "failed";
 }
 
-/** 创建子节点并启动子线程 */
+/** 创建子节点并启动子线程（统一入口） */
 create_sub_thread(title: string, options?: {
   traits?: string[];
   description?: string;
-}): ThreadHandle
+  derive_from_which_thread?: string;  // 按需回忆：挂在目标线程下，继承其 actions 历史
+}): ThreadHandle  // 返回真实 threadId，可用于 continue_sub_thread / await
 
-/** 在指定节点下创建子线程（按需回忆，仅限同一 Object 内） */
-create_sub_thread_on_node(nodeId: string, message: string): Promise<string>
+/**
+ * 向已创建的子线程追加消息（多次交互）
+ *
+ * 前提：targetThreadId 必须是当前线程创建的子线程。
+ * 消息写入目标线程的 inbox，如果目标线程处于 done/failed 状态则自动唤醒为 running。
+ */
+continue_sub_thread(targetThreadId: string, message: string): void
 
 /** 完成当前线程，将结果交还创建者 */
 return(summary: string, artifacts?: Record<string, unknown>): void
@@ -283,9 +289,31 @@ await_all(threadIds: string[]): Promise<ThreadResult[]>
 - `artifacts` 合并到**创建者线程**的 `locals` 中（`Object.assign(creator.locals, artifacts)`）
 - 创建者线程被唤醒后，可以通过 `locals` 访问子线程的产出
 
-#### create_sub_thread_on_node 的作用域
+#### derive_from_which_thread 的作用域
 
-`create_sub_thread_on_node` 仅限同一 Object 内使用。目标 nodeId 必须在当前 Object 的线程树中。跨 Object 的交互统一使用 `talk`。
+`create_sub_thread` 的 `derive_from_which_thread` 参数仅限同一 Object 内使用。目标 threadId 必须在当前 Object 的线程树中。跨 Object 的交互统一使用 `talk`。
+
+#### continue_sub_thread 的语义
+
+`continue_sub_thread` 实现对同一子线程的多次交互：
+
+```
+场景：父线程 T1 创建子线程 T2 处理任务，T2 完成后 T1 需要追问
+
+1. T1: create_sub_thread("搜索 AI safety") → 返回 T2 的 threadId
+2. T2 执行，完成后 return(summary)
+3. T1 被唤醒，看到 T2 的结果
+4. T1: continue_sub_thread(T2.id, "请补充 2024 年之后的论文")
+   → 消息写入 T2 的 inbox
+   → T2 状态从 done 变为 running，重新启动 ThinkLoop
+   → T1 进入 waiting（自动 await T2）
+5. T2 看到 inbox 中的追问，继续工作
+6. T2 再次 return → T1 再次被唤醒
+```
+
+安全约束：
+- `targetThreadId` 必须是当前线程的直接子线程（`creatorThreadId === 当前线程 ID`）
+- 如果目标线程正在 running，消息仍然写入 inbox，但不改变状态（线程下一轮自然看到）
 
 #### description 与 plan 的区别
 
@@ -377,13 +405,14 @@ commentOnIssue(issueId: string, content: string, mentions?: string[]): void
 
 ## 5. Context 构建
 
-### 5.1 三种线程创建方式的 Context 差异
+### 5.1 线程创建方式的 Context 差异
 
 | 创建方式 | 初始 process | 目标节点信息 | 其余节点 |
 |---------|-------------|------------|---------|
 | `create_sub_thread` | 拷贝父线程 process（快照） | — | 摘要 |
-| `create_sub_thread_on_node` | 空白 | 目标节点完整展示（actions + messages） | 摘要 |
+| `create_sub_thread` + `derive_from` | 空白 | 目标节点完整展示（actions + messages） | 摘要 |
 | `talk` | 空白 | — | 摘要 |
+| `continue_sub_thread` | 保留已有 process（追加 inbox 消息） | — | 摘要 |
 
 #### process 拷贝的语义（create_sub_thread）
 
@@ -414,8 +443,9 @@ commentOnIssue(issueId: string, content: string, mentions?: string[]): void
 
 1. N 自己的 process（actions + messages 按时间排序）
    - create_sub_thread：初始 = 父线程 process 拷贝 + 后续自己的 actions
-   - create_sub_thread_on_node：初始 = 空白 + 目标节点完整历史
+   - create_sub_thread + derive_from：初始 = 空白 + 目标节点完整历史
    - talk：初始 = 空白
+   - continue_sub_thread：保留已有 process + inbox 中的新消息
 
 2. N 的直系祖先节点：摘要（title + status + summary）
 
@@ -647,9 +677,21 @@ A 的线程：
 ### 9.4 按需回忆
 
 ```
-D 的线程：create_sub_thread_on_node("C", "你产出的文档路径在哪？")
+D 的线程：create_sub_thread("查询文档路径", { derive_from_which_thread: "C" })
   → C 下创建子线程，Context 包含 C 的完整 actions 历史
   → 子线程回答后 return，结果异步返回 D
+```
+
+### 9.5 多次交互
+
+```
+A 的线程：
+  t1 = create_sub_thread("搜索 AI safety")
+  await(t1)
+  → t1 完成，A 看到结果
+  continue_sub_thread(t1, "请补充 2024 年之后的论文")
+  → t1 被唤醒，A 自动进入 waiting
+  → t1 再次完成，A 再次被唤醒
 ```
 
 ---
@@ -710,7 +752,7 @@ serializedWrite 的实现：
 1. 读 `threads.json` → 获取树结构和所有节点摘要
 2. 读当前线程的 `thread.json` → 获取完整 process
 3. 如果是 `create_sub_thread`：还需读父线程的 `thread.json`（拷贝 process）
-4. 如果是 `create_sub_thread_on_node`：还需读目标节点的 `thread.json`（完整展示）
+4. 如果是 `create_sub_thread` + `derive_from`：还需读目标节点的 `thread.json`（完整展示）
 
 ---
 
@@ -725,7 +767,7 @@ serializedWrite 的实现：
 | G5（Context/遗忘） | 默认摘要，按需回忆 = 结构化遗忘 |
 | G6（Relation 关系） | 不变，通过 directory 展示在 Context 中 |
 | G7（持久化即存在） | threads.json + threads/{path}/thread.json = 线程树的物理存在 |
-| G8（Effect） | talk / create_sub_thread_on_node / commentOnIssue = Effect |
+| G8（Effect） | talk / create_sub_thread(derive_from) / continue_sub_thread / commentOnIssue = Effect |
 | G9（行为树） | 行为树 = 线程树 |
 | G10（事件历史） | actions 记录在节点的 thread.json |
 | G11（UI 自我表达） | 不变，但前端需要适配线程树可视化（见 Section 13） |
