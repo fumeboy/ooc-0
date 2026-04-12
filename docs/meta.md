@@ -27,6 +27,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── process/          ← 行为树, 认知栈
 │   │   ├── stone/            ← Stone 操作
 │   │   ├── trait/            ← Trait 加载/激活
+│   │   ├── skill/            ← Skill 加载（SKILL.md 按需加载）
 │   │   ├── persistence/      ← 持久化读写
 │   │   ├── executable/       ← 沙箱执行器
 │   │   ├── thinkable/        ← LLM 配置
@@ -40,11 +41,15 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │       ├── api/          ← API 客户端
 │   │       └── lib/          ← 工具函数
 │   ├── traits/               ← Kernel Traits（所有对象共享的基础能力）
-│   │   ├── computable/       ← 思考与执行（树形：含 output_format, program_api, stack_api, multi_thread 子 trait）
-│   │   ├── talkable/         ← 跨对象通信（树形：含 cross_object, ooc_links, delivery 子 trait）
-│   │   ├── reflective/       ← 记忆与反思（树形：含 memory_api, reflect_flow 子 trait）
-│   │   ├── plannable/        ← 任务规划
-│   │   ├── library_index/    ← Library 资源查询
+│   │   ├── base/            ← 指令系统基座（唯一 always trait，极简）
+│   │   ├── computable/       ← 思考与执行（program 指令时加载，含 output_format, program_api, stack_api, multi_thread, file_ops, file_search, shell_exec, web_search, testable 子 trait）
+│   │   ├── talkable/         ← 跨对象通信（talk/return 指令时加载，含 cross_object, ooc_links, delivery 子 trait）
+│   │   ├── reflective/       ← 记忆与反思（return 指令时加载，含 memory_api, reflect_flow 子 trait）
+│   │   ├── verifiable/       ← 验证能力（return 指令时加载）
+│   │   ├── plannable/        ← 任务规划（create_sub_thread 指令时加载）
+│   │   ├── debuggable/       ← 系统化调试（program 指令时加载）
+│   │   ├── reviewable/       ← 代码审查（program 指令时加载）
+│   │   ├── library_index/    ← Library 资源查询（program 指令时加载）
 │   │   └── ...
 │   ├── tests/                ← 单元测试（bun:test）
 │   └── package.json
@@ -748,13 +753,13 @@ Web UI 概念树
 │   │   └── UITab ── Flow 自渲染 UI（DynamicUI 加载 ui/pages/*.tsx）
 │   │
 │   ├── SessionKanban（Session 看板）── Session 级总览（替换原 SessionGantt）
-│   │   │   双栏布局：readme | Issues + Tasks（上下排列）
+│   │   │   三栏布局：readme + Issues + Tasks
 │   │   │
 │   │   ├── ReadmePanel ── 左栏：readme.md 渲染（supervisor 维护的 session 摘要）
-│   │   ├── IssuesPanel ── 右栏上部：Issue 按状态分组展示
+│   │   ├── IssuesPanel ── 中栏：Issue 按状态分组展示
 │   │   │   ├── IssueCard ── Issue 卡片（标题 + 关联 task 数 + 参与者 + hasNewInfo 红点）
 │   │   │   └── 分组顺序：需确认 → 讨论中 → 设计中 → 评审中 → 执行中 → 确认中 → 完成 → 关闭
-│   │   ├── TasksPanel ── 右栏下部：Task 按状态分组展示
+│   │   ├── TasksPanel ── 右栏：Task 按状态分组展示
 │   │   │   ├── TaskCard ── Task 卡片（标题 + 子任务进度条 + hasNewInfo 红点）
 │   │   │   └── 分组顺序：执行中 → 完成 → 关闭
 │   │   └── 空分组不显示
