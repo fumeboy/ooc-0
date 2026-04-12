@@ -1,7 +1,7 @@
 ---
 name: library/prd
 type: how_to_use_tool
-when: always
+when: "当需要生成或编写 PRD/产品文档时"
 description: PRD/产品文档生成能力索引（子 trait 见本目录）
 ---
 

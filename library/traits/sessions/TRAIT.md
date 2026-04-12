@@ -1,7 +1,7 @@
 ---
 name: library/sessions
 type: how_to_use_tool
-when: always
+when: "当需要检索或分析历史 Session/Flow 数据时"
 description: Sessions/Flow 检索与分析能力索引（子 trait 见本目录）
 ---
 

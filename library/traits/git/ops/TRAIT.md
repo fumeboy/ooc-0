@@ -2,7 +2,7 @@
 name: library/git/ops
 type: how_to_use_tool
 version: 1.0.0
-when: always
+when: "当需要执行 Git 版本控制操作时"
 description: Git 版本控制操作：status/diff/log/add/commit/branch/checkout/push/pull
 deps: []
 ---

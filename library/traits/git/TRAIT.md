@@ -1,7 +1,7 @@
 ---
 name: library/git
 type: how_to_use_tool
-when: always
+when: "当需要使用 Git 相关能力时"
 description: Git 相关能力索引（子 trait 见本目录）
 ---
 

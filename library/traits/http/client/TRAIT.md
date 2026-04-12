@@ -2,7 +2,7 @@
 name: library/http/client
 type: how_to_use_tool
 version: 1.0.0
-when: always
+when: "当需要发送 HTTP GET/POST 请求时"
 description: HTTP 请求能力：GET/POST/通用请求
 deps: []
 ---
