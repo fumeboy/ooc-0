@@ -1,7 +1,9 @@
 ---
 name: session-kanban
 type: how_to_think
-when: always
+when: never
+command_binding:
+  commands: ["create_sub_thread", "set_plan"]
 description: Supervisor 专属 trait，提供 Session 级别的 Issue/Task 管理能力
 deps: []
 ---
