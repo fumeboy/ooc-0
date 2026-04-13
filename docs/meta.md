@@ -20,17 +20,14 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   ├── src/                  ← 后端源码（TypeScript, Bun runtime）
 │   │   ├── cli.ts            ← CLI 入口
 │   │   ├── server/           ← HTTP + SSE 服务
-│   │   ├── flow/             ← ThinkLoop, Flow
-│   │   ├── thread/           ← 线程树架构（ThreadsTree, Engine, Scheduler）
-│   │   ├── world/            ← World, Scheduler, Router
-│   │   ├── context/          ← Context 构建
-│   │   ├── process/          ← 行为树, 认知栈
+│   │   ├── thread/           ← 线程树架构（ThreadsTree, Engine, Scheduler, ContextBuilder）
+│   │   ├── world/            ← World（对象加载、talk 入口）
 │   │   ├── stone/            ← Stone 操作
-│   │   ├── trait/            ← Trait 加载/激活
+│   │   ├── trait/            ← Trait 加载/激活/方法注册
 │   │   ├── skill/            ← Skill 加载（SKILL.md 按需加载）
 │   │   ├── persistence/      ← 持久化读写
 │   │   ├── executable/       ← 沙箱执行器
-│   │   ├── thinkable/        ← LLM 配置
+│   │   ├── thinkable/        ← LLM 配置（含 tool calling 支持）
 │   │   └── types/            ← 类型定义
 │   ├── web/                  ← 前端源码（React + Vite + Jotai）
 │   │   └── src/
@@ -41,15 +38,15 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │       ├── api/          ← API 客户端
 │   │       └── lib/          ← 工具函数
 │   ├── traits/               ← Kernel Traits（所有对象共享的基础能力）
-│   │   ├── base/            ← 指令系统基座（唯一 always trait，极简）
-│   │   ├── computable/       ← 思考与执行（program 指令时加载，含 output_format, program_api, stack_api, multi_thread, file_ops, file_search, shell_exec, web_search, testable 子 trait）
-│   │   ├── talkable/         ← 跨对象通信（talk/return 指令时加载，含 cross_object, ooc_links, delivery 子 trait）
-│   │   ├── reflective/       ← 记忆与反思（return 指令时加载，含 memory_api, reflect_flow 子 trait）
-│   │   ├── verifiable/       ← 验证能力（return 指令时加载）
-│   │   ├── plannable/        ← 任务规划（create_sub_thread 指令时加载）
-│   │   ├── debuggable/       ← 系统化调试（program 指令时加载）
-│   │   ├── reviewable/       ← 代码审查（program 指令时加载）
-│   │   ├── library_index/    ← Library 资源查询（program 指令时加载）
+│   │   ├── base/            ← 指令系统基座（唯一 always trait，open/submit/close 三原语）
+│   │   ├── computable/       ← 代码执行（command_binding: program，含 program_api, file_ops, file_search, shell_exec, web_search, testable 子 trait）
+│   │   ├── talkable/         ← 跨对象通信（command_binding: talk/return，含 cross_object, ooc_links, delivery 子 trait）
+│   │   ├── reflective/       ← 记忆与反思（command_binding: return，含 memory_api, reflect_flow 子 trait）
+│   │   ├── verifiable/       ← 验证能力（command_binding: return）
+│   │   ├── plannable/        ← 任务规划（command_binding: create_sub_thread）
+│   │   ├── debuggable/       ← 系统化调试（command_binding: program）
+│   │   ├── reviewable/       ← 代码审查（command_binding: program）
+│   │   ├── library_index/    ← Library 资源查询（command_binding: program）
 │   │   └── ...
 │   ├── tests/                ← 单元测试（bun:test）
 │   └── package.json
@@ -175,102 +172,99 @@ Object（对象）
 │   │   │   Context 不是世界的影子——Context 就是对象的全部世界。
 │   │   │
 │   │   ├── whoAmI ── 我是谁（来自 readme.md）
-│   │   ├── process ── 我在做什么（来自当前 Flow 的行为树）
-│   │   ├── messages ── 别人对我说了什么（来自消息队列）
-│   │   ├── windows ── 我正在观察什么（来自打开的数据窗口）
+│   │   ├── instructions ── 系统指令（来自激活的 kernel trait）
+│   │   ├── knowledge ── 知识窗口（来自激活的 library/user trait）
+│   │   ├── parentExpectation ── 父线程对我的期望（来自线程树节点 title + description）
+│   │   ├── process ── 我在做什么（来自当前线程的 actions 历史）
+│   │   ├── inbox ── 别人对我说了什么（来自线程 inbox，含 messageId 供 mark）
+│   │   ├── activeForms ── 我正在进行的操作（来自 FormManager）
 │   │   ├── directory ── 我拥有什么（来自持久化目录）
-│   │   └── status ── 我的状态如何（来自运行时元数据）
+│   │   └── childrenSummary ── 子线程完成情况（来自线程树子节点摘要）
+│   │
+│   ├── 线程树 / Thread Tree（G13）
+│   │   │   对象的运行时 = 一棵树。
+│   │   │   每个节点 = 一个线程 = 一层认知作用域。
+│   │   │   替代旧的"认知栈"和"行为树"，统一为单一数据结构。
+│   │   │
+│   │   ├── 根线程 ── 由用户消息或 talk 创建
+│   │   │       是对象处理一个请求的入口。
+│   │   │
+│   │   ├── 子线程 ── 由 create_sub_thread 创建
+│   │   │       继承父线程的 trait 作用域。
+│   │   │       独立执行，完成后 return 结果通知父线程。
+│   │   │
+│   │   ├── Scope Chain ── 从当前节点沿树向上收集
+│   │   │       决定哪些 trait 被激活、哪些知识可见。
+│   │   │
+│   │   ├── 节点状态 ── running / waiting / done / failed
+│   │   │
+│   │   └── 智慧 = 根节点的厚度
+│   │           新手需要很多子线程才能完成一件事。
+│   │           专家的根线程已经内化了大量经验——同样的事只需要很浅的树。
 │   │
 │   ├── ThinkLoop（G4）
 │   │   │   对象的思考引擎。每一轮：
-│   │   │   Context → LLM → Program → 执行 → 新 Context → ...
+│   │   │   Context → LLM（含 tools）→ Tool Call → 执行 → 新 Context → ...
 │   │   │
-│   │   ├── 感知 ── 读取 Context
-│   │   ├── 思考 ── LLM 基于 Context 生成 Program
-│   │   ├── 行动 ── 执行 Program 中的 actions
-│   │   └── 循环 ── 行动结果写回 Context，触发下一轮
+│   │   ├── 感知 ── 构建 Context（context-builder.ts）
+│   │   ├── 思考 ── LLM 基于 Context + tools 生成 tool call 或文本
+│   │   ├── 行动 ── Engine 处理 tool call（open/submit/close）
+│   │   └── 循环 ── 行动结果写回线程数据，触发下一轮
 │   │
-│   ├── 认知栈（G13）
-│   │   │   对象的运行时 = 一个栈。
-│   │   │   每个帧 = 一层认知作用域。
+│   ├── 指令系统 / Tool Calling
+│   │   │   对象通过三个 tool 与系统交互：
 │   │   │
-│   │   ├── 帧 0 ── 身份层（who_am_i + 沉淀的经验）
-│   │   │       永远在栈底。是对象的"人格基座"。
+│   │   ├── open ── 打开上下文
+│   │   │   │   三种类型：
+│   │   │   ├── command ── 执行指令（program/talk/return 等），加载关联 trait
+│   │   │   ├── trait ── 加载 trait 知识到上下文
+│   │   │   └── skill ── 加载 skill 内容到上下文
 │   │   │
-│   │   ├── 帧 1..N ── 任务层（当前正在处理的事）
-│   │   │       每个帧继承外层帧的作用域。
-│   │   │       内层帧可以访问外层帧的变量，但不能修改。
+│   │   ├── submit ── 提交执行（仅 command 类型）
+│   │   │       传入 open 返回的 form_id + 指令参数。
 │   │   │
-│   │   └── 智慧 = 帧 0 的厚度
-│   │           新手需要很多帧才能完成一件事。
-│   │           专家的帧 0 已经内联了大量经验——同样的事只需要很浅的栈。
+│   │   ├── close ── 关闭上下文
+│   │   │       command 类型 = 取消指令，trait/skill 类型 = 卸载知识。
+│   │   │
+│   │   ├── mark ── 标记 inbox 消息（附加在任意 tool 调用上）
+│   │   │       ack（已确认）/ ignore（忽略）/ todo（待办）
+│   │   │
+│   │   └── Form Manager ── 跟踪活跃 form 的生命周期
+│   │           open 创建 form → submit 完成 form → close 取消 form
+│   │           渐进式 trait 加载：open 时加载，submit/close 后卸载
 │   │
-│   ├── 多线程（Thread）
-│   │   │   Process Tree 支持多个命名的 focus cursor（线程）。
-│   │   │   每个线程独立推进自己的执行栈。
-│   │   │   默认两个线程：frontend（对外沟通）、backend（内部工作）。
-│   │   │   线程间通过 signal 通信，signal 需要 ack + memo 确认。
+│   ├── Thinking Mode（双通道架构）
+│   │   │   thought 从"输出协议"迁移为"Provider 能力层产生的运行时语义"。
 │   │   │
-│   │   └── 线程状态机
-│   │           running → yielded（focus 离开 doing 节点）
-│   │           yielded → running（go 重新激活）
-│   │           running → finished（线程根节点被 return）
+│   │   ├── Provider 能力层 ── 开启 thinking、读取 thinking 输出、适配为统一结构
+│   │   │   └── LLMResult = { content, thinkingContent, toolCalls, usage }
+│   │   └── Engine 语义映射层 ── 将 thinkingContent 映射为系统 thought
+│   │       ├── 记录为 thought action（落盘 thread.json）
+│   │       └── 通过 SSE 发为 stream:thought
 │   │
-│   ├── 栈帧语义
-│   │   │   每个 ProcessNode = 一个栈帧。
-│   │   │   操作使用段落标记格式，与 [talk]、[action] 保持一致：
+│   ├── Inbox 机制
+│   │   │   对象接收消息的统一入口。
 │   │   │
-│   │   ├── [cognize_stack_frame_push] ── 压栈：创建普通子栈帧
-│   │   │       支持属性段落：title（必填）、description、traits、outputs、outputDescription
-│   │   ├── [cognize_stack_frame_pop] ── 弹栈：执行 when_stack_pop hooks，完成当前帧
-│   │   │       支持属性段落：summary、artifacts（JSON 输出，合并到父节点 locals）
-│   │   ├── [reflect_stack_frame_push/pop] ── 进入/退出内联 reflect 子栈帧
-│   │   │       用于主动调整 plan、traits 或审视上文
-│   │   ├── [set_plan] ── 更新当前节点的 plan 文本（展示在认知栈区域）
-│   │   ├── stack_throw ── 抛出异常，触发 when_error hook
-│   │   └── defer = create_hook("when_stack_pop", handler)
-│   │           不引入独立概念，hook 系统统一处理。
-│   │
-│   ├── 节点类型与内联子节点
-│   │   │   区分普通子栈帧和内联子节点：
-│   │   │
-│   │   ├── frame ── 普通子栈帧（[cognize_stack_frame_push] 创建）
-│   │   │       独立生命周期，加入 todo 队列，触发 when_stack_pop 等 hooks
-│   │   ├── inline_before ── before hook 内联子节点（自动创建）
-│   │   │       在 [cognize_stack_frame_push] 时触发，完成后才执行原始 push
-│   │   ├── inline_after ── after hook 内联子节点（自动创建）
-│   │   │       在 [cognize_stack_frame_pop] 后触发，完成后回到父节点
-│   │   └── inline_reflect ── reflect 内联子节点（[reflect_stack_frame_push] 创建）
-│   │           主动触发，依附于父节点上下文
-│   │
-│   ├── Hook 时机扩展
-│   │   │   栈帧级生命周期回调，运行时通过 create_hook 注册。
-│   │   │
-│   │   ├── when_stack_push ── 新栈帧创建时
-│   │   ├── when_stack_pop ── 栈帧 pop 时（defer 统一为此，LIFO 执行）
-│   │   ├── when_yield ── focus 离开 doing 节点时（被动触发）
-│   │   ├── when_error ── stack_throw 冒泡到当前帧时
-│   │   ├── before ── [cognize_stack_frame_push] 时（创建 inline_before 内联节点）
-│   │   ├── after ── [cognize_stack_frame_pop] 后（创建 inline_after 内联节点）
-│   │   └── reflect ── [reflect_stack_frame_push] 时
-│   │       │
-│   │       └── Hook 类型
-│   │               inject_message ── 注入系统消息到 context（内联节点中记录为 inject action）
-│   │               create_todo ── 创建 todo 项到队列
+│   │   ├── 消息来源 ── talk（其他对象）/ system（系统通知）/ thread_error（错误）
+│   │   ├── 消息状态 ── unread / marked
+│   │   ├── 展示 ── Context 中"未读消息"区域，含 messageId
+│   │   └── 标记 ── Object 通过 mark 参数主动标记（ack/ignore/todo）
 │   │
 │   └── 注意力与遗忘（G5）
 │           Context 有容量限制。不是所有信息都能同时存在。
 │           遗忘不是丢失——是让不相关的信息退场，为当前任务腾出空间。
-│           pop 帧时，有价值的内容内联到帧 0，其余释放。
+│           线程完成后，有价值的内容通过 return summary 传递给父线程，其余释放。
 │
 ├── 行动 ── 对象如何"做"？
 │   │
-│   ├── Process / 行为树（G9）
-│   │   │   对象的行动计划。树状结构，可嵌套、可并行。
+│   ├── 线程树调度（G9）
+│   │   │   对象的行动由线程树驱动。
+│   │   │   ThreadScheduler 管理线程执行顺序。
 │   │   │
-│   │   ├── 顺序节点 ── 按序执行子任务
-│   │   ├── 并行节点 ── 同时执行多个子任务
-│   │   └── 条件节点 ── 根据状态选择分支
+│   │   ├── 单线程循环 ── 每个 running 线程轮流执行一轮 ThinkLoop
+│   │   ├── 子线程创建 ── create_sub_thread 创建子线程处理子任务
+│   │   ├── 等待机制 ── await/await_all 等待子线程完成
+│   │   └── 完成传播 ── 子线程 return → 结果写入父线程 inbox → 唤醒父线程
 │   │
 │   ├── Effect / 副作用（G10）
 │   │   │   对象作用于世界的唯一通道。
@@ -283,11 +277,10 @@ Object（对象）
 │   │
 │   ├── 消息 / Message（G8）
 │   │   │   对象间通信的机制。消息是一种特殊的 Effect。
-│   │   │   异步、不保证即时响应。
 │   │   │
-│   │   ├── talk ── 对话（请求-响应）
-│   │   ├── delegate ── 委托（创建子任务）
-│   │   └── broadcast ── 广播（通知所有关系对象）
+│   │   ├── talk ── 异步对话（发送消息，不等待回复）
+│   │   ├── talk_sync ── 同步对话（发送消息，等待回复后继续）
+│   │   └── inbox ── 消息收件箱（unread → Object 主动 mark）
 │   │
 │   └── Supervisor（全局代理）
 │           Supervisor 是一个 stone，但拥有系统级特权：
@@ -420,140 +413,150 @@ stones/
 ```
 Context
 │
-├── 六个组成部分
-│   ├── whoAmI       ← stones/{name}/readme.md
-│   ├── process      ← flows/{sessionId}/objects/{name}/process.json（当前行为树）
-│   ├── messages     ← pendingMessages 队列（来自其他对象的消息）
-│   ├── windows      ← Trait 定义的数据窗口（打开的文件/数据）
-│   ├── directory    ← stones/{name}/ 目录列表
-│   └── status       ← 运行时元数据（轮次、状态、时间）
+├── 组成部分
+│   ├── whoAmI          ← stones/{name}/readme.md
+│   ├── instructions    ← 激活的 kernel trait 的 TRAIT.md（系统指令）
+│   ├── knowledge       ← 激活的 library/user trait 的 TRAIT.md（知识窗口）
+│   ├── parentExpectation ← 线程树节点的 title + description
+│   ├── process         ← threads/{threadId}/thread.json 中的 actions 历史
+│   ├── inbox           ← thread.json 中的 unread 消息（含 messageId）
+│   ├── activeForms     ← FormManager 中的活跃 form 列表
+│   ├── directory       ← stones/{name}/ 目录列表
+│   └── childrenSummary ← 线程树子节点的完成摘要
 │
-├── 结构化遗忘
-│   ├── focus 节点   ── 保留完整 actions 历史
-│   └── 非 focus 节点 ── 仅保留摘要（autoSummarize 压缩）
+├── Scope Chain（作用域链）
+│   └── 从当前线程节点沿树向上收集
+│       → 决定哪些 trait 被激活
+│       → 决定哪些知识可见
 │
-├── Mirror 系统
-│   └── 行为观察 → 统计模式 → 注入 Context → 触发自我反思
+├── 渐进式 Trait 加载
+│   ├── base trait（always）── 始终注入，定义 open/submit/close 三原语
+│   ├── command_binding ── open(command=X) 时加载 X 关联的 trait
+│   │       如 open(command=program) → 加载 computable trait
+│   └── open(type=trait/skill) ── 按需加载任意 trait 或 skill
 │
 ├── 三层记忆
-│   ├── long-term memory  ── stones/{name}/readme.md（沉淀的经验）
-│   ├── session memory    ── process.json 中的 actions 历史
+│   ├── long-term memory  ── stones/{name}/readme.md + memory.md
+│   ├── session memory    ── thread.json 中的 actions 历史
 │   └── recent history    ── 最近 N 轮的完整记录
 │
 └── Pause（人机协作检查点）
-    ├── 触发: ThinkLoop 在 LLM 返回后、执行前检查暂停信号
+    ├── 触发: Engine 在 LLM 返回后、执行前检查暂停信号
     ├── 暂停时写出:
     │   ├── llm.input.txt  ── 本轮发送给 LLM 的完整 Context
-    │   └── llm.output.txt ── LLM 返回的原始输出
+    │   └── llm.output.txt ── LLM 返回的原始输出（含 tool calls）
     ├── 人工介入: 用户可查看、修改 llm.output.txt
-    └── 恢复时: 读取 llm.output.txt 作为实际输出执行，然后删除两个临时文件
+    └── 恢复时: 读取 llm.output.txt 作为实际输出执行
 
-代码: kernel/src/context/builder.ts（组装）, kernel/src/context/formatter.ts（格式化）
-      kernel/src/context/mirror.ts（Mirror）, kernel/src/context/history.ts（历史管理）
+代码: kernel/src/thread/context-builder.ts（组装）, kernel/src/thread/engine.ts（Engine 循环）
+      kernel/src/thread/tools.ts（Tool 定义）, kernel/src/thread/form.ts（FormManager）
 ```
 
-### 子树 3: 思考-执行 — "ThinkLoop 每一轮发生了什么"（G4, G9, G12, G13）
+### 子树 3: 思考-执行 — "Engine 每一轮发生了什么"（G4, G9, G12, G13）
 
 ```
-ThinkLoop
+Engine（线程树执行引擎）
 │
 ├── 单轮循环
-│   ├── 感知    ── builder.ts 组装 Context
-│   ├── 思考    ── LLM 基于 Context 生成输出（Thinking Mode 双通道）
-│   │               Provider 返回 thinkingContent + assistantContent
+│   ├── 感知    ── context-builder.ts 组装 Context
+│   ├── 思考    ── LLM 基于 Context + tools 生成输出
+│   │               Provider 返回 content + thinkingContent + toolCalls
 │   │               thinkingContent 自动映射为系统 thought action
-│   │               assistantContent 交由 parser 解析为执行协议
-│   ├── 解析    ── parser 解析 assistant 输出中的结构化协议
-│   │               仅识别 [program]/[talk]/[action]/stack ops/directives
-│   │               不再解析 [thought]（thought 来自 Provider 原生能力）
-│   │               assistant 输出中出现 [thought] 视为协议错误
-│   ├── 执行    ── 逐条执行 actions（文件操作/消息/Effect）
-│   ├── 记录    ── thought + actions + output 写入 process.json
-│   └── 投递    ── 检查 pendingMessages，推进 focus
+│   │               toolCalls 交由 Engine 处理
+│   ├── 执行    ── Engine 处理 tool call（open/submit/close）
+│   │               open → 创建 form + 加载 trait
+│   │               submit → 执行指令（program/talk/return 等）
+│   │               close → 取消 form + 卸载 trait
+│   ├── 记录    ── thought + actions + output 写入 thread.json
+│   └── 标记    ── 处理 mark 参数，标记 inbox 消息
 │
 ├── Thinking Mode（双通道架构）
 │   │   thought 从"输出协议"迁移为"Provider 能力层产生的运行时语义"。
-│   │   三层职责分离：
 │   │
-│   ├── Provider 能力层 ── 开启 thinking、读取 thinking 输出、适配为统一结构
-│   │   └── LLMResult = { assistantContent, thinkingContent, usage }
-│   │       LLMStreamEvent = thinking_chunk | assistant_chunk | done
-│   ├── ThinkLoop 语义映射层 ── 将 thinkingContent 映射为系统 thought
-│   │   ├── 记录为 thought action（落盘 process.json）
-│   │   ├── 通过 SSE 发为 stream:thought
-│   │   └── 持久化顺序：thought → program/talk/action → 执行结果
-│   └── Parser 协议层 ── 只解析 assistant 最终输出中的结构化协议
-│       ├── 不再识别 [thought]
-│       └── assistant 输出 [thought] = 协议错误（deprecated_thought_section）
+│   ├── Provider 能力层 ── 开启 thinking、读取 thinking 输出
+│   │   └── LLMResult = { content, thinkingContent, toolCalls, usage }
+│   └── Engine 语义映射层 ── 将 thinkingContent 映射为系统 thought
+│       ├── 记录为 thought action（落盘 thread.json）
+│       └── 通过 SSE 发为 stream:thought
 │
-├── 行为树操作
-│   ├── focus 推进     ── 完成当前节点 → 移动到下一个
-│   ├── 节点创建       ── addTask / addParallelTasks
-│   ├── 状态转换       ── pending → active → done / waiting
-│   └── autoSummarize  ── 非 focus 节点压缩为摘要
+├── Tool Calling 路径（主路径）
+│   │   LLM 返回 toolCalls 时走此路径。
+│   │
+│   ├── open → FormManager.begin() + collectCommandTraits() + activateTrait()
+│   ├── submit → FormManager.submit() + 执行指令 + deactivateTrait()
+│   └── close → FormManager.cancel() + deactivateTrait()
 │
-├── 认知栈
-│   ├── computeScopeChain  ── 从 focus 节点向上收集作用域链
-│   ├── collectFrameHooks  ── 收集各帧的 hooks（before_finish 等）
-│   └── getActiveTraits    ── 沿作用域链收集激活的 Traits
+├── TOML 路径（兼容回退）
+│   │   LLM 未返回 toolCalls 时走旧 TOML 解析路径。
+│   │   保留用于不支持 tool calling 的 LLM 模型。
+│   │
+│   └── parser.ts 解析 TOML 格式输出 → runThreadIteration
+│
+├── 线程树调度
+│   ├── ThreadScheduler ── 管理线程执行顺序
+│   │       每个 running 线程轮流执行一轮
+│   │       子线程完成 → 唤醒等待的父线程
+│   │       检测死锁（所有线程 waiting）→ 强制唤醒
+│   └── 终止条件 ── 根线程 done/failed → 执行结束
 │
 └── ReflectFlow — 对象的常驻自我反思
     │
     ├── 物理位置: stones/{name}/reflect/（data.json + process.json）
-    ├── 创建: Flow.ensureReflectFlow() — sessionId 固定为 _reflect, isSelfMeta: true
     ├── 触发: 普通 Flow 调用 reflect(message)
-    │         → World 投递消息到 ReflectFlow 的 pendingMessages
-    ├── 执行: scheduler 调度 ReflectFlow，拥有独立行为树
-    │         可修改 Stone 的 readme.md / data.json
-    ├── 回复: replyToFlow(sessionId, message) — 回复发起对话的普通 Flow
+    ├── 执行: 拥有独立行为树，可修改 Stone 的 readme.md / data.json
     │
     └── 哲学意义: 实现 G12 沉淀循环的关键机制
                   经历 → reflect → ReflectFlow 审视 → 沉淀为 trait
 
-代码: kernel/src/flow/thinkloop.ts（循环引擎）, kernel/src/flow/flow.ts（ensureReflectFlow）
-      kernel/src/flow/parser.ts（协议解析，不含 [thought]）
-      kernel/src/thinkable/client.ts（Provider 双通道返回）
-      kernel/src/thinkable/config.ts（Thinking capability 配置）
-      kernel/src/process/focus.ts（焦点推进）, kernel/src/process/tree.ts（行为树操作）
-      kernel/src/process/cognitive-stack.ts（认知栈）
-      kernel/src/world/world.ts（deliverToSelfMeta）, kernel/src/world/router.ts（talkToSelf）
+代码: kernel/src/thread/engine.ts（执行引擎）, kernel/src/thread/scheduler.ts（调度器）
+      kernel/src/thread/tree.ts（线程树数据结构）, kernel/src/thread/context-builder.ts（Context 构建）
+      kernel/src/thread/tools.ts（Tool 定义）, kernel/src/thread/form.ts（FormManager）
+      kernel/src/thread/hooks.ts（Trait 加载钩子）, kernel/src/thread/parser.ts（TOML 兼容解析）
+      kernel/src/thinkable/client.ts（Provider，含 tool calling 支持）
 ```
 
 ### 子树 4: 协作 — "对象如何与其他对象交互"（G6, G8）
 
 ```
-CollaborationAPI
+协作模型
 │
 ├── 通信原语
-│   ├── talk(target, message)       ── 对话：发送消息，等待回复
-│   ├── delegate(target, task)      ── 委托：创建子任务，异步执行
-│   └── reply(message)              ── 回复：响应 talk 或 delegate
+│   ├── talk(target, message)       ── 异步对话：发送消息到目标对象
+│   ├── talk_sync(target, message)  ── 同步对话：发送消息并等待回复
+│   └── return(summary)             ── 完成当前线程，返回结果给创建者
 │
-├── 消息投递机制
-│   ├── 发送方调用 talk/delegate
-│   │   → router.ts 路由消息
-│   │   → 写入目标 Flow 的 pendingMessages
-│   ├── 目标 Flow 下一轮 ThinkLoop 感知到消息
-│   │   → 创建中断节点（interrupt）插入行为树
-│   │   → focus 推进到中断节点处理消息
-│   └── 处理完成后 reply → 消息回传发送方
+├── Inbox 机制
+│   ├── 消息写入 ── talk 消息写入目标线程的 inbox
+│   ├── 消息展示 ── Context 中"未读消息"区域（含 messageId）
+│   ├── 消息标记 ── Object 通过 mark 参数主动标记
+│   │       ack（已确认）/ ignore（忽略）/ todo（待办）
+│   └── 溢出处理 ── 超过上限时自动 mark(ignore) 最早的 unread
+│
+├── 子线程协作
+│   ├── create_sub_thread ── 创建子线程处理子任务
+│   ├── continue_sub_thread ── 向已创建的子线程追加消息
+│   ├── await / await_all ── 等待子线程完成
+│   └── 子线程 return → 结果写入父线程 inbox → 唤醒父线程
 │
 ├── Session 管理
 │   └── Session
 │       ├── 一个 sessionId 对应一个 Session
-│       ├── Session 管理同一任务中的多个 Flow（多个对象参与）
+│       ├── Session 管理同一任务中的多个对象的线程树
 │       └── Session 结束时清理所有 Flow 的 .flow 标记
 │
 └── World 调度
-    └── Scheduler
-        ├── 维护所有活跃 Flow 的队列
-        ├── 轮转调度：每个 Flow 执行一轮 ThinkLoop
-        ├── 并发线程：同一 Flow 内多个 running thread 通过 Promise.all 并行执行
-        │       fork_threads / join_threads / finish_thread API
-        └── 检测终止条件：所有 Flow 都 done/waiting → Session 结束
+    └── ThreadScheduler
+        ├── 管理单个对象内的线程执行顺序
+        ├── 每个 running 线程轮流执行一轮 Engine 循环
+        ├── 子线程完成 → checkAndWake 唤醒等待的父线程
+        ├── 死锁检测 → 所有线程 waiting 时强制唤醒
+        └── 终止条件 → 根线程 done/failed → 执行结束
 
-代码: kernel/src/world/router.ts（消息路由）, kernel/src/world/session.ts（Session 管理）
-      kernel/src/world/scheduler.ts（调度器）, kernel/src/world/world.ts（World 入口）
+代码: kernel/src/thread/engine.ts（执行引擎，含 talk/create_sub_thread 处理）
+      kernel/src/thread/scheduler.ts（线程调度器）
+      kernel/src/thread/tree.ts（线程树，含 writeInbox/markInbox/awaitThreads）
+      kernel/src/thread/collaboration.ts（跨对象协作 API）
+      kernel/src/world/world.ts（World 入口）
 ```
 
 ### 子树 5: Trait — "能力如何定义、加载、生效"（G3, G13）
@@ -564,64 +567,75 @@ Trait
 ├── 定义结构（TraitDefinition）
 │   ├── name         ── 完整路径名（如 "kernel/computable", "lark/doc"）
 │   ├── description  ── 能力描述（注入 Context 让 LLM 理解）
-│   ├── bias         ── 思维偏置（影响 LLM 的决策倾向）
-│   ├── windows      ── 数据窗口（Trait 激活时自动打开的数据源）
-│   ├── hooks        ── 生命周期钩子（before_finish, before_wait, on_error）
-│   ├── methods      ── 注册方法（ThinkLoop 中可调用的 actions）
+│   ├── readme       ── TRAIT.md 内容（激活时注入 Context）
+│   ├── command_binding ── 关联的指令列表（open 时自动加载）
+│   ├── methods      ── 注册方法（沙箱中可调用的函数）
 │   ├── children     ── 子 trait ID 列表（树形结构时自动填充）
 │   └── parent       ── 父 trait ID（树形结构时自动填充）
 │
 ├── 树形结构与 Progressive Disclosure
-│   │   Trait 支持任意深度的树形嵌套（如 kernel/computable/output_format）。
+│   │   Trait 支持任意深度的树形嵌套（如 kernel/computable/file_ops）。
 │   │   三层加载策略减少 Context 注入量：
 │   │
 │   ├── Level 1 ── 精简注入（always-on 父 trait 的精简 TRAIT.md）
 │   ├── Level 2 ── 子 trait 描述可见（active 父 trait 的子 trait 一行描述）
-│   └── Level 3 ── 按需激活（readTrait/activateTrait 加载完整内容）
+│   └── Level 3 ── 按需激活（open(type=trait) 或 command_binding 加载完整内容）
 │
 ├── 加载链路（三层，同名后者覆盖前者）
 │   └── 1. kernel/traits/ → 2. library/traits/ → 3. stones/{name}/traits/
 │       → loader.ts 解析 Trait 文件
 │       → TraitDefinition[]
 │
-├── 激活逻辑
-│   └── computeScopeChain 收集作用域链
-│       → activator.ts 区分 kernel/user traits
-│       → 激活的 Traits 注入 Context（bias + windows + hooks）
+├── 渐进式激活（command_binding 驱动）
+│   │   Trait 不再始终激活，而是按需加载：
+│   │
+│   ├── open(type=command, command=X) → collectCommandTraits 查找 X 关联的 trait → activateTrait
+│   ├── open(type=trait, name=Y) → 直接 activateTrait(Y)
+│   ├── submit/close 后 → 检查 refcount → deactivateTrait
+│   └── FormManager 跟踪活跃 form，驱动 trait 加载/卸载
 │
 └── 方法注册
     └── MethodRegistry
-        ├── Trait 的 methods 注册为可调用 action
-        └── ThinkLoop 执行时查找并调用
+        ├── Trait 的 methods 注册为沙箱可调用函数
+        ├── buildSandboxMethods 按 activatedTraits 过滤注入
+        └── call_function 指令直接调用 trait 方法
 
-代码: kernel/src/trait/loader.ts（加载）, kernel/src/trait/activator.ts（激活）
-      kernel/src/trait/registry.ts（方法注册）, kernel/src/types/trait.ts（类型定义）
+代码: kernel/src/trait/loader.ts（加载）, kernel/src/trait/registry.ts（方法注册）
+      kernel/src/thread/hooks.ts（collectCommandTraits）
+      kernel/src/thread/tree.ts（activateTrait/deactivateTrait）
+      kernel/src/types/trait.ts（类型定义）
 ```
 
-#### Kernel Traits — 三层结构
+#### Kernel Traits — 两层结构
 
 Kernel Traits 是所有对象共享的基础能力，位于 `kernel/traits/`。
-它们按激活策略分为三层，组合起来定义了"作为 OOC 对象意味着什么"。
+通过 `command_binding` 渐进式加载，组合起来定义了"作为 OOC 对象意味着什么"。
 
 ```
 Kernel Traits
 │
-├── 基座层（when: always）── 定义最小可行智能体
+├── 基座层（when: always）── 始终注入
 │   │
-│   │   这些 trait 始终激活，任何对象都具备。
+│   └── kernel/base ── 指令系统基座
+│           定义 open/submit/close 三原语 + mark 机制。
+│           是唯一的 always trait，极简。
+│
+├── 能力层（when: never, command_binding 驱动）── 按需加载
+│   │
+│   │   这些 trait 在 open(command=X) 时自动加载，submit/close 后自动卸载。
 │   │   它们的组合 = 能思考 + 能交流 + 能成长 + 不自欺 + 会拆解。
-│   │   基座层 trait 采用树形结构：父 trait 精简注入，子 trait 按需激活。
 │   │
-│   ├── kernel/computable ── 思考与执行（G4, G13）
-│   │   │   认知栈思维模式、输出格式速查、核心 API 签名。
+│   ├── kernel/computable ── 代码执行（command_binding: program）
+│   │   │   核心 API 签名、沙箱变量、文件操作。
 │   │   │   没有它，对象无法行动。
 │   │   │
-│   │   ├── kernel/computable/output_format  ── TOML 输出格式完整规范
 │   │   ├── kernel/computable/program_api    ── 完整 API 参考文档
-│   │   ├── kernel/computable/stack_api      ── 栈帧 push/pop 语义
-│   │   └── kernel/computable/multi_thread   ── 多线程 API
+│   │   ├── kernel/computable/file_ops       ── 文件操作详细说明
+│   │   ├── kernel/computable/file_search    ── glob/grep 详细说明
+│   │   ├── kernel/computable/shell_exec     ── exec/sh 详细说明
+│   │   └── kernel/computable/web_search     ── 互联网搜索
 │   │
-│   ├── kernel/talkable ── 与他者建立关系（G6, G8）
+│   ├── kernel/talkable ── 与他者建立关系（command_binding: talk, talk_sync, return）
 │   │   │   消息发送、回复、社交原则。
 │   │   │   没有它，对象是孤岛。
 │   │   │
@@ -629,23 +643,21 @@ Kernel Traits
 │   │   ├── kernel/talkable/ooc_links     ── ooc:// 链接和导航卡片
 │   │   └── kernel/talkable/delivery      ── 交付规范、协作交付
 │   │
-│   ├── kernel/reflective ── 从经验中学习（G5, G12）
+│   ├── kernel/reflective ── 从经验中学习（command_binding: return）
 │   │   │   reflect 沉淀通道、核心原则。
 │   │   │   没有它，对象不会成长。
 │   │   │
 │   │   ├── kernel/reflective/memory_api    ── 记忆 API（Flow Summary, Self/Session）
 │   │   └── kernel/reflective/reflect_flow  ── ReflectFlow 角色定义
 │   │
-│   └── kernel/verifiable ── 认识论诚实
-│           "没有验证证据，不做完成声明。"
-│           没有它，对象会自欺。
-│
-├── 认知工具层（when: conditional）── 按需激活的思维策略
+│   ├── kernel/verifiable ── 认识论诚实（command_binding: return）
+│   │       "没有验证证据，不做完成声明。"
+│   │       没有它，对象会自欺。
 │   │
-│   ├── kernel/plannable        ── 任务拆解（G9）
-│   ├── kernel/debuggable       ── 系统化调试
-│   ├── kernel/object_creation  ── 创建新对象（G1）
-│   └── kernel/web_search       ── 外部信息获取（G10）
+│   ├── kernel/plannable        ── 任务拆解（command_binding: create_sub_thread）
+│   ├── kernel/debuggable       ── 系统化调试（command_binding: program）
+│   ├── kernel/reviewable       ── 代码审查（command_binding: program）
+│   └── kernel/library_index    ── Library 资源查询（command_binding: program）
 │
 └── 组合效应
         基座层的交叉：
@@ -988,14 +1000,14 @@ Kanban
 
 ```
 展开循环（正向）：
-  身份(帧0) → 能力(Trait) → 计划(Process) → 思考(ThinkLoop) → 行动(Effect)
+  身份(readme) → 能力(Trait) → 计划(线程树) → 思考(Engine) → 行动(Effect)
                                                                     │
 沉淀循环（逆向）：                                                    │
-  身份(帧0) ← 沉淀(G12) ← 反思(reflect) ← 记录 ← 经验 ←─────────┘
+  身份(readme) ← 沉淀(G12) ← 反思(reflect) ← 记录 ← 经验 ←─────────┘
 ```
 
 对象从身份出发，展开为行动；行动的结果沉淀回身份。
-这个循环每转一圈，帧 0 就厚一层。
+这个循环每转一圈，对象的经验就厚一层。
 
 ---
 
