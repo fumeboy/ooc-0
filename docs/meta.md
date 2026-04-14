@@ -248,7 +248,8 @@ Object（对象）
 │   │   ├── 消息来源 ── talk（其他对象）/ system（系统通知）/ thread_error（错误）
 │   │   ├── 消息状态 ── unread / marked
 │   │   ├── 展示 ── Context 中"未读消息"区域，含 messageId
-│   │   └── 标记 ── Object 通过 mark 参数主动标记（ack/ignore/todo）
+│   │   ├── 标记 ── Object 通过 mark 参数主动标记（ack/ignore/todo）
+│   │   └── 上下文保留 ── inbox 不过滤已标记消息，保持完整上下文
 │   │
 │   └── 注意力与遗忘（G5）
 │           Context 有容量限制。不是所有信息都能同时存在。
@@ -530,6 +531,7 @@ Engine（线程树执行引擎）
 │   ├── 消息展示 ── Context 中"未读消息"区域（含 messageId）
 │   ├── 消息标记 ── Object 通过 mark 参数主动标记
 │   │       ack（已确认）/ ignore（忽略）/ todo（待办）
+│   ├── 上下文保留 ── inbox 不过滤已标记消息，保持完整上下文
 │   └── 溢出处理 ── 超过上限时自动 mark(ignore) 最早的 unread
 │
 ├── 子线程协作
@@ -542,6 +544,9 @@ Engine（线程树执行引擎）
 │   └── Session
 │       ├── 一个 sessionId 对应一个 Session
 │       ├── Session 管理同一任务中的多个对象的线程树
+│       ├── 跨对象协作在同一个 session 下
+│       │   └── onTalk 回调传递 sessionId 给 _talkWithThreadTree
+│       │       使所有对象的线程树在 session/objects/ 目录下
 │       └── Session 结束时清理所有 Flow 的 .flow 标记
 │
 └── World 调度
@@ -679,15 +684,24 @@ Web UI 概念树
 │   │   三栏结构：LeftRail + Stage + MessageDock
 │   │
 │   ├── LeftRail（左侧栏）── 导航 + 文件树区域
-│   │   ├── BrandMark ── OOC Logo（阿基米德螺旋 + 三圆点关系图）
-│   │   ├── ModeSwitch ── 三 Tab 切换器（Flows / Stones / World）
-│   │   ├── SessionBar ── 当前 Session 标题栏（列表切换 + 标题编辑）
-│   │   └── TreePane ── 文件树区域（根据 ModeSwitch 切换内容）
-│   │       ├── SessionsList ── Session 列表（Flows 模式，无活跃 session 时）
-│   │       ├── SessionFileTree ── Session 文件树（Flows 模式，有活跃 session 时）
-│   │       │       注入虚拟节点：index（session 入口）、ui（自渲染 UI）、.stone（对象源）
-│   │       └── FileTree ── 通用文件目录树（Stones / World 模式）
-│   │               带 marker 图标：Box=stone, GitBranch=flow, Folder=普通目录
+│   │   │   拆分成上下两个圆角卡片，中间 gap-1.5 露出背景
+│   │   │
+│   │   ├── 上部卡片 ── Logo 区域
+│   │   │   ├── BrandMark ── OOC Logo（阿基米德螺旋 + 三圆点关系图）
+│   │   │   ├── Title ── "Oriented Object Context"
+│   │   │   └── ControlButtons ── 三个等宽圆角按钮（pause/debug/online）
+│   │   │       灰色圆角容器，按钮改成 rounded-md，高度 24px
+│   │   │
+│   │   └── 下部卡片 ── Tab + 内容区域
+│   │       ├── ModeSwitch ── 三 Tab 切换器（Flows / Stones / World）
+│   │       ├── SessionBar ── 当前 Session 标题栏（列表切换 + 标题编辑）
+│   │       ├── TreePane ── 文件树区域（根据 ModeSwitch 切换内容）
+│   │       │   ├── SessionsList ── Session 列表（Flows 模式，无活跃 session 时）
+│   │       │   ├── SessionFileTree ── Session 文件树（Flows 模式，有活跃 session 时）
+│   │       │   │       注入虚拟节点：index（session 入口）、ui（自渲染 UI）、.stone（对象源）
+│   │       │   └── FileTree ── 通用文件目录树（Stones / World 模式）
+│   │       │           带 marker 图标：Box=stone, GitBranch=flow, Folder=普通目录
+│   │       └── ActivityHeatmap ── 当月使用热力图
 │   │
 │   ├── Stage（舞台）── 主内容区
 │   │   ├── EditorTabs ── IDE 风格文件标签栏（多 tab 切换 + 关闭）
@@ -757,24 +771,29 @@ Web UI 概念树
 │   │
 │   ├── FlowView（Flow 视图）── 单个 Flow 对象的详情
 │   │   │   Header：左侧头像+名称+状态Badge，右侧按钮组 Tabs
+│   │   │   主体：Object Readme 全屏展示
+│   │   │   抽屉：底部升起的抽屉页（默认 90% 高度）
 │   │   │
-│   │   ├── TimelineTab ── 时间线（消息 + actions 按时间排序）
-│   │   ├── ProcessTab ── 行为树视图（复用 ProcessView）
-│   │   ├── ReadmeTab ── 对象 Readme（复用 ObjectReadmeView）
-│   │   ├── DataTab ── 分栏设计（左栏 Flow data + 右栏 Stone data）
-│   │   └── UITab ── Flow 自渲染 UI（DynamicUI 加载 ui/pages/*.tsx）
+│   │   ├── Readme（主体）── 对象 Readme 全屏展示
+│   │   └── 底部抽屉 ── iOS 风格装饰条 + Tab 内容
+│   │       ├── TimelineTab ── 时间线（消息 + actions 按时间排序）
+│   │       ├── ProcessTab ── 行为树视图（复用 ProcessView）
+│   │       ├── DataTab ── 分栏设计（左栏 Flow data + 右栏 Stone data）
+│   │       ├── MemoryTab ── 会话记忆展示
+│   │       └── UITab ── Flow 自渲染 UI（DynamicUI 加载 ui/pages/*.tsx）
 │   │
-│   ├── SessionKanban（Session 看板）── Session 级总览（替换原 SessionGantt）
-│   │   │   三栏布局：readme + Issues + Tasks
+│   ├── SessionKanban（Session 看板）── Session 级总览
+│   │   │   主体：readme 全屏展示
+│   │   │   抽屉：底部升起的抽屉页（初始 160px，展开 90%）
 │   │   │
-│   │   ├── ReadmePanel ── 左栏：readme.md 渲染（supervisor 维护的 session 摘要）
-│   │   ├── IssuesPanel ── 中栏：Issue 按状态分组展示
-│   │   │   ├── IssueCard ── Issue 卡片（标题 + 关联 task 数 + 参与者 + hasNewInfo 红点）
-│   │   │   └── 分组顺序：需确认 → 讨论中 → 设计中 → 评审中 → 执行中 → 确认中 → 完成 → 关闭
-│   │   ├── TasksPanel ── 右栏：Task 按状态分组展示
-│   │   │   ├── TaskCard ── Task 卡片（标题 + 子任务进度条 + hasNewInfo 红点）
-│   │   │   └── 分组顺序：执行中 → 完成 → 关闭
-│   │   └── 空分组不显示
+│   │   ├── Readme（主体）── readme.md 渲染（supervisor 维护的 session 摘要）
+│   │   └── 底部抽屉 ── iOS 风格装饰条 + Issues/Tasks 左右分栏
+│   │       ├── IssuesPanel ── 左栏：Issue 按状态分组展示
+│   │       │   ├── IssueCard ── Issue 卡片（标题 + 关联 task 数 + 参与者 + hasNewInfo 红点）
+│   │       │   └── 分组顺序：需确认 → 讨论中 → 设计中 → 评审中 → 执行中 → 确认中 → 完成 → 关闭
+│   │       └── TasksPanel ── 右栏：Task 按状态分组展示
+│   │           ├── TaskCard ── Task 卡片（标题 + 子任务进度条 + hasNewInfo 红点）
+│   │           └── 分组顺序：执行中 → 完成 → 关闭
 │   │
 │   ├── IssueDetailView（Issue 详情页）── Issue 讨论、评论、关联管理
 │   │   │   虚拟路径：flows/{sessionId}/issues/{issueId}
@@ -818,13 +837,15 @@ Web UI 概念树
 │   │
 │   ├── ActionCard（Action 卡片）── 展示单条 action
 │   │   │   圆角卡片，header + body 结构，Safari tab 风格圆角过渡
+│   │   │   ThreadAction 类型：thinking/text/tool_use/mark_inbox
 │   │   │
 │   │   ├── CardHeader ── 头部（对象头像 + 类型 Badge + 时间 + 工具栏）
-│   │   │   ├── TypeBadge ── 类型标签（thought/program/inject/message_in/message_out/pause）
+│   │   │   ├── TypeBadge ── 类型标签（thinking/text/tool_use/mark_inbox）
+│   │   │   │       tool_use 显示工具名 + 参数摘要
 │   │   │   └── Toolbar ── 工具栏（Zoom-in / Copy / Ref 按钮）
 │   │   ├── CardBody ── 内容区
-│   │   │   ├── 普通类型 → MarkdownContent 渲染
-│   │   │   └── program/action 类型 → 默认单栏（只显示 input），Output 在 Maximize（Modal）中展示
+│   │   │   ├── thinking/text 类型 → MarkdownContent 渲染
+│   │   │   └── tool_use 类型 → 显示工具调用详情（工具名 + 参数 + 结果）
 │   │   └── ZoomSheet ── 展开详情侧滑面板（Sheet）
 │   │
 │   └── TalkCard（对话卡片）── 展示单条对话消息
