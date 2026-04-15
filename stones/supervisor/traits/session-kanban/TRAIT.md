@@ -56,7 +56,42 @@ Task 状态反映执行进度：
 4. **关键节点** — 标记 hasNewInfo，让用户知道有新进展
 5. **任务结束** — 更新 Issue 到 confirming/done，确保看板反映最终状态
 
-## API
+## API 调用方式
 
-看板 API 通过 `call_function`（trait: `kernel/plannable/kanban`）调用。
-详见 `kernel/plannable/kanban` trait 的完整 API 文档。
+通过 `call_function` 调用看板 API。trait 为 `kernel/plannable/kanban`。
+
+### 创建 Issue
+
+```
+open(type="command", command="call_function", trait="kernel/plannable/kanban", function_name="createIssue", description="创建 Issue")
+→ 获得 form_id
+submit(form_id="...", args={"title": "G1 基因分析", "description": "需要分析 G1 基因的核心思想", "participants": ["sophia"]})
+```
+
+### 更新 Issue 状态
+
+```
+open(type="command", command="call_function", trait="kernel/plannable/kanban", function_name="updateIssueStatus", description="更新 Issue 状态")
+submit(form_id="...", args={"issueId": "issue-001", "status": "executing"})
+```
+
+### 创建 Task
+
+```
+open(type="command", command="call_function", trait="kernel/plannable/kanban", function_name="createTask", description="创建 Task")
+submit(form_id="...", args={"title": "sophia 分析 G1 基因", "description": "让 sophia 分析并写报告", "issueRefs": ["issue-001"]})
+```
+
+### 更新 Task 状态
+
+```
+open(type="command", command="call_function", trait="kernel/plannable/kanban", function_name="updateTaskStatus", description="更新 Task 状态")
+submit(form_id="...", args={"taskId": "task-001", "status": "done"})
+```
+
+### 标记需要人类确认
+
+```
+open(type="command", command="call_function", trait="kernel/plannable/kanban", function_name="setIssueNewInfo", description="标记 Issue 有新信息")
+submit(form_id="...", args={"issueId": "issue-001", "hasNewInfo": true})
+```
