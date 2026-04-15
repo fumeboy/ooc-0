@@ -783,10 +783,15 @@ Web UI 概念树
 │   │       └── UITab ── Flow 自渲染 UI（DynamicUI 加载 ui/pages/*.tsx）
 │   │
 │   ├── SessionKanban（Session 看板）── Session 级总览
-│   │   │   主体：readme 全屏展示
+│   │   │   主体：所有对象的 threads tree 可视化
 │   │   │   抽屉：底部升起的抽屉页（初始 160px，展开 90%）
 │   │   │
-│   │   ├── Readme（主体）── readme.md 渲染（supervisor 维护的 session 摘要）
+│   │   ├── Threads Tree 列表（主体）── 垂直排列所有对象的线程树
+│   │   │   ├── 对象分隔标题 ── 头像 + 对象名
+│   │   │   ├── ThreadsTreeView ── 复用 FlowView 的线程树组件
+│   │   │   ├── 加载策略 ── supervisor 优先，其他并发加载
+│   │   │   └── SSE 刷新 ── 只刷新变化的对象（防抖批量处理）
+│   │   │
 │   │   └── 底部抽屉 ── iOS 风格装饰条 + Issues/Tasks 左右分栏
 │   │       ├── IssuesPanel ── 左栏：Issue 按状态分组展示
 │   │       │   ├── IssueCard ── Issue 卡片（标题 + 关联 task 数 + 参与者 + hasNewInfo 红点）
