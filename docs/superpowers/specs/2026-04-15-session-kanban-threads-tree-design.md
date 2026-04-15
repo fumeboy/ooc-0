@@ -44,7 +44,7 @@ SessionKanban
 ### 新增端点 1：获取 session 对象列表
 
 ```
-GET /api/session/{sessionId}/objects
+GET /api/sessions/{sessionId}/objects
 
 Response:
 {
@@ -61,7 +61,7 @@ Response:
 ### 新增端点 2：获取单个对象的 process
 
 ```
-GET /api/session/{sessionId}/objects/{objectName}/process
+GET /api/sessions/{sessionId}/objects/{objectName}/process
 
 Response:
 {
@@ -71,9 +71,9 @@ Response:
 ```
 
 **实现：**
-- 复用 FlowView 的 process 加载逻辑
-- 读取 `threads.json` + `threads/{threadId}/thread.json`
-- 使用 `thread-adapter.ts` 转换为 Process 格式
+- 使用 `threadsToProcess(objectFlowDir)` 转换线程树为 Process 格式
+- 处理 null 返回值（threads.json 不存在或无效）
+- 返回 404 如果对象或 process 数据不存在
 
 ### 复用现有 API
 
@@ -144,13 +144,15 @@ useEffect(() => {
 }, [lastEvent, sessionId, objectNames]);
 ```
 
+**注意：** SSE 事件需要包含 `objectName` 字段。当前 SSE 事件类型（flow:start, flow:action 等）已经包含此字段。如果某些事件类型缺少此字段，将不会触发刷新（安全降级）。
+
 ## 后端实现
 
 ### 端点 1：获取对象列表
 
 ```typescript
 // kernel/src/server/server.ts
-app.get("/api/session/:sessionId/objects", async (req, res) => {
+app.get("/api/sessions/:sessionId/objects", async (req, res) => {
   const { sessionId } = req.params;
   const objectsDir = join(world.flowsDir, sessionId, "objects");
 
@@ -177,7 +179,9 @@ app.get("/api/session/:sessionId/objects", async (req, res) => {
 
 ```typescript
 // kernel/src/server/server.ts
-app.get("/api/session/:sessionId/objects/:objectName/process", async (req, res) => {
+import { threadsToProcess } from "../persistence/thread-adapter.js";
+
+app.get("/api/sessions/:sessionId/objects/:objectName/process", async (req, res) => {
   const { sessionId, objectName } = req.params;
   const objectFlowDir = join(world.flowsDir, sessionId, "objects", objectName);
 
@@ -188,17 +192,15 @@ app.get("/api/session/:sessionId/objects/:objectName/process", async (req, res) 
     });
   }
 
-  // 复用 FlowView 的逻辑
-  const threadsFile = join(objectFlowDir, "threads.json");
-  if (!existsSync(threadsFile)) {
+  // 使用 threadsToProcess 转换
+  const process = threadsToProcess(objectFlowDir);
+
+  if (!process) {
     return res.status(404).json({
       success: false,
-      error: "Threads data not found"
+      error: "Process data not available"
     });
   }
-
-  const threadsTree = JSON.parse(readFileSync(threadsFile, "utf-8"));
-  const process = convertThreadsTreeToProcess(threadsTree, objectFlowDir);
 
   res.json({ success: true, data: process });
 });
@@ -214,9 +216,31 @@ app.get("/api/session/:sessionId/objects/:objectName/process", async (req, res) 
 ## 性能优化
 
 1. **React.memo** — 包裹 ThreadsTreeView 避免不必要的重渲染
-2. **防抖刷新** — SSE 刷新使用 500ms 防抖
+2. **批量刷新** — 使用单个防抖函数（500ms）批量处理多个对象的更新请求，避免同时更新多个对象时的重复渲染
 3. **并发加载** — 使用 `Promise.all` 并发加载多个对象
 4. **增量更新** — 只更新变化的对象，不重新加载整个列表
+
+**防抖实现示例：**
+```typescript
+const pendingRefreshes = useRef<Set<string>>(new Set());
+const debouncedRefresh = useMemo(
+  () => debounce(() => {
+    const objectsToRefresh = Array.from(pendingRefreshes.current);
+    pendingRefreshes.current.clear();
+
+    Promise.all(
+      objectsToRefresh.map(name => fetchObjectProcess(sessionId, name))
+    ).then(processes => {
+      setProcessData(prev => {
+        const next = new Map(prev);
+        objectsToRefresh.forEach((name, i) => next.set(name, processes[i]));
+        return next;
+      });
+    });
+  }, 500),
+  [sessionId]
+);
+```
 
 ## 测试计划
 
@@ -229,8 +253,11 @@ app.get("/api/session/:sessionId/objects/:objectName/process", async (req, res) 
 ## 迁移影响
 
 - **移除功能** — session readme 展示（supervisor 不再需要维护 readme.md）
+  - **向后兼容：** 现有 session 的 readme.md 文件保留但不再显示
+  - **迁移策略：** 无需数据迁移，旧 session 自动适配新界面
 - **保持功能** — Issues/Tasks 抽屉、创建 Issue/Task、SSE 实时更新
 - **新增功能** — threads tree 可视化、分批加载、按对象刷新
+- **Session 元数据** — Session 标题仍然显示在左侧栏的 SessionBar 中，不受此改动影响
 
 ## 后续优化
 
