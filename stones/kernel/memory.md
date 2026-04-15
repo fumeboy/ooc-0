@@ -11,6 +11,7 @@ world_dir/
 │   │   ├── cli.ts         ← CLI 入口
 │   │   ├── server/        ← HTTP + SSE 服务
 │   │   ├── flow/          ← ThinkLoop, Flow
+│   │   ├── thread/       ← 线程树架构（当前核心）
 │   │   ├── world/         ← World, Scheduler, Router
 │   │   ├── context/       ← Context 构建
 │   │   ├── process/       ← 行为树, 认知栈
@@ -30,6 +31,19 @@ world_dir/
 ```
 
 ## 关键文件路径
+
+### 线程树架构（当前核心）
+
+- Engine: `world_dir/kernel/src/thread/engine.ts`
+- Scheduler: `world_dir/kernel/src/thread/scheduler.ts`
+- Context Builder: `world_dir/kernel/src/thread/context-builder.ts`
+- Tree: `world_dir/kernel/src/thread/tree.ts`
+- Tools: `world_dir/kernel/src/thread/tools.ts`
+- Form Manager: `world_dir/kernel/src/thread/form.ts`
+- Hooks: `world_dir/kernel/src/thread/hooks.ts`
+- Parser: `world_dir/kernel/src/thread/parser.ts`
+
+### 旧架构（仍存在，线程树架构优先）
 
 - ThinkLoop: `world_dir/kernel/src/flow/thinkloop.ts`
 - Flow: `world_dir/kernel/src/flow/flow.ts`

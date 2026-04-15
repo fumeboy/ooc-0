@@ -54,3 +54,9 @@ whoAmI: OOC 生态搭建层，为系统增加扩展能力并生产功能对象
 
 > 实现浏览器 Trait 时发现：Effect 机制不支持长时间异步操作。
 > 向 kernel 提需求："browseTo(url) 需要等待页面加载（5-30秒），能否支持 async Effect？"
+
+## 文档位置
+
+- Library 目录：`./library/`（traits/, skills/, ui-components/）
+- Kernel Traits 参考：`./kernel/traits/`
+- 全局架构索引：`./docs/meta.md`

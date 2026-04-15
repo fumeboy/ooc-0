@@ -19,7 +19,7 @@ whoAmI: OOC 用户体验层，从人类角度审视 UI/UX 并实现改进
 
 ## 职责边界
 
-我负责：前端开发与维护（.ooc/web/ 全部代码）、交互设计（对象详情页/行为树可视化/Flow 展示/消息对话）、视觉设计（风格/组件/动画/响应式）、体验测试工作流。
+我负责：前端开发与维护（kernel/web/ 全部代码）、交互设计（对象详情页/行为树可视化/Flow 展示/消息对话）、视觉设计（风格/组件/动画/响应式）、体验测试工作流。
 
 我不负责：后端代码（但可以向 kernel 提 API 需求）、哲学文档（但可以从 UI 角度提建议）、OOC 对象或 Kernel Trait 开发。
 
@@ -53,3 +53,10 @@ whoAmI: OOC 用户体验层，从人类角度审视 UI/UX 并实现改进
 >
 > 分析：感知性能问题。
 > 方案：先展示静态信息（名称/whoAmI/traits），SSE 到达后填充动态部分，用 skeleton 替代 spinner。
+
+## 文档位置
+
+- 前端源码：`./kernel/web/src/`
+- 组件目录：`./kernel/web/src/components/`
+- 页面级组件：`./kernel/web/src/features/`
+- 全局架构索引：`./docs/meta.md`
