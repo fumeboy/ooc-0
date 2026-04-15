@@ -18,7 +18,7 @@
 
 ### Frontend (kernel/web/src/)
 - **Modify:** `api/client.ts` - Add API client functions
-- **Modify:** `api/types.ts` - Add ProcessData type export (if needed)
+- **Modify:** `api/types.ts` - Add Process type export (if needed)
 - **Modify:** `features/SessionKanban.tsx` - Complete rewrite of main body
 - **No changes:** Issues/Tasks drawer, kanban API, ThreadsTreeView component
 
@@ -156,17 +156,17 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `kernel/web/src/api/client.ts`
-- Modify: `kernel/web/src/api/types.ts` (if ProcessData not exported)
+- Modify: `kernel/web/src/api/types.ts` (if Process not exported)
 
-- [ ] **Step 1: Check if ProcessData is exported in types.ts**
+- [ ] **Step 1: Check if Process is exported in types.ts**
 
 ```bash
-grep "export.*ProcessData" kernel/web/src/api/types.ts
+grep "export.*Process" kernel/web/src/api/types.ts
 ```
 
 If not found, add to types.ts:
 ```typescript
-export type { ProcessData } from "../../src/types/index.js";
+export type { Process } from "../../src/types/index.js";
 ```
 
 - [ ] **Step 2: Add fetchSessionObjects function to client.ts**
@@ -187,16 +187,16 @@ export async function fetchSessionObjects(sessionId: string): Promise<string[]> 
 export async function fetchObjectProcess(
   sessionId: string,
   objectName: string
-): Promise<ProcessData> {
-  return get<ProcessData>(`/sessions/${sessionId}/objects/${objectName}/process`);
+): Promise<Process> {
+  return get<Process>(`/sessions/${sessionId}/objects/${objectName}/process`);
 }
 ```
 
 - [ ] **Step 4: Verify imports and exports**
 
-Ensure ProcessData is imported at top of client.ts:
+Ensure Process is imported at top of client.ts:
 ```typescript
-import type { ProcessData } from "./types";
+import type { Process } from "./types";
 ```
 
 - [ ] **Step 5: Commit**
@@ -228,13 +228,14 @@ Replace/add imports at top of file:
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { lastFlowEventAtom, editorTabsAtom, activeFilePathAtom } from "../store/session";
-import { fetchIssues, fetchTasks, fetchSessionObjects, fetchObjectProcess, createIssue, createTask } from "../api/kanban";
+import { fetchIssues, fetchTasks, createIssue, createTask } from "../api/kanban";
+import { fetchSessionObjects, fetchObjectProcess } from "../api/client";
 import { StatusGroup } from "./kanban/StatusGroup";
 import { IssueCard } from "./kanban/IssueCard";
 import { TaskCard } from "./kanban/TaskCard";
 import { ThreadsTreeView } from "./ThreadsTreeView";
 import { ObjectAvatar } from "../components/ui/ObjectAvatar";
-import type { KanbanIssue, KanbanTask, IssueStatus, TaskStatus, ProcessData } from "../api/types";
+import type { KanbanIssue, KanbanTask, IssueStatus, TaskStatus, Process } from "../api/types";
 import { cn } from "../lib/utils";
 ```
 
@@ -247,7 +248,7 @@ Replace readme state with new state:
 ```typescript
 export function SessionKanban({ sessionId }: { sessionId: string }) {
   const [objectNames, setObjectNames] = useState<string[]>([]);
-  const [processData, setProcessData] = useState<Map<string, ProcessData>>(new Map());
+  const [processData, setProcess] = useState<Map<string, Process>>(new Map());
   const [loadingObjects, setLoadingObjects] = useState<Set<string>>(new Set());
   const [issues, setIssues] = useState<KanbanIssue[]>([]);
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
@@ -280,7 +281,7 @@ Replace readme loading effect with:
           try {
             const process = await fetchObjectProcess(sessionId, "supervisor");
             if (!mounted) return;
-            setProcessData(prev => new Map(prev).set("supervisor", process));
+            setProcess(prev => new Map(prev).set("supervisor", process));
             setLoadingObjects(prev => {
               const next = new Set(prev);
               next.delete("supervisor");
@@ -303,7 +304,7 @@ Replace readme loading effect with:
             try {
               const process = await fetchObjectProcess(sessionId, name);
               if (!mounted) return;
-              setProcessData(prev => new Map(prev).set(name, process));
+              setProcess(prev => new Map(prev).set(name, process));
             } catch (err) {
               console.error(`Failed to load ${name} process:`, err);
             } finally {
@@ -360,7 +361,7 @@ Add after loading effect:
             )
           );
 
-          setProcessData(prev => {
+          setProcess(prev => {
             const next = new Map(prev);
             objectsToRefresh.forEach((name, i) => {
               if (processes[i]) next.set(name, processes[i]);
