@@ -1,49 +1,42 @@
 ---
 when: never
 command_binding:
-  commands: ["return"]
+  commands: ["return", "talk"]
 ---
 
-# UI 自渲染 + Session 状态报告
+# UI 自渲染
 
-你有两个职责：
+你可以通过编写 React TSX 组件来为用户展示高度自定义的内容。
 
-## 1. Session Readme 维护
+Flow 级别的 UI 写入 `task_files_dir` 下的 `ui/pages/*.tsx`（多页模式，每个页面一个文件）。
 
-每次 return 时，更新 `flows/{sessionId}/readme.md`，向用户展示当前 session 的状态。
+## 引导用户查看页面
 
-内容包括：
-- 当前任务标题和状态
-- 已完成的工作摘要
-- 进行中的工作
-- 待处理的问题
+在 return 或 talk to user 时，使用 ooc link 导航卡片引导用户访问你创建的 UI 页面：
 
-写入方式：
-```javascript
-const sessionDir = task_files_dir.replace(/\/objects\/.*$/, "");
-const readmePath = sessionDir + "/readme.md";
-await Bun.write(readmePath, markdownContent);
+```
+[navigate title="任务进展报告" description="查看详细的任务分解和执行状态"]ooc://ui/flows/{sessionId}/objects/{objectName}/ui/pages/report.tsx[/navigate]
 ```
 
-## 2. UI 自渲染
+其中 `{sessionId}` 和 `{objectName}` 用实际值替换。`ooc://ui/` 后面是相对于 World 根目录的真实路径。
 
-你可以通过编写 React TSX 组件来为用户展示高度自定义的内容。组件文件写入 `task_files_dir` 下的 `ui/index.tsx`。
+用户点击导航卡片后，前端会自动打开对应的 Flow 视图并展示 UI 页面。
 
-### 写入方式
+## 写入方式
 
 ```javascript
-const uiDir = task_files_dir + "/ui";
-await Bun.write(uiDir + "/index.tsx", tsxCode);
+const pagesDir = task_files_dir + "/ui/pages";
+await Bun.write(pagesDir + "/report.tsx", tsxCode);
 ```
 
-### 规则
+## 规则
 
-1. **任务开始时** — 创建 ui/index.tsx，展示任务标题、初始状态和任务分解
-2. **委派时** — 更新组件，记录委派对象和任务描述
-3. **收到回复时** — 更新组件，展示进展，标记已完成步骤
-4. **任务结束时** — 更新组件，展示结果摘要，状态改为"已完成"
+1. **任务开始时** — 创建页面，展示任务标题、初始状态和任务分解
+2. **委派时** — 更新页面，记录委派对象和任务描述
+3. **收到回复时** — 更新页面，展示进展，标记已完成步骤
+4. **任务结束时** — 更新页面，展示结果摘要，状态改为"已完成"
 
-### 可用依赖
+## 可用依赖
 
 组件可以 import 以下模块（使用 `@ooc` 路径别名）：
 
@@ -53,7 +46,7 @@ await Bun.write(uiDir + "/index.tsx", tsxCode);
 - `@ooc/components/ui/*` — 原子组件（MarkdownContent, Badge 等）
 - `@ooc/lib/utils` — 工具函数（cn 等）
 
-### 示例
+## 示例
 
 ```tsx
 import React, { useEffect, useState } from "react";
@@ -93,20 +86,20 @@ export default function SupervisorReport({ sessionId, objectName }) {
 }
 ```
 
-### 注意
+## 注意
 
-- 每次更新都是**全量覆写** ui/index.tsx
-- 组件必须 `export default` 一个 React 组件
+- 每个页面文件必须 `export default` 一个 React 组件
+- 每次更新都是**全量覆写**对应的页面文件
 - 不要省略历史进展记录
 - 即使任务失败也要更新 UI，标注失败原因
 - UI 面向人类用户，注重可读性和视觉层次
 
-### 验证 UI
+## 验证 UI
 
-每次写入 ui/index.tsx 后，**必须验证文件能否编译成功**：
+每次写入页面文件后，**必须验证文件能否编译成功**：
 
 ```javascript
-const uiPath = task_files_dir + "/ui/index.tsx";
+const uiPath = pagesDir + "/report.tsx";
 await Bun.write(uiPath, tsxCode);
 
 try {
