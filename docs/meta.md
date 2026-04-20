@@ -212,6 +212,11 @@ Object（对象）
 │   │   │
 │   │   ├── 节点状态 ── running / waiting / done / failed
 │   │   │
+│   │   ├── 线程复活（Thread Revival）
+│   │   │       done 线程收到任何 inbox 消息时自动恢复为 running。
+│   │   │       线程不是一次性执行单元，而是可反复唤醒的认知通道。
+│   │   │       revivalCount 记录复活次数，Context 注入 revival_notice 提示。
+│   │   │
 │   │   └── 智慧 = 根节点的厚度
 │   │           新手需要很多子线程才能完成一件事。
 │   │           专家的根线程已经内化了大量经验——同样的事只需要很浅的树。
@@ -242,6 +247,11 @@ Object（对象）
 │   │   │
 │   │   ├── mark ── 标记 inbox 消息（附加在任意 tool 调用上）
 │   │   │       ack（已确认）/ ignore（忽略）/ todo（待办）
+│   │   │
+│   │   ├── defer ── 注册 command hook（灵感来自 Go defer）
+│   │   │       open(command=defer) + submit(on_command, content)
+│   │   │       在目标 command 被 submit 时注入提醒文本到 Context
+│   │   │       生命周期 = 线程级，线程 return 后自动清除
 │   │   │
 │   │   └── Form Manager ── 跟踪活跃 form 的生命周期
 │   │           open 创建 form → submit 完成 form → close 取消 form
@@ -546,11 +556,12 @@ Engine（线程树执行引擎）
 │   ├── 消息标记 ── Object 通过 mark 参数主动标记
 │   │       ack（已确认）/ ignore（忽略）/ todo（待办）
 │   ├── 上下文保留 ── inbox 不过滤已标记消息，保持完整上下文
-│   └── 溢出处理 ── 超过上限时自动 mark(ignore) 最早的 unread
+│   ├── 溢出处理 ── 超过上限时自动 mark(ignore) 最早的 unread
+│   └── 线程复活 ── 向 done 线程写入消息时自动唤醒为 running（revivalCount +1）
 │
 ├── 子线程协作
 │   ├── create_sub_thread ── 创建子线程处理子任务
-│   ├── continue_sub_thread ── 向已创建的子线程追加消息
+│   ├── continue_sub_thread ── 向已创建的子线程追加消息（done 线程自动复活）
 │   ├── await / await_all ── 等待子线程完成
 │   └── 子线程 return → 结果写入父线程 inbox → 唤醒父线程
 │
