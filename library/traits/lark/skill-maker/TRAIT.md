@@ -1,5 +1,6 @@
 ---
-name: library/lark/skill-maker
+namespace: library
+name: lark/skill-maker
 type: how_to_use_tool
 version: 1.0.0
 when: never

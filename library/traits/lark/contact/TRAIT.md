@@ -1,5 +1,6 @@
 ---
-name: library/lark/contact
+namespace: library
+name: lark/contact
 type: how_to_use_tool
 version: 1.0.0
 when: never

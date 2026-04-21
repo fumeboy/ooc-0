@@ -1,5 +1,6 @@
 ---
-name: library/lark/event
+namespace: library
+name: lark/event
 type: how_to_use_tool
 version: 1.0.0
 when: never

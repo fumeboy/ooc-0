@@ -1,5 +1,6 @@
 ---
-name: library/lark/mail
+namespace: library
+name: lark/mail
 type: how_to_use_tool
 version: 1.0.0
 when: never

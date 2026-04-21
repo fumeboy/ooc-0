@@ -1,5 +1,6 @@
 ---
-name: subagent-driven-development
+namespace: library
+name: superpowers/subagent-driven-development
 description: Use when executing implementation plans with independent tasks in the current session
 ---
 

@@ -1,4 +1,5 @@
 ---
+namespace: self
 name: session-kanban
 type: how_to_think
 when: always

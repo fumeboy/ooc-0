@@ -1,5 +1,6 @@
 ---
-name: library/lark/shared
+namespace: library
+name: lark/shared
 type: how_to_use_tool
 version: 1.0.0
 when: never

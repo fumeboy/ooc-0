@@ -1,5 +1,6 @@
 ---
-name: library/news/aggregator
+namespace: library
+name: news/aggregator
 type: how_to_use_tool
 version: 1.0.0
 when: never

@@ -1,4 +1,6 @@
 ---
+name: reporter
+namespace: self
 when: never
 command_binding:
   commands: ["return", "talk"]

@@ -1,5 +1,6 @@
 ---
-name: library/lark/openapi-explorer
+namespace: library
+name: lark/openapi-explorer
 type: how_to_use_tool
 version: 1.0.0
 when: never

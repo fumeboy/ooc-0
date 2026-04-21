@@ -1,5 +1,6 @@
 ---
-name: library/git/ops
+namespace: library
+name: git/ops
 type: how_to_use_tool
 version: 1.0.0
 when: "当需要执行 Git 版本控制操作时"

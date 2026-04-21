@@ -1,5 +1,6 @@
 ---
-name: library/lark/doc
+namespace: library
+name: lark/doc
 type: how_to_use_tool
 version: 1.0.0
 when: never
@@ -7,7 +8,7 @@ description: >-
   飞书云文档：创建和编辑飞书文档。从 Markdown
   创建文档、获取文档内容、更新文档（追加/覆盖/替换/插入/删除）、上传和下载文档中的图片和文件、搜索云空间文档。当用户需要创建或编辑飞书文档、读取文档内容、在文档中插入图片、搜索云空间文档时使用；如果用户是想按名称或关键词先定位电子表格、报表等云空间对象，也优先使用本
   skill 的 docs +search 做资源发现。
-deps: ["library/lark/shared"]
+deps: ["library:lark/shared"]
 examples:
   - title: 获取文档内容
     description: 使用 +fetch shortcut 获取文档的 Markdown 内容

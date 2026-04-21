@@ -1,5 +1,6 @@
 ---
-name: library/http/client
+namespace: library
+name: http/client
 type: how_to_use_tool
 version: 1.0.0
 when: "当需要发送 HTTP GET/POST 请求时"

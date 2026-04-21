@@ -1,5 +1,6 @@
 ---
-name: library/news
+namespace: library
+name: news
 type: how_to_use_tool
 when: "当需要获取新闻或资讯信息时"
 description: 新闻/资讯聚合能力索引（子 trait 见本目录）
