@@ -600,6 +600,13 @@ Engine（线程树执行引擎）
 ├── 通信原语
 │   ├── talk(target, message)       ── 异步对话：发送消息到目标对象
 │   ├── talk_sync(target, message)  ── 同步对话：发送消息并等待回复
+│   ├── talk + form(可选)           ── 结构化表单消息（发起方心里有候选回复时用）
+│   │       args.form = { type: single_choice/multi_choice, options[{id,label,detail}] }
+│   │       engine 自动生成 formId，写入 message_out action.form 字段落盘
+│   │       接收方是 user 时，前端 MessageSidebar 渲染为 option picker
+│   │       自然语言兜底永不关闭：user 仍可写自由文本回复
+│   │       user 回复经 POST /api/talk body.formResponse 透传为
+│   │       [formResponse] {formId, selectedOptionIds, freeText} 前缀注入消息
 │   └── return(summary)             ── 完成当前线程，返回结果给创建者
 │
 ├── Inbox 机制
@@ -885,7 +892,15 @@ Web UI 概念树
 │       │   │     currentThreadId=null  → "向 supervisor 发起对话"
 │       │   │     线程无 action        → "此线程暂无内容"
 │       │   ├── TuiUserMessage ── user 侧消息
-│       │   ├── TuiTalk ── 对象侧消息
+│       │   ├── TuiTalk ── 对象侧消息（纯文本 bubble）
+│       │   ├── TuiTalkForm ── 对象侧消息（带 form 时渲染 option picker）
+│       │   │       数据源：当前 thread 的 message_out action.form 字段
+│       │   │       匹配：FlowMessage.content + timestamp → 对应 action.form
+│       │   │       键盘：↑↓ navigate / Enter select / Esc skip / 1..9 直选
+│       │   │       单选：点击/Enter 即发；多选：勾选 + 确认按钮
+│       │   │       自由文本兜底：Something else 输入框（永远可写自由文本）
+│       │   │       已提交 formId 持久化到 localStorage（ooc:talk-form:submitted:{sid}）
+│       │   │       发送：talkTo(target, displayText, sid, formResponse)
 │       │   ├── TuiAction ── process action 一行展示
 │       │   └── TuiStreamingBlock ── 流式 thought / talk / action
 │       │
