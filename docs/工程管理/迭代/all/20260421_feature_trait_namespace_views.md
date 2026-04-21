@@ -2,8 +2,9 @@
 
 > 类型：feature
 > 创建日期：2026-04-21
-> 状态：todo
-> 负责人：TBD
+> 完成日期：2026-04-21
+> 状态：finish
+> 负责人：Claude Opus 4.7（Phase 1-2）+ Claude Opus 4.7 续作（Phase 3-5）
 
 ## 背景 / 问题描述
 
@@ -318,4 +319,116 @@ POST /api/flows/.../call_method
 - [x] MessageSidebar 迭代的 server.ts 未冲突（我的改动在新 match 块内追加，未动 talk/flows/memory 等既有路由）
 
 ---
+
+### 2026-04-21 Phase 5 完成（Reporter + 文档同步）
+
+**User 仓 commit**：
+- `407e781` docs+reporter: Phase 5 文档同步 + Reporter trait 升级
+
+**关键文档变更**：
+- `docs/meta.md`：
+  - 子树 5（Trait）整段重写：namespace + kind + traitId（`namespace:name`）+ 双方法通道 + views as kind=view + loadAllTraits 新签名与加载顺序
+  - 子树 6（Web UI）：ooc://view/ 协议、DynamicUI 注入 callMethod、FlowView Tab 名 UI → View、IssueDetail/TaskDetail report 路径
+  - 持久化子树：stones 级 + flow 级 views 三件套
+- `docs/对象/人机交互/自渲染.md`：整篇重写（Views = kind=view 的 Trait）
+- `docs/对象/人机交互/ooc-protocol.md`：ooc://view/ 协议 + 预览表
+- `docs/对象/结构/trait/README.md`：traitId 规则 + 省略解析 + 双通道表
+- `docs/对象/结构/trait/定义结构.md`：TraitDefinition 字段重列；文件结构普通 Trait + View 两节
+- `docs/对象/结构/trait/加载链路.md`：四/五层加载；loadAllTraits 新签名
+- `docs/对象/结构/trait/方法注册.md`：整篇重写（三元键 + 单函数 callMethod + HTTP endpoint + notifyThread）
+- `docs/哲学/discussions/2026-04-21-Trait-Namespace-Views-HTTPMethods设计决策.md`：新增设计决策追溯
+- `docs/superpowers/specs/` + `plans/`：首次入库跟踪
+
+**Reporter trait（stones/supervisor/traits/reporter/TRAIT.md）整篇重写**：
+- 两类产出规范：报告文档（`files/reports/*.md`）+ 交互 View（`views/*/` 三件套）
+- Views 三件套写入的完整代码示例（VIEW.md + frontend.tsx + backend.ts）
+- [navigate] 卡片双形态：ooc://file/ + ooc://view/
+- notifyThread 线程复活闭环解释
+- 何时选哪种产出的决策表
+
+**Bruce 体验追溯**（在 kernel 服务上的 curl smoke）：
+- `GET /api/stones` → 200，列出 8 个对象（含 supervisor）
+- `GET /api/resolve?url=ooc://view/stones/supervisor/views/main/` → 200，正确指向 `stones/supervisor/views/main/frontend.tsx`，内容正常
+- `POST /api/flows/s_demo/objects/supervisor/call_method { traitId:"self:main", method:"ping", args:{from:"bruce-verification"} }`
+  → 200 `{ success: true, data: { result: { ok: true, from: "bruce-verification", at: <ts> } } }`
+  （s_demo 没有线程树，notifyThread 不会写入 inbox，但 ping 方法本体不依赖 notifyThread，仍正常返回）
+- 服务端日志：正常加载 8 个对象 + Cron 启动 + 端口 8080 监听；无 error/warn
+- 测试基线 525 pass / 6 skip / 0 fail 维持
+
+**Gate 验证**：
+- [x] `bun test` 全绿（525 pass）
+- [x] `docs/meta.md` 子树 5/6/持久化 + 自渲染 + ooc-protocol + trait/ 已更新
+- [x] Bruce 式 curl smoke 通过
+- [x] `git log --oneline` 每 phase commits 清晰可定位
+
+---
+
+## 迭代最终总结（Phase 1-5 完整交付）
+
+**Kernel 仓 commits（11 个，按时间顺序）**：
+
+Phase 1:
+1. `75f8016` refactor(trait): Phase 1 namespace/traitId 协议切换（源码 + 测试）
+2. `0ccf1fc` refactor(traits): kernel traits TRAIT.md 迁移
+
+Phase 2:
+3. `c9754bb` refactor(registry): Phase 2 MethodRegistry 三元键
+4. `646c0fe` refactor(loader): llm_methods/ui_methods 双命名导出
+5. `554f01c` refactor(kernel-traits): computable/* index.ts 迁移
+6. `f3bdeea` refactor(kernel-traits): plannable/kanban + talkable/issue-discussion + library_index
+7. `d7886b7` docs(kernel-traits): program_api + computable 文档对齐 callMethod
+
+Phase 3（续作）:
+8. `c8428d5` feat(views): Phase 3.1 VIEW.md 加载（kind=view 的 trait）
+9. `eff4773` refactor(protocol): Phase 3.2+3.3 ooc://ui/ 协议硬切 ooc://view/
+10. `5c70f88` refactor(web): Phase 3.4 DynamicUI 加载 views/{viewName}/frontend.tsx
+11. `c8da093` chore(web): 修复 Phase 3 gate 前置的 tsc 基线错误
+
+Phase 4（续作）:
+12. `52422cd` feat(server): Phase 4 HTTP call_method endpoint + notifyThread
+
+**User 仓 commits（4 个）**：
+1. `4b4996f` refactor(traits): library + self traits TRAIT.md 迁移到 namespace:name 格式
+2. `bca18ac` refactor(library-traits): http/client + git/ops llm_methods 导出
+3. `5b8fe18` feat(supervisor): Phase 3 示例 view self:main
+4. `407e781` docs+reporter: Phase 5 文档同步 + Reporter trait 升级
+
+**测试基线对比**：
+
+| 阶段 | pass | skip | fail | files |
+|------|------|------|------|-------|
+| 起点 | 484 | 0 | 0 | 39 |
+| Phase 1 结束 | 502 | 0 | 0 | 43 |
+| Phase 2 结束 | 513 | 6 | 0 | 45 |
+| Phase 3 结束（续作）| 518 | 6 | 0 | 46 |
+| Phase 4 结束（续作）| 525 | 6 | 0 | 47 |
+| Phase 5 结束（续作）| 525 | 6 | 0 | 47 |
+
+全流程 **0 fail**；skip=6 为 Phase 2 接入新 MethodRegistry 后的旧扁平/两段式 API 测试，已由 method-registry.test.ts 覆盖。
+
+**硬迁移总量**：
+- 69 个 TRAIT.md frontmatter（23 kernel + 44 library + 2 self）
+- 11 个 index.ts（kernel + library + self）切到 llm_methods 导出
+- 5 处 DynamicUI 调用点（ViewRouter / registrations / FlowView / IssueDetailView / TaskDetailView）
+- 3 处前端 ooc:// 协议迁移（ooc-url / OocLinkPreview / OocNavigateCard）
+- 1 处 server.ts ooc:// resolver
+- 1 个新 HTTP endpoint（/api/flows/:sid/objects/:name/call_method）
+- 1 个示例 view（stones/supervisor/views/main/）
+- 7 个核心文档重写（meta.md + 自渲染 + ooc-protocol + trait/README + 定义结构 + 加载链路 + 方法注册）
+- 1 个 discussions.md 设计决策追溯
+- Reporter trait TRAIT.md 整篇重写
+
+**与其他迭代的兼容性**：
+- MessageSidebar 迭代（2026-04-21 finish）：前端用 MessageSidebar.tsx / MessageSidebarThreadsList.tsx，未碰 DynamicUI / ooc-url。我的改动 0 干扰。
+- User Inbox 迭代（2026-04-21 finish）：engine 生成 messageId + handleOnTalkToUser，我未改动 engine 的 talk/onTalk 路径。0 干扰。
+- ReflectFlow / talk_form（todo/）：未接触它们的路径。
+
+**未完成项**：无（Phase 1-5 按 Plan 全量交付）。
+
+**偏离 Plan 的地方**：
+1. **loadAllTraits 新签名**：Plan Task 3.5 建议"扩展 loadObjectTraits 接 sessionId"；我改为 `loadAllTraits(objectDir, kernelDir, libraryDir?, flowObjectDir?)`——更显式。user 仓 Reporter 的 backend.ts 在沙箱中通过 `callMethod("computable/file_ops", "writeFile", ...)` 产出 view 文件，仍可正常工作。
+2. **Task 3.6 清理旧 ui/ 引用**：stones 下原本就无 ui/ 文件夹，迁移任务为空；前端代码路径硬切已完成（无 `ooc://ui/` / `ui/index.tsx` / `ui/pages` 引用残留）。
+3. **Phase 5 的 `docs/实验/` 记录**：Plan 建议写入，但该目录目前无活跃使用（user 仓只有 `docs/哲学/` + `docs/对象/` + `docs/工程管理/` + `docs/superpowers/`）。我改为在 `docs/哲学/discussions/` 写设计决策追溯（与其他 2026-04-21 决策文件同级风格），更对齐现有约定。
+
+**Gate 全验证**：所有 phase Gate 通过，具体见各 phase 完成段。
 
