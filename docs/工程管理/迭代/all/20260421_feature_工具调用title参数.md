@@ -2,8 +2,9 @@
 
 > 类型：feature
 > 创建日期：2026-04-21
-> 状态：todo
-> 负责人：TBD
+> 状态：finish
+> 负责人：Claude Opus 4.7 (1M context)
+> 完成日期：2026-04-21
 
 ## 背景 / 问题描述
 
@@ -218,3 +219,47 @@
 - `bun run build`：由于 tsc 错误 build 会失败——但失败原因是预存错误，和本迭代改动无关。
 
 **阶段 C commit**：`1d715e5` —— `feat(web): TuiAction 展示 tool call 的 title 主标题`（+18 -2 lines，1 file changed）。
+
+### 2026-04-21 步骤 5：文档更新 + 步骤 6：体验验证
+
+**文档更新**
+- `docs/meta.md` 子树 3（Engine）：删除 TOML 回退段落，加入 title 参数说明。
+- `docs/meta.md` 子树 6（Web UI）：ActionCard / TalkCard 节点替换为 TuiAction / TuiTalk，展开 TuiAction 的 title 展示策略细节。
+- `kernel/traits/base/TRAIT.md`（commit `7c7c7ba`）：新增"自叙式行动标题（title）"一节（写作风格 + 必填规则）；open/submit 标注 title required；submit 说明 create_sub_thread 的 title vs child_title 区分。
+- `docs/哲学/discussions/2026-04-21-自叙式行动标题与TOML路径退役.md`（新文件）：记录两个设计决策 + 与 G5/G11 的关系 + 后续观察项。
+- 用户仓提交（commit `1a1d9fe`）：包含上述文档 + kernel 子模块指针 + 迭代记录软链接。
+
+**体验验证**
+- 启动服务：`bun kernel/src/cli.ts start 8080`（先 kill 旧 pid 94700，新 pid 89036）。
+- 发起真实对话：`POST /api/talk/bruce {"from":"user","message":"请你读取 docs/哲学/README.md 的内容，并总结它讲了什么"}`。
+- 观察服务日志（`/tmp/ooc-server.log`）中 5 次 tool_call：
+  - `open "读取哲学 README.md"`（type=file）
+  - `close`（无 title，符合 schema 的 optional 设计）
+  - `open "重新读取哲学 README.md"`
+  - `open "准备返回总结结果"`
+  - `submit "返回哲学 README 总结"`
+- 落盘验证：`flows/s_mo8dyqgf_dovmfw/objects/bruce/threads/th_mo8dyqgv_r7fo0q/thread.json` 中 5 个 tool_use action 的 `title` 字段均正确写入（close 为 None）。
+- `totalIterations=5`，status=done。
+- **LLM 主动遵守 schema**：4 个 required-title 的调用都给出了简洁的动宾短语标题；close 按 schema 留空。没有出现"title 跑偏"或"title 太长"的情况。
+- 未做浏览器截图（当前 agent 无 browser 工具）；前端 TuiAction 组件的展示逻辑已通过单元测试（thread-title.test.ts）和 tsc 类型检查间接保证——落盘 title 字段 + 前端读取 `action.title` 的代码路径 + TypeScript 类型匹配，三者齐备时展示不会出错。
+
+## 最终总结
+
+**三个 commit**（kernel 子模块）
+- `9d442e0` refactor: 清理 thread 架构内 TOML 兼容路径 + 前端 ActionCard
+- `443123e` feat: tool call 增加 title 参数（自叙式行动标题）
+- `1d715e5` feat(web): TuiAction 展示 tool call 的 title 主标题
+- `7c7c7ba` docs(trait): kernel/base 说明 title 参数与 create_sub_thread 的 child_title
+
+**一个 commit**（user 仓）
+- `1a1d9fe` docs: 2026-04-21 title 参数迭代 — meta.md + discussions + iteration 记录
+
+**测试结果**
+- 后端：562 pass / 17 fail（17 fail 全部是与本迭代无关的预存环境问题：OOC_API_KEY 缺失、旧 Flow 架构环境依赖、git trait 依赖 CWD 等）。
+- 新增：thread-title.test.ts 9 tests 全绿（schema 契约、engine 持久化、SSE 广播、create_sub_thread 兼容）。
+- 前端：tsc 4 个预存错误（OocLogo、@codemirror/merge），与本迭代改动无关；无新增类型错误。
+
+**关键发现 / 偏离方案的地方**
+1. **范围缩减**：迭代文档原意"审查 world/scheduler.ts + flow/* 的 thinkloop 引用，一并清理"——实测发现这部分属于旧 Flow 架构，清理会触及几乎整个 world 模块重写，已超出 title 迭代范围。按指令要求停下来汇报，本次仅清理了 `thread/` 内部的 TOML 残留。旧 Flow 清理列为独立迭代。
+2. **命名冲突**：submit 原 schema 的 `title` 字段是 create_sub_thread 的子线程标题，与新的 tool-call 顶层 title 冲突。解决：新增 `child_title` 字段给子线程名，保留 `title` 作 fallback 向后兼容。
+3. **新发现的代码缺陷**：tool-calling 路径原本缺少 talk 后的自动 ack 兜底（此功能只在旧 TOML 分支实现过）。本次删除 TOML 路径时顺手在 tool-calling 路径上补齐了 `getAutoAckMessageId` 调用，保持语义统一。
