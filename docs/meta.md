@@ -70,7 +70,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── talkable/         ← 跨对象通信（command_binding: talk/return，含 cross_object, ooc_links, delivery 子 trait）
 │   │   ├── reflective/       ← 记忆与反思（command_binding: return，含 memory_api, super 子 trait）
 │   │   ├── verifiable/       ← 验证能力（command_binding: return）
-│   │   ├── plannable/        ← 任务规划（command_binding: create_sub_thread）
+│   │   ├── plannable/        ← 任务规划（command_binding: think / set_plan）
 │   │   ├── debuggable/       ← 系统化调试（command_binding: program）
 │   │   ├── reviewable/       ← 代码审查（command_binding: program）
 │   │   ├── library_index/    ← Library 资源查询（command_binding: program）
@@ -223,7 +223,7 @@ Object（对象）
 │   │   ├── 根线程 ── 由用户消息或 talk 创建
 │   │   │       是对象处理一个请求的入口。
 │   │   │
-│   │   ├── 子线程 ── 由 create_sub_thread 创建
+│   │   ├── 子线程 ── 由 think(fork) 创建
 │   │   │       继承父线程的 trait 作用域。
 │   │   │       独立执行，完成后 return 结果通知父线程。
 │   │   │
@@ -307,7 +307,7 @@ Object（对象）
 │   │   │   ThreadScheduler 管理线程执行顺序。
 │   │   │
 │   │   ├── 单线程循环 ── 每个 running 线程轮流执行一轮 ThinkLoop
-│   │   ├── 子线程创建 ── create_sub_thread 创建子线程处理子任务
+│   │   ├── 子线程创建 ── think(fork) 创建子线程处理子任务
 │   │   ├── 等待机制 ── await/await_all 等待子线程完成
 │   │   └── 完成传播 ── 子线程 return → 结果写入父线程 inbox → 唤醒父线程
 │   │
@@ -606,7 +606,7 @@ Engine（线程树执行引擎）
       kernel/src/thread/tools.ts（Tool 定义，含所有 tool 的 title 参数）
       kernel/src/thread/form.ts（FormManager）, kernel/src/thread/hooks.ts（Trait 加载钩子）
       kernel/src/world/super.ts（SuperFlow 落盘：handleOnTalkToSuper + getSuperThreadDir）
-      kernel/src/thread/collaboration.ts（talk / create_sub_thread_on_node 协作原语）
+      kernel/src/thread/collaboration.ts（talk / sub_thread_on_node 协作原语）
       kernel/traits/reflective/super/（反思能力 trait：TRAIT.md + index.ts llm_methods — 仅含 persist_to_memory / create_trait）
       kernel/src/thinkable/client.ts（Provider，含 tool calling 支持）
 ```
@@ -616,9 +616,18 @@ Engine（线程树执行引擎）
 ```
 协作模型
 │
-├── 通信原语
-│   ├── talk(target, message)       ── 异步对话：发送消息到目标对象
-│   ├── talk_sync(target, message)  ── 同步对话：发送消息并等待回复
+├── 通信原语（2026-04-22 think/talk 统一）
+│   │   think 对自己的线程操作；talk 对其他对象的线程操作；参数一致。
+│   │   think/talk {msg, threadId?, context: "fork"|"continue", target?}
+│   │   - fork：派生新线程（原线程 readonly）
+│   │   - continue：向原线程投递消息（产生影响，唤醒）
+│   │
+│   ├── think(msg, context="fork")                ── 在当前线程下派生子线程（原 create_sub_thread）
+│   ├── think(msg, threadId, context="continue")  ── 向自己的已有线程投递消息（原 continue_sub_thread）
+│   ├── talk(target, msg, context="fork")         ── 对方新根线程（原 talk）
+│   ├── talk(target, msg, threadId, context="fork")     ── 对方线程下 fork（新能力）
+│   ├── talk(target, msg, threadId, context="continue") ── 向对方已有线程投递（新能力）
+│   ├── talk_sync(target, msg, ...)               ── 同步对话：等待回复
 │   ├── talk + form(可选)           ── 结构化表单消息（发起方心里有候选回复时用）
 │   │       args.form = { type: single_choice/multi_choice, options[{id,label,detail}] }
 │   │       engine 自动生成 formId，写入 message_out action.form 字段落盘
@@ -651,9 +660,9 @@ Engine（线程树执行引擎）
 │   ├── talk_sync(user) ── 不设 waiting 状态（user 永不回复，避免死锁）
 │   └── HTTP API ── GET /api/sessions/:sid/user-inbox → { inbox: [...] }
 │
-├── 子线程协作
-│   ├── create_sub_thread ── 创建子线程处理子任务
-│   ├── continue_sub_thread ── 向已创建的子线程追加消息（done 线程自动复活）
+├── 子线程协作（think 统一）
+│   ├── think(fork) ── 创建子线程处理子任务（替代 create_sub_thread）
+│   ├── think(continue, threadId) ── 向已创建的子线程追加消息（done 线程自动复活；替代 continue_sub_thread）
 │   ├── await / await_all ── 等待子线程完成
 │   └── 子线程 return → 结果写入父线程 inbox → 唤醒父线程
 │
@@ -674,7 +683,7 @@ Engine（线程树执行引擎）
         ├── 死锁检测 → 所有线程 waiting 时强制唤醒
         └── 终止条件 → 根线程 done/failed → 执行结束
 
-代码: kernel/src/thread/engine.ts（执行引擎，含 talk/create_sub_thread 处理）
+代码: kernel/src/thread/engine.ts（执行引擎，含 think/talk 四模式统一处理）
       kernel/src/thread/scheduler.ts（线程调度器）
       kernel/src/thread/tree.ts（线程树，含 writeInbox/markInbox/awaitThreads）
       kernel/src/thread/collaboration.ts（跨对象协作 API）
@@ -835,11 +844,11 @@ Kernel Traits
 │   │       "没有验证证据，不做完成声明。"
 │   │       没有它，对象会自欺。
 │   │
-│   ├── kernel/plannable        ── 任务拆解（command_binding: create_sub_thread）
+│   ├── kernel/plannable        ── 任务拆解（command_binding: think / set_plan）
 │   ├── kernel/debuggable       ── 系统化调试（手动激活，无 command_binding）
 │   ├── kernel/reviewable       ── 代码审查（手动激活，deps: verifiable）
 │   ├── kernel/library_index    ── Library 资源查询（command_binding: program）
-│   └── kernel/object_creation  ── 创建新对象的指南（command_binding: create_sub_thread）
+│   └── kernel/object_creation  ── 创建新对象的指南（command_binding: think）
 │
 └── 组合效应
         基座层的交叉：

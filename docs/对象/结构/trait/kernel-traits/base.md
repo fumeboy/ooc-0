@@ -96,7 +96,7 @@ base 是所有其他 trait 的"调用入口"：
 ```
 想执行代码 → open(command=program) → 激活 computable
 想发消息   → open(command=talk) → 激活 talkable
-想创建子线程 → open(command=create_sub_thread) → 激活 plannable
+想创建子线程 → open(command=think) → 激活 plannable（think 统一了 fork/continue）
 想结束线程 → open(command=return) → 激活 talkable + reflective + verifiable
 ```
 

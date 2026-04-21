@@ -25,10 +25,10 @@ submit(form_id, {
 
 | 创建方式 | 创建者 | summary 去向 |
 |---|---|---|
-| `create_sub_thread` | 父线程 | 父线程 inbox |
+| `think(context="fork")` | 父线程 | 父线程 inbox |
 | 用户直接 talk | （用户侧） | 通过 SSE 推送给前端 |
 | 其他对象 talk | 对方线程 | 对方线程 inbox |
-| `continue_sub_thread` | 父线程（同 create） | 父线程 inbox |
+| `think(context="continue")` | 原线程创建者 | 原线程创建者 inbox |
 
 ## 激活的三个 trait
 

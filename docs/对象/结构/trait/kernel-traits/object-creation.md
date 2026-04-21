@@ -8,13 +8,13 @@
 name: kernel/object_creation
 type: how_to_interact
 when: never
-command_binding: [create_sub_thread]
+command_binding: [think]
 description: 创建新对象或完善对象身份的指南
 ```
 
 **注意**：meta.md 子树 5 中未列出此 trait。本目录的 README 已补充。后续 meta.md 会同步修正。
 
-## 为什么关联 create_sub_thread
+## 为什么关联 think
 
 在 OOC 中，**创建新对象**通常是一个子任务——需要一个专门的子线程来：
 1. 设计对象的 whoAmI（身份定义）
@@ -22,7 +22,7 @@ description: 创建新对象或完善对象身份的指南
 3. 生成初始 readme.md 和 data.json
 4. 创建对象目录
 
-`create_sub_thread` 触发此 trait 激活，让子线程获得"如何设计一个对象"的指导。
+`think(context="fork")` 触发此 trait 激活，让子线程获得"如何设计一个对象"的指导。
 
 ## whoAmI 的结构
 
@@ -49,10 +49,11 @@ object_creation 的 TRAIT.md 强调：一个好的 whoAmI 应该包含：
 用户：创建一个"代码评审助手"对象
 
 supervisor（根线程）:
-  open(type=command, command=create_sub_thread)
+  open(type=command, command=think)
   submit({
     title: "创建代码评审助手",
-    description: "..."
+    context: "fork",
+    msg: "创建代码评审助手：需要 reviewable + verifiable 能力"
   })
   → 子线程继承 supervisor 的 scope，加载 object_creation trait
 
@@ -92,8 +93,8 @@ object_creation 不只用于新建——也用于**完善已有对象的 whoAmI*
 用户：帮我完善 alan 的 whoAmI，加一些关于他对哲学的偏好
 
 supervisor:
-  open(command=create_sub_thread)
-  submit({ title: "完善 alan 身份", ... })
+  open(command=think)
+  submit({ title: "完善 alan 身份", context: "fork", msg: "..." })
 ```
 
 子线程读取现有 readme，分析缺失部分，向用户确认新内容，通过 SelfMeta 写回。

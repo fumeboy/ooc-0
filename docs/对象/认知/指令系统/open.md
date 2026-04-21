@@ -23,7 +23,7 @@ open({
 
 ### 参数
 
-- `command` (必填): 指令名称（`program` / `talk` / `talk_sync` / `return` / `create_sub_thread` 等）
+- `command` (必填): 指令名称（`program` / `think` / `talk` / `talk_sync` / `return` / `call_function` / `set_plan` / `await` / `await_all` / `defer`）
 - `description` (必填): 描述此次 open 的目的（用于 activeForms 展示、便于回看）
 
 ### 效果

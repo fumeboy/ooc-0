@@ -44,19 +44,26 @@ submit({ form_id, summary: "任务完成：找到 3 份相关文档，详见 ...
 // → 线程 done
 ```
 
-### create_sub_thread
+### think(context="fork")（替代 create_sub_thread）
 
 ```typescript
-submit({ form_id, title: "...", description: "...", inherit_scope: true })
-// → { thread_id: "th_xxx" }
+open({ type: "command", command: "think", description: "派生子线程分析 X" })
+submit({ form_id, title: "分析 X", context: "fork", msg: "请分析 X 模块的 API" })
+// → 创建子线程，返回 thread_id = "th_xxx"
 ```
 
-### continue_sub_thread
+`title` 同时是新子线程的名字。
+`threadId` 省略时：fork 当前线程；填写时：fork 指定线程。
+
+### think(context="continue")（替代 continue_sub_thread）
 
 ```typescript
-submit({ form_id, thread_id: "th_xxx", message: "继续：..." })
-// → { sent: true }
+open({ type: "command", command: "think", description: "补充信息给子线程" })
+submit({ form_id, title: "补充上下文", context: "continue", threadId: "th_xxx", msg: "忘了告诉你：X 在 Y 目录" })
+// → 向 th_xxx 的 inbox 投递消息，唤醒该线程
 ```
+
+continue 模式下 `threadId` 必填（engine 会校验）。
 
 ### set_plan
 

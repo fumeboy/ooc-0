@@ -84,9 +84,9 @@ await wait()                      // 等待对方回复
 ### 并行子线程后汇总
 
 ```typescript
-const t1 = await open_and_submit(create_sub_thread, { title: "搜索 A" })
-const t2 = await open_and_submit(create_sub_thread, { title: "搜索 B" })
-const t3 = await open_and_submit(create_sub_thread, { title: "搜索 C" })
+const t1 = await open_and_submit(think, { title: "搜索 A", context: "fork", msg: "搜索 A" })
+const t2 = await open_and_submit(think, { title: "搜索 B", context: "fork", msg: "搜索 B" })
+const t3 = await open_and_submit(think, { title: "搜索 C", context: "fork", msg: "搜索 C" })
 
 await wait({ thread_ids: [t1, t2, t3] })
 // 三个子线程都 done，结果在各自的 return summary 里
@@ -106,7 +106,7 @@ await wait()  // 阻塞，等 reviewer 回复
 当前实现**没有 wait 超时**——线程会一直 waiting 直到条件满足。
 
 如果需要超时，需要：
-1. 配合 `create_sub_thread` 创建一个"定时器子线程"，到点 return
+1. 配合 `think(context="fork")` 创建一个"定时器子线程"，到点 return
 2. 主线程 wait 主任务 和 定时器子线程 其中任一完成（需要 wait_any 语义，目前未直接支持）
 
 目前只支持 `wait_all`（全部完成才唤醒）。如需 wait_any，用户自己通过 inbox + 轮询实现。

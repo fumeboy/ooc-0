@@ -70,7 +70,7 @@ try {
 
 ### 对方长时间不回
 
-当前无超时机制。A 会一直 waiting。如需超时，调用方需要用 `create_sub_thread` 创建定时器子线程。
+当前无超时机制。A 会一直 waiting。如需超时，调用方需要用 `think(context="fork")` 创建定时器子线程。
 
 ### 对方线程 failed
 

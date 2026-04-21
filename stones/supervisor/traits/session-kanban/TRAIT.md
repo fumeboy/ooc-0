@@ -4,7 +4,7 @@ name: session-kanban
 type: how_to_think
 when: always
 command_binding:
-  commands: ["create_sub_thread", "set_plan"]
+  commands: ["think", "set_plan"]
 description: 用 Issue/Task 看板管理和推进 Session 中的工作
 deps: []
 ---
