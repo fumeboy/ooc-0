@@ -432,6 +432,10 @@ stones/
 └── flows/{sessionId}/                 ── 一个 Session = 一个目录
     ├── .session.json               ── Session 元数据（title 等）
     ├── readme.md                   ── Session 工作状态摘要
+    ├── user/                        ── user 的 session 级数据（身份挂牌，不参与 ThinkLoop）
+    │   └── data.json               ── user inbox 引用索引：{ inbox: [{threadId, messageId}, ...] }
+    │                                 每次 talk(target="user") 追加一条引用（不存正文）
+    │                                 前端凭 (threadId, messageId) 反查 thread.json.actions 里的正文
     ├── objects/{name}/              ── 一个 Flow = 一个目录（原 flows/ 重命名）
     │   ├── .flow                   ── 标记文件（Flow 存活标志）
     │   ├── data.json               ── Flow 的运行时数据
@@ -451,6 +455,7 @@ stones/
 
 代码: kernel/src/persistence/reader.ts（读）, kernel/src/persistence/writer.ts（写）
       kernel/src/persistence/thread-adapter.ts（线程树 → Process 转换）
+      kernel/src/persistence/user-inbox.ts（user inbox 引用式持久化，append/read）
 ```
 
 ### 子树 2: 认知构建 — "Context 如何被组装"（G5, G13）
@@ -589,6 +594,20 @@ Engine（线程树执行引擎）
 │   ├── 溢出处理 ── 超过上限时自动 mark(ignore) 最早的 unread
 │   └── 线程复活 ── 向 done 线程写入消息时自动唤醒为 running（revivalCount +1）
 │
+├── User Inbox（session 级引用式收件箱）
+│   │   user 是身份挂牌、不参与 ThinkLoop，但系统需要记录"谁给 user 发过什么"
+│   │   以便前端 MessageSidebar 能按对象聚合 + 未读角标。
+│   │
+│   ├── 路径 ── flows/{sessionId}/user/data.json
+│   ├── 结构 ── { inbox: [{threadId, messageId}, ...] }
+│   ├── 引用式 ── 只存 (threadId, messageId) 对，不复制消息正文
+│   │       正文在发起对象的 thread.json.actions[] 里，前端凭 id 反查
+│   ├── 写入时机 ── 任意对象 talk(target="user") 时，world 在 SSE 广播外追加一条引用
+│   ├── 写失败不阻塞 ── console.error，不回滚 SSE，不抛
+│   ├── 串行化 ── per-sessionId Promise 链（防并发写丢）
+│   ├── talk_sync(user) ── 不设 waiting 状态（user 永不回复，避免死锁）
+│   └── HTTP API ── GET /api/sessions/:sid/user-inbox → { inbox: [...] }
+│
 ├── 子线程协作
 │   ├── create_sub_thread ── 创建子线程处理子任务
 │   ├── continue_sub_thread ── 向已创建的子线程追加消息（done 线程自动复活）
@@ -616,7 +635,8 @@ Engine（线程树执行引擎）
       kernel/src/thread/scheduler.ts（线程调度器）
       kernel/src/thread/tree.ts（线程树，含 writeInbox/markInbox/awaitThreads）
       kernel/src/thread/collaboration.ts（跨对象协作 API）
-      kernel/src/world/world.ts（World 入口）
+      kernel/src/world/world.ts（World 入口；含 handleOnTalkToUser helper）
+      kernel/src/persistence/user-inbox.ts（user inbox 引用式持久化）
 ```
 
 ### 子树 5: Trait — "能力如何定义、加载、生效"（G3, G13）
