@@ -131,7 +131,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 - 线程树架构（`kernel/src/thread/`）是**唯一执行路径**。
 - 旧的 `kernel/src/flow/` 目录以及 `kernel/src/world/{scheduler,session,router}.ts` 已在 2026-04-21 完全退役并删除（退役记录见 `docs/工程管理/迭代/all/20260421_feature_旧Flow架构退役.md`）。
 - `OOC_THREAD_TREE` 环境变量不再生效——线程树架构下没有"回退"这回事。
-- ReflectFlow 线程树化：方案 A 最小可用已于 2026-04-21 上线（`kernel/src/thread/reflect.ts` + `kernel/traits/reflective/reflect_flow/index.ts`）。反思线程落盘在 `stones/{name}/reflect/threads.json`，通过 `callMethod("reflective/reflect_flow", "talkToSelf", { message })` 投递。**当前阶段限制**：消息仅落盘到 inbox，反思线程暂不触发 ThinkLoop 执行——跨 session 常驻调度器与 G12 沉淀循环的后半段（memory 自动注入、trait 自动创建）留待后续迭代。
+- ReflectFlow 线程树化：方案 A 最小可用已于 2026-04-21 上线；**方案 B 完整闭环 2026-04-22 上线**——新增 `kernel/src/thread/reflect-scheduler.ts`（跨 session 常驻调度骨架）、`reflect_flow` trait 的 `persist_to_memory` / `create_trait` 沉淀工具、`context-builder.ts` 读 `stones/{name}/memory.md` 注入 knowledge 区段（上限 4000 字符）。完整路径：主线程 `callMethod("reflective/reflect_flow", "talkToSelf", { message })` → 反思线程 inbox → 调度器触发 → 沉淀工具写 memory.md → 下次主线程 Context 自动"看见"该经验。G12 经验沉淀工程闭环完成。前端 `ReflectFlowView` 适配新结构：Inbox tab（反思线程 root inbox）+ Memory tab（memory.md）。反思线程真正跑 ThinkLoop 的 engine runner 注入留作后续迭代。
 
 ---
 
@@ -565,30 +565,44 @@ Engine（线程树执行引擎）
 │   │       检测死锁（所有线程 waiting）→ 强制唤醒
 │   └── 终止条件 ── 根线程 done/failed → 执行结束
 │
-└── ReflectFlow — 对象的常驻反思线程（线程树版，2026-04-21 方案 A 最小可用上线）
+└── ReflectFlow — 对象的常驻反思线程（线程树版，2026-04-22 方案 B 完整闭环）
     │
     ├── 物理位置: stones/{name}/reflect/threads.json + threads/{rootId}/thread.json
     │           （复用线程树基础设施，结构与普通 session 一致）
     ├── 触发: 任意线程调用 callMethod("reflective/reflect_flow", "talkToSelf", { message })
     │       底层走 reflect.ts 的 talkToReflect(stoneDir, from, message)
     │       消息落入 reflect root 线程 inbox（source=system, status=unread）
+    ├── 调度: ReflectScheduler（reflect-scheduler.ts）跨 session 常驻
+    │       register(name, stoneDir) / triggerReflect(name) / scanAll()
+    │       runner 由 World 注入——reflect 线程真正跑 ThinkLoop 的 engine 入口后续迭代补
     ├── 生命周期: 常驻、横跨所有 session（对象每次新对话共享同一反思线程）
     ├── 线程复活: tree.writeInbox 内置 done→running 复活（revivalCount +1）
     │
-    ├── 【方案 A 限制】: 消息仅落盘，反思线程暂不触发 ThinkLoop 执行
-    │                跨 session 常驻调度器 + 沉淀写入留待后续迭代
+    ├── 沉淀工具（reflect_flow trait llm_methods）:
+    │   ├── talkToSelf({message}) ── 投递消息到 reflect inbox
+    │   ├── getReflectState({}) ── 查 inbox 计数 + 预览
+    │   ├── persist_to_memory({key, content}) ── append 到 stones/{name}/memory.md（方案 B）
+    │   └── create_trait({relativePath, content}) ── 创建 stones/{name}/traits/**/TRAIT.md（方案 B）
     │
-    └── 哲学意义: G12 沉淀循环的工程通道（前半段已打通）
-                  经历 → callMethod talkToSelf → reflect 线程 inbox → [待接调度器]
-                  → 反思审视 → 沉淀为 memory/trait
+    ├── Context 注入（context-builder.ts）:
+    │       knowledge 区段读 {stoneDir}/memory.md → name=memory 窗口（上限 4000 字符）
+    │       下次主线程 Context 自动"看见"沉淀的经验
+    │
+    └── 哲学意义: G12 沉淀循环**完整工程闭环**（方案 B 2026-04-22）
+                  经历 → talkToSelf → reflect inbox → Scheduler 触发 →
+                  反思线程 runner → persist_to_memory/create_trait →
+                  下次主线程 Context 含新 memory → 改变行为
+                  详见 docs/哲学/discussions/2026-04-22-ReflectFlow方案B-G12完整闭环.md
+                  和 docs/哲学/genes/g12-经验沉淀.md「工程映射」章节
 
 代码: kernel/src/thread/engine.ts（执行引擎）, kernel/src/thread/scheduler.ts（调度器）
-      kernel/src/thread/tree.ts（线程树数据结构）, kernel/src/thread/context-builder.ts（Context 构建）
+      kernel/src/thread/tree.ts（线程树数据结构）, kernel/src/thread/context-builder.ts（Context 构建 + memory 注入）
       kernel/src/thread/tools.ts（Tool 定义，含所有 tool 的 title 参数）
       kernel/src/thread/form.ts（FormManager）, kernel/src/thread/hooks.ts（Trait 加载钩子）
       kernel/src/thread/reflect.ts（常驻反思线程落盘 API — 方案 A）
+      kernel/src/thread/reflect-scheduler.ts（反思线程调度骨架 — 方案 B Phase 1）
       kernel/src/thread/collaboration.ts（talk / talkToSelf / replyToFlow 协作原语）
-      kernel/traits/reflective/reflect_flow/（反思能力 trait：TRAIT.md + index.ts llm_methods）
+      kernel/traits/reflective/reflect_flow/（反思能力 trait：TRAIT.md + index.ts llm_methods — 含 persist_to_memory / create_trait）
       kernel/src/thinkable/client.ts（Provider，含 tool calling 支持）
 ```
 
@@ -916,11 +930,13 @@ Web UI 概念树
 │       │
 │       ├── MessageInput ── 消息输入框（@ mention + 发送）
 │       │
-│       └── 未读持久化 ── localStorage（本迭代临时方案）
-│               key: ooc:user-inbox:last-read:{sid}
-│               value: string[]（已读的 messageId 列表）
-│               切到某 thread 时自动 markMessagesRead
-│               后续独立迭代做后端 read-state
+│       └── 未读持久化 ── 服务端 readState 权威 + localStorage 离线兜底（2026-04-22）
+│               主：POST /api/sessions/:sid/user-read-state { objectName, timestamp }
+│                 后端在 flows/{sid}/user/data.json.readState.lastReadTimestampByObject 单调递增记录
+│                 GET /user-inbox 返回含 readState 字段
+│                 切 thread 时前端反查最大 message_out timestamp → setUserReadObject
+│               备：localStorage key ooc:user-inbox:last-read:{sid}（id 集合）
+│                 readState 拉取失败时作为本地兜底；设置时与服务端同步写入
 │
 ├── 视图注册表（ViewRegistry）── "打开什么路径，看到什么视图"
 │   │
@@ -929,9 +945,10 @@ Web UI 概念树
 │   │   tabKey 决定是否复用已有 tab。
 │   │
 │   ├── stones/{name}                    → StoneView（ObjectDetail 或 DynamicUI）[priority: 50]
-│   ├── stones/{name}/reflect/           → ReflectFlowView（Process + Data）[priority: 80]
-│   │                                     【待适配】2026-04-21 后端切到线程树版（threads.json + threads/），
-│   │                                     该视图仍按旧 data.json+process.json 渲染，需要前端独立迭代适配
+│   ├── stones/{name}/reflect/           → ReflectFlowView（Inbox + Memory）[priority: 80]
+│   │                                     2026-04-22 适配线程树结构：
+│   │                                     Inbox tab 展示 reflect/threads/{rootId}/thread.json.inbox（未读红点）
+│   │                                     Memory tab 展示 stones/{name}/memory.md
 │   ├── flows/{sessionId}                → SessionKanban（看板视图）[priority: 120]
 │   ├── flows/{sid}/issues/{id}          → IssueDetailView（Issue 详情页）[priority: 130]
 │   ├── flows/{sid}/tasks/{id}           → TaskDetailView（Task 详情页）[priority: 130]
