@@ -187,6 +187,135 @@
 
 **迁移总数**：69 个 TRAIT.md（23 kernel + 44 library + 2 self） + 9 个 index.ts。
 
+---
 
+### 2026-04-21 续作认领（Phase 3/4/5）
 
+**基线确认**：`bun test` 513 pass / 6 skip / 0 fail（45 files）——与前一 agent 交接一致。
+
+**我理解的 Phase 3/4/5 目标**：
+
+- **Phase 3 — Views 加载 + DynamicUI**
+  - 后端 loader 已支持 VIEW.md + backend.ts（前一 agent 在 Phase 1/2 顺手带入 `kind: view` + `llm_methods` / `ui_methods`）；本轮补齐：`loadObjectViews`（扫 `stones/{name}/views/*`）+ flow 级 views 扫描 + 与 traits 一起进 registry。
+  - 前端 `ooc://ui/` → `ooc://view/` 硬切：`ooc-url.ts` 类型 + 正则 + `OocLinkPreview` 分支 + `OocNavigateCard` 跳转。
+  - `DynamicUI.tsx`：动态 import 路径从 `@stones/{name}/ui/index.tsx` / `@flows/{sid}/objects/{name}/ui/pages/*.tsx` → `@stones/{name}/views/{viewName}/frontend.tsx` / `@flows/{sid}/objects/{name}/views/{viewName}/frontend.tsx`。
+  - 5 处调用点（`ViewRouter` / `registrations` / `FlowView` / `IssueDetailView` / `TaskDetailView`）全改。
+  - `objects/index.ts`（import.meta.glob）扫描规则从 `ui/index.tsx` → `views/*/frontend.tsx`。
+  - stones 下无既有 `ui/` 目录（前一 agent 已确认），迁移任务 = 空；只做新机制。
+  - 示例 view：我将创建 `stones/supervisor/views/main/{VIEW.md, frontend.tsx, backend.ts}` 作为 smoke test 基础（避免改坏真实工作流时无证据）。
+  - Gate：`bun test` 全绿 + 前端 `tsc --noEmit` 0 error + 服务可启动 + 前端 `build` 可通过。
+
+- **Phase 4 — HTTP call_method endpoint + notifyThread**
+  - `MethodContext` 扩展 `notifyThread(message, opts?)`：向目标对象的 root thread inbox 写 system 消息，done 线程自动复活（`ThreadsTree.writeInbox` 已有复活路径，仅需拿到实例）。
+  - `POST /api/flows/:sid/objects/:name/call_method`：白名单严格（self namespace + kind=view + ui_methods + owner 匹配）。
+  - 前端 `callMethod(sid, objectName, traitId, method, args)` api client 新增 + `DynamicUI` 注入闭包。
+  - 集成测试：合法调用 / 白名单拦截 / notifyThread 效果。
+
+- **Phase 5 — Reporter 升级 + 文档同步**
+  - `docs/meta.md`：Trait 子树（加 namespace / kind / llm_methods/ui_methods / traitId 格式）+ Web UI 子树（`ui/` → `views/`、`ooc://ui/` → `ooc://view/`）。
+  - `docs/对象/人机交互/*`、`docs/对象/结构/trait/*`、`docs/哲学文档/discussions.md` 各一条。
+  - Reporter trait 重写（新 TRAIT.md + 示例 view）。
+  - Bruce 体验追溯。
+
+**并行安全**：User Inbox / MessageSidebar 都已 finish，server.ts 干净。我将放手干，每 Task 独立 commit。
+
+---
+
+### 2026-04-21 Phase 3 完成（Views 加载 + DynamicUI）
+
+**Kernel 仓 commits**：
+- `c8428d5` feat(views): Phase 3.1 VIEW.md 加载（kind=view 的 trait）
+- `eff4773` refactor(protocol): Phase 3.2+3.3 ooc://ui/ 协议硬切 ooc://view/
+- `5c70f88` refactor(web): Phase 3.4 DynamicUI 加载 views/{viewName}/frontend.tsx
+- `c8da093` chore(web): 修复 Phase 3 gate 前置的 tsc 基线错误
+
+**User 仓 commits**：
+- `5b8fe18` feat(supervisor): Phase 3 示例 view self:main
+
+**关键决策**：
+- **loader 合并了 views 进 traits**：`loadAllTraits(objectDir, kernelDir, libraryDir?, flowObjectDir?)` 签名改写——传入 objectDir（其下 traits/ + views/ 分别扫），并接受可选 flowObjectDir 做 flow 级 views 覆盖。所有 views 以 `self:{viewName}` 形式进 trait map。
+- **VIEW.md 与 TRAIT.md 共用 loader**：loader.loadTrait 支持 VIEW.md 描述文件；文件名是 VIEW.md 时 kind 自动置为 "view"（无需 frontmatter 显式）。loadObjectViews 还强制 `kind: view`（防止用户 frontmatter 错写）。
+- **frontend.tsx 必须存在**：loadObjectViews 校验失败报错（views 必须可渲染）。
+- **前端改造 5 处调用点**：Stone 级 UI tab 默认加载 `views/main/frontend.tsx`；Flow 级 FlowView tab 名从 `UI` 改为 `View`，自动选 `main` 或第一个 view；IssueDetailView / TaskDetailView reportPages 路径改为 `views/{viewName}/frontend.tsx`；App.tsx 默认 Session path 从 `ui/pages` 改为 `views`。
+- **objects/index.ts import.meta.glob 改扫 `stones/*/views/*/frontend.tsx`**，新增 objectViews / getDefaultView / listObjectViews。
+- **旧 ui/ 目录不存在**（stones 下无任何 ui/）→ 真·空迁移，无数据风险。
+- **ooc://ui/ 协议硬切 ooc://view/**：server.ts resolver + ooc-url.ts type + OocLinkPreview 分支 + OocNavigateCard 跳转全部迁移。路径形态 `ooc://view/stones/{name}/views/{viewName}/` 或 `ooc://view/flows/{sid}/objects/{name}/views/{viewName}/`，尾部斜杠代表 view 目录默认指向 frontend.tsx。
+- **示例 view 在 user 仓**：`stones/supervisor/views/main/{VIEW.md, frontend.tsx, backend.ts}`。frontend 显示 sessionId/objectName/callMethod 注入状态；backend 的 ui_methods.ping 为 Phase 4 HTTP endpoint 的集成测试目标。
+
+**测试基线对比**：
+- Phase 3 开始前：513 pass / 6 skip / 0 fail / 45 files
+- Phase 3 完成后：518 pass / 6 skip / 0 fail / 46 files（新增 view-loader.test.ts 5 tests）
+
+**Gate 验证**：
+- [x] `cd kernel && bun test` 全绿
+- [x] `cd kernel/web && bun run tsc --noEmit` 0 error（修掉 4 项 pre-existing 基线噪音）
+- [x] `cd kernel/web && bun run build` 通过（dist/ 产出）
+- [x] 服务端可启动（curl /api/stones 200 OK）
+- [x] Example view 加载：`loadObjectViews(/stones/supervisor)` 返回 `[self:main (view) uiMethods=[ping]]`
+
+**Phase 3 → Phase 4 准备**：
+- 方法注册表已支持 ui channel；现有 MethodContext 已有 setData/getData/print/sessionId/filesDir/rootDir/selfDir/stoneName。
+- notifyThread 需要拿到 world + ThreadsTree 实例；Phase 4 会在 MethodContext 扩一个字段（或直接通过闭包从 world 注入）。
+
+---
+
+### 2026-04-21 Phase 4 完成（HTTP call_method + notifyThread）
+
+**Kernel 仓 commits**：
+- `52422cd` feat(server): Phase 4 HTTP call_method endpoint + notifyThread
+
+**关键实现**：
+- `POST /api/flows/:sid/objects/:name/call_method`：
+  - 请求体 `{ traitId, method, args }`
+  - 响应 `{ success: true, data: { result } }` / `{ success: false, error }`
+- **白名单层叠校验**（失败即返回，错误消息明确）：
+  1. `traitId` 必须非空字符串 → 400
+  2. `method` 必须非空字符串 → 400
+  3. `traitId.startsWith("self:")` → 403 "只允许调用 self: namespace 的 traitId"
+  4. 对象存在 → 404
+  5. loadObjectViews(stone.dir) + flow 级 views + loadTraitsFromDir(self) → Map<traitId, entry>；未命中 → 404
+  6. `entry.kind === "view"` → 403 "不是 kind=view"
+  7. `view.uiMethods[method]` 存在 → 403 "未在 ui_methods 中声明"（列出可用方法）
+  8. 方法执行抛错 → 500（含 error.message）
+- **notifyThread 实现**：
+  - 定位根线程 `ThreadsTree.load(objFlowDir).rootId`
+  - 记录调用前 root 状态；writeInbox 写入（status=unread）；若调用前是 done，writeInbox 内部已有 revival 逻辑（done → running）
+  - 复活后 `world.resumeFlow(objectName, sid).catch(...)` 非阻塞触发 scheduler
+  - 若无线程树（flow 不存在）→ 打 warn，不抛错（方法本体仍然执行）
+- **stone.save()**：方法修改 `stone.data` 后持久化；save 失败记 warn 但不回滚响应（方法语义已生效）
+- **前端 `callMethod` 与 DynamicUI 集成**：
+  - api/client.ts 新增 `callMethod<T>(sid, obj, traitId, method, args): Promise<T>`（post 返回 `body.result`）
+  - DynamicUI 自动注入 callMethod 闭包（componentProps 含 sessionId+objectName 且未显式传 callMethod 时）；对 stone 级 view 不注入（sessionId 为空）
+
+**测试覆盖**（tests/server-call-method.test.ts，7 tests）：
+- 合法：self:demo submit → 200 + result + inbox 写入 + root 从 done 复活 running
+- 403：kernel: 命名空间
+- 403：self: 命名空间但 kind=trait（非 view）
+- 403：方法只在 llm_methods 不在 ui_methods
+- 404：view 不存在
+- 400：缺 traitId
+- 500：方法抛错
+
+**测试基线对比**：
+- Phase 4 开始前：518 pass / 6 skip / 0 fail / 46 files
+- Phase 4 完成后：525 pass / 6 skip / 0 fail / 47 files（+7 新）
+
+**手工 curl smoke**（supervisor + self:main ping）：
+```bash
+POST /api/sessions/create  → { sessionId: "s_mo8qbx20_in4p5k" }
+POST /api/flows/s_mo8qbx20_in4p5k/objects/supervisor/call_method
+  { traitId: "self:main", method: "ping", args: { from: "curl-smoke" } }
+→ { success: true, data: { result: { ok: true, from: "curl-smoke", at: 1776782341678 } } }
+
+POST /api/flows/.../call_method
+  { traitId: "kernel:computable", method: "readFile", args: { path: "x" } }
+→ 403 { success: false, error: "只允许调用 self: namespace 的 traitId" }
+```
+
+**Gate 验证**：
+- [x] `bun test` 全绿（525 pass）
+- [x] 服务启动 + 手工 curl 合法/非法调用行为符合预期
+- [x] MessageSidebar 迭代的 server.ts 未冲突（我的改动在新 match 块内追加，未动 talk/flows/memory 等既有路由）
+
+---
 

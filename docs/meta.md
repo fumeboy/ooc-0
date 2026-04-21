@@ -393,14 +393,15 @@ Object（对象）
     │       relations → 关系图
     │       对象改变自己 → UI 自动改变。
     │
-    └── 自渲染（G11 实现）
-            对象在 ui/index.tsx 中编写 React 组件（Stone 级别，唯一入口）。
-            Flow 级别在 ui/pages/*.tsx 中编写（多页演示，无 index.tsx）。
-            UI 路径从 files/ui/ 提升为 ui/（Stone 和 Flow 统一）。
-            前端通过 Vite 原生 import 加载，自动热更新。
-            无 ui/index.tsx 的对象使用通用视图（fallback）。
-            有自定义 UI 时默认展示 UI Tab。
-            渲染失败时自动降级到通用视图。
+    └── 自渲染（G11 实现 → 2026-04-21 升级为 Views 机制）
+            对象在 views/{viewName}/frontend.tsx 中编写 React 组件（Stone + Flow 通用）。
+            每个 view 目录含三件套：VIEW.md（元数据，kind=view）+ frontend.tsx（默认导出）
+              + backend.ts（可选，ui_methods / llm_methods 双通道）。
+            前端通过 Vite 原生 import 动态加载（DynamicUI 组件），自动注入 callMethod 闭包。
+            views/main（或任一 view）存在时默认展示 View Tab。
+            无 views/ 的对象使用通用视图（fallback）。
+            渲染失败时自动通知对象修复并降级到错误提示。
+            详见子树 5（Trait）和子树 6（Web UI）。
 ```
 
 ---
@@ -425,8 +426,10 @@ stones/
 │   │   ├── data.json               ── ReflectFlow 的运行时数据
 │   │   ├── process.json            ── ReflectFlow 的行为树
 │   │   └── files/                  ── ReflectFlow 的共享数据
-│   ├── ui/                         ── 自渲染 UI（原 files/ui/）
-│   │   └── index.tsx               ── Stone 唯一主界面入口
+│   ├── views/{viewName}/           ── Stone 级 Views（2026-04-21 取代 ui/index.tsx）
+│   │   ├── VIEW.md                 ── 元数据（kind=view，namespace=self）
+│   │   ├── frontend.tsx            ── React 组件（默认导出）
+│   │   └── backend.ts              ── 可选，ui_methods / llm_methods
 │   └── files/                      ── 其他共享文件
 │
 └── flows/{sessionId}/                 ── 一个 Session = 一个目录
@@ -444,7 +447,10 @@ stones/
     │   ├── threads/{threadId}/     ── 线程运行时数据
     │   │   └── thread.json         ── 单个线程的 actions、locals、plan
     │   ├── memory.md               ── 会话记忆（仅当前任务可见）
-    │   ├── ui/pages/               ── Flow 演示页面（原 files/ui/）
+    │   ├── views/{viewName}/       ── Flow 级 View（2026-04-21 取代 ui/pages/）
+    │   │   ├── VIEW.md             ── 元数据（kind=view，namespace=self）
+    │   │   ├── frontend.tsx        ── React 组件（默认导出）
+    │   │   └── backend.ts          ── 可选，ui_methods / llm_methods
     │   └── files/                  ── Flow 共享数据
     ├── issues/                     ── Issue 跟踪
     │   ├── index.json              ── 轻量索引（id, title, status, updatedAt）
@@ -641,30 +647,52 @@ Engine（线程树执行引擎）
 
 ### 子树 5: Trait — "能力如何定义、加载、生效"（G3, G13）
 
+> 2026-04-21 Namespace + Views + HTTP Methods 大改造。详见 Spec：`docs/superpowers/specs/2026-04-21-trait-namespace-views-and-http-methods-design.md`。
+
 ```
 Trait
 │
 ├── 定义结构（TraitDefinition）
-│   ├── name         ── 完整路径名（如 "kernel/computable", "lark/doc"）
+│   ├── namespace    ── "kernel" | "library" | "self"（必填，frontmatter 显式声明）
+│   ├── name         ── namespace 下的相对名（如 "computable", "lark/doc", "reporter"）
+│   ├── kind         ── "trait" | "view"（默认 trait；VIEW.md 自动 view）
 │   ├── description  ── 能力描述（注入 Context 让 LLM 理解）
-│   ├── readme       ── TRAIT.md 内容（激活时注入 Context）
+│   ├── readme       ── TRAIT.md / VIEW.md 内容（激活时注入 Context）
 │   ├── command_binding ── 关联的指令列表（open 时自动加载）
-│   ├── methods      ── 注册方法（沙箱中可调用的函数）
+│   ├── llmMethods   ── Record<name, TraitMethod>（LLM 沙箱可见）
+│   ├── uiMethods    ── Record<name, TraitMethod>（HTTP call_method 可见）
+│   ├── deps         ── 依赖的 traitId 列表（可省略 namespace，按 self→kernel→library 解析）
 │   ├── children     ── 子 trait ID 列表（树形结构时自动填充）
 │   └── parent       ── 父 trait ID（树形结构时自动填充）
 │
+├── traitId 唯一键格式
+│   │   traitId = `${namespace}:${name}`（冒号分隔）
+│   │
+│   │   例：kernel:computable、kernel:computable/file_ops、library:lark/doc、
+│   │       self:reporter、self:main（后者为 view）
+│
+├── 省略 namespace 解析（deps / callMethod 入口）
+│   │   查找顺序固定：self → kernel → library
+│   │   取第一个命中；同名不报错，按顺序返回
+│
 ├── 树形结构与 Progressive Disclosure
-│   │   Trait 支持任意深度的树形嵌套（如 kernel/computable/file_ops）。
+│   │   Trait 支持任意深度的树形嵌套（name 含 `/`）。
 │   │   三层加载策略减少 Context 注入量：
 │   │
 │   ├── Level 1 ── 精简注入（always-on 父 trait 的精简 TRAIT.md）
 │   ├── Level 2 ── 子 trait 描述可见（active 父 trait 的子 trait 一行描述）
 │   └── Level 3 ── 按需激活（open(type=trait) 或 command_binding 加载完整内容）
 │
-├── 加载链路（三层，同名后者覆盖前者）
-│   └── 1. kernel/traits/ → 2. library/traits/ → 3. stones/{name}/traits/
-│       → loader.ts 解析 Trait 文件
-│       → TraitDefinition[]
+├── 加载链路（四层，同 traitId 后者覆盖前者）
+│   │
+│   ├── 1. kernel/traits/        → namespace=kernel（系统级基础能力）
+│   ├── 2. library/traits/       → namespace=library（公共库）
+│   ├── 3. stones/{name}/traits/ → namespace=self（对象自定义 trait）
+│   └── 4. stones/{name}/views/  → namespace=self, kind=view（对象自渲染视图）
+│
+│   加载器：loader.ts 的 loadAllTraits(objectDir, kernelDir, libraryDir?, flowObjectDir?)
+│          → 同 traitId（namespace:name）按加载顺序覆盖
+│          → flowObjectDir 可选，用于 Flow 级 views 覆盖 Stone 级
 │
 ├── 渐进式激活（command_binding 驱动）
 │   │   Trait 不再始终激活，而是按需加载：
@@ -674,15 +702,48 @@ Trait
 │   ├── submit/close 后 → 检查 refcount → deactivateTrait
 │   └── FormManager 跟踪活跃 form，驱动 trait 加载/卸载
 │
-└── 方法注册
-    └── MethodRegistry
-        ├── Trait 的 methods 注册为沙箱可调用函数
-        ├── buildSandboxMethods 按 activatedTraits 过滤注入
-        └── call_function 指令直接调用 trait 方法
+├── 方法注册（双通道）
+│   │   MethodRegistry key 是三元 (traitId, methodName, channel)，channel ∈ llm | ui
+│   │
+│   ├── LLM 通道 ── trait.llmMethods 注册进 llm channel
+│   │       沙箱只暴露 callMethod(traitId, method, args) 单函数
+│   │       traitId 可省略 namespace（按 self→kernel→library 顺序解析）
+│   │
+│   ├── UI 通道 ── trait.uiMethods 注册进 ui channel
+│   │       仅通过 HTTP POST /api/flows/:sid/objects/:name/call_method 调用
+│   │       白名单严格：self namespace + kind=view + ui_methods + view owner 匹配
+│   │
+│   └── 严格隔离
+│           沙箱的 callMethod 只能命中 llm channel，ui_methods 不可见
+│           HTTP 端点只能命中 ui channel，llm_methods 不可见
+│
+└── Views：kind=view 的 Trait
+    │
+    ├── 物理目录（Stone 级 / Flow 级）
+    │   ├── stones/{name}/views/{viewName}/
+    │   └── flows/{sid}/objects/{name}/views/{viewName}/
+    │
+    ├── 三件套（每个 view 目录）
+    │   ├── VIEW.md        ── 同 TRAIT.md 结构，namespace=self, kind=view（loader 强制）
+    │   ├── frontend.tsx   ── 默认导出 React 组件（Vite 动态 import；必须存在）
+    │   └── backend.ts     ── 可选；导出 llm_methods / ui_methods
+    │
+    ├── 与普通 Trait 共享
+    │   ├── 同一个 Loader（loader.loadTrait 支持 TRAIT.md/VIEW.md 两种描述文件）
+    │   ├── 同一个 MethodRegistry（双通道同一表）
+    │   ├── 同一套 namespace + traitId 规则
+    │   └── 可声明 command_binding（LLM 像普通 trait 一样激活）
+    │
+    └── view 独有
+        ├── frontend.tsx（前端 DynamicUI 加载）
+        └── ui_methods（暴露给 HTTP call_method 端点）
 
-代码: kernel/src/trait/loader.ts（加载）, kernel/src/trait/registry.ts（方法注册）
+代码: kernel/src/trait/loader.ts（loadAllTraits + loadObjectViews）
+      kernel/src/trait/registry.ts（MethodRegistry 三元键 + buildSandboxMethods）
+      kernel/src/trait/activator.ts（traitId 构造 + 省略解析）
       kernel/src/thread/hooks.ts（collectCommandTraits）
       kernel/src/thread/tree.ts（activateTrait/deactivateTrait）
+      kernel/src/server/server.ts（POST /call_method endpoint）
       kernel/src/types/trait.ts（类型定义）
 ```
 
@@ -841,16 +902,17 @@ Web UI 概念树
 │   │   路径 → 按优先级匹配 → 渲染对应组件（props: { path }）。
 │   │   tabKey 决定是否复用已有 tab。
 │   │
-│   ├── stones/{name}              → StoneView（ObjectDetail 或 DynamicUI）[priority: 50]
-│   ├── stones/{name}/reflect/     → ReflectFlowView（Process + Data）[priority: 80]
-│   ├── flows/{sessionId}          → SessionKanban（看板视图）[priority: 120]
-│   ├── flows/{sid}/issues/{id}    → IssueDetailView（Issue 详情页）[priority: 130]
-│   ├── flows/{sid}/tasks/{id}     → TaskDetailView（Task 详情页）[priority: 130]
-│   ├── flows/{sid}/objects/{name} → FlowView（Flow 详情，含 Readme/Data/UI Tab）[priority: 100]
-│   ├── **/process.json            → ProcessJsonView（行为树查看器）[priority: 40]
-│   ├── *.json                     → CodeViewer（CodeMirror JSON 高亮）[priority: 0]
-│   ├── *.md                       → MarkdownViewer（Markdown 渲染）[priority: 0]
-│   └── *                          → CodeViewer（CodeMirror 纯文本/代码高亮）[priority: 0]
+│   ├── stones/{name}                    → StoneView（ObjectDetail 或 DynamicUI）[priority: 50]
+│   ├── stones/{name}/reflect/           → ReflectFlowView（Process + Data）[priority: 80]
+│   ├── flows/{sessionId}                → SessionKanban（看板视图）[priority: 120]
+│   ├── flows/{sid}/issues/{id}          → IssueDetailView（Issue 详情页）[priority: 130]
+│   ├── flows/{sid}/tasks/{id}           → TaskDetailView（Task 详情页）[priority: 130]
+│   ├── flows/{sid}/objects/{name}       → FlowView（Flow 详情，含 Readme/Data/View Tab）[priority: 100]
+│   ├── flows/{sid}/objects/{name}/views → FlowView 的 View tab（默认 views/main） [priority: 100]
+│   ├── **/process.json                  → ProcessJsonView（行为树查看器）[priority: 40]
+│   ├── *.json                           → CodeViewer（CodeMirror JSON 高亮）[priority: 0]
+│   ├── *.md                             → MarkdownViewer（Markdown 渲染）[priority: 0]
+│   └── *                                → CodeViewer（CodeMirror 纯文本/代码高亮）[priority: 0]
 │
 ├── 页面级视图 ── 占据 Stage 全部空间的完整页面
 │   │
@@ -882,8 +944,9 @@ Web UI 概念树
 │   │   │   ├── MemoryTab ── 长期记忆展示（Markdown 渲染）
 │   │   │   └── UITab ── 自渲染 UI 标签页（如果对象注册了自定义 UI）
 │   │   │
-│   │   └── DynamicUI ── 统一动态 UI 加载器（Stone + Flow）
-│   │           Vite 动态 import（@vite-ignore）
+│   │   └── DynamicUI ── 统一动态 View 加载器（Stone + Flow，2026-04-21 改造）
+│   │           Vite 动态 import（@vite-ignore）→ views/{viewName}/frontend.tsx
+│   │           自动注入 callMethod 闭包（当 componentProps 含 sessionId+objectName）
 │   │           渲染失败自动降级到 fallback
 │   │
 │   ├── FlowView（Flow 视图）── 单个 Flow 对象的详情
@@ -897,7 +960,7 @@ Web UI 概念树
 │   │       ├── ProcessTab ── 行为树视图（复用 ProcessView）
 │   │       ├── DataTab ── 分栏设计（左栏 Flow data + 右栏 Stone data）
 │   │       ├── MemoryTab ── 会话记忆展示
-│   │       └── UITab ── Flow 自渲染 UI（DynamicUI 加载 ui/pages/*.tsx）
+│   │       └── ViewTab ── Flow 自渲染 View（DynamicUI 加载 views/{viewName}/frontend.tsx，默认 views/main）
 │   │
 │   ├── SessionKanban（Session 看板）── Session 级总览
 │   │   │   主体：所有对象的 threads tree 可视化
@@ -929,7 +992,7 @@ Web UI 概念树
 │   │   ├── DescriptionTab ── Issue 描述（Markdown 渲染）
 │   │   ├── CommentsTab ── 时间线评论列表 + 用户输入框
 │   │   ├── LinkedTasksTab ── 关联的 Task 列表
-│   │   └── ReportsTab ── 关联的 report pages（DynamicUI 加载 ui/pages/*.tsx）
+│   │   └── ReportsTab ── 关联的 report pages（DynamicUI 加载 views/{viewName}/frontend.tsx）
 │   │
 │   └── TaskDetailView（Task 详情页）── Task 子任务、关联管理
 │       │   虚拟路径：flows/{sessionId}/tasks/{taskId}
@@ -1059,12 +1122,16 @@ Web UI 概念树
 │   └── stream:thought ── 流式 thinking_chunk（来自 Provider thinking 通道）
 │
 └── ooc:// 协议 ── 前端内部链接系统
-    │   对象间导航的统一寻址方式
+    │   对象间导航的统一寻址方式（2026-04-21：ooc://ui/ 硬切 ooc://view/）
     │
     ├── ooc://object/{name} ── 指向一个 Stone 对象
     ├── ooc://file/{name}/{path} ── 指向对象的共享文件
+    ├── ooc://view/{相对路径} ── 指向对象的 View 资源
+    │   ├── Stone 级：ooc://view/stones/{name}/views/{viewName}/
+    │   └── Flow 级：ooc://view/flows/{sid}/objects/{name}/views/{viewName}/
+    │       尾部斜杠代表整个 view 目录，默认指向 frontend.tsx
     └── MarkdownContent 自动识别并拦截 ooc:// 链接
-        → 点击打开 OocLinkPreview 侧滑面板
+        → 点击打开 OocLinkPreview 侧滑面板 或 OocNavigateCard 跳转
 
 代码: kernel/web/src/App.tsx, kernel/web/src/router/, kernel/web/src/features/, kernel/web/src/components/
       kernel/web/src/store/, kernel/web/src/api/client.ts

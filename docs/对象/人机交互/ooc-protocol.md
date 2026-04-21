@@ -5,12 +5,16 @@
 ## 格式
 
 ```
-ooc://object/{name}            ← 指向一个 Stone 对象
-ooc://file/{name}/{path}       ← 指向对象的共享文件
-ooc://action/{action_id}       ← 指向某个 action（可选）
-ooc://thread/{thread_id}       ← 指向某个线程（可选）
-ooc://issue/{issue_id}         ← 指向某个 Issue
-ooc://task/{task_id}           ← 指向某个 Task
+ooc://object/{name}                       ← 指向一个 Stone 对象
+ooc://file/{name}/{path}                  ← 指向对象的共享文件
+ooc://view/{相对路径}                     ← 指向对象的 View（2026-04-21 新增，取代旧 ooc://ui/）
+                                            Stone 级：ooc://view/stones/{name}/views/{viewName}/
+                                            Flow 级：  ooc://view/flows/{sid}/objects/{name}/views/{viewName}/
+                                            尾部斜杠代表整个 view 目录（默认指向 frontend.tsx）
+ooc://action/{action_id}                  ← 指向某个 action（可选）
+ooc://thread/{thread_id}                  ← 指向某个线程（可选）
+ooc://issue/{issue_id}                    ← 指向某个 Issue
+ooc://task/{task_id}                      ← 指向某个 Task
 ```
 
 ## 在 Markdown 中的用法
@@ -35,6 +39,7 @@ ooc://task/{task_id}           ← 指向某个 Task
 |---|---|
 | `ooc://object/X` | 对象名片：头像 + whoAmI + Traits + Public Methods |
 | `ooc://file/X/path` | 文件内容预览（Markdown 渲染或 CodeMirror） |
+| `ooc://view/X/...` | View 路径（OocNavigateCard 跳转进 FlowView 的 View tab；预览展示路径字符串） |
 | `ooc://issue/X` | Issue 摘要卡片 |
 | `ooc://task/X` | Task 摘要卡片 |
 | `ooc://action/X` | Action 完整详情 |
