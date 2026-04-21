@@ -791,10 +791,49 @@ Web UI 概念树
 │   │           替代原 ViewRouter 的硬编码路由
 │   │
 │   └── MessageDock（消息坞）── 右侧消息面板（仅桌面端 Flows 模式）
-│       │   固定对话对象为 supervisor，可折叠/展开。
-│       ├── MessageBubble ── 消息气泡（用户消息右对齐，对象消息左对齐）
-│       ├── StreamingIndicator ── 流式回复实时展示
-│       └── MessageInput ── 消息输入框
+│       │   user 的多线程消息中心。默认与 supervisor 对话，但 Body 可展示
+│       │   任意 threadId 的 process；Header 红 dot 角标提示其他 thread 未读。
+│       │   代码：kernel/web/src/features/MessageSidebar.tsx
+│       │       + MessageSidebarThreadsList.tsx
+│       │       + hooks/useUserThreads.ts
+│       │
+│       ├── Header ── 顶部工具条
+│       │   ├── target avatar + session id（当前对话对象）
+│       │   ├── 上下消息导航（ChevronUp/Down）
+│       │   ├── pause/resume toggle
+│       │   ├── threads 切换按钮（MessageSquare icon）
+│       │   │       红 dot 角标：其他非当前查看 thread 有未读消息时显示
+│       │   │       unread 判定：allUnreadMessageIds 排除 currentThreadId 的消息
+│       │   └── main/sidebar 布局切换
+│       │
+│       ├── Body（process 视图）── sidebarView="process" 时
+│       │   │   只展示 currentThreadId 对应节点的 actions
+│       │   │   （跨 subFlows 用 findThreadInAllSubFlows 定位节点）
+│       │   │   空状态分两种：
+│       │   │     currentThreadId=null  → "向 supervisor 发起对话"
+│       │   │     线程无 action        → "此线程暂无内容"
+│       │   ├── TuiUserMessage ── user 侧消息
+│       │   ├── TuiTalk ── 对象侧消息
+│       │   ├── TuiAction ── process action 一行展示
+│       │   └── TuiStreamingBlock ── 流式 thought / talk / action
+│       │
+│       ├── Body（threads 视图）── sidebarView="threads" 时
+│       │   │   MessageSidebarThreadsList 双栏：
+│       │   ├── 左栏：我发起的
+│       │   │       subFlows 的 process.root（user 主动 talk 创建的线程）
+│       │   │       每项：对象头像 + thread title + status 圆点
+│       │   └── 右栏：收到的（iMessage 风格按对象聚合）
+│       │           按 user-inbox 反查 + 按对象分组
+│       │           卡片：对象头像 + 名 + 最新消息缩略 + 未读 badge + 时间
+│       │           展开后显示该对象下所有 thread 的缩略列表
+│       │
+│       ├── MessageInput ── 消息输入框（@ mention + 发送）
+│       │
+│       └── 未读持久化 ── localStorage（本迭代临时方案）
+│               key: ooc:user-inbox:last-read:{sid}
+│               value: string[]（已读的 messageId 列表）
+│               切到某 thread 时自动 markMessagesRead
+│               后续独立迭代做后端 read-state
 │
 ├── 视图注册表（ViewRegistry）── "打开什么路径，看到什么视图"
 │   │
