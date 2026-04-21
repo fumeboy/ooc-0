@@ -1,0 +1,1 @@
+../all/20260421_bugfix_call_function对象参数.md
