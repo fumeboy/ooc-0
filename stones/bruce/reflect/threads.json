@@ -1,0 +1,14 @@
+{
+  "rootId": "th_mo8rn23b_85fznh",
+  "nodes": {
+    "th_mo8rn23b_85fznh": {
+      "id": "th_mo8rn23b_85fznh",
+      "title": "reflect",
+      "description": "对象常驻反思线程：接收 talkToSelf 投递的经验条目，用于沉淀到长期记忆。",
+      "status": "running",
+      "childrenIds": [],
+      "createdAt": 1776784541015,
+      "updatedAt": 1776784541015
+    }
+  }
+}
