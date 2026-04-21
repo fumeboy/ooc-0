@@ -522,18 +522,16 @@ Engine（线程树执行引擎）
 │       ├── 记录为 thought action（落盘 thread.json）
 │       └── 通过 SSE 发为 stream:thought
 │
-├── Tool Calling 路径（主路径）
-│   │   LLM 返回 toolCalls 时走此路径。
+├── Tool Calling 路径（唯一路径）
+│   │   LLM 必须返回 toolCalls；Engine 从每次 tool call 顶层
+│   │   提取 title（一句话行动说明），写入 ThreadAction.title，
+│   │   并通过 SSE flow:action 广播给前端 TuiAction 展示。
 │   │
 │   ├── open → FormManager.begin() + collectCommandTraits() + activateTrait()
 │   ├── submit → FormManager.submit() + 执行指令 + deactivateTrait()
-│   └── close → FormManager.cancel() + deactivateTrait()
-│
-├── TOML 路径（兼容回退）
-│   │   LLM 未返回 toolCalls 时走旧 TOML 解析路径。
-│   │   保留用于不支持 tool calling 的 LLM 模型。
-│   │
-│   └── parser.ts 解析 TOML 格式输出 → runThreadIteration
+│   ├── close → FormManager.cancel() + deactivateTrait()
+│   └── wait → tree.setNodeStatus(threadId, "waiting")
+│   （原 TOML 兼容回退路径已于 2026-04-21 退役——parser.ts/thinkloop.ts 删除）
 │
 ├── 线程树调度
 │   ├── ThreadScheduler ── 管理线程执行顺序
@@ -553,8 +551,8 @@ Engine（线程树执行引擎）
 
 代码: kernel/src/thread/engine.ts（执行引擎）, kernel/src/thread/scheduler.ts（调度器）
       kernel/src/thread/tree.ts（线程树数据结构）, kernel/src/thread/context-builder.ts（Context 构建）
-      kernel/src/thread/tools.ts（Tool 定义）, kernel/src/thread/form.ts（FormManager）
-      kernel/src/thread/hooks.ts（Trait 加载钩子）, kernel/src/thread/parser.ts（TOML 兼容解析）
+      kernel/src/thread/tools.ts（Tool 定义，含所有 tool 的 title 参数）
+      kernel/src/thread/form.ts（FormManager）, kernel/src/thread/hooks.ts（Trait 加载钩子）
       kernel/src/thinkable/client.ts（Provider，含 tool calling 支持）
 ```
 
@@ -790,8 +788,8 @@ Web UI 概念树
 │   │   │   浮动输入框 + 对话时间线 + 对象信息面板
 │   │   │
 │   │   ├── ChatTimeline ── 对话时间线（消息 + actions 按时间排序）
-│   │   │   ├── TalkCard ── 对话消息卡片
-│   │   │   └── ActionCard ── Action 卡片
+│   │   │   ├── TuiTalk ── 对话消息一行展示（TuiBlock.tsx 内）
+│   │   │   └── TuiAction ── Action 一行展示（tool_use 首行显示 title，详见下）
 │   │   ├── FloatingInput ── 底部浮动输入框（@ mention + 发送）
 │   │   ├── ObjectInfoPanel ── 右侧对象信息面板（Readme / Data / Shared）
 │   │   └── MentionPicker ── @ 对象选择下拉框
@@ -876,7 +874,7 @@ Web UI 概念树
 │   │   │   沿 scope chain 向上收集所有 actions，按节点分组展示
 │   │   │
 │   │   ├── NodeHeader ── 节点标题（状态圆点 + 标题 + focus 标记 + action 计数）
-│   │   ├── ActionCard ── Action 卡片（详见卡片组件）
+│   │   ├── TuiAction ── Action 一行展示（详见卡片组件）
 │   │   └── NodeSummary ── 节点摘要（虚线边框，压缩后的内容）
 │   │
 │   └── MiniTree ── 右栏：节点树缩略视图
@@ -884,27 +882,33 @@ Web UI 概念树
 │           状态圆点：绿=done, 橙=doing, 灰=pending
 │           focus 节点标记 "(focus-on)"
 │
-├── 卡片组件 ── 信息展示的基本单元
+├── 卡片组件 ── 信息展示的基本单元（TuiBlock.tsx 中统一定义）
 │   │
-│   ├── ActionCard（Action 卡片）── 展示单条 action
-│   │   │   圆角卡片，header + body 结构，Safari tab 风格圆角过渡
-│   │   │   ThreadAction 类型：thinking/text/tool_use/mark_inbox
+│   ├── TuiAction（Action 一行展示）── 展示单条 action
+│   │   │   TUI 风格：一行前缀字符 + label + 内容；inject 默认折叠
+│   │   │   ThreadAction 类型：thinking/text/tool_use/program/inject/message_in/
+│   │   │                     message_out/set_plan/mark_inbox/create_thread/thread_return
 │   │   │
-│   │   ├── CardHeader ── 头部（对象头像 + 类型 Badge + 时间 + 工具栏）
-│   │   │   ├── TypeBadge ── 类型标签（thinking/text/tool_use/mark_inbox）
-│   │   │   │       tool_use 显示工具名 + 参数摘要
-│   │   │   └── Toolbar ── 工具栏（Zoom-in / Copy / Ref 按钮）
-│   │   ├── CardBody ── 内容区
-│   │   │   ├── thinking/text 类型 → MarkdownContent 渲染
-│   │   │   └── tool_use 类型 → 显示工具调用详情（工具名 + 参数 + 结果）
-│   │   └── ZoomSheet ── 展开详情侧滑面板（Sheet）
+│   │   ├── HeaderLine ── 头部一行
+│   │   │   ├── 前缀字符 + label（类型着色）
+│   │   │   ├── tool_use 主标题 ── action.title（LLM 自叙的行动说明，主色、font-medium）
+│   │   │   ├── tool_use 副标题 ── toolName(args 摘要)（次级色、小字、低透明度）
+│   │   │   │       无 title 时 fallback 为此行的主展示
+│   │   │   ├── program 成功/失败标记（✓/✗）
+│   │   │   ├── objectName（可选）
+│   │   │   ├── 时间戳 ── 右侧对齐
+│   │   │   └── CopyBtn ── hover 显示
+│   │   ├── ContentArea（expanded 才显示，支持 maxHeight 截断滚动）
+│   │   │   ├── thinking → Markdown（italic）
+│   │   │   ├── program → pre 截断 + "查看全文"模态窗
+│   │   │   └── text / inject 等 → Markdown
+│   │   └── FullTextModal ── Radix Dialog 全屏展开
 │   │
-│   └── TalkCard（对话卡片）── 展示单条对话消息
-│       │   与 ActionCard 同风格，header 显示 from → to
+│   └── TuiTalk（Talk 一行展示）── 展示对象间对话消息
+│       │   TuiBlock.tsx 中与 TuiAction 同风格
 │       │
-│       ├── CardHeader ── 头部（发送方头像 + from → to + [talk] 标签 + 工具栏）
-│       ├── CardBody ── 内容区（MarkdownContent 渲染）
-│       └── ZoomSheet ── 展开详情侧滑面板
+│       ├── HeaderLine ── 前缀 ❯ + label talk + from → to + 时间戳 + CopyBtn
+│       └── ContentArea ── MarkdownContent（text-[13px]）
 │
 ├── 全局覆盖层 ── 浮于所有内容之上的交互层
 │   │
@@ -940,7 +944,7 @@ Web UI 概念树
 │   ├── CodeBlock（代码块）── 简单的 pre 代码块（可限高）
 │   │
 │   ├── Sheet（侧滑面板）── 从屏幕边缘滑出的面板
-│   │       用于 ActionCard Zoom-in、OocLinkPreview 等
+│   │       用于 OocLinkPreview 等（TuiAction 使用 Radix Dialog 的 FullTextModal）
 │   │
 │   ├── FloatingGradient（浮动渐变）── 三色光球背景装饰
 │   │
