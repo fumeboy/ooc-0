@@ -497,6 +497,18 @@ Context
       kernel/src/thread/tools.ts（Tool 定义）, kernel/src/thread/form.ts（FormManager）
 ```
 
+**可见性分类（4 色）** —— 每个节点在 focus 线程 Context 中的呈现形态：
+
+- `detailed` — focus 自身：process 区段完整 actions 可见
+- `summary`  — 祖先 / 直接子 / 同级兄弟，拥有 summary 字段
+- `title_only` — 祖先 / 直接子 / 同级兄弟，没有 summary
+- `hidden` — 其他节点（uncle / cousin / 孙节点等）
+
+规则严格对齐 context-builder 的 `renderAncestorSummary`/`renderChildrenSummary`/`renderSiblingSummary`。
+分类器：`kernel/src/thread/visibility.ts#classifyContextVisibility`
+HTTP：`GET /api/flows/:sessionId/objects/:name/context-visibility?focus=:threadId`
+UI：`ThreadsTreeView` "Ctx View" 切换（子树 6）
+
 ### 子树 3: 思考-执行 — "Engine 每一轮发生了什么"（G4, G9, G12, G13）
 
 ```
@@ -835,6 +847,11 @@ Web UI 概念树
 │   │   ├── Threads Tree 列表（主体）── 垂直排列所有对象的线程树
 │   │   │   ├── 对象分隔标题 ── 头像 + 对象名
 │   │   │   ├── ThreadsTreeView ── 复用 FlowView 的线程树组件
+│   │   │   │   ├── 节点状态圆点 ── running / waiting / done / failed / pending / paused
+│   │   │   │   ├── 图钉 ── 右键菜单 10 种颜色 + 系统蓝色图钉（最近查看）
+│   │   │   │   └── Ctx View 切换 ── 按 focus 线程的 Context 可见性给每个节点着色
+│   │   │   │       四色图例：detailed / summary / title_only / hidden
+│   │   │   │       点击节点 → 切换 focus → 全树重算（调用 context-visibility API）
 │   │   │   ├── 加载策略 ── supervisor 优先，其他并发加载
 │   │   │   └── SSE 刷新 ── 只刷新变化的对象（防抖批量处理）
 │   │   │
