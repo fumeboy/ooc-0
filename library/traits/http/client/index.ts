@@ -142,3 +142,48 @@ export async function httpPost(
 ): Promise<ToolResult<HttpResponseData>> {
   return httpRequest(ctx, "POST", url, { ...options, body });
 }
+
+/* ========== Phase 2 新协议：llm_methods 对象导出 ========== */
+
+import type { TraitMethod } from "../../../../kernel/src/types/index";
+
+export const llm_methods: Record<string, TraitMethod> = {
+  httpRequest: {
+    name: "httpRequest",
+    description: "通用 HTTP 请求",
+    params: [
+      { name: "method", type: "string", description: "HTTP 方法 GET/POST/PUT/DELETE", required: true },
+      { name: "url", type: "string", description: "请求地址", required: true },
+      { name: "headers", type: "object", description: "请求头", required: false },
+      { name: "body", type: "string|object", description: "请求体", required: false },
+      { name: "timeout", type: "number", description: "超时毫秒（默认 30000）", required: false },
+    ],
+    fn: ((ctx: any, { method, url, headers, body, timeout }: any) =>
+      httpRequest(ctx, method, url, { headers, body, timeout })) as TraitMethod["fn"],
+  },
+  httpGet: {
+    name: "httpGet",
+    description: "发起 GET 请求",
+    params: [
+      { name: "url", type: "string", description: "请求地址", required: true },
+      { name: "headers", type: "object", description: "请求头", required: false },
+      { name: "timeout", type: "number", description: "超时毫秒", required: false },
+    ],
+    fn: ((ctx: any, { url, headers, timeout }: any) =>
+      httpGet(ctx, url, { headers, timeout })) as TraitMethod["fn"],
+  },
+  httpPost: {
+    name: "httpPost",
+    description: "发起 POST 请求",
+    params: [
+      { name: "url", type: "string", description: "请求地址", required: true },
+      { name: "body", type: "string|object", description: "请求体", required: true },
+      { name: "headers", type: "object", description: "请求头", required: false },
+      { name: "timeout", type: "number", description: "超时毫秒", required: false },
+    ],
+    fn: ((ctx: any, { url, body, headers, timeout }: any) =>
+      httpPost(ctx, url, body, { headers, timeout })) as TraitMethod["fn"],
+  },
+};
+
+export const ui_methods: Record<string, TraitMethod> = {};

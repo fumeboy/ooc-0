@@ -402,3 +402,75 @@ export async function gitPull(
     return toolErr(`git pull 执行失败: ${err?.message ?? String(err)}`);
   }
 }
+
+/* ========== Phase 2 新协议：llm_methods 对象导出 ========== */
+
+import type { TraitMethod } from "../../../../kernel/src/types/index";
+
+export const llm_methods: Record<string, TraitMethod> = {
+  gitStatus: {
+    name: "gitStatus",
+    description: "获取工作区状态（分支 / 暂存 / 未暂存 / 未跟踪）",
+    params: [],
+    fn: ((ctx: any) => gitStatus(ctx)) as TraitMethod["fn"],
+  },
+  gitDiff: {
+    name: "gitDiff",
+    description: "获取差异（可选暂存区或指定文件）",
+    params: [
+      { name: "staged", type: "boolean", description: "暂存区差异", required: false },
+      { name: "file", type: "string", description: "指定文件路径", required: false },
+    ],
+    fn: ((ctx: any, { staged, file }: any) => gitDiff(ctx, { staged, file })) as TraitMethod["fn"],
+  },
+  gitLog: {
+    name: "gitLog",
+    description: "获取提交历史",
+    params: [{ name: "limit", type: "number", description: "返回条数（默认 10）", required: false }],
+    fn: ((ctx: any, { limit }: any) => gitLog(ctx, { limit })) as TraitMethod["fn"],
+  },
+  gitAdd: {
+    name: "gitAdd",
+    description: "将文件添加到暂存区",
+    params: [{ name: "files", type: "string[]", description: "文件路径数组", required: true }],
+    fn: ((ctx: any, { files }: any) => gitAdd(ctx, files)) as TraitMethod["fn"],
+  },
+  gitCommit: {
+    name: "gitCommit",
+    description: "创建提交",
+    params: [{ name: "message", type: "string", description: "提交信息", required: true }],
+    fn: ((ctx: any, { message }: any) => gitCommit(ctx, message)) as TraitMethod["fn"],
+  },
+  gitBranch: {
+    name: "gitBranch",
+    description: "创建新分支",
+    params: [
+      { name: "name", type: "string", description: "分支名称", required: true },
+      { name: "checkout", type: "boolean", description: "创建后切换", required: false },
+    ],
+    fn: ((ctx: any, { name, checkout }: any) => gitBranch(ctx, name, { checkout })) as TraitMethod["fn"],
+  },
+  gitCheckout: {
+    name: "gitCheckout",
+    description: "切换分支",
+    params: [{ name: "branch", type: "string", description: "目标分支", required: true }],
+    fn: ((ctx: any, { branch }: any) => gitCheckout(ctx, branch)) as TraitMethod["fn"],
+  },
+  gitPush: {
+    name: "gitPush",
+    description: "推送到远程仓库",
+    params: [
+      { name: "force", type: "boolean", description: "强制推送", required: false },
+      { name: "upstream", type: "string", description: "设置上游（如 'origin feat/x'）", required: false },
+    ],
+    fn: ((ctx: any, { force, upstream }: any) => gitPush(ctx, { force, upstream })) as TraitMethod["fn"],
+  },
+  gitPull: {
+    name: "gitPull",
+    description: "从远程仓库拉取",
+    params: [{ name: "rebase", type: "boolean", description: "使用 rebase", required: false }],
+    fn: ((ctx: any, { rebase }: any) => gitPull(ctx, { rebase })) as TraitMethod["fn"],
+  },
+};
+
+export const ui_methods: Record<string, TraitMethod> = {};
