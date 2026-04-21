@@ -127,9 +127,10 @@ ooc/                          ← user repo（用户仓库，git 根）
 - 文档中引用公共资源：`library/...`（Library 对象 + 公用 traits + skills + ui-components）
 - 文档中引用其他文档：`docs/...`（相对于 user repo 根）
 
-**架构过渡说明**（2026-04 更新）：
-- 线程树架构默认启用。旧的 `kernel/src/flow/` + `kernel/src/process/` 是**旧架构**，保留作为过渡期回退（`OOC_THREAD_TREE=0`）。
-- 新代码一律走 `kernel/src/thread/`。旧目录等待清理。
+**架构过渡说明**（2026-04-21 更新）：
+- 线程树架构（`kernel/src/thread/`）默认启用，是主路径。
+- 旧的 `kernel/src/flow/` 与 `kernel/src/world/scheduler.ts` **不是完全死代码**——`Flow` 类仍被线程树架构用作落盘格式兼容包装（`_wrapThreadTreeResult`），`ReflectFlow` 机制（对象常驻自我对话 Flow）也仍通过 `Flow.ensureReflectFlow` 实现；server.ts 的 debug 接口依赖 Flow.load。`OOC_THREAD_TREE=0` 仍可回退到纯旧 Flow 路径。
+- 新代码一律走 `kernel/src/thread/`。旧 Flow 架构退役需独立迭代处理（调研见 `docs/工程管理/迭代/all/20260421_feature_统一title参数清理child_title.md` 阶段 B）。
 
 ---
 
