@@ -68,7 +68,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── base/            ← 指令系统基座（唯一 always trait，open/submit/close/wait 四原语）
 │   │   ├── computable/       ← 代码执行（command_binding: program，含 program_api, file_ops, file_search, shell_exec, web_search, testable 子 trait）
 │   │   ├── talkable/         ← 跨对象通信（command_binding: talk/return，含 cross_object, ooc_links, delivery 子 trait）
-│   │   ├── reflective/       ← 记忆与反思（command_binding: return，含 memory_api, reflect_flow 子 trait）
+│   │   ├── reflective/       ← 记忆与反思（command_binding: return，含 memory_api, super 子 trait）
 │   │   ├── verifiable/       ← 验证能力（command_binding: return）
 │   │   ├── plannable/        ← 任务规划（command_binding: create_sub_thread）
 │   │   ├── debuggable/       ← 系统化调试（command_binding: program）
@@ -98,7 +98,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── data.json         ← 动态数据
 │   │   ├── memory.md         ← 长期记忆
 │   │   ├── traits/           ← 用户自定义 Trait
-│   │   ├── reflect/          ← ReflectFlow 数据
+│   │   ├── super/            ← SuperFlow 数据（反思镜像分身，跨 session 常驻）
 │   │   ├── ui/               ← 自定义 UI 文件
 │   │   └── files/            ← 其他文件
 │   └── ...
@@ -131,7 +131,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 - 线程树架构（`kernel/src/thread/`）是**唯一执行路径**。
 - 旧的 `kernel/src/flow/` 目录以及 `kernel/src/world/{scheduler,session,router}.ts` 已在 2026-04-21 完全退役并删除（退役记录见 `docs/工程管理/迭代/all/20260421_feature_旧Flow架构退役.md`）。
 - `OOC_THREAD_TREE` 环境变量不再生效——线程树架构下没有"回退"这回事。
-- ReflectFlow 线程树化：方案 A 最小可用已于 2026-04-21 上线；**方案 B 完整闭环 2026-04-22 上线**——新增 `kernel/src/thread/reflect-scheduler.ts`（跨 session 常驻调度骨架）、`reflect_flow` trait 的 `persist_to_memory` / `create_trait` 沉淀工具、`context-builder.ts` 读 `stones/{name}/memory.md` 注入 knowledge 区段（上限 4000 字符）。完整路径：主线程 `callMethod("reflective/reflect_flow", "talkToSelf", { message })` → 反思线程 inbox → 调度器触发 → 沉淀工具写 memory.md → 下次主线程 Context 自动"看见"该经验。G12 经验沉淀工程闭环完成。前端 `ReflectFlowView` 适配新结构：Inbox tab（反思线程 root inbox）+ Memory tab（memory.md）。反思线程真正跑 ThinkLoop 的 engine runner 注入留作后续迭代。
+- ReflectFlow → **SuperFlow 转型（2026-04-22）**：对象的反思被重构为"镜像分身"——`stones/{name}/super/` 是 super 对象的独立 ThreadsTree（跨 session 常驻）；投递通道从 `callMethod("reflective/reflect_flow", "talkToSelf", ...)` 改为通用的 `talk(target="super", message)`（world.onTalk 识别 super 特殊 target，路由到 `handleOnTalkToSuper` 落盘）。删除了 `src/thread/reflect.ts` + `reflect-scheduler.ts` + `collaboration.ts::talkToSelf/replyToFlow`；trait `reflective/reflect_flow` → `reflective/super`（only `persist_to_memory` + `create_trait`，talkToSelf 方法已移除）；`context-builder.ts` 仍注入 `stones/{name}/memory.md`（上限 4000 字符）到下次主线程 Context。前端 `ReflectFlowView` → `SuperFlowView`（文件夹/路径 `/reflect/` → `/super/` 全量替换）。super 线程跨 session 自动跑 ThinkLoop 依赖独立调度器，留作后续迭代（当前阶段消息"静静躺在 super inbox"等待唤醒）。详见 `docs/工程管理/迭代/finish/20260422_refactor_SuperFlow转型.md`。
 
 ---
 
@@ -374,8 +374,8 @@ Object（对象）
 │   │   ├── 直觉 ── 内化为不需要思考就能做（trait 升级为 always-on）
 │   │   │
 │   │   └── 沉淀循环
-│   │           经历 → 记录(G10) → 反思(reflect)
-│   │           → ReflectFlow 审视 → 沉淀为 trait → 改变帧 0
+│   │           经历 → 记录(G10) → 反思(talk → super)
+│   │           → SuperFlow 审视 → 沉淀为 memory.md / 新 trait → 改变帧 0
 │   │
 │   └── 自我修改
 │           对象修改自己的 readme.md → 改变身份
@@ -422,10 +422,10 @@ stones/
 │   ├── data.json                   ── 动态数据（键值对）
 │   ├── memory.md                   ── 长期记忆（跨任务持久存在）
 │   ├── traits/                     ── 能力定义（Trait 文件）
-│   ├── reflect/                    ── 常驻反思线程（线程树版 ReflectFlow）持久化目录
-│   │   ├── threads.json            ── 反思线程树索引（rootId + nodes）
+│   ├── super/                      ── 对象的反思镜像分身（SuperFlow，跨 session 常驻）
+│   │   ├── threads.json            ── super 线程树索引（rootId + nodes）
 │   │   └── threads/{rootId}/       ── root 线程目录
-│   │       └── thread.json         ── root 线程运行时数据（inbox/actions/todos）
+│   │       └── thread.json         ── root 线程运行时数据（inbox 接收 talk(super) 投递）
 │   ├── views/{viewName}/           ── Stone 级 Views（2026-04-21 取代 ui/index.tsx）
 │   │   ├── VIEW.md                 ── 元数据（kind=view，namespace=self）
 │   │   ├── frontend.tsx            ── React 组件（默认导出）
@@ -565,44 +565,49 @@ Engine（线程树执行引擎）
 │   │       检测死锁（所有线程 waiting）→ 强制唤醒
 │   └── 终止条件 ── 根线程 done/failed → 执行结束
 │
-└── ReflectFlow — 对象的常驻反思线程（线程树版，2026-04-22 方案 B 完整闭环）
+└── SuperFlow — 对象的反思镜像分身（2026-04-22 SuperFlow 转型）
     │
-    ├── 物理位置: stones/{name}/reflect/threads.json + threads/{rootId}/thread.json
-    │           （复用线程树基础设施，结构与普通 session 一致）
-    ├── 触发: 任意线程调用 callMethod("reflective/reflect_flow", "talkToSelf", { message })
-    │       底层走 reflect.ts 的 talkToReflect(stoneDir, from, message)
-    │       消息落入 reflect root 线程 inbox（source=system, status=unread）
-    ├── 调度: ReflectScheduler（reflect-scheduler.ts）跨 session 常驻
-    │       register(name, stoneDir) / triggerReflect(name) / scanAll()
-    │       runner 由 World 注入——reflect 线程真正跑 ThinkLoop 的 engine 入口后续迭代补
-    ├── 生命周期: 常驻、横跨所有 session（对象每次新对话共享同一反思线程）
+    ├── 物理位置: stones/{name}/super/threads.json + threads/{rootId}/thread.json
+    │           （复用线程树基础设施，结构与普通 flow object 一致）
+    ├── 触发: 任意线程调用 talk(target="super", message)
+    │       world.onTalk 识别 target === "super" → world/super.ts::handleOnTalkToSuper
+    │       消息落入 stones/{fromObject}/super/ 的 root 线程 inbox（source=system）
+    │       返回 reply=null（异步通道语义，与 handleOnTalkToUser 对齐）
+    ├── 哲学: 反思 = 对话（G8 延伸）；super ≈ super-ego，对象的反思镜像分身
+    │       A 向 super 说的话 = A 对自己的话——不需要专用方法调用
+    ├── 生命周期: 常驻、横跨所有 session（反思是长期的，不跟随一次对话结束）
     ├── 线程复活: tree.writeInbox 内置 done→running 复活（revivalCount +1）
     │
-    ├── 沉淀工具（reflect_flow trait llm_methods）:
-    │   ├── talkToSelf({message}) ── 投递消息到 reflect inbox
-    │   ├── getReflectState({}) ── 查 inbox 计数 + 预览
-    │   ├── persist_to_memory({key, content}) ── append 到 stones/{name}/memory.md（方案 B）
-    │   └── create_trait({relativePath, content}) ── 创建 stones/{name}/traits/**/TRAIT.md（方案 B）
+    ├── 沉淀工具（reflective/super trait llm_methods，when: never 天然权限隔离）:
+    │   ├── persist_to_memory({key, content}) ── append 到 stones/{name}/memory.md
+    │   └── create_trait({relativePath, content}) ── 创建 stones/{name}/traits/**/TRAIT.md
+    │     （仅 super 对象激活本 trait；普通对象无法越权）
     │
     ├── Context 注入（context-builder.ts）:
     │       knowledge 区段读 {stoneDir}/memory.md → name=memory 窗口（上限 4000 字符）
     │       下次主线程 Context 自动"看见"沉淀的经验
     │
-    └── 哲学意义: G12 沉淀循环**完整工程闭环**（方案 B 2026-04-22）
-                  经历 → talkToSelf → reflect inbox → Scheduler 触发 →
-                  反思线程 runner → persist_to_memory/create_trait →
+    ├── 当前工程状态:
+    │   ├── ✅ 投递通道（talk(super)） + 落盘（handleOnTalkToSuper）
+    │   ├── ✅ 沉淀工具方法体（persist_to_memory / create_trait）
+    │   ├── ✅ 下次 Context 注入 memory.md（context-builder）
+    │   └── ⏳ super 线程跨 session 自动跑 ThinkLoop（后续迭代：需要独立调度器，
+    │         当前阶段消息"静静躺在 super inbox 里"等待唤醒机制）
+    │
+    └── 哲学意义: G12 沉淀循环工程通道（SuperFlow）
+                  经历 → talk(super, 消息) → super inbox 落盘 →
+                  （待实装）super ThinkLoop → persist_to_memory/create_trait →
                   下次主线程 Context 含新 memory → 改变行为
-                  详见 docs/哲学/discussions/2026-04-22-ReflectFlow方案B-G12完整闭环.md
+                  详见 docs/哲学/discussions/2026-04-22-SuperFlow反思即对话.md
                   和 docs/哲学/genes/g12-经验沉淀.md「工程映射」章节
 
 代码: kernel/src/thread/engine.ts（执行引擎）, kernel/src/thread/scheduler.ts（调度器）
       kernel/src/thread/tree.ts（线程树数据结构）, kernel/src/thread/context-builder.ts（Context 构建 + memory 注入）
       kernel/src/thread/tools.ts（Tool 定义，含所有 tool 的 title 参数）
       kernel/src/thread/form.ts（FormManager）, kernel/src/thread/hooks.ts（Trait 加载钩子）
-      kernel/src/thread/reflect.ts（常驻反思线程落盘 API — 方案 A）
-      kernel/src/thread/reflect-scheduler.ts（反思线程调度骨架 — 方案 B Phase 1）
-      kernel/src/thread/collaboration.ts（talk / talkToSelf / replyToFlow 协作原语）
-      kernel/traits/reflective/reflect_flow/（反思能力 trait：TRAIT.md + index.ts llm_methods — 含 persist_to_memory / create_trait）
+      kernel/src/world/super.ts（SuperFlow 落盘：handleOnTalkToSuper + getSuperThreadDir）
+      kernel/src/thread/collaboration.ts（talk / create_sub_thread_on_node 协作原语）
+      kernel/traits/reflective/super/（反思能力 trait：TRAIT.md + index.ts llm_methods — 仅含 persist_to_memory / create_trait）
       kernel/src/thinkable/client.ts（Provider，含 tool calling 支持）
 ```
 
@@ -819,11 +824,12 @@ Kernel Traits
 │   │   └── kernel/talkable/issue-discussion ── Issue 讨论与评论（所有对象共享，虽在 talkable 下但偏向看板）
 │   │
 │   ├── kernel/reflective ── 从经验中学习（command_binding: return）
-│   │   │   reflect 沉淀通道、核心原则。
+│   │   │   反思 = 对话（SuperFlow）：talk(target="super") 投递经验。
 │   │   │   没有它，对象不会成长。
 │   │   │
 │   │   ├── kernel/reflective/memory_api    ── 记忆 API（Flow Summary, Self/Session）
-│   │   └── kernel/reflective/reflect_flow  ── 常驻反思线程（线程树版，含 llm_methods: talkToSelf, getReflectState）
+│   │   └── kernel/reflective/super         ── 反思镜像分身的沉淀工具集（when: never；
+│   │                                           llm_methods: persist_to_memory, create_trait）
 │   │
 │   ├── kernel/verifiable ── 认识论诚实（command_binding: return）
 │   │       "没有验证证据，不做完成声明。"
@@ -945,9 +951,9 @@ Web UI 概念树
 │   │   tabKey 决定是否复用已有 tab。
 │   │
 │   ├── stones/{name}                    → StoneView（ObjectDetail 或 DynamicUI）[priority: 50]
-│   ├── stones/{name}/reflect/           → ReflectFlowView（Inbox + Memory）[priority: 80]
-│   │                                     2026-04-22 适配线程树结构：
-│   │                                     Inbox tab 展示 reflect/threads/{rootId}/thread.json.inbox（未读红点）
+│   ├── stones/{name}/super/             → SuperFlowView（Inbox + Memory）[priority: 80]
+│   │                                     SuperFlow 转型（2026-04-22）：
+│   │                                     Inbox tab 展示 super/threads/{rootId}/thread.json.inbox（未读红点）
 │   │                                     Memory tab 展示 stones/{name}/memory.md
 │   ├── flows/{sessionId}                → SessionKanban（看板视图）[priority: 120]
 │   ├── flows/{sid}/issues/{id}          → IssueDetailView（Issue 详情页）[priority: 130]

@@ -2,8 +2,9 @@
 
 > 类型：refactor
 > 创建日期：2026-04-22
-> 状态：todo
-> 负责人：TBD
+> 完成日期：2026-04-22
+> 状态：finish
+> 负责人：Alan Kay
 
 ## 背景 / 问题描述
 
@@ -145,4 +146,163 @@
 
 ## 执行记录
 
-（初始为空）
+### 2026-04-22 完整完成 5 Phase
+
+#### 现状调研（起点）
+
+- 起点测试基线：**593 pass / 6 skip / 0 fail**（方案 B 完成后）
+- reflect 相关文件清单：
+  - `kernel/src/thread/reflect.ts`（ensureReflectThread / talkToReflect / getReflectThreadDir）
+  - `kernel/src/thread/reflect-scheduler.ts`（ReflectScheduler 类，骨架未接入）
+  - `kernel/tests/reflect-thread.test.ts`、`reflect-scheduler.test.ts`、`reflect-g12-e2e.test.ts`
+  - `kernel/traits/reflective/reflect_flow/`（talkToSelf + getReflectState + persist_to_memory + create_trait）
+  - `kernel/src/thread/collaboration.ts` 的 `talkToSelf` / `replyToFlow` / `deliverToSelfMeta` / `getStoneDir`
+  - `kernel/src/stone/stone.ts` 的 `reflectDir` getter
+  - `kernel/web/src/router/registrations.tsx` 的 `ReflectFlowAdapter` + 注册
+  - `kernel/web/src/hooks/useHashRouter.ts` 注释中的 /reflect 路径
+  - `kernel/web/src/App.tsx` + `features/SessionFileTree.tsx` 中 "reflect" 目录的特殊过滤
+  - `stones/*/reflect/` 物理目录（bruce/debugger/iris/kernel/nexus/sophia/supervisor/user）
+- 关键发现：
+  - `engine.ts` 的 talk/talk_sync 指令**直接调** `config.onTalk`（不走 collaboration.ts）——
+    说明 `handleOnTalkToSuper` 只需要挂在 `world.ts::onTalk` 分支即可，不需要改 engine
+  - `runWithThreadTree` 的 `objectFlowDir` 硬编码 `flows/{sid}/objects/{name}`——
+    super 目录（`stones/{name}/super/`）结构不同，**不适合直接复用 `_talkWithThreadTree`**
+  - 决策：`handleOnTalkToSuper` 做"纯落盘 + 返回 reply=null"，和 `handleOnTalkToUser` 对齐
+
+#### Phase 1 — talk(target="super") 路由
+
+- 新 `kernel/src/world/super.ts`: `handleOnTalkToSuper` + `getSuperThreadDir`
+  - 落盘到 `{rootDir}/stones/{fromObject}/super/` 的独立 ThreadsTree
+  - 首次创建 root 线程（title=`{fromObject}:super`）；后续复用 rootId
+  - SerialQueue 按 superDir 串行化，防并发覆盖
+  - 返回 `{ reply: null, remoteThreadId: rootId }`
+- `kernel/src/world/world.ts::_talkWithThreadTree` 与 `_buildEngineConfig` 两处 onTalk 加 super 分支
+- 新测试 `kernel/tests/world-talk-super.test.ts`：**4 pass**（落盘/累积/隔离/兜底）
+- kernel commit `0fee221` feat(world): talk(target="super") 路由到 stone 的 super 目录
+- 测试基线：**597 pass / 6 skip / 0 fail**（+4）
+
+#### Phase 2 — 目录 + trait rename
+
+- `git mv stones/{*}/reflect/ → stones/{*}/super/`（保留历史；bruce/nexus/sophia/supervisor/user 有 6 个文件 rename；debugger/iris/kernel 空目录用 mv）
+- `git mv kernel/traits/reflective/reflect_flow/ → kernel/traits/reflective/super/`
+- TRAIT.md 全面改写：
+  - `name: "reflective/reflect_flow"` → `"reflective/super"`
+  - 描述从"常驻反思线程"改为"反思镜像分身的沉淀工具集"
+- `index.ts` 文件头注释更新为 SuperFlow 语义（方法体暂保留）
+- 老测试 `reflect-thread.test.ts` + `reflect-g12-e2e.test.ts` 的 import path 同步改为 `traits/reflective/super/index.js`
+  （本 Phase 不删测试，保持 0 fail 过渡态；Phase 3 统一删）
+- kernel commit `4b97665` refactor: reflective/reflect_flow → reflective/super trait 重命名
+- user commit `a3a2bf7` refactor(stones): reflect → super 目录重命名（含 Phase 1 + 2 的 kernel 指针）
+- 测试基线：**597 pass / 6 skip / 0 fail**（持平）
+
+#### Phase 3 — 删除方案 A/B 冗余代码
+
+- 物理删除：
+  - `kernel/src/thread/reflect.ts`
+  - `kernel/src/thread/reflect-scheduler.ts`
+  - `kernel/tests/reflect-thread.test.ts`
+  - `kernel/tests/reflect-scheduler.test.ts`
+  - `kernel/tests/reflect-g12-e2e.test.ts`
+- `kernel/src/thread/collaboration.ts`：
+  - 删除 `talkToSelf` / `replyToFlow` method 与实现（`executeTalkToSelf` / `executeReplyToFlow`）
+  - 清理 `CollaborationContext.deliverToSelfMeta` / `stoneDir`
+  - 清理 `ObjectResolver.getStoneDir`
+  - `executeTalk` 的 self-talk 错误提示：用 `talk("super", ...)` 取代 `talkToSelf()`
+  - 文件头注释声明 SuperFlow 转型的 talkToSelf / replyToFlow 移除理由
+- `kernel/traits/reflective/super/index.ts`：
+  - 删除 `talkToSelfImpl` / `getReflectStateImpl` 方法体
+  - `llm_methods` 仅保留 `persist_to_memory` + `create_trait`
+- `kernel/src/stone/stone.ts`：`reflectDir` getter → `superDir` getter
+- `kernel/src/utils/serial-queue.ts`：注释中 reflect.ts 引用改为 world/super.ts
+- `kernel/tests/thread-collaboration.test.ts`：
+  - 删除 3 个 describe 块（`talkToSelf()` + `talkToSelf() — 方案 A` + `replyToFlow()`），共约 8 个 tests
+  - 清理 `fs` / `os` / `ThreadsTree` 等未使用的 import
+- kernel commit `414fd27` refactor: 删除方案 A/B 冗余代码（SuperFlow Phase 3）
+- 测试基线：**562 pass / 6 skip / 0 fail**（-35：删除了老 reflect/scheduler/e2e 测试 + talkToSelf 相关测试）
+
+#### Phase 4 — 前端视图简化
+
+- `kernel/web/src/router/registrations.tsx`：
+  - `ReflectFlowAdapter` → `SuperFlowAdapter`（函数重命名，basePath 改 super）
+  - 视图注册 name: "ReflectFlow" → "SuperFlow"；match 正则 /reflect/ → /super/
+  - tabLabel "{name} (reflect)" → "{name} (super)"；视觉 badge "reflect" → "super"
+  - 空态文案：原"从未被 talkToSelf" → "从未被 talk(target=super)"
+  - `ProcessJson` 匹配器的 /reflect/ 排除规则同步改 /super/
+- `kernel/web/src/hooks/useHashRouter.ts`：路由文档 `/stones/{name}/reflect → ReflectFlowView` → `/stones/{name}/super → SuperFlowView`
+- `kernel/web/src/App.tsx`：FileTree 对 "reflect" 目录的特殊过滤改 "super"
+- `kernel/web/src/features/SessionFileTree.tsx`：同上
+- 决策：**没有完全删掉专属 View 让通用 FlowView 处理**——
+  因为 FlowView 强依赖 `flows/{sid}/objects/{obj}` 的语义（sessionId/objectName），
+  super 目录在 `stones/{name}/super/` 下结构上不符合；最小改动是 rename + 路径替换
+- tsc: 0 error；vite build: 1232KB（持平基线）
+- kernel commit `9b218ce` refactor(web): ReflectFlowView → SuperFlowView + /reflect/ → /super/
+- 测试基线：**562 pass / 6 skip / 0 fail**（前端不影响后端测试）
+
+#### Phase 5 — E2E + 文档
+
+**E2E 实际执行（降级为落盘验证）**：
+
+启动服务后，执行 `curl -X POST http://localhost:8080/api/talk/bruce -d '{"message":"请 talk 给你自己的 super 记下一条经验：读 meta.md 需要分段看子树而不是一口气通读。"}'`。
+
+session: `s_mo8uvo2w_6ew1er`，bruce 线程：`th_mo8uvo3d_ewl7yn`
+
+**实际 LLM 行为**：bruce 把 "super" 当成了 "supervisor"——
+1. 执行 `talk(target="supervisor", message="请记录一条体验测试经验：读 meta.md 需要分段看子树...")`
+2. supervisor 收到后调 `persist_to_memory` 写入 `stones/supervisor/memory.md`
+3. bruce return "已通过 talk 将经验发送给 supervisor"
+
+**原因分析**：当前 bruce 的 Context 里没有对 `target="super"` 特殊语义的说明——
+LLM 没被教过 "super" 是保留字，凭直觉从候选对象里匹配最像的 "supervisor"。
+这不是 SuperFlow 通道的问题，是 **trait 层缺对 super 的文档化**。
+
+**通道验证（单元测试已覆盖）**：
+- `kernel/tests/world-talk-super.test.ts` 4 pass：`handleOnTalkToSuper` 的落盘通路完全 OK
+  - 首次投递创建 super 目录 + threads.json
+  - 多次投递累积到同一 rootId
+  - 不同对象的 super 互不干扰
+  - 兜底 mkdir
+
+**E2E 结论**：**super 通道落盘通路 OK（单元测试证明）**，但**自动 ThinkLoop 消费**路径需要：
+1. trait 层文档化 `talk(super)` 语义，让 LLM 知道何时用
+2. 独立调度器唤醒 super 线程跑 ThinkLoop（本迭代已声明留作后续）
+
+**文档更新**：
+- `docs/meta.md`：三处子树同步（认知/Trait/视图注册表），SuperFlow 段替换原 ReflectFlow 方案 B 段
+- `docs/哲学/genes/g12-经验沉淀.md`：工程映射章节整体重写为 SuperFlow 语义
+- `docs/哲学/discussions/2026-04-22-SuperFlow反思即对话.md`：新 discussion，含哲学变革、实现要点、E2E 教训、后续 backlog
+- `docs/哲学/discussions/2026-04-22-ReflectFlow方案B-G12完整闭环.md`：文首追加转型注记
+
+user commit（含 submodule 指针 + Phase 3/4/5 kernel + 文档）：`refactor: SuperFlow 转型（reflect → super 简化重构）`
+
+### 测试基线演进
+
+| 阶段 | 总 pass |
+|------|---------|
+| 起点（方案 B 完成） | 593 |
+| Phase 1 后 | 597（+4 world-talk-super） |
+| Phase 2 后 | 597（rename 不改测试） |
+| Phase 3 后 | 562（-35：删除方案 A/B 老测试 + talkToSelf/replyToFlow 块） |
+| Phase 4 后 | 562（前端不影响后端测试） |
+| Phase 5 后 | **562 pass / 6 skip / 0 fail** |
+
+零回归 / 零新增 fail / 零新增 skip（相对 Phase 1 增量的 4 新测试全绿）。
+
+### commit 清单
+
+kernel：
+- `0fee221` feat(world): talk(target="super") 路由到 stone 的 super 目录
+- `4b97665` refactor: reflective/reflect_flow → reflective/super trait 重命名（SuperFlow Phase 2）
+- `414fd27` refactor: 删除方案 A/B 冗余代码（SuperFlow Phase 3）
+- `9b218ce` refactor(web): ReflectFlowView → SuperFlowView + /reflect/ → /super/（SuperFlow Phase 4）
+
+user：
+- `a3a2bf7` refactor(stones): reflect → super 目录重命名（SuperFlow Phase 1+2）
+- 最终 commit: `refactor: SuperFlow 转型落地（reflect → super 简化重构 + 文档同步）`
+
+### 后续 backlog（转型期遗留）
+
+1. **super 线程跨 session 自动调度器**（真正跑 ThinkLoop + 自动沉淀）
+2. **talkable trait 增加 talk(target="super") 语义文档**（让 LLM 知道"super"是反思保留字，避免误解为 supervisor）
+3. **super 的 memory 二次沉淀**（super 的 memory.md 与对象本身的 memory.md 关系设计）
+4. **前端 SuperFlowView 增强**（手动触发 super ThinkLoop 按钮；多线程可视化）
+5. **E2E 真实验证**（待 1 + 2 完成后，LLM 能够正确 `talk(super, ...)` 并由调度器自动消费）

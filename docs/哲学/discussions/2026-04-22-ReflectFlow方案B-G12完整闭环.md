@@ -1,5 +1,13 @@
 # ReflectFlow 方案 B — G12 完整闭环（2026-04-22）
 
+> **注**：方案 B 已转型为 SuperFlow（2026-04-22 同日），本文档仅保留设计历史语境——
+> 调度器骨架、沉淀工具方法体、memory.md 注入 Context 的语义在 SuperFlow 下仍然有效，
+> 但投递通道（`callMethod("reflective/reflect_flow", "talkToSelf", ...)`）已改为
+> 通用 `talk(target="super", message)`；`reflect.ts` / `reflect-scheduler.ts` / 
+> trait `reflective/reflect_flow` 已删除或重命名。
+> 实际实现见 `docs/哲学/discussions/2026-04-22-SuperFlow反思即对话.md` 和
+> `docs/工程管理/迭代/finish/20260422_refactor_SuperFlow转型.md`。
+
 > 继 2026-04-21 方案 A（线程树化打通投递通道）之后，方案 B 完成 5 个 Phase：
 > 调度器 + 沉淀工具 + Context 注入 + 前端适配 + E2E 验证。
 
