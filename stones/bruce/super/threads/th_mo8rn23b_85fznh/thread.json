@@ -9,6 +9,14 @@
       "timestamp": 1776784541016,
       "source": "system",
       "status": "unread"
+    },
+    {
+      "id": "msg_mo8xek5h_c8pb",
+      "from": "bruce",
+      "content": "经验沉淀：think/talk 统一 fork-continue 协议后，表达意图更精准，LLM 学习成本更低。两种操作模式（fork=派生新线程只读原线程，continue=向已有线程投递消息）覆盖了协作中的核心场景，且语义对称、易于记忆。",
+      "timestamp": 1776794222213,
+      "source": "system",
+      "status": "unread"
     }
   ]
 }

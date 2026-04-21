@@ -2,8 +2,18 @@
 
 > 类型：refactor
 > 创建日期：2026-04-22
-> 状态：todo
-> 负责人：TBD
+> 完成日期：2026-04-22
+> 状态：finish
+> 负责人：Alan Kay
+
+## 总结
+
+把 thread 操作统一为 think（自己）/ talk（别人）两个指令，**参数一致**：`{msg, threadId?, context: "fork"|"continue", target?}`。
+四种模式正交化（fork 自己/别人；continue 自己/别人），协作表达力扩展（talk 可以 continue 别人的线程、fork 别人线程下的子线程）。
+按"不考虑旧版本兼容"原则，`create_sub_thread` / `continue_sub_thread` 指令直接删除。
+顺带在 `kernel/traits/talkable/TRAIT.md` 补齐 `target="super"` 保留字说明（反例警告 + 示例），关闭 SuperFlow 迭代的 backlog #2。
+Phase 1-5 全部达成；E2E 5 用例全绿；测试基线 562 → 571 pass / 6 skip / 0 fail；前端 tsc 0 error + build pass。
+
 
 ## 背景 / 问题描述
 
@@ -207,3 +217,134 @@ think/talk {
 5. **talk 的 continue_thread 老参数**：保留向后兼容（talk schema 已有 continue_thread；`context="continue"` 是新的语义通道）。本迭代遵守"不考虑旧版本兼容"直接删除 `continue_thread`，改为让 LLM 用 `threadId + context="continue"` 统一表达
 
 6. **think 的 traits/description/outputs 参数**：沿用 create_sub_thread 的额外参数
+
+#### Phase 1+2 — 指令协议 + Engine 处理
+
+- `tools.ts`：
+  - open 的 command enum 替换：新增 "think"，删除 "create_sub_thread" / "continue_sub_thread"
+  - submit 参数新增 `msg` / `threadId` / `context`，删除 `continue_thread`
+- `types.ts`：ThreadAction 新增可选 `context: "fork" | "continue"` 字段
+- `engine.ts`：
+  - run/resume 两路径同步重写 talk / think 分支
+  - 删除 create_sub_thread / continue_sub_thread 分支
+  - onTalk 签名新增 `forkUnderThreadId` 参数
+  - `runWithThreadTree` 新增 forkUnderThreadId 初始化分支（对方线程下 fork 子线程）
+- `world.ts`：_talkWithThreadTree 接入 forkUnderThreadId；onTalk 两处同步
+- 新测试 `tests/thread-think-talk-unified.test.ts`：9 tests 覆盖 schema + 4 种模式
+- kernel commit `b408c69` feat(thread): think/talk 指令统一 fork/continue 协议（Phase 1+2）
+- 测试基线：**562 → 571 pass / 6 skip / 0 fail**（+9）
+
+#### Phase 3 — Kernel traits 更新
+
+- `traits/plannable/TRAIT.md`：command_binding 改 `["think", "set_plan"]`；重写为 think 的 4 模式对照 + 语义要点
+- `traits/talkable/TRAIT.md`：
+  - 重写为 talk 4 模式对照表（含 fork under / continue 两个新能力）
+  - **新增 target="super" 保留字语义段**：反例警告、反例对比表、示例（承接 SuperFlow backlog #2）
+- `traits/object_creation/TRAIT.md`：command_binding 改 `["think"]`
+- `traits/base/TRAIT.md`：命令清单去 create_sub_thread / continue_sub_thread，加 think
+- 用户 stones: `stones/supervisor/traits/session-kanban/TRAIT.md` 同步
+- kernel commit `8672765` docs(traits): plannable/talkable/object_creation 同步 think/talk 协议 + super 保留字
+- 测试基线：**571 pass / 6 skip / 0 fail**（持平）
+
+#### Phase 4 — 前端 + 文档
+
+- 前端：
+  - `web/src/api/types.ts` Action 接口新增 `context?: "fork" | "continue"`
+  - `web/src/components/ui/TuiBlock.tsx` TuiAction：think/talk 徽章（`command·context·threadId`），fork=blue，continue=teal
+- 文档：
+  - `docs/meta.md` 子树 3/4/5 同步（指令清单、通信原语、trait 清单）
+  - `docs/对象/` 下 14 个文档替换 create_sub_thread / continue_sub_thread 引用（plannable.md 重写、子线程.md 重写、线程复活.md 局部、submit.md 改示例、wait.md 示例、scope-chain.md 局部、README 等）
+  - `docs/哲学/discussions/2026-04-22-think-talk统一-fork-continue语义.md`：新 discussion（问题诊断、统一后的协议、fork vs continue 哲学、新能力、SuperFlow backlog 修复、验收）
+- tsc: 0 error；vite build: 1233KB（持平）
+- kernel commit `e0247ca` feat(web): TuiAction 新增 think/talk 徽章
+- user commit `41233b2` docs+user: think/talk 统一协议文档同步
+- 测试基线：**571 pass / 6 skip / 0 fail**（持平）
+
+#### Phase 5 — E2E 验证
+
+启动服务 `bun kernel/src/cli.ts start 8080`，串行运行 5 个 E2E 用例：
+
+**Test 1 — think fork 自身** ✅
+- Prompt bruce "用 think(context=fork) 派生子线程汇总 docs/meta.md 前 5 子树标题"
+- session: `s_mo8xb04p_nb0zs5`，main thread: `th_mo8xb056_lb9vae`
+- Engine log：
+  - `[Engine] tool_call: open ... command":"think"`
+  - `[Engine] tool_call: submit ... "context":"fork","msg":"请读取 docs/meta.md..."`
+  - `[Engine] think.fork: 派生子线程汇总 meta.md 前5子树标题 → th_mo8xb9m1_sxp1z2`
+- 落盘验证：`threads.json` 显示 root.childrenIds=[th_mo8xb9m1]，child.status=done，child.summary 含 5 个子树标题
+- 主线程 return：iterations=10，status=done
+
+**Test 2 — think continue 自身子线程** ✅
+- Prompt bruce "向刚才子线程 th_mo8xb9m1_sxp1z2 发 think(continue) 补充消息（要求列出基因 ID）"，复用同 session
+- Engine log：
+  - `[Engine] tool_call: submit ... "context":"continue","threadId":"th_mo8xb9m1_sxp1z2"`
+  - `[Engine] think.continue: → th_mo8xb9m1_sxp1z2`
+- 子线程被唤醒：`[ThreadScheduler] 唤醒线程 th_mo8xb9m1_sxp1z2` → running → 处理后 return 基因 ID 列表（G7/G5/G13/G4/G9/G12/G6/G8/G3）
+- 主线程 return 汇报 continue 投递成功
+
+**Test 3 — talk fork 新根（= 当前 talk 行为）** ✅
+- Prompt bruce "talk(target=supervisor, context=fork, msg=问候) 向 supervisor 发起新根线程"
+- session: `s_mo8xdfit_dkprlj`
+- Engine log：
+  - `[World] 跨 Object talk: bruce → supervisor, session=s_mo8xdfit_dkprlj`（无 forkUnder / continue 后缀，= 新根）
+  - supervisor 主线程 th_mo8xdppn_qnirqn 创建（根线程），收到 bruce 问候
+  - supervisor 回复 bruce → `[World] 跨 Object talk: supervisor → bruce, session=..., continue=th_mo8xdfj5_99of9r`
+
+**Test 4 — talk continue 对方已有线程（新能力）** ✅
+- Prompt bruce "用 talk(target=supervisor, threadId=th_mo8xdppn_qnirqn, context=continue, msg=补充) 向 supervisor 已有线程投递 continue"
+- Bruce 落盘 submit args：`{target:"supervisor", threadId:"th_mo8xdppn_qnirqn", context:"continue", msg:"..."}`
+- Engine log：
+  - `[World] 跨 Object talk: bruce → supervisor, session=s_mo8xdfit_dkprlj, continue=th_mo8xdppn_qnirqn`
+- **关键**：world 正确传递 continueThreadId 参数（而非 forkUnderThreadId）；supervisor 的原线程被唤醒继续处理，而非新建线程
+
+**Test 5 — SuperFlow E2E（super 保留字语义）** ✅ 🎉
+- Prompt bruce "向你自己的 super（反思镜像分身，**不是 supervisor**）记下经验"
+- session: `s_mo8xeac8_sr8tnq`
+- Bruce LLM thinking：`"The user wants me to send a message to my 'super' (reflection mirror) using talk..."`
+- Bruce 落盘 submit args：`{target:"super", msg:"经验沉淀：think/talk 统一 fork-continue 协议后..."}`
+- Engine log：`[Super] bruce → super 投递: len=121 messageId=msg_mo8xek5g_xj27 rootId=th_mo8rn23b_85fznh`
+- 持久化验证：`stones/bruce/super/threads/th_mo8rn23b_85fznh/thread.json` inbox 新增 1 条 `from=bruce` 的消息，内容匹配 bruce 投递的经验
+- **SuperFlow backlog #2 关闭**：bruce 正确区分 super vs supervisor（上一轮被误解为 supervisor 的问题，本轮 trait 层文档化 target="super" 保留字 + 反例警告后，LLM 首次直觉就用对了）
+
+**服务 kill**：`pkill -f "bun kernel/src/cli.ts"` 成功。
+
+#### 全仓 grep 验证
+
+- `grep -rn "create_sub_thread\|continue_sub_thread"` kernel/src/thread/：0 匹配（只剩 `sub_thread_on_node` 协作 API，保留）
+- kernel/src/world/、kernel/src/thinkable/、kernel/web/：0 匹配
+- 文档活跃区仅剩"替代旧 X"、"think 统一了 X"等说明性引用；归档区（.归档-20260421/）不处理
+
+### 测试基线演进
+
+| 阶段 | 总 pass |
+|------|---------|
+| 起点 | 562 |
+| Phase 1+2 后 | 571（+9 新 think/talk 测试） |
+| Phase 3 后 | 571（持平） |
+| Phase 4 后 | 571（持平） |
+| Phase 5 后 | **571 pass / 6 skip / 0 fail**（E2E 不改测试） |
+
+零回归 / 零新增 fail / 零新增 skip。
+
+### commit 清单
+
+kernel：
+- `b408c69` feat(thread): think/talk 指令统一 fork/continue 协议（Phase 1+2）
+- `8672765` docs(traits): plannable/talkable/object_creation 同步 think/talk 协议 + super 保留字
+- `e0247ca` feat(web): TuiAction 新增 think/talk 徽章（fork·continue·threadId）
+
+user：
+- `41233b2` docs+user: think/talk 统一协议文档同步（Phase 3+4 user 侧）
+- 最终 commit：`refactor: think/talk 指令统一 + super 语义修正`（含 kernel submodule 指针、Phase 5 迭代文档流转）
+
+### 非预期发现
+
+1. **engine 签名扩展优于重构**：onTalk 原本有 `continueThreadId` 参数，新增 `forkUnderThreadId` 让两个能力并存（互斥使用）。不用改成 options 对象也能承载——正是 OOC "最小改动" 原则的体现。
+2. **bruce 这次没搞错 super**：trait 层加了反例警告和 target="super" 明确段落后，LLM 一次就对，不需要 Phase 3 强化。原始 SuperFlow 迭代的 E2E 教训已经被此次迭代承接并修复。
+3. **测试基线增长可预期**：+9 单元测试覆盖 4 模式 + schema 契约；现有 562 基线零回归。
+
+### 后续 backlog
+
+1. `forkUnderThreadId` 的 E2E 用例（talk 对方线程下 fork 子线程）——本次只做了 onTalk 端到端 unit 测试覆盖，LLM prompt 级 E2E 留作后续
+2. 前端 Badge 可以进一步视觉化 fork tree（NodeCard 展示子线程关系时标注 fork/continue 来源）
+3. 废弃警告：如果从旧版本升级带有 create_sub_thread actions 的 thread.json，前端应识别并提示（当前直接 fallback 到通用 tool_use 渲染，无警示）
