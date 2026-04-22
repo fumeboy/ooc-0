@@ -1,4 +1,4 @@
-# 12 条涌现能力
+# 14 条涌现能力
 
 > 单个基因是简单的规则。但当它们组合时，会涌现出远超各部分之和的能力。
 > 这些能力**不是被设计出来的**，而是从基因中"长出来"的。
@@ -20,6 +20,7 @@
 | E11 | Effect 循环 | G8, G10 | 未验证 | [effect_cycle.md](effect_cycle.md) |
 | E12 | UI 涌现 | G1, G11 | 部分验证 | [ui_emergence.md](ui_emergence.md) |
 | E13 | 元认知压力调节 | G5, G12, G4 | 未验证（2026-04-22 实装） | [metacognitive_pressure.md](metacognitive_pressure.md) |
+| E14 | 三阶段激活模型 | G3, G6, G12 | 基础验证（2026-04-23 实装） | [three_phase_activation.md](three_phase_activation.md) |
 
 > 另有（Progressive Disclosure：树形 Trait + 三层加载）待从当前实现中提炼。
 
