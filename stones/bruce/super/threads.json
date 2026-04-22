@@ -1,14 +1,18 @@
 {
-  "rootId": "th_mo8rn23b_85fznh",
+  "rootId": "th_mo9dxke3_xsbeqo",
   "nodes": {
-    "th_mo8rn23b_85fznh": {
-      "id": "th_mo8rn23b_85fznh",
-      "title": "reflect",
-      "description": "对象常驻反思线程：接收 talkToSelf 投递的经验条目，用于沉淀到长期记忆。",
-      "status": "running",
+    "th_mo9dxke3_xsbeqo": {
+      "id": "th_mo9dxke3_xsbeqo",
+      "title": "bruce:super",
+      "description": "bruce 的反思镜像分身：接收 talk(super) 投递的经验条目，由沉淀工具（persist_to_memory / create_trait）消费。",
+      "status": "done",
       "childrenIds": [],
-      "createdAt": 1776784541015,
-      "updatedAt": 1776784541015
+      "createdAt": 1776821982843,
+      "updatedAt": 1776822038702,
+      "activatedTraits": [
+        "kernel:reflective/super"
+      ],
+      "summary": "处理了 1 条 inbox 消息：将「线程树的可观测性价值」经验沉淀到 memory.md。inbox 已清空，本轮完成。"
     }
   }
 }

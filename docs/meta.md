@@ -587,22 +587,37 @@ Engine（线程树执行引擎）
     │       knowledge 区段读 {stoneDir}/memory.md → name=memory 窗口（上限 4000 字符）
     │       下次主线程 Context 自动"看见"沉淀的经验
     │
-    ├── 当前工程状态:
+    ├── 当前工程状态（G12 完整闭环已达成 2026-04-22）:
     │   ├── ✅ 投递通道（talk(super)） + 落盘（handleOnTalkToSuper）
     │   ├── ✅ 沉淀工具方法体（persist_to_memory / create_trait）
     │   ├── ✅ 下次 Context 注入 memory.md（context-builder）
-    │   └── ⏳ super 线程跨 session 自动跑 ThinkLoop（后续迭代：需要独立调度器，
-    │         当前阶段消息"静静躺在 super inbox 里"等待唤醒机制）
+    │   ├── ✅ super 线程跨 session 自动跑 ThinkLoop（SuperScheduler 实装）
+    │   │      kernel/src/thread/super-scheduler.ts —— 进程级单例 polling
+    │   │      （默认 3s tick）扫所有对象 super/threads.json 的 unread inbox
+    │   │      → 调注入的 runner（生产是 engine.runSuperThread）
+    │   │      SerialQueue 按 stoneName 串行；幂等（in-flight 期间新 tick 跳过）
+    │   │      错误隔离 + graceful stop（等 in-flight 完成）
+    │   │      World.init() 注册所有非 user 对象 + start；cli SIGINT/SIGTERM 走 stop
+    │   └── ✅ super 线程执行（engine.runSuperThread）
+    │          复用 resumeWithThreadTree（objectFlowDirOverride=superDir）
+    │          force-activate kernel:reflective/super trait 到 root 线程
+    │          注入 super_role extraWindow 含完整 open + submit 工具调用示例
+    │          虚拟 sessionId="super:{stoneName}" 仅日志/SSE 用，不创建 flows/
     │
-    └── 哲学意义: G12 沉淀循环工程通道（SuperFlow）
+    └── 哲学意义: G12 沉淀循环工程通道（SuperFlow + SuperScheduler）
                   经历 → talk(super, 消息) → super inbox 落盘 →
-                  （待实装）super ThinkLoop → persist_to_memory/create_trait →
+                  SuperScheduler tick 自动唤醒 → super ThinkLoop →
+                  persist_to_memory/create_trait →
                   下次主线程 Context 含新 memory → 改变行为
                   详见 docs/哲学/discussions/2026-04-22-SuperFlow反思即对话.md
-                  和 docs/哲学/genes/g12-经验沉淀.md「工程映射」章节
+                      docs/哲学/discussions/2026-04-22-super-scheduler-g12真闭环.md
+                      docs/哲学/genes/g12-经验沉淀.md「工程映射」章节
 
-代码: kernel/src/thread/engine.ts（执行引擎）, kernel/src/thread/scheduler.ts（调度器）
-      kernel/src/thread/tree.ts（线程树数据结构）, kernel/src/thread/context-builder.ts（Context 构建 + memory 注入）
+代码: kernel/src/thread/engine.ts（执行引擎；含 runSuperThread）
+      kernel/src/thread/scheduler.ts（线程调度器，session 内）
+      kernel/src/thread/super-scheduler.ts（跨 session 常驻 super 调度器）
+      kernel/src/thread/tree.ts（线程树数据结构）
+      kernel/src/thread/context-builder.ts（Context 构建 + memory 注入）
       kernel/src/thread/tools.ts（Tool 定义，含所有 tool 的 title 参数）
       kernel/src/thread/form.ts（FormManager）, kernel/src/thread/hooks.ts（Trait 加载钩子）
       kernel/src/world/super.ts（SuperFlow 落盘：handleOnTalkToSuper + getSuperThreadDir）
@@ -675,13 +690,43 @@ Engine（线程树执行引擎）
 │       │       使所有对象的线程树在 session/objects/ 目录下
 │       └── Session 结束时清理所有 Flow 的 .flow 标记
 │
-└── World 调度
-    └── ThreadScheduler
-        ├── 管理单个对象内的线程执行顺序
-        ├── 每个 running 线程轮流执行一轮 Engine 循环
-        ├── 子线程完成 → checkAndWake 唤醒等待的父线程
-        ├── 死锁检测 → 所有线程 waiting 时强制唤醒
-        └── 终止条件 → 根线程 done/failed → 执行结束
+├── World 调度
+│   └── ThreadScheduler
+│       ├── 管理单个对象内的线程执行顺序
+│       ├── 每个 running 线程轮流执行一轮 Engine 循环
+│       ├── 子线程完成 → checkAndWake 唤醒等待的父线程
+│       ├── 死锁检测 → 所有线程 waiting 时强制唤醒
+│       └── 终止条件 → 根线程 done/failed → 执行结束
+│
+└── 跨 session 调度（SuperScheduler，2026-04-22）
+    │   反思镜像分身（super）的常驻调度——session 级 ThreadScheduler 解决不了
+    │   "跨 session 长生命周期"问题，故有专属调度器。
+    │
+    ├── SuperScheduler ── 进程级单例 polling
+    │       默认 3s tick，扫所有注册对象的 stones/{name}/super/threads.json
+    │       发现 unread inbox → 通过注入的 runner 触发 super 线程跑一轮 ThinkLoop
+    │       SerialQueue<stoneName> 串行（同 stone 不并发，不同 stone 并发）
+    │       幂等：in-flight 期间新 tick 跳过该对象（_inFlight Set）
+    │       错误隔离：单对象 runner 抛错被吞 + log，不影响其他对象 / 后续 tick
+    │       graceful stop：等所有 in-flight runner resolve 后才返回
+    │
+    ├── runner 注入（解耦设计）
+    │   ├── 测试：mock runner 验证调度逻辑
+    │   └── 生产：World 注入闭包 → 重建 EngineConfig → 调 engine.runSuperThread
+    │
+    ├── 集成到 World
+    │   ├── World.constructor: 创建 SuperScheduler
+    │   ├── World.init(): 注册所有非 user 对象 + start polling
+    │   ├── World.stopSuperScheduler(): graceful shutdown 入口
+    │   └── cli.ts SIGINT/SIGTERM handler: 调 stopSuperScheduler 后 exit
+    │
+    └── G12 完整闭环达成
+        bruce 主线程 talk(super, "经验候选") → 落盘 stones/bruce/super/inbox
+        SuperScheduler tick 检测 → engine.runSuperThread →
+        super 线程 ThinkLoop（角色感知 + 沉淀工具激活）→
+        persist_to_memory 写 stones/bruce/memory.md →
+        新 session bruce talk → context-builder 注入 memory →
+        bruce 引用沉淀的经验
 
 代码: kernel/src/thread/engine.ts（执行引擎，含 think/talk 四模式统一处理）
       kernel/src/thread/scheduler.ts（线程调度器）
