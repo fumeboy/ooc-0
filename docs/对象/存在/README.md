@@ -23,7 +23,7 @@ stones/{name}/                  flows/{sessionId}/objects/{name}/
 ├── data.json                   ├── data.json
 ├── traits/                     ├── threads.json
 ├── memory.md                   ├── threads/{threadId}/thread.json
-├── reflect/                    └── ...
+├── super/                      └── ...
 ├── ui/
 └── files/
 ```

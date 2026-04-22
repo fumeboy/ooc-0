@@ -50,7 +50,7 @@ Kernel Traits 分两层：
 
 | Trait | 触发 command | 简述 | 详细 |
 |---|---|---|---|
-| **reflective** | `return` | 经验沉淀、ReflectFlow 驱动 | [reflective.md](reflective.md) |
+| **reflective** | `return` | 经验沉淀、SuperFlow 驱动 | [reflective.md](reflective.md) |
 | **verifiable** | `return` | 没有验证就不做完成声明 | [verifiable.md](verifiable.md) |
 
 ### 资源查询

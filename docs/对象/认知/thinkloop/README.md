@@ -22,9 +22,9 @@
 |---|---|
 | [engine.md](engine.md) | Engine 单轮循环的详细实现 |
 | [thinking-mode.md](thinking-mode.md) | Provider 能力层 + 语义映射：thinking 的双通道架构 |
-| (reflect-flow 挪到 [../../成长/反思机制/reflect-flow.md](../../成长/反思机制/reflect-flow.md)) | — |
+| (super-flow 挪到 [../../成长/反思机制/super-flow.md](../../成长/反思机制/super-flow.md)) | — |
 
-**为什么 ReflectFlow 不在这里**：ReflectFlow 是**跨轮次的成长机制**——它的本质是驱动 G12 沉淀循环，而非驱动单轮思考。所以它归属 `成长/` 而非 `认知/`。详见 [../../成长/反思机制/](../../成长/反思机制/)。
+**为什么 SuperFlow 不在这里**：SuperFlow 是**跨轮次的成长机制**——它的本质是驱动 G12 沉淀循环，而非驱动单轮思考。所以它归属 `成长/` 而非 `认知/`。详见 [../../成长/反思机制/](../../成长/反思机制/)。
 
 ## 两条执行路径
 

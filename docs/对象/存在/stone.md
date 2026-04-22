@@ -13,7 +13,7 @@ stones/{name}/
 ├── traits/                   ← 用户自定义 Trait
 │   └── {trait_name}/
 │       └── TRAIT.md
-├── reflect/                  ← ReflectFlow 子对象
+├── super/                    ← SuperFlow 子对象
 │   ├── data.json
 │   ├── process.json
 │   └── files/
@@ -77,7 +77,7 @@ traits:                                               # 激活的 traits
 与 Bruce 的协作模式：先让 Bruce 跑用例，再根据报告修复。
 ```
 
-只能通过反思（talkToSelf / reflect）写入。详见 [../成长/反思机制/](../成长/反思机制/)。
+只能通过反思（`talk(target="super")`）写入。详见 [../成长/反思机制/](../成长/反思机制/)。
 
 ### traits/
 
@@ -96,19 +96,19 @@ stones/alan/traits/
 
 详见 [../结构/trait/加载链路.md](../结构/trait/加载链路.md)。
 
-### reflect/
+### super/
 
-ReflectFlow 是对象的**常驻反思子对象**。它有自己的独立行为树，可以修改 Stone 的 readme / data / traits。
+SuperFlow 是对象的**常驻反思子对象**。它有自己的独立行为树，可以修改 Stone 的 readme / data / traits。
 
 目录结构类似 Flow：
 ```
-reflect/
-├── data.json          ← ReflectFlow 自己的数据
-├── process.json       ← ReflectFlow 的行为树
-└── files/             ← ReflectFlow 的共享数据
+super/
+├── data.json          ← SuperFlow 自己的数据
+├── process.json       ← SuperFlow 的行为树
+└── files/             ← SuperFlow 的共享数据
 ```
 
-详见 [../成长/反思机制/reflect-flow.md](../成长/反思机制/reflect-flow.md)。
+详见 [../成长/反思机制/super-flow.md](../成长/反思机制/super-flow.md)。
 
 ### ui/index.tsx
 
@@ -134,7 +134,7 @@ Supervisor 是一个**拥有系统级特权**的 Stone：
 | 创建 | `create_object` trait 方法（object_creation） |
 | 读取身份 | `kernel/src/persistence/reader.ts` → `readStone(name)` |
 | 修改数据 | `setData(key, value)` 指令 |
-| 修改身份 | 只能通过 SelfMeta（ReflectFlow） |
+| 修改身份 | 只能通过 SelfMeta（SuperFlow） |
 | 删除 | 直接删除目录（谨慎） |
 
 ## 源码锚点

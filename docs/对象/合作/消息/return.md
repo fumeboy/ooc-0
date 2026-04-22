@@ -62,7 +62,7 @@ open(command=return) 时，这三个 trait 全部激活——LLM 看到的 Conte
 ```
 在结束任务前，请花一轮思考回顾：
 1. 这个任务中你学到了什么新东西？
-2. 有什么值得长期记住的？用 reflect 告诉你的 ReflectFlow
+2. 有什么值得长期记住的？用 talk(target="super") 告诉你的 SuperFlow
 ...
 ```
 

@@ -39,7 +39,7 @@ B.thread 如果决定回复 A：
 | 格式 | 含义 |
 |---|---|
 | `"bruce"` | 对象名 → 找 Session 中该对象的 Flow，或自动创建 |
-| `"_selfmeta"` | 自己的 ReflectFlow（特殊名字） |
+| `"super"` | 自己的 SuperFlow（特殊名字，由 `world.ts` 的 onTalk 特判路由到 `stones/{fromObject}/super/`） |
 | `"supervisor"` | Session 的 Supervisor |
 
 **注意**：target 是**对象名**，不是 thread_id。跨对象 talk 的"选择哪个 thread 接收"由 Engine 决定（通常是对方的根线程，或最近交互过的线程）。

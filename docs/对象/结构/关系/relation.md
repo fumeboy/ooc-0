@@ -85,14 +85,14 @@ LLM 看到：
 ### 添加关系
 
 ```typescript
-// 通过 trait 方法（需要权限）
-await talkToSelf({
-  method: "addRelation",
-  args: { name: "new-helper", description: "新的辅助对象" }
+// 通过 talk 向 SuperFlow 提交沉淀请求（SuperFlow 审视后决定写入）
+await talk({
+  target: "super",
+  content: "请沉淀关系：name=new-helper, description=新的辅助对象"
 });
 ```
 
-只有 SelfMeta 才能写 Stone 级 readme。普通 Flow 不能直接改 Stone 的 relations。
+只有 SelfMeta（SuperFlow）才能写 Stone 级 readme。普通 Flow 不能直接改 Stone 的 relations。
 
 ### 移除关系
 

@@ -14,7 +14,7 @@
 | 目录 | 内容 | 核心问题 |
 |---|---|---|
 | [三层结构/](三层结构/) | 知识 / 能力 / 直觉 | 经验如何分层沉淀 |
-| [反思机制/](反思机制/) | ReflectFlow / 沉淀循环 | 反思如何驱动沉淀 |
+| [反思机制/](反思机制/) | SuperFlow / 沉淀循环 | 反思如何驱动沉淀 |
 | [自我修改.md](自我修改.md) | readme / trait / relation 的改写 | 对象改变自己的具体路径 |
 | [遗忘.md](遗忘.md) | G5 的另一面 | 遗忘作为成长的前提 |
 
@@ -23,7 +23,7 @@
 G12 的核心是**沉淀循环**：
 
 ```
-经历 → 记录（G10） → 反思（reflect） → ReflectFlow 审视 → 沉淀为 trait → 改变帧 0
+经历 → 记录（G10） → 反思（talk(super)） → SuperFlow 审视 → 沉淀为 trait → 改变帧 0
   ↑                                                                          │
   └──────────────────── 新的经历在新的起点上发生 ─────────────────────────────┘
 ```
@@ -47,7 +47,7 @@ G12 的核心是**沉淀循环**：
 
 ## 反思的角色
 
-**反思不是自动的**。不是每个经历都会改变对象——只有经过反思、被 ReflectFlow 审视的经验才会沉淀。
+**反思不是自动的**。不是每个经历都会改变对象——只有经过反思、被 SuperFlow 审视的经验才会沉淀。
 
 这个设计保证了：
 - 对象不会因为一次错误就全盘重写自己
@@ -75,8 +75,8 @@ G5 说"遗忘是智能的基础设施"——不是丢失，是让不相关退场
 
 | 概念 | 实现 |
 |---|---|
-| reflect() | `kernel/traits/reflective/` + SelfMeta Flow |
-| ReflectFlow 运行 | 作为特殊 Flow，机制同普通 Flow |
+| talk(target="super") | `kernel/src/world/world.ts` 特判 + SelfMeta Flow |
+| SuperFlow 运行 | 作为特殊 Flow，机制同普通 Flow |
 | 长期记忆 | `stones/{name}/memory.md` |
 | trait 写入 | `stones/{name}/traits/` |
 

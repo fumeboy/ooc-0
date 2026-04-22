@@ -53,7 +53,7 @@ flows/sess_C/objects/alan/            ← 处理任务 C
 - 其他对象的任何文件
 - 其他 Session 的任何文件
 
-**想修改 Self（Stone）**：通过 `talkToSelf(message)` 向 SelfMeta 发消息，由 SelfMeta 审视后决定是否写入。
+**想修改 Self（Stone）**：通过 `talk(target="super", message)` 向 SelfMeta（SuperFlow）发消息，由 SelfMeta 审视后决定是否写入。
 **想影响其他对象**：通过 `talk(target, message)` 发送消息，由对方自行处理。
 
 这个约束让并发 Flow 不会踩踏。
@@ -170,7 +170,7 @@ flows/sess_X/objects/alan/ui/pages/
 
 - Flow 的"思考"由线程树驱动（[../认知/线程树/](../认知/线程树/)）
 - Flow 的"行动"通过 Effect 输出（[../合作/基础/effect.md](../合作/基础/effect.md)）
-- Flow 的"反思"调用 ReflectFlow（[../成长/反思机制/reflect-flow.md](../成长/反思机制/reflect-flow.md)）
+- Flow 的"反思"调用 SuperFlow（[../成长/反思机制/super-flow.md](../成长/反思机制/super-flow.md)）
 - Flow 的"展示"通过 ui/pages/（[../人机交互/页面/flow-view.md](../人机交互/页面/flow-view.md)）
 
 ## 与基因的关联

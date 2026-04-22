@@ -90,7 +90,7 @@ self:main                           ← 对象的 View（kind=view）
 
 - Trait 定义了对象的**能力**（"做什么")
 - 具体**行动**通过 trait 暴露的指令进行（[../../认知/指令系统/](../../认知/指令系统/)）
-- trait 的**沉淀**（readme-only → always-on）由 ReflectFlow 驱动（[../../成长/反思机制/](../../成长/反思机制/)）
+- trait 的**沉淀**（readme-only → always-on）由 SuperFlow 驱动（[../../成长/反思机制/](../../成长/反思机制/)）
 
 ## 源码锚点
 

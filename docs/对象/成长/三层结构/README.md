@@ -66,7 +66,7 @@ G12 讨论中常提到"帧 0"——对象启动新任务时的初始 Context。
 | 一次错误的判断 | **不应该沉淀** — 知识层面记录即可 |
 | 一次未经验证的结论 | **不应该沉淀** — verifiable 把门 |
 
-错误的沉淀会**污染**未来的直觉。ReflectFlow 的核心职责就是**选择什么值得沉淀**。
+错误的沉淀会**污染**未来的直觉。SuperFlow 的核心职责就是**选择什么值得沉淀**。
 
 ## 跨三层的工具
 
@@ -75,8 +75,8 @@ OOC 提供几个工具跨三层工作：
 | 工具 | 作用层 |
 |---|---|
 | `updateSessionMemory(text)` | 知识（Session 内） |
-| `reflect("请记住 X")` | 知识（Self 级，跨任务） |
-| `reflect("请沉淀为 trait：X")` | 能力 |
+| `talk(target="super", content="请记住 X")` | 知识（Self 级，跨任务） |
+| `talk(target="super", content="请沉淀为 trait：X")` | 能力 |
 | 手动编辑 readme 的 traits 列表 | 能力 → 直觉（改 trait 的 when） |
 
 ## 源码锚点

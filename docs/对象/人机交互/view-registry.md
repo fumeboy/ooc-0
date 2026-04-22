@@ -22,7 +22,7 @@ interface ViewRegistration {
 
 ```
 stones/{name}                   → StoneView [priority: 50]
-stones/{name}/reflect/          → ReflectFlowView [priority: 80]
+stones/{name}/super/            → FlowView (复用通用视图) [priority: 80]
 flows/{sessionId}               → SessionKanban [priority: 120]
 flows/{sid}/issues/{id}         → IssueDetailView [priority: 130]
 flows/{sid}/tasks/{id}          → TaskDetailView [priority: 130]
@@ -53,11 +53,11 @@ flows/{sid}/objects/{name}      → FlowView [priority: 100]
 ```typescript
 // 任何模块都可以注册
 registerView({
-  match: (p) => p.startsWith("stones/") && p.endsWith("/reflect/"),
+  match: (p) => p.startsWith("stones/") && p.endsWith("/super/"),
   priority: 80,
   tabKey: (p) => p,  // 每个路径独立 tab
-  tabLabel: (p) => `Reflect: ${extractName(p)}`,
-  Component: ReflectFlowView
+  tabLabel: (p) => `Super: ${extractName(p)}`,
+  Component: FlowView   // 复用通用 FlowView
 });
 ```
 
@@ -81,7 +81,7 @@ tabKey: (p) => "session-kanban-" + extractSessionId(p)
 | 路径模式 | 视图 | 说明 |
 |---|---|---|
 | `stones/{name}` | StoneView | Stone 详情（ObjectDetail 或 DynamicUI） |
-| `stones/{name}/reflect/` | ReflectFlowView | 反思子对象 |
+| `stones/{name}/super/` | FlowView（复用通用视图） | 反思子对象 |
 | `flows/{sid}` | SessionKanban | Session 总览 |
 | `flows/{sid}/issues/{id}` | IssueDetailView | Issue 详情 |
 | `flows/{sid}/tasks/{id}` | TaskDetailView | Task 详情 |
