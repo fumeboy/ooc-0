@@ -19,8 +19,9 @@
 | E10 | 对象的死亡与遗产 | G7, G12 | 未验证 | [death_legacy.md](death_legacy.md) |
 | E11 | Effect 循环 | G8, G10 | 未验证 | [effect_cycle.md](effect_cycle.md) |
 | E12 | UI 涌现 | G1, G11 | 部分验证 | [ui_emergence.md](ui_emergence.md) |
+| E13 | 元认知压力调节 | G5, G12, G4 | 未验证（2026-04-22 实装） | [metacognitive_pressure.md](metacognitive_pressure.md) |
 
-> 另有 E13（Progressive Disclosure：树形 Trait + 三层加载）待从当前实现中提炼。
+> 另有（Progressive Disclosure：树形 Trait + 三层加载）待从当前实现中提炼。
 
 ## 验证状态定义
 
