@@ -1,12 +1,19 @@
 ---
 namespace: self
 name: reporter
-when: never
+when: always
 command_binding:
   commands: ["return", "talk"]
 description: 任务结束或阶段性汇报时产出报告文档 + 可选交互 View + 导航卡片
 deps: []
 ---
+
+<!-- 2026-04-22：when 从 never → always。
+     原因：当 when=never + command_binding 时，reporter 只在 `talk/return` 的 form 打开期间被加载到 knowledge；
+     form 关闭后立即卸载。若 LLM 在 open/close 间震荡，它会看到"有 reporter → 没 reporter"反复切换，
+     引发自我怀疑的病态循环（参见 finish/20260422 相关 bugfix 讨论）。
+     reporter 仅 supervisor 拥有（namespace=self），总是加载不会污染其他对象的 context。 -->
+
 
 # Reporter — 报告能力（2026-04-21 新版）
 
