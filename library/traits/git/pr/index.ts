@@ -25,10 +25,13 @@ async function runCmd(
   ctx: any,
   cmd: string[],
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  /* 显式传 env: process.env —— 确保测试里对 process.env.PATH 的动态修改
+   * （用于 gh CLI stub 路径注入）能被子进程看到。 */
   const proc = Bun.spawn(cmd, {
     cwd: ctx.rootDir,
     stdout: "pipe",
     stderr: "pipe",
+    env: { ...process.env } as Record<string, string>,
   });
   const exitCode = await proc.exited;
   const stdout = await new Response(proc.stdout).text();
@@ -341,34 +344,144 @@ export async function getPrChecks(
 /**
  * 在 PR 上添加评论
  *
- * 注意：`gh pr comment` 目前不支持 threaded reply；inReplyTo 参数保留以便未来扩展
- * （通过 GraphQL API 实现）。当前实现只创建顶层评论。
+ * - 无 `inReplyTo`：走 `gh pr comment`（顶层 issue 评论）
+ * - 带 `inReplyTo`：走 GraphQL mutation `addPullRequestReviewComment`，
+ *   回复**指定 review comment**（PR diff 上的 thread 评论）。
+ *
+ * `inReplyTo` 接受两种形态：
+ * - `PRRC_*` 开头的 GraphQL node_id：直接使用
+ * - 纯数字 REST id：先调 `gh api repos/:owner/:repo/pulls/comments/:id` 取 node_id
  */
 export async function commentOnPr(
   ctx: any,
   input: CommentOnPrInput,
-): Promise<ToolResult<{ number: number }>> {
+): Promise<ToolResult<{ number: number; replyId?: string }>> {
   if (!Number.isInteger(input?.number) || input.number <= 0) {
     return toolErr("commentOnPr: number 必须是正整数");
   }
   if (!input.body?.trim()) return toolErr("commentOnPr: body 必填");
 
   try {
-    const { stderr, exitCode } = await runCmd(ctx, [
-      "gh",
-      "pr",
-      "comment",
-      String(input.number),
-      "--body",
-      input.body,
-    ]);
-    if (exitCode !== 0) {
-      return toolErr(`gh pr comment 失败: ${stderr.trim() || "unknown error"}`);
+    /* 分支 1：顶层评论 */
+    if (!input.inReplyTo) {
+      const { stderr, exitCode } = await runCmd(ctx, [
+        "gh",
+        "pr",
+        "comment",
+        String(input.number),
+        "--body",
+        input.body,
+      ]);
+      if (exitCode !== 0) {
+        return toolErr(`gh pr comment 失败: ${stderr.trim() || "unknown error"}`);
+      }
+      return toolOk({ number: input.number });
     }
-    return toolOk({ number: input.number });
+
+    /* 分支 2：回复 review comment —— 走 GraphQL */
+    return await replyToReviewComment(ctx, input);
   } catch (err: any) {
     return toolErr(`commentOnPr 执行失败: ${err?.message ?? String(err)}`);
   }
+}
+
+/**
+ * 通过 GraphQL `addPullRequestReviewComment` mutation 回复 review comment。
+ *
+ * 步骤：
+ * 1. 解析 inReplyTo → GraphQL node_id（PRRC_ 前缀直接用；纯数字先查 REST 拿 node_id）
+ * 2. 通过 `gh pr view <N> --json url` 解析 owner / repo
+ * 3. 通过 `gh api graphql -f query=... -f ...` 触发 mutation
+ */
+async function replyToReviewComment(
+  ctx: any,
+  input: CommentOnPrInput,
+): Promise<ToolResult<{ number: number; replyId?: string }>> {
+  const inReplyTo = input.inReplyTo!.trim();
+
+  /* 校验格式：PRRC_ 开头 或 纯数字 */
+  const isNodeId = /^PRRC_/.test(inReplyTo);
+  const isNumeric = /^\d+$/.test(inReplyTo);
+  if (!isNodeId && !isNumeric) {
+    return toolErr(
+      `commentOnPr: inReplyTo 非法（期望 PRRC_* node_id 或纯数字 REST id，实际 "${inReplyTo}"）`,
+    );
+  }
+
+  /* 运行前探测 gh CLI 是否存在 */
+  const ghProbe = await runCmd(ctx, ["gh", "--version"]);
+  if (ghProbe.exitCode !== 0 && !ghProbe.stdout) {
+    return toolErr(
+      "commentOnPr: 未检测到 gh CLI（gh_cli_missing）",
+      "请先安装 GitHub CLI: brew install gh，然后 gh auth login",
+    );
+  }
+
+  /* 1. 通过 pr view 拿 PR 的 URL，解析 owner / repo */
+  const view = await runCmd(ctx, [
+    "gh",
+    "pr",
+    "view",
+    String(input.number),
+    "--json",
+    "url",
+  ]);
+  if (view.exitCode !== 0) {
+    return toolErr(`gh pr view 失败: ${view.stderr.trim() || "unknown"}`);
+  }
+  const viewJson = safeJsonParse<{ url: string }>(view.stdout);
+  const url = viewJson?.url ?? "";
+  const ownerRepo = url.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/\d+/);
+  if (!ownerRepo) {
+    return toolErr(`无法从 PR URL 解析 owner/repo: ${url}`);
+  }
+  const [, owner, repo] = ownerRepo;
+
+  /* 2. 解析 node_id */
+  let nodeId = inReplyTo;
+  if (isNumeric) {
+    const lookup = await runCmd(ctx, [
+      "gh",
+      "api",
+      `repos/${owner}/${repo}/pulls/comments/${inReplyTo}`,
+    ]);
+    if (lookup.exitCode !== 0) {
+      return toolErr(
+        `gh api lookup review comment 失败: ${lookup.stderr.trim() || "unknown"}`,
+      );
+    }
+    const lookedUp = safeJsonParse<{ node_id: string }>(lookup.stdout);
+    if (!lookedUp?.node_id) {
+      return toolErr(`review comment ${inReplyTo} 返回体中缺 node_id`);
+    }
+    nodeId = lookedUp.node_id;
+  }
+
+  /* 3. 发 GraphQL mutation —— 用 addPullRequestReviewComment(inReplyTo) */
+  const mutation = `mutation($inReplyTo: ID!, $body: String!) {
+  addPullRequestReviewComment(input: { inReplyTo: $inReplyTo, body: $body }) {
+    comment { id body }
+  }
+}`;
+  const mutate = await runCmd(ctx, [
+    "gh",
+    "api",
+    "graphql",
+    "-f",
+    `query=${mutation}`,
+    "-f",
+    `inReplyTo=${nodeId}`,
+    "-f",
+    `body=${input.body}`,
+  ]);
+  if (mutate.exitCode !== 0) {
+    return toolErr(
+      `addPullRequestReviewComment 失败: ${mutate.stderr.trim() || "unknown"}`,
+    );
+  }
+  const mutateJson = safeJsonParse<any>(mutate.stdout);
+  const replyId = mutateJson?.data?.addPullRequestReviewComment?.comment?.id;
+  return toolOk({ number: input.number, replyId });
 }
 
 /**
@@ -451,11 +564,17 @@ export const llm_methods: Record<string, TraitMethod> = {
   },
   comment_on_pr: {
     name: "comment_on_pr",
-    description: "在 PR 上添加评论（顶层评论；inReplyTo 预留未启用）。",
+    description:
+      "在 PR 上添加评论。默认顶层评论；传 inReplyTo（PRRC_* node_id 或纯数字 REST id）则通过 GraphQL 回复对应 review comment 的 thread。",
     params: [
       { name: "number", type: "number", description: "PR 编号", required: true },
       { name: "body", type: "string", description: "评论内容", required: true },
-      { name: "inReplyTo", type: "string", description: "（预留）回复目标评论 ID", required: false },
+      {
+        name: "inReplyTo",
+        type: "string",
+        description: "回复的 review comment ID（PRRC_* node_id 或数字 REST id）",
+        required: false,
+      },
     ],
     fn: ((ctx: any, args: CommentOnPrInput) => commentOnPr(ctx, args)) as TraitMethod["fn"],
   },

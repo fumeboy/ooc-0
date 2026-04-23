@@ -64,10 +64,21 @@ const r = await get_pr_checks({ number: 42 });
 
 ### comment_on_pr({ number, body, inReplyTo? })
 
-只创建顶层评论；`inReplyTo` 参数**预留**（当前实现忽略，后续可通过 GraphQL 扩展）。
+- 默认创建顶层评论（走 `gh pr comment`）
+- 传 `inReplyTo` 时通过 **GraphQL `addPullRequestReviewComment` mutation** 回复 review comment 的 thread
+  - `inReplyTo` 可为 GraphQL node_id（`PRRC_*`）或纯数字 REST id（自动先查 `gh api repos/:o/:r/pulls/comments/:id` 拿 `node_id`）
+  - 宿主机未安装 `gh` 时，返回 `gh_cli_missing` 错误（context 里带安装提示）
 
 ```javascript
+// 顶层评论
 await comment_on_pr({ number: 42, body: "LGTM，合并前建议补一个 E2E" });
+
+// 回复 diff 里某条 review comment
+await comment_on_pr({
+  number: 42,
+  body: "已修复，看看这样可以吗？",
+  inReplyTo: "PRRC_kwDOXXXX",  // 或 "123456789"（数字 REST id）
+});
 ```
 
 ### merge_pr({ number, method, deleteBranch? })
