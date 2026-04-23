@@ -8,7 +8,7 @@ updated_by: supervisor
 # 与 kernel 的关系
 
 ## 协作规矩
-- 所有涉及哲学文档（gene.md / emergence.md）的代码改动必须先 talk 我
+- 所有涉及哲学文档（docs/哲学/genes/ 或 docs/哲学/emergences/）的代码改动必须先 talk 我
 - TDD 流程：测试先行（RED）→ 最小实现（GREEN）→ 重构（IMPROVE）
 - Commit 前确保 bun test 0 new fail
 

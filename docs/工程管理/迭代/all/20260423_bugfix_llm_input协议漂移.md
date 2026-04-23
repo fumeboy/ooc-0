@@ -2,7 +2,8 @@
 
 > 类型：bugfix
 > 创建日期：2026-04-23
-> 状态：doing（部分项已完成，见执行记录）
+> 完成日期：2026-04-24
+> 状态：finish（问题 1/2/3/4/6 修复；问题 5 按原计划挂起）
 > 负责人：supervisor
 > 优先级：P0（直接影响 tool calling 稳定性与调试可信度）
 
@@ -204,3 +205,48 @@ content 原样 push 到行内（为了保留 Markdown 可读性）。一旦 Cont
 
 **覆盖结论**：原文档 6 条问题中 1/2/3/6 已修复（本地第一块 + 本块合并）；4/5 仍未覆盖，
 待后续独立迭代。
+
+### 2026-04-24 方案 A 第三块：Identity 旧路径修复（问题 4）
+
+根因：2026-04-21 docs/ 三层重构后，`docs/哲学文档/` 拆成 `docs/哲学/{genes,emergences,discussions}/`，
+老的单文件 `gene.md` / `emergence.md` / `discussions.md` 被拆成目录 + 多个文件；但 identity 文档与
+README 中仍残留旧路径或旧单文件名，LLM 读到后会尝试 open 不存在的路径。
+
+**排查规则**：只改"路径形式"或"单文件名路径"引用；保留属于历史证据的引用（归档路径、验证用例执行记录、
+历史讨论等）。
+
+**kernel 仓库改动**（commit 3331b49）：
+- `README.md`：文档清单里的 `gene.md` / `emergence.md` → `docs/哲学/genes/` / `docs/哲学/emergences/`；
+  组织结构路径 `docs/组织/` → `docs/工程管理/组织/`
+- `traits/reflective/super/TRAIT.md`：`@ref docs/哲学文档/gene.md#G12` →
+  `@ref docs/哲学/genes/g12-经验沉淀.md`
+
+**user 仓库改动**：
+- `CLAUDE.md`：Step 9 的 `更新 discussions.md / emergence.md` → `更新 docs/哲学/discussions/ 或
+  docs/哲学/emergences/ 下对应文件`
+- `docs/meta.md`：目录树节点 `哲学文档/ ← gene.md, emergence.md, discussions.md` 重写为真实的
+  三层结构（`哲学/` / `对象/` / `工程管理/`）
+- `stones/supervisor/relations/kernel.md`：`涉及哲学文档（gene.md / emergence.md）` →
+  `涉及哲学文档（docs/哲学/genes/ 或 docs/哲学/emergences/）`
+- `stones/sophia/readme.md`：三处
+  - 职责表述 `维护哲学文档（gene.md, emergence.md, discussions.md, model.md）` →
+    `维护哲学文档（docs/哲学/genes/、docs/哲学/emergences/、docs/哲学/discussions/、model.md 等）`
+  - 行为铁律 `记录到 discussions.md` → `记录到 docs/哲学/discussions/ 下对应文件`
+  - 示例台词 `已更新 gene.md#G13，已记录到 discussions.md` →
+    `已更新 docs/哲学/genes/g13-认知栈即运行模型.md，已记录到 docs/哲学/discussions/ 下对应讨论`
+- `stones/kernel/readme.md`：三处
+  - 行为铁律 `绝不修改 gene.md` → `绝不修改 docs/哲学/genes/ 下任何文件`
+  - TDD 示例 `阅读 gene.md#G4 和 gene.md#G2` → 指向具体 `g04-*.md` / `g02-*.md`
+  - 哲学缺陷场景 `gene.md 没有定义` → `docs/哲学/genes/g13-*.md 没有定义`
+
+**跳过的历史证据**（故意保留，不视为漂移）：
+- `docs/哲学/discussions/README.md` 中 `.归档-20260421/哲学文档/discussions/` — 归档路径本就指向重构前的快照
+- `docs/工程管理/验证/用例/用例002/success.md` — 用例执行证据（当时路径就是旧结构）
+- 讨论文件 / 旧迭代文档里零散的 `gene.md#Gxx` / `emergence.md` 等历史性笔记
+
+**验证**：
+- kernel `bun test` → 921 pass / 6 skip / 6 fail（fail 全为 pre-existing 故障，零新增回归）
+- identity 链 supervisor / kernel / sophia 的 readme 与 CLAUDE.md、meta.md 路径引用自洽
+
+**覆盖结论更新**：原文档 6 条问题中 1/2/3/4/6 已修复；仅 5（session-kanban trait 入口不一致，
+原文档已注明"本迭代暂不调整"）挂起，不再纳入本迭代范围。本迭代可转 finish。

@@ -75,7 +75,7 @@ Step 5: 自测     → bun test，确认 0 fail
 Step 6: 文档     → 检查文档一致性
 Step 7: 提交     → git commit
 Step 8: 体验验证  → spawn Bruce 以用户身份体验新功能
-Step 9: 反思     → 更新 discussions.md / emergence.md
+Step 9: 反思     → 更新 docs/哲学/discussions/ 或 docs/哲学/emergences/ 下对应文件
 ```
 
 # 文档管理规则

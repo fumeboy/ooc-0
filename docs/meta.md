@@ -77,12 +77,11 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   └── ...
 │   ├── tests/                ← 单元测试（bun:test）
 │   └── package.json
-├── docs/                     ← 文档（哲学、架构、feature、规范）
+├── docs/                     ← 文档（三层组织：哲学 / 对象 / 工程管理）
 │   ├── meta.md               ← 本文件
-│   ├── 哲学文档/              ← gene.md, emergence.md, discussions.md
-│   ├── 组织/                  ← 1+3 组织结构
-│   ├── feature/              ← Feature 设计文档
-│   ├── 规范/                  ← 编码规范、交叉引用
+│   ├── 哲学/                  ← genes/, emergences/, discussions/, 两个循环.md, 统一性.md
+│   ├── 对象/                  ← 本体层：存在 / 结构 / 认知 / 合作 / 成长 / 人机交互
+│   ├── 工程管理/              ← 元层 · 实践：目标 / 组织 / 流程 / 规范 / 验证
 │   └── superpowers/          ← specs/ + plans/
 ├── library/                  ← 公共资源库 + Skill 管理器（Library 对象）
 │   ├── .stone                ← 对象标记
