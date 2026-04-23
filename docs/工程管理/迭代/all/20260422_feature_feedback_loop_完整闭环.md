@@ -2,8 +2,9 @@
 
 > 类型：feature
 > 创建日期：2026-04-22
-> 状态：todo
-> 负责人：TBD
+> 完成日期：2026-04-23
+> 状态：finish
+> 负责人：kernel agent
 > 优先级：P0（v1 基础设施已上线，本迭代让 feedback 真正闭环）
 
 ## 背景
@@ -70,4 +71,66 @@
 
 ## 执行记录
 
-（初始为空）
+### 2026-04-23 Phase 1 — Runner → World 失败桥
+
+- 新 `kernel/src/world/test-failure-bridge.ts`：
+  - `formatFailuresAsTalkMessage`：把一组 TestFailure 渲染成 `[test_failure] ...` 文本
+  - `pickRecipient`：按 显式 > `OOC_TEST_FAILURE_RECIPIENT` > `supervisor` > `alan` > 第一个非 user 查找收件人
+  - `startTestFailureBridge`：默认关，`OOC_TEST_FAILURE_BRIDGE=1` 启用；返回卸载函数
+- 扩展 `kernel/src/test/runner.ts`：
+  - 新增 `getLatestCoverage` / `clearLatestCoverage` / `LatestCoverage` 缓存 API，给 Phase 2 coverage window 使用
+  - `runTests(opts.coverage)` 成功返回时 `recordLatestCoverage`
+  - 新增 `__emitFailuresForTest`（测试桥接入口）
+- 扩展 `kernel/src/world/world.ts`：
+  - `init()` 末尾启动 bridge，talk 调用 `this.talk(recipient, message, "test_runner")`
+  - `stopSuperScheduler()` 顺带解除订阅
+- 新增测试：`tests/test-failure-bridge.test.ts` 13 tests pass
+- 全量验证：`bun test` → 934 pass / 6 skip / 6 fail（6 fail 为 pre-existing http_client 故障；对比基线 921 pass 新增 +13）
+
+### 2026-04-23 Phase 2 — Coverage window 注入
+
+- 扩展 `kernel/src/test/runner.ts`：新增 `__injectLatestCoverageForTest`（测试注入口）
+- 扩展 `kernel/src/thread/context-builder.ts`：
+  - import `getLatestCoverage`
+  - 在 knowledge 段 build_feedback 之前注入 `<knowledge name="coverage">` 窗口
+  - 显示「总覆盖率 XX% (cwd=...)」+ `summarizeCoverage` 文件表前 20 行
+  - getLatestCoverage() 返回 undefined 时静默不注入
+- 新增测试：`tests/coverage-window.test.ts` 3 tests pass
+- 全量验证：`bun test` → 937 pass / 6 skip / 6 fail（新增 +3）
+
+### 2026-04-23 Phase 3 — apply_edits 触发 build hooks
+
+- `kernel/src/persistence/edit-plans.ts`：
+  - `ApplyResult` 新增 `buildFeedback?: HookFeedback[]`
+  - `applyEditPlan(plan, options)` 的 options 新增 `threadId`
+  - 写盘成功后 `runBuildHooks(changedPaths, { rootDir, threadId })`；失败不跑
+- `kernel/src/trait/registry.ts`：`MethodContext` 新增 optional `threadId`
+- `kernel/traits/computable/file_ops/index.ts`：`applyEditsImpl` 把 `ctx.threadId` 透传给 `applyEditPlan`
+- `kernel/src/thread/engine.ts`：两处 `methodCtx` 构造都注入 `threadId`（run / resume 路径）
+- 新增测试：`tests/apply-edits-hooks.test.ts` 4 tests pass
+- 全量验证：`bun test` → 941 pass / 6 skip / 6 fail（新增 +4）
+
+### 2026-04-23 Phase 4 — Prettier / ESLint hooks
+
+- `kernel/src/world/hooks.ts`：新增 `prettierFormatHook` 与 `eslintCheckHook`
+  - Prettier 匹配 ts/tsx/js/jsx/json/md/css/html/yaml/yml
+  - ESLint 匹配 ts/tsx/js/jsx/mjs/cjs
+  - 两者都用 `bun x` 跑子进程；失败 output 塞 errors
+- `registerDefaultHooks` 扩展：
+  - `OOC_BUILD_HOOKS_PRETTIER=1` 启用 prettier（默认关）
+  - `OOC_BUILD_HOOKS_ESLINT=1` 启用 eslint（默认关）
+  - `OOC_BUILD_HOOKS_TSC=1` 保持原样
+- 新增测试：`tests/prettier-eslint-hooks.test.ts` 9 tests pass（match 规则 + 环境开关 + 结构校验；不实跑子进程避免项目配置依赖）
+- 全量验证：`bun test` → 950 pass / 6 skip / 6 fail（新增 +9）
+
+### 2026-04-23 Phase 5 — 防循环（重复失败告警）
+
+- 扩展 `kernel/src/world/hooks.ts`：
+  - 新增 `HookFeedback.repeatCount`（同 `(path, errorHash)` 连续失败次数）
+  - 新增 `repeatCountsByBucket: Map<bucketId, Map<key, count>>`（threadId 存在按线程隔离，否则 `__global__`）
+  - 新增 `feedbackRepeatKey(fb)` = `${path}||hash(errors.join|output)`
+  - `runBuildHooks` 失败时递增计数，同 path 本轮所有 match 的 hook 都 pass 时清零该 path 所有 key
+  - `formatFeedbackForContext` 在任一 feedback `repeatCount >= 3` 时追加全局告警段 + 条目级 ⚠️ 标签
+  - 新 export `getRepeatFailThreshold()`
+- 新增测试：`tests/loop-prevention.test.ts` 6 tests pass（递增 / 清零 / 不同 error 独立 / 不同 threadId 隔离 / 告警注入）
+- 全量验证：`bun test` → 956 pass / 6 skip / 6 fail（新增 +6；累计对比基线 921 → +35）
