@@ -2,7 +2,7 @@
 
 > 类型：bugfix
 > 创建日期：2026-04-23
-> 状态：todo
+> 状态：doing（部分项已完成，见执行记录）
 > 负责人：supervisor
 > 优先级：P0（直接影响 tool calling 稳定性与调试可信度）
 
@@ -114,3 +114,50 @@
 - 同一场景生成的 `llm.input.txt` 可被前端 viewer 稳定解析（无重复根/明显结构错误）。
 - LLM 按规则生成的 tool call 与运行时可执行性一致（不再出现“规则要求 form_id 但现实不提供/不记录”的矛盾）。
 - supervisor identity 与 session-kanban/reporter 文档引用路径、入口与 `docs/meta.md` 对齐。
+
+## 执行记录
+
+### 2026-04-23 方案 A 第一块：XML 序列化正确性（CDATA + 属性转义）
+
+**病灶定位**（原文档问题 1 / 3 的根因）：
+
+`kernel/src/thread/engine.ts` 的 `renderAttrs` 对属性值不做任何转义；`serializeXml` 对叶子
+content 原样 push 到行内（为了保留 Markdown 可读性）。一旦 Context 里的 whoAmI / TRAIT.md
+内嵌 XML 示例 / 代码里的 `Array<string>` 或 `a & b` 流出，前端 DOMParser 就会 parse-error。
+
+**改动**（与 user 建议对齐：CDATA 包装前先判断必要性，避免纯文本被无意义包装）：
+
+- 新建 `kernel/src/thread/xml.ts`，把 `XmlNode` / `renderAttrs` / `serializeXml` 从 engine.ts
+  抽出；同时加入：
+  - `escapeAttr(v)`：属性值强制 XML 实体转义（`&amp;` / `&lt;` / `&gt;` / `&quot;`）
+  - `contentNeedsCdata(content)`：只要出现 `<` / `>` / `&` 就返回 true
+  - `wrapCdata(content)`：包 `<![CDATA[...]]>`；对 `]]>` 边界按标准做法拆成
+    `]]]]><![CDATA[>` 防止提前闭合
+  - `serializeXml` 的叶子分支：`contentNeedsCdata(raw) ? wrapCdata(raw) : raw`
+    —— 纯文本保持原样（Markdown / 代码块不加任何包装，可读性无损）
+- `kernel/src/thread/engine.ts`：移除内嵌的 `XmlNode` / `renderAttrs` / `serializeXml` 副本，
+  改 import 自 `./xml.js`
+- `kernel/tests/thread-xml-escape.test.ts`：新增 27 个单元测试
+  - escapeAttr 四字符转义（含 `&` 先序约束）
+  - renderAttrs 属性转义 + 顺序保持
+  - contentNeedsCdata 判定（含 `Array<string>` / `Record<string, any>` / `a && b`）
+  - wrapCdata 单次 / 多次 `]]>` 边界拆分
+  - serializeXml 叶子 CDATA 必要性、嵌套容器、自闭合
+  - 回归守护：含 `Array<string>` + 属性含 `&` 的混合场景，外层无裸 `<` `>` `&` 残留
+- 前端 `kernel/web/src/features/LLMInputViewer.tsx` 无需改动：DOMParser 把 CDATASection
+  自动合并到 `el.textContent`，现有"叶子节点读 textContent"分支天然兼容
+
+**验证**：
+- `bun test tests/thread-xml-escape.test.ts` → 27 pass
+- `bun test tests/thread-engine-xml-structure.test.ts` → 2 pass（无回归）
+- 全量 `bun test` → 921 pass / 6 skip / 6 fail（fail 全是预存的 http_client 端口 19876 故障，与本次无关）
+- `kernel/web` tsc + vite build 通过
+
+**未在本块覆盖的项**（原文档问题 2 / 4 / 5 / 6）：
+
+- 问题 2（submit 指令 form_id 与历史展示矛盾）：规则与历史的展示对齐策略，待后续单独
+  处理（需要改写 action 历史渲染，有可能影响线程树序列化，独立出块更安全）
+- 问题 4（identity 旧路径引用）：属于 stones 文档层面的修正，需 supervisor identity 与
+  docs/meta.md 对齐，独立出块
+- 问题 5（session-kanban trait 入口与 meta.md 不一致）：原文档已注明"本迭代暂不调整"
+- 问题 6（lifespan always vs transient 注释漂移）：需查 trait 加载/激活的生命周期标注逻辑
