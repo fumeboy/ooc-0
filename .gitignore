@@ -2,6 +2,7 @@
 flows/
 data.json
 server.json
+.ooc/
 
 # 依赖
 kernel/web/node_modules/
