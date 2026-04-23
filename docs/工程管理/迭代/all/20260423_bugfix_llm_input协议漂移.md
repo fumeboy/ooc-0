@@ -161,3 +161,46 @@ content 原样 push 到行内（为了保留 Markdown 可读性）。一旦 Cont
   docs/meta.md 对齐，独立出块
 - 问题 5（session-kanban trait 入口与 meta.md 不一致）：原文档已注明"本迭代暂不调整"
 - 问题 6（lifespan always vs transient 注释漂移）：需查 trait 加载/激活的生命周期标注逻辑
+
+### 2026-04-23 方案 A 第二块：吸收远端 github/main 并行修复
+
+远端 `github/main af5c397` 对同一问题做了并行修复。diff 对比结果：
+- 问题 1/3（XML 不合法 / mark 塞 JSON 文本）：远端**未改** `renderAttrs` / `serializeXml`，
+  无 escape / CDATA —— 本地第一块已覆盖
+- 问题 2（form_id 历史矛盾）：远端已修，本地未做 → 本次 port
+- 问题 6（lifespan always 漂移）：远端已修，本地未做 → 本次 port
+- 远端还顺带把 `renderThreadProcess` 从字符串拼接改成结构化 XmlNode + 递归值展开 —— 正是
+  原文档问题 3 的"治本"路径（args 对象不再 JSON.stringify 塞进文本），本次 port
+
+**本次 cherry-pick 式合并内容**（不引入远端的非 bugfix refactor，如 scheduler pause 语义变更）：
+
+- `kernel/src/thread/context-builder.ts`
+  - lifespan 计算不再做 legacy 覆盖，直接沿用 `getOpenFiles` 返回的 lifespan
+    （open-files 已把 `stoneRefs + nodeMeta.pinnedTraits + when="always"` 统一归 pinned）
+  - `cleanArgs` 在清除已关闭 form 的 `form_id` 后注入展示层占位符
+    `form_id_finished_so_removed: true`，避免模型按"历史缺失 form_id"模仿
+  - `renderThreadProcess` 从字符串拼接改为 XmlNode + 递归 `valueToXmlNode`：
+    - `tool_use` 的 args 按字典序拆成子节点（原子值→叶子 content；对象→嵌套标签；
+      数组→`<item index="N">...</item>`），**不再 JSON.stringify 塞进 content**
+    - `program` 的 `code` / `result` 改成容器节点的子叶子，经 xml.ts 的 serializeXml
+      自动 CDATA 包装（配合第一块的改动，args 含 `<` / `>` / `&` 时天然安全）
+    - `compact_summary` / 其他类型按本地已有语义保留
+    - 使用 `serializeXml(nodes, 1)`，外层 `<process>` 由 engine 包裹
+- `kernel/src/thread/engine.ts`
+  - 新增模块级 `isAlwaysTrait(traits, fullId)` 辅助
+  - `<knowledge>` 注释补充"或该 trait 的 when=always（语义等价 pinned）"
+  - 两处 form hint 文案追加"下一步：请调用 submit({"form_id":"..."}, ...) 提交"，
+    对齐规则与历史展示，降低模仿误导
+  - 四处 trait 卸载循环（run / resume × submit / close）加入 `isAlwaysTrait` 豁免
+  - 两处 `_trait` 型 form close 分支加入 `isAlwaysTrait` 豁免
+- **不采纳**：远端对 `isPaused` 测试的行为变更（从"跳过调度"→"执行一轮后暂停"）属于
+  scheduler 设计决策，本地线程树 scheduler 已有独立语义，不并入本次 bugfix
+
+**验证**：
+- `bun test` → 921 pass / 6 skip / 6 fail（fail 全为 pre-existing http_client 端口故障，
+  数字与前一块完全一致，无新增回归）
+- `bun test tests/thread-engine-xml-structure.test.ts tests/thread-xml-escape.test.ts` → 29 pass
+- `bun test tests/thread-engine.test.ts tests/thread-engine-skill.test.ts` → 21 pass
+
+**覆盖结论**：原文档 6 条问题中 1/2/3/6 已修复（本地第一块 + 本块合并）；4/5 仍未覆盖，
+待后续独立迭代。
