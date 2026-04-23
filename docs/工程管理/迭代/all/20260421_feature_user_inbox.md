@@ -114,7 +114,7 @@ curl http://localhost:8080/api/sessions/<sid>/user-inbox
 
 - `docs/meta.md` 子树 4（协作）新增 user-inbox 节点：「user 是黑洞对象，但 session 级持有一个引用式 inbox 记录谁何时给 user 发过消息」
 - `docs/meta.md` 子树 1（持久化）补 `flows/{sid}/user/data.json` 结构
-- `docs/哲学文档/discussions.md` 追加一条：「为什么 user inbox 是引用式 —— 消息正文只有一份真相（发起线程），user 只需知道索引」
+- `docs/哲学/discussions/README.md` 追加一条：「为什么 user inbox 是引用式 —— 消息正文只有一份真相（发起线程），user 只需知道索引」
 
 ## 影响范围
 

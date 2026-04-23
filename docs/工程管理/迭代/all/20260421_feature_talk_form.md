@@ -99,7 +99,7 @@
 - **文档**：
   - `docs/meta.md` 子树 4（协作 → 通信原语）+ 子树 6（Web UI）说明
   - `kernel/traits/talkable/TRAIT.md` 加 form 使用 example
-  - `docs/哲学文档/discussions.md` 记录"为什么保留自然语言兜底"设计决策
+  - `docs/哲学/discussions/README.md` 记录"为什么保留自然语言兜底"设计决策
 - **基因/涌现**：
   - 强化 G8（消息）的表达力——消息不只是文本，可以携带交互结构
   - 可能涌现"对象主动用 form 提问降低协作歧义"的新行为模式
@@ -470,4 +470,3 @@ Server killed after test.
 3. **后端 formResponse 持久化到 inbox.formResponse**：本迭代仅前端收集 formResponse 后通过 server.ts 注入消息体，engine 没有把 formResponse 字段结构化落盘到 inbox。若需要（比如做 formResponse 的审计/回查），可在 engine 侧扩展——留给后续迭代。
 4. **LLM 自然使用率观察**：本次体验验证 supervisor 被明确 prompt 引导才用 form。未来可观察：没有引导时 LLM 能否自发使用 form？TRAIT.md 的 example 是否足够吸引 LLM？
 5. **对象间 form 透传**：本迭代只做 user 视角的 option picker。对象 A 给对象 B 发带 form 的 talk 时，B 是 LLM，它只能自然语言回复（看 inbox.content 里的 `[form: formId]` 标记），不走 formResponse 通道。这是预期行为，不视为缺陷。
-

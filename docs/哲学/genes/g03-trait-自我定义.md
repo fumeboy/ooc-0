@@ -8,7 +8,7 @@
 @referenced-by kernel/src/context/builder.ts — implemented-by — Trait 内容注入 context
 @referenced-by kernel/src/flow/thinkloop.ts — implemented-by — Trait 元编程 API
 @referenced-by kernel/web/src/features/TraitsTab.tsx — rendered-by
-@referenced-by docs/哲学文档/traits.md — extended-by
+@referenced-by docs/对象/结构/trait/README.md — extended-by
 -->
 
 **Trait（特质）**是 OOC 中对象定义自身的统一机制。
@@ -88,4 +88,3 @@ OOC 的 trait 分为两层：
 Trait 是 OOC 中对象「自我定义」的原子单位。
 
 ---
-

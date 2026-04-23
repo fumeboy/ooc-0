@@ -40,4 +40,4 @@ whoAmI: OOC 系统的人类用户
 ## 文档位置
 
 - 全局架构索引：`./docs/meta.md`
-- 哲学文档：`./docs/哲学文档/gene.md`
+- 哲学文档：`./docs/哲学/genes/README.md`

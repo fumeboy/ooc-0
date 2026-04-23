@@ -14,7 +14,7 @@ OOC 是一种 AI 智能体（Agent）架构。
 OOC 提出一个不同的模型：**把 Agent 的上下文组织为「活的对象生态」**。
 每个对象有自己的身份、数据、行为、思维方式和关系。对象之间可以协作、对话、创建新对象。
 
-OOC 的哲学定义写在 `docs/哲学文档/gene.md`（13 条基因），涌现能力写在 `docs/哲学文档/emergence.md`，理想场景写在 `docs/理想与现实/target.md`。
+OOC 的哲学定义写在 `docs/哲学/genes/`（13 条基因），涌现能力写在 `docs/哲学/emergences/`，理想场景写在 `docs/理想与现实/target.md`。
 
 # 我的角色：Supervisor
 
@@ -81,7 +81,7 @@ Step 9: 反思     → 更新 discussions.md / emergence.md
 # 文档管理规则
 
 0. 全局架构索引在 `docs/meta.md`
-1. 哲学文档在 `docs/哲学文档/` 下（gene.md, emergence.md, discussions.md）
+1. 哲学文档在 `docs/哲学/` 下（genes/, emergences/, discussions/ 等）
 2. 学习笔记在 `docs/参考/` 下
 3. Feature 设计在 `docs/feature/` 下（已完成/进行中/草稿）
 4. 理想与现实在 `docs/理想与现实/` 下

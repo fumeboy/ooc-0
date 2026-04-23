@@ -21,8 +21,8 @@
 ## 关键文档路径
 
 - 全局架构索引：`./docs/meta.md`
-- 哲学基因：`./docs/哲学文档/gene.md`
-- 涌现记录：`./docs/哲学文档/emergence.md`
+- 哲学基因：`./docs/哲学/genes/README.md`
+- 涌现记录：`./docs/哲学/emergences/README.md`
 - 组织结构：`./docs/组织/README.md`
 
 

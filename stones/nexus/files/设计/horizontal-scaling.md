@@ -1,8 +1,8 @@
 # OOC 水平扩展设计
 
 <!--
-@ref docs/哲学文档/gene.md#G7 — extends — 持久化目录从本地文件系统扩展到分布式存储
-@ref docs/哲学文档/gene.md#G8 — extends — Effect 路由从单机扩展到跨节点
+@ref docs/哲学/genes/g07-目录即存在.md — extends — 持久化目录从本地文件系统扩展到分布式存储
+@ref docs/哲学/genes/g08-effect-与-space.md — extends — Effect 路由从单机扩展到跨节点
 @ref src/world/world.ts — references — 当前单机 World 实现
 @ref src/world/scheduler.ts — references — 当前单机 Scheduler 实现
 @ref src/world/router.ts — references — 当前单机 Router 实现

@@ -117,7 +117,7 @@
 - **文档**：
   - `docs/meta.md` — 删除旧 Flow 相关段落
   - `kernel/traits/reflective/reflect_flow/TRAIT.md` — 按新实现更新
-  - `docs/哲学文档/discussions.md` — 追加退役决策记录
+  - `docs/哲学/discussions/README.md` — 追加退役决策记录
 
 ## 验证标准
 

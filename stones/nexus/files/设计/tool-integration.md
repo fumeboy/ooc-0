@@ -1,8 +1,8 @@
 # OOC 外部工具接入框架
 
 <!--
-@ref docs/哲学文档/gene.md#G3 — extends — Trait 作为工具接入载体
-@ref docs/哲学文档/gene.md#G8 — extends — Effect 机制扩展到外部世界
+@ref docs/哲学/genes/g03-trait-自我定义.md — extends — Trait 作为工具接入载体
+@ref docs/哲学/genes/g08-effect-与-space.md — extends — Effect 机制扩展到外部世界
 @ref .ooc/kernel/traits/web_search/index.ts — references — 参考实现
 -->
 

@@ -127,19 +127,29 @@
 ```javascript
 // 扫描 session 下所有 flow 的状态和错误
 const { readdirSync } = require("node:fs");
-const sessionDir = world_dir + "/flows/{SESSION_ID}/flows/";
+const sessionDir = world_dir + "/flows/{SESSION_ID}/objects/";
 for (const name of readdirSync(sessionDir)) {
-  const data = JSON.parse(await Bun.file(sessionDir + name + "/data.json").text());
-  const process = JSON.parse(await Bun.file(sessionDir + name + "/process.json").text());
-
-  // 递归收集所有 actions
-  const collectActions = (node) => {
-    let actions = [...(node.actions || [])];
-    for (const child of node.children || []) actions.push(...collectActions(child));
+  // 读取 data.json（flow 状态）
+  const dataPath = sessionDir + name + "/data.json";
+  const data = JSON.parse(await Bun.file(dataPath).text());
+  
+  // 读取 threads.json（线程树）
+  const threadsPath = sessionDir + name + "/threads.json";
+  const threads = JSON.parse(await Bun.file(threadsPath).text());
+  
+  // 递归收集所有 thread 的 actions
+  const collectActions = async (threadId) =&gt; {
+    const threadPath = sessionDir + name + "/thread-" + threadId + ".json";
+    const thread = JSON.parse(await Bun.file(threadPath).text());
+    let actions = [...(thread.actions || [])];
+    for (const childId of thread.children || []) {
+      actions.push(...await collectActions(childId));
+    }
     return actions;
   };
-  const actions = collectActions(process.root);
-  const errors = actions.filter(a => (a.result || "").includes("error"));
+  
+  const actions = await collectActions(threads.rootThreadId);
+  const errors = actions.filter(a =&gt; (a.result || "").toLowerCase().includes("error"));
 
   print(`${name}: status=${data.status} actions=${actions.length} errors=${errors.length}`);
 }

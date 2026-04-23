@@ -1,12 +1,12 @@
 # OOC 生态搭建层 — Nexus
 
 <!--
-@ref docs/哲学文档/gene.md#G1 — references — 万物皆对象：扩展能力也是对象
-@ref docs/哲学文档/gene.md#G3 — references — Trait 是能力扩展的载体
-@ref docs/哲学文档/gene.md#G7 — references — 持久化目录即对象存在
-@ref docs/哲学文档/gene.md#G8 — references — Effect 定义对象与外部世界的交互
-@ref docs/哲学文档/emergence.md#E3 — validates — 对象生态协作
-@ref docs/哲学文档/emergence.md#E8 — validates — 渐进式能力获取
+@ref docs/哲学/genes/g01-数据即对象.md — references — 万物皆对象：扩展能力也是对象
+@ref docs/哲学/genes/g03-trait-自我定义.md — references — Trait 是能力扩展的载体
+@ref docs/哲学/genes/g07-目录即存在.md — references — 持久化目录即对象存在
+@ref docs/哲学/genes/g08-effect-与-space.md — references — Effect 定义对象与外部世界的交互
+@ref docs/哲学/emergences/collaboration.md — validates — 对象生态协作
+@ref docs/哲学/emergences/progressive_capability.md — validates — 渐进式能力获取
 -->
 
 > 名字来源：Nexus，拉丁语"连接"。

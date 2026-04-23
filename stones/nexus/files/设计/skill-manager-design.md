@@ -1,9 +1,9 @@
 # skill_manager 设计思考
 
 <!--
-@ref docs/哲学文档/gene.md#G1 — implements — 万物皆对象：skill 管理能力建模为独立对象
-@ref docs/哲学文档/gene.md#G7 — implements — 目录即存在：skill_manager 目录存在即服务可用
-@ref docs/哲学文档/gene.md#G8 — references — 消息传递：其他对象通过 talk 请求 skill
+@ref docs/哲学/genes/g01-数据即对象.md — implements — 万物皆对象：skill 管理能力建模为独立对象
+@ref docs/哲学/genes/g07-目录即存在.md — implements — 目录即存在：skill_manager 目录存在即服务可用
+@ref docs/哲学/genes/g08-effect-与-space.md — references — 消息传递：其他对象通过 talk 请求 skill
 -->
 
 ## 为什么是一个独立对象

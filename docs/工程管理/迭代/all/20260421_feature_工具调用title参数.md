@@ -114,7 +114,7 @@
 - **涉及文档**：
   - `docs/meta.md` — 子树 3（Engine）去掉 TOML 回退段落；子树 6（Web UI）把 ActionCard 节点替换为 TuiAction
   - `kernel/traits/base/TRAIT.md` — 在 open/submit/close/wait 原语说明中提到 title 参数
-  - `docs/哲学文档/discussions.md` — 记录"自叙式行动标题"与"砍掉 TOML 兼容路径"两个设计决策
+  - `docs/哲学/discussions/README.md` — 记录"自叙式行动标题"与"砍掉 TOML 兼容路径"两个设计决策
 - **涉及基因/涌现**：
   - 对 G5（注意力与遗忘）、G11（UI 即自我表达）有正向影响：title 是对象对自身行动的简化表达，既利于外部观察也利于自我对齐。
   - 可能催生新的涌现观察项：LLM 是否自发地用 title 做意图链追溯。

@@ -1,12 +1,12 @@
 # OOC 核心思想层 — Kernel
 
 <!--
-@ref docs/哲学文档/gene.md#G2 — implements — Stone vs Flow 工程实现
-@ref docs/哲学文档/gene.md#G4 — implements — ThinkLoop 思考循环
-@ref docs/哲学文档/gene.md#G5 — implements — Context 与注意力
-@ref docs/哲学文档/gene.md#G9 — implements — 行为树
-@ref docs/哲学文档/gene.md#G13 — implements — 认知栈
-@ref docs/哲学文档/emergence.md — validates — 涌现能力工程验证
+@ref docs/哲学/genes/g02-stone-与-flow.md — implements — Stone vs Flow 工程实现
+@ref docs/哲学/genes/g04-输出程序以行动.md — implements — ThinkLoop 思考循环
+@ref docs/哲学/genes/g05-context-即世界.md — implements — Context 与注意力
+@ref docs/哲学/genes/g09-行为树计划执行.md — implements — 行为树
+@ref docs/哲学/genes/g13-认知栈即运行模型.md — implements — 认知栈
+@ref docs/哲学/emergences/README.md — validates — 涌现能力工程验证
 -->
 
 > 名字来源：Kernel，操作系统的内核。

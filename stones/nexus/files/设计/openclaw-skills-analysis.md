@@ -2,8 +2,8 @@
 
 <!--
 @ref .ooc/objects/nexus/shared/设计/tool-integration.md — extends — 外部工具接入框架
-@ref docs/哲学文档/gene.md#G3 — references — Trait 作为能力载体
-@ref docs/哲学文档/gene.md#G8 — references — Effect 机制
+@ref docs/哲学/genes/g03-trait-自我定义.md — references — Trait 作为能力载体
+@ref docs/哲学/genes/g08-effect-与-space.md — references — Effect 机制
 -->
 
 ## 一、OpenClaw Skill 市场概览

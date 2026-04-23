@@ -1,9 +1,9 @@
 # 最高哲学设计层 — Sophia
 
 <!--
-@ref docs/哲学文档/gene.md — references — Sophia 是 gene.md 的守护者
-@ref docs/哲学文档/emergence.md — references — Sophia 维护涌现能力的推演与验证
-@ref docs/哲学文档/discussions.md — references — Sophia 裁决设计决策
+@ref docs/哲学/genes/README.md — references — Sophia 是 genes 的守护者
+@ref docs/哲学/emergences/README.md — references — Sophia 维护涌现能力的推演与验证
+@ref docs/哲学/discussions/README.md — references — Sophia 裁决设计决策
 -->
 
 > 名字来源：Sophia（σοφία），希腊语"智慧"。

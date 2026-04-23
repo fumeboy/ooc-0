@@ -86,7 +86,7 @@
   - 若有样式文件，增加四个可见性配色
 - **文档**：
   - `docs/meta.md` 子树 2（认知构建 Context 子树）+ 子树 6（Web UI）新增说明
-  - 建议在 `docs/哲学文档/discussions.md` 加一条：「Context 可见性可视化 — G5 / G13 的具象化」
+- 建议在 `docs/哲学/discussions/README.md` 加一条：「Context 可见性可视化 — G5 / G13 的具象化」
 - **基因/涌现**：
   - 对 G5（注意力与遗忘）、G13（线程树）的 UI 化表达——外部观察者第一次能"直接看到"线程的视野边界。
 

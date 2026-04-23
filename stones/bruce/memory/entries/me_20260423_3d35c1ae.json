@@ -1,0 +1,15 @@
+{
+  "id": "me_20260423_3d35c1ae",
+  "key": "新用户体验评估的关键发现与改进建议",
+  "content": "作为体验测试者，完成了一次从新用户视角对 OOC 系统的评估，重点关注了 open/submit 工具调用、pause/resume 和 super 沉淀三个方面。\n\n**关键发现：**\n1. 新用户对 form_id 和两步流程（先 open 再 submit）的理解存在困难\n2. pause/resume 功能的可见性和恢复路径不够明确\n3. super 沉淀的心智模型不够直觉，\"沉淀\"术语对新用户不够友好\n\n**改进建议优先级：**\n1. open 后用自然语言提示下一步\n2. 暂停时提供明显的状态标识和恢复提示\n3. 优化\"沉淀\"术语和解释\n\n这些最小改进能显著改善新用户体验。",
+  "tags": [],
+  "category": "",
+  "createdAt": "2026-04-23T11:07:46.034Z",
+  "updatedAt": "2026-04-23T11:07:46.034Z",
+  "pinned": false,
+  "ttlDays": null,
+  "source": {
+    "type": "persist_to_memory",
+    "stoneName": "bruce"
+  }
+}

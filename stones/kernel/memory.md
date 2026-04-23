@@ -10,11 +10,7 @@ world_dir/
 │   ├── src/               ← 后端源码（TypeScript, Bun runtime）
 │   │   ├── cli.ts         ← CLI 入口
 │   │   ├── server/        ← HTTP + SSE 服务
-│   │   ├── flow/          ← ThinkLoop, Flow
-│   │   ├── thread/       ← 线程树架构（当前核心）
-│   │   ├── world/         ← World, Scheduler, Router
-│   │   ├── context/       ← Context 构建
-│   │   ├── process/       ← 行为树, 认知栈
+│   │   ├── thread/        ← 线程树架构（当前核心）
 │   │   ├── stone/         ← Stone 操作
 │   │   ├── trait/         ← Trait 加载/激活
 │   │   ├── persistence/   ← 持久化读写
@@ -41,18 +37,10 @@ world_dir/
 - Tools: `world_dir/kernel/src/thread/tools.ts`
 - Form Manager: `world_dir/kernel/src/thread/form.ts`
 - Hooks: `world_dir/kernel/src/thread/hooks.ts`
-- Parser: `world_dir/kernel/src/thread/parser.ts`
 
-### 旧架构（仍存在，线程树架构优先）
+### 其他核心模块
 
-- ThinkLoop: `world_dir/kernel/src/flow/thinkloop.ts`
-- Flow: `world_dir/kernel/src/flow/flow.ts`
-- Context Builder: `world_dir/kernel/src/context/builder.ts`
-- Scheduler: `world_dir/kernel/src/world/scheduler.ts`
-- World: `world_dir/kernel/src/world/world.ts`
-- Router: `world_dir/kernel/src/world/router.ts`
-- Executor: `world_dir/kernel/src/executable/executor.ts`
-- Trait Loader: `world_dir/kernel/src/trait/loader.ts`
+- CLI: `world_dir/kernel/src/cli.ts`
 - Server: `world_dir/kernel/src/server/server.ts`
 - 类型定义: `world_dir/kernel/src/types/`
 - 测试: `world_dir/kernel/tests/`
@@ -61,8 +49,8 @@ world_dir/
 ## 运行方式
 
 - 后端: `bun kernel/src/cli.ts start 8080`（从 world_dir 执行）
-- 测试: `cd kernel && bun test`
-- 前端: `cd kernel/web && bun run dev`
+- 测试: `cd kernel &amp;&amp; bun test`
+- 前端: `cd kernel/web &amp;&amp; bun run dev`
 
 ## 经验笔记
 

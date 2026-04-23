@@ -1,10 +1,10 @@
 # Skill 在 OOC 体系下的表示方式
 
 <!--
-@ref docs/哲学文档/gene.md#G1 — references — 万物皆对象
-@ref docs/哲学文档/gene.md#G3 — references — Trait 自我定义单元
-@ref docs/哲学文档/gene.md#G8 — references — Effect 与消息传递
-@ref docs/哲学文档/gene.md#G13 — references — 认知栈模型
+@ref docs/哲学/genes/g01-数据即对象.md — references — 万物皆对象
+@ref docs/哲学/genes/g03-trait-自我定义.md — references — Trait 自我定义单元
+@ref docs/哲学/genes/g08-effect-与-space.md — references — Effect 与消息传递
+@ref docs/哲学/genes/g13-认知栈即运行模型.md — references — 认知栈模型
 -->
 
 ## 一、问题的本质

@@ -96,8 +96,8 @@
   - `docs/meta.md` 的 Web UI 子树 5 原 ReflectFlow 描述更新
 - **文档**：
   - `docs/meta.md` 子树 3（ReflectFlow 部分）全文重写
-  - `docs/哲学文档/discussions.md` 记录线程树版 G12 闭环设计
-  - `docs/哲学文档/gene.md` 可能需要微调 G12 的工程映射描述
+  - `docs/哲学/discussions/README.md` 记录线程树版 G12 闭环设计
+  - `docs/哲学/genes/g12-经验沉淀.md` 可能需要微调 G12 的工程映射描述
 - **基因/涌现**：
   - G12 首次获得完整工程闭环；可能催生新的涌现观察项（如"对象自发在哪些场景调用 talkToSelf"）
 
@@ -358,5 +358,4 @@ registered talkToSelf: true
 3. **体验验证前**：Talk Form 当时没占用 8080，可以启服。测完立即 `kill` 释放端口。
 
 **结果**：三次 commit 均只含我的改动，Talk Form 的 `engine.ts/tools.ts/types.ts/server.ts/tests/talk-form.test.ts` 未提交改动 100% 保留在工作树。
-
 

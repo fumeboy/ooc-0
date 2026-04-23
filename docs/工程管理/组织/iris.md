@@ -1,11 +1,11 @@
 # OOC 用户体验层 — Iris
 
 <!--
-@ref docs/哲学文档/gene.md#G11 — implements — UI 自我表达
-@ref docs/哲学文档/gene.md#G5 — references — Context 可视化
-@ref docs/哲学文档/gene.md#G9 — references — 行为树可视化
-@ref docs/哲学文档/emergence.md#E6 — validates — 人机协作
-@ref docs/哲学文档/emergence.md#E12 — validates — UI 涌现
+@ref docs/哲学/genes/g11-ui-即面孔.md — implements — UI 自我表达
+@ref docs/哲学/genes/g05-context-即世界.md — references — Context 可视化
+@ref docs/哲学/genes/g09-行为树计划执行.md — references — 行为树可视化
+@ref docs/哲学/emergences/human_ai.md — validates — 人机协作
+@ref docs/哲学/emergences/ui_emergence.md — validates — UI 涌现
 -->
 
 > 名字来源：Iris，希腊神话中的彩虹女神，天地之间的信使。

@@ -214,7 +214,7 @@
 
 - **Phase 5 — Reporter 升级 + 文档同步**
   - `docs/meta.md`：Trait 子树（加 namespace / kind / llm_methods/ui_methods / traitId 格式）+ Web UI 子树（`ui/` → `views/`、`ooc://ui/` → `ooc://view/`）。
-  - `docs/对象/人机交互/*`、`docs/对象/结构/trait/*`、`docs/哲学文档/discussions.md` 各一条。
+  - `docs/对象/人机交互/*`、`docs/对象/结构/trait/*`、`docs/哲学/discussions/README.md` 各一条。
   - Reporter trait 重写（新 TRAIT.md + 示例 view）。
   - Bruce 体验追溯。
 
@@ -431,4 +431,3 @@ Phase 4（续作）:
 3. **Phase 5 的 `docs/实验/` 记录**：Plan 建议写入，但该目录目前无活跃使用（user 仓只有 `docs/哲学/` + `docs/对象/` + `docs/工程管理/` + `docs/superpowers/`）。我改为在 `docs/哲学/discussions/` 写设计决策追溯（与其他 2026-04-21 决策文件同级风格），更对齐现有约定。
 
 **Gate 全验证**：所有 phase Gate 通过，具体见各 phase 完成段。
-

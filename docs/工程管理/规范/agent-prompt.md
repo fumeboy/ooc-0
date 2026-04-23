@@ -4,8 +4,8 @@
 > 适用于 Claude Code 侧（`.claude/agents/*.md`）和 OOC 运行时侧（`stones/*/readme.md`）。
 
 <!--
-@ref docs/哲学文档/gene.md — implements — Prompt as Object 哲学（G1 身份, G3 能力, G5 注意力, G9 行为, G12 成长）
-@ref docs/哲学文档/meta.md — extends — 概念树四面（存在/认知/行动/成长）扩展为七层 prompt 架构
+@ref docs/哲学/genes/README.md — implements — Prompt as Object 哲学（G1 身份, G3 能力, G5 注意力, G9 行为, G12 成长）
+@ref docs/meta.md — extends — 概念树四面（存在/认知/行动/成长）扩展为七层 prompt 架构
 @ref docs/组织/README.md — references — 1+3 组织模型
 @referenced-by .claude/agents/sophia.md — implemented-by
 @referenced-by .claude/agents/kernel.md — implemented-by
