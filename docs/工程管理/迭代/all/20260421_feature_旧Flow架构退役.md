@@ -32,7 +32,7 @@
 5. 四个解耦点各自有线程树等价实现：
    - Session 落盘：用线程树原生 `threads.json + threads/{id}/thread.json` 作为主格式；`Flow.load` 调用点改为直接读 `threads.json`。
    - ReflectFlow：设计并实现线程树版本的常驻自我对话机制。
-   - Server debug：`/pending-output`、`/debug-mode` 改读线程树 pause 状态。
+   - Server debug：`/pending-output`、`/debug-mode` 删除（旧 Flow 的混淆概念）；用 `/api/debug/enable`（写 debug 文件）和 `/api/global-pause/enable`（暂停执行）替代。
    - talkToSelf / replyToFlow：改走线程树 scheduler。
 6. 前端 `Flow` 相关组件（如果存在）同步适配。
 7. 测试失败数保持 0（1 skip 随旧 Flow 测试一并删除）。
@@ -80,7 +80,8 @@
 
 ### 阶段 4 — 解耦点 3：Server debug 接口
 
-- 把 `/pending-output` / `/debug-mode` 改读线程树 pause 状态。
+- 删除旧 Flow 的 `/pending-output` / `/debug-mode` 端点（混淆了 debug 写文件与 pause 暂停的概念）。
+- 已由 `/api/debug/enable`（写 debug 文件）和 `/api/global-pause/enable`（暂停执行）的两个独立端点替代。
 - 如果前端 UI 依赖 Flow 字段，同步改 Web UI。
 
 ### 阶段 5 — 清理
@@ -162,7 +163,11 @@
 - `/api/stones/:name/flows/:flowId/debug-mode`（POST）：写 `flow.data.debugMode`。
 - `/api/stones/:name/flows/:flowId/step`（POST）：调 `world.stepOnce(...)`。
 - 前端唯一使用方：`kernel/web/src/features/FlowDetail.tsx`——`pendingOutput` / `pausedContext` / `debugMode` / `handleResume` 都挂在 `PausedPanel` 组件。FlowDetail 是旧 Flow 形态的详情视图，用户现在主要看 `ThreadsTreeView`（线程树视图），FlowDetail 被 SubTab 包起来，日常不常用。
-- **结论**：`/pending-output` / `/debug-mode` 在线程树架构下**没有等价实现**——线程树的 pause 机制通过 `stones/{name}/threads/*/llm.input.txt` 和 `llm.output.txt` 落盘，属于文件调试，不是"前端 JSON 读写"模式。FlowDetail 的 PausedPanel 在线程树模式下永远不会触发，因为线程树不走 `Flow.setStatus("pausing")`。
+- **结论**：`/pending-output` / `/debug-mode` 在线程树架构下**没有等价实现**——线程树有两套独立机制：
+  1. **Debug 模式**（通过 `/api/debug/enable`）：写 debug 文件到 `threads/*/debug/` 目录，**不暂停执行**。
+  2. **全局暂停 + 单步模式**（通过 `/api/global-pause/enable` 或 `stepOnceWithThreadTree`）：暂停执行，**不写 debug 文件**。
+  
+  旧 Flow 的 `/debug-mode` 混淆了这两个概念。线程树中文件调试（llm.input.txt/llm.output.txt）只是 debug 模式的一部分，与 pause 机制无关。FlowDetail 的 PausedPanel 在线程树模式下永远不会触发，因为线程树不走 `Flow.setStatus("pausing")`。
 
 **调研 3：Session 落盘迁移**
 
@@ -201,7 +206,7 @@
 理由：
 1. ReflectFlow 是"死 stub"——线程树 engine 根本没接通 `deliverToSelfMeta`，所有 `stones/*/reflect/data.json` 是 messages=[] 的空模板，历史 flow 里只有 2 个早期实验提过 `reflect` 字符串。这不是"活功能需要迁移"，而是"未启用功能需要先退栈"。
 2. `Flow.ensureReflectFlow` 保留为"空目录+空 data.json stub"的纯持久化函数（留在 writer.ts 里），world.ts 里去掉所有 ReflectFlow 调度逻辑。未来若真要做线程树版 ReflectFlow，作为独立迭代重新设计（反正现在也没人用）。
-3. server.ts 的 `/pending-output` / `/debug-mode` / `stepOnce` 接口在线程树模式下**本来就不工作**（没有 `_pendingOutput` 字段存在的途径）——直接删掉这些端点和前端 `PausedPanel`。线程树有自己的文件级 pause 调试机制（llm.input.txt/llm.output.txt）。
+3. server.ts 的 `/pending-output` / `/debug-mode` / `stepOnce` 接口在线程树模式下**本来就不工作**（没有 `_pendingOutput` 字段存在的途径）——直接删掉这些端点和前端 `PausedPanel`。线程树用 `/api/debug/enable`（写 debug 文件到 llm.input.txt/llm.output.txt）和 `/api/global-pause/enable`（暂停执行）的两个独立端点替代，概念更清晰。
 4. 前端 `FlowDetail.tsx` 的 PausedPanel 和 `debugMode` 相关 UI 可以简化为"不再展示"——因为线程树模式下永远不会进入 pausing 状态。
 
 因此阶段映射：
