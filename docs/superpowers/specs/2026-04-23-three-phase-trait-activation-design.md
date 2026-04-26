@@ -1,5 +1,8 @@
 # 三阶段 Trait 激活 + Relation 统一模型设计
 
+> ⚠️ **本文档中描述的 partial submit / submit(partial=true) 机制已于 2026-04-26 退役**，
+> 由 `refine` tool 取代。详见 `docs/superpowers/specs/2026-04-26-refine-tool-and-knowledge-activator.md`。
+
 > 创建日期：2026-04-23
 > 状态：已定稿，待落地
 > 关联迭代：`docs/工程管理/迭代/all/20260423_feature_trait_activation_统一.md`

@@ -1,5 +1,8 @@
 # LLMInputViewer Phase 3 — 对比视图 + active-forms 结构化
 
+> ⚠️ **本文档中描述的 partial submit / submit(partial=true) 机制已于 2026-04-26 退役**，
+> 由 `refine` tool 取代。详见 `docs/superpowers/specs/2026-04-26-refine-tool-and-knowledge-activator.md`。
+
 > 类型：feature
 > 创建日期：2026-04-22
 > 状态：finish
