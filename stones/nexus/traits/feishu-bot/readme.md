@@ -1,4 +1,6 @@
 ---
+namespace: self
+name: feishu-bot
 when: "always"
 ---
 
