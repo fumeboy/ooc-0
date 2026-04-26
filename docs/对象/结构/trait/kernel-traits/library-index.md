@@ -8,7 +8,8 @@
 name: kernel/library_index
 type: how_to_use_tool
 when: never
-command_binding: [program]
+activates_on:
+  paths: [program]
 description: Library 公共资源索引 — 查找和使用 library 中的 traits
 ```
 

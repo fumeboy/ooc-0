@@ -8,7 +8,8 @@
 name: kernel/computable
 type: how_to_think
 when: never
-command_binding: [program]
+activates_on:
+  paths: [program]
 description: 代码执行能力 — 文件操作、搜索、Shell 命令、数据管理
 ```
 

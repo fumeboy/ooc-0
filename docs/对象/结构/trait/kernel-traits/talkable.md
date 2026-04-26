@@ -8,7 +8,8 @@
 name: kernel/talkable
 type: how_to_interact
 when: never
-command_binding: [talk, talk_sync, return]
+activates_on:
+  paths: [talk, talk_sync, return]
 description: 对象间通信协议 — talk/talk_sync 消息传递
 ```
 

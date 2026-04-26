@@ -8,7 +8,8 @@
 name: kernel/object_creation
 type: how_to_interact
 when: never
-command_binding: [think]
+activates_on:
+  paths: [think]
 description: 创建新对象或完善对象身份的指南
 ```
 

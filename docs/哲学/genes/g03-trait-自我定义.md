@@ -3,7 +3,7 @@
 <!--
 @referenced-by kernel/src/types/trait.ts — implemented-by — TraitDefinition, TraitWhen, TraitMethod
 @referenced-by kernel/src/trait/loader.ts — implemented-by — 从文件系统加载 Trait
-@referenced-by kernel/src/trait/activator.ts — implemented-by — Trait 激活逻辑
+@referenced-by kernel/src/knowledge/activator.ts — implemented-by — KnowledgeRef 统一类型 + 反向索引 + traitId 构造
 @referenced-by kernel/src/trait/registry.ts — implemented-by — 方法全量注册
 @referenced-by kernel/src/context/builder.ts — implemented-by — Trait 内容注入 context
 @referenced-by kernel/src/flow/thinkloop.ts — implemented-by — Trait 元编程 API

@@ -8,7 +8,8 @@
 name: kernel/reflective
 type: how_to_think
 when: never
-command_binding: [return]
+activates_on:
+  paths: [return]
 description: 经验结晶与自我反思，SuperFlow 驱动的持续学习
 ```
 

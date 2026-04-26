@@ -56,9 +56,9 @@ Stage 2 给出**改进建议**，不阻塞通过（合规即可 merge）。
 
 通常由**另一个对象**（如 `code-reviewer` 角色）激活此 trait 后对代码做审查。
 
-## 无 command_binding
+## 无 activates_on.paths
 
-reviewable 没有 `command_binding`。激活方式：
+reviewable 没有 `activates_on.paths`。激活方式：
 - 对象主动 `open(type=trait, name=kernel/reviewable)`
 - 在 `supervisor` 或 `code-reviewer` 的 readme 中 always 激活
 

@@ -40,7 +40,7 @@ Context
 
 ### 1. 渐进式 Trait 加载（按需激活）
 
-不是所有 trait 都始终注入。`command_binding` 驱动的按需激活让 Context 精简。
+不是所有 trait 都始终注入。`activates_on.paths` 驱动的按需激活让 Context 精简。
 详见 [../../结构/trait/渐进式激活.md](../../结构/trait/渐进式激活.md)。
 
 ### 2. 三层记忆（时间维度压缩）

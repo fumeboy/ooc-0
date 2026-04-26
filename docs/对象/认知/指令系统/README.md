@@ -3,27 +3,32 @@
 > 对象通过 `open / submit / close / wait` 四原语与系统交互。
 > 这是基座 trait（`kernel/base`）定义的唯一交互协议。
 
-## 七个文档
+## 八个文档
 
 | 文档 | 内容 |
 |---|---|
-| [open.md](open.md) | 打开上下文：command / trait / skill 三种类型 |
-| [submit.md](submit.md) | 提交执行 |
+| [open.md](open.md) | 打开上下文：command / trait / skill 三种类型；可选 args 预填 |
+| [refine.md](refine.md) | 累积/修改参数（新，2026-04-26）：在 submit 前分步填写 args |
+| [submit.md](submit.md) | 提交执行：schema 为 {title, form_id, mark}；args 经由 refine 累积 |
 | [close.md](close.md) | 关闭上下文 |
 | [wait.md](wait.md) | 等待子线程或消息 |
 | [mark.md](mark.md) | 标记 inbox 消息（附加参数） |
 | [defer.md](defer.md) | 注册 command hook（灵感自 Go defer） |
 | [form-manager.md](form-manager.md) | Form 生命周期管理器 |
 
-## 四原语速览
+## 五原语速览
 
 ### open — 打开上下文
 
-声明"我要做什么"，加载相关知识/能力。返回 `form_id`。
+声明"我要做什么"，加载相关知识/能力。返回 `form_id`。可传 `args` 预填（等价于 open + refine）。
+
+### refine — 累积参数（新）
+
+在 submit 之前，分多步填写或修正 form 的 args。不执行，只积累。
 
 ### submit — 提交执行
 
-对 command 类型 form：执行具体指令。对 trait / skill 类型：无需 submit。
+对 command 类型 form：执行具体指令。schema 为 `{title, form_id, mark}`，args 已通过 refine 累积。对 trait / skill 类型：无需 submit。
 
 ### close — 关闭上下文
 
@@ -45,7 +50,7 @@ open 不只是"声明意图"——它还是**按需加载的入口**：
 
 ```
 open(command=program)
-  → 激活 kernel/computable（command_binding 触发）
+  → 激活 kernel/computable（activates_on.paths 触发）
   → kernel/computable 的 readme 注入 Context
   → 子 trait 描述也可见（Level 2）
 ```

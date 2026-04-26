@@ -8,11 +8,12 @@
 name: kernel/plannable
 type: how_to_think
 when: never
-command_binding: [think, set_plan]
+activates_on:
+  paths: [think, set_plan]
 description: 任务拆解与规划 — 先想清楚再动手
 ```
 
-> 2026-04-22 起 plannable 的 command_binding 统一为 `think` + `set_plan`。
+> 2026-04-22 起 plannable 的 activates_on.paths 统一为 `think` + `set_plan`。
 > 旧命令 `create_sub_thread` / `continue_sub_thread` 已被 `think(context="fork"|"continue")` 替代（不做兼容层）。
 
 ## 核心原则

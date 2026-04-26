@@ -2,19 +2,22 @@
 
 > 对 command 类型 form，submit 执行具体指令。trait / skill 类型**不需要** submit。
 
-## 签名
+## 签名（2026-04-26 更新）
 
 ```typescript
 submit({
   form_id: "f_001",
-  ...commandSpecificArgs
+  title: "一句话说明本次行动",  // 必填
+  mark?: { id: string; action: "ack" | "ignore" | "todo" }
 })
 // → 指令执行结果
 ```
 
+**注意**：`submit` 不再直接接受指令参数（`commandSpecificArgs`）。所有 args 通过 `refine` 工具在 submit 之前累积。`open(action, args?)` 中的可选 `args` 等价于 open + 一次 refine。
+
 ## 按 command 分派
 
-submit 的 `commandSpecificArgs` 根据 form 的 command 不同：
+submit 触发后，engine 从 FormManager 读取之前通过 `refine` 累积的 args，按 form 的 command 类型分派：
 
 ### program
 

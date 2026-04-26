@@ -50,7 +50,8 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── thread/           ← 线程树架构（ThreadsTree, Engine, Scheduler, ContextBuilder）
 │   │   ├── world/            ← World（对象加载、talk 入口）
 │   │   ├── stone/            ← Stone 操作
-│   │   ├── trait/            ← Trait 加载/激活/方法注册
+│   │   ├── trait/            ← Trait 加载/方法注册
+│   │   ├── knowledge/        ← Knowledge Activator（KnowledgeRef 统一类型 + 反向索引）
 │   │   ├── skill/            ← Skill 加载（SKILL.md 按需加载）
 │   │   ├── persistence/      ← 持久化读写
 │   │   ├── executable/       ← 沙箱执行器
@@ -65,15 +66,15 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │       ├── api/          ← API 客户端
 │   │       └── lib/          ← 工具函数
 │   ├── traits/               ← Kernel Traits（所有对象共享的基础能力）
-│   │   ├── base/            ← 指令系统基座（唯一 always trait，open/submit/close/wait 四原语）
-│   │   ├── computable/       ← 代码执行（command_binding: program，含 program_api, file_ops, file_search, shell_exec, web_search, testable 子 trait）
-│   │   ├── talkable/         ← 跨对象通信（command_binding: talk/return，含 cross_object, ooc_links, delivery 子 trait）
-│   │   ├── reflective/       ← 记忆与反思（command_binding: return，含 memory_api, super 子 trait）
-│   │   ├── verifiable/       ← 验证能力（command_binding: return）
-│   │   ├── plannable/        ← 任务规划（command_binding: think / set_plan）
-│   │   ├── debuggable/       ← 系统化调试（command_binding: program）
-│   │   ├── reviewable/       ← 代码审查（command_binding: program）
-│   │   ├── library_index/    ← Library 资源查询（command_binding: program）
+│   │   ├── base/            ← 指令系统基座（唯一 always trait，open/refine/submit/close/wait 五原语）
+│   │   ├── computable/       ← 代码执行（activates_on.paths: [program]，含 program_api, file_ops, file_search, shell_exec, web_search, testable 子 trait）
+│   │   ├── talkable/         ← 跨对象通信（activates_on.paths: [talk, return]，含 cross_object, ooc_links, delivery 子 trait）
+│   │   ├── reflective/       ← 记忆与反思（activates_on.paths: [return]，含 memory_api, super 子 trait）
+│   │   ├── verifiable/       ← 验证能力（activates_on.paths: [return]）
+│   │   ├── plannable/        ← 任务规划（activates_on.paths: [think, set_plan]）
+│   │   ├── debuggable/       ← 系统化调试（activates_on.paths: [program]）
+│   │   ├── reviewable/       ← 代码审查（activates_on.paths: [program]）
+│   │   ├── library_index/    ← Library 资源查询（activates_on.paths: [program]）
 │   │   └── ...
 │   ├── tests/                ← 单元测试（bun:test）
 │   └── package.json
@@ -230,6 +231,8 @@ Object（对象）
 │   │   │       决定哪些 trait 被激活、哪些知识可见。
 │   │   │
 │   │   ├── 节点状态 ── running / waiting / done / failed
+│   │   │       waiting 细分 waitingType：await_children / talk_sync / explicit_wait（唤醒时自动清除）
+│   │   │       failed 时 failureReason 字段记录原因（GET /api/flows 透出）
 │   │   │
 │   │   ├── 线程复活（Thread Revival）
 │   │   │       done 线程收到任何 inbox 消息时自动恢复为 running。
@@ -246,20 +249,23 @@ Object（对象）
 │   │   │
 │   │   ├── 感知 ── 构建 Context（context-builder.ts）
 │   │   ├── 思考 ── LLM 基于 Context + tools 生成 tool call 或文本
-│   │   ├── 行动 ── Engine 处理 tool call（open/submit/close/wait）
+│   │   ├── 行动 ── Engine 处理 tool call（open/refine/submit/close/wait）
 │   │   └── 循环 ── 行动结果写回线程数据，触发下一轮
 │   │
 │   ├── 指令系统 / Tool Calling
-│   │   │   对象通过三个 tool 与系统交互：
+│   │   │   对象通过五个 tool 与系统交互：
 │   │   │
 │   │   ├── open ── 打开上下文
-│   │   │   │   三种类型：
+│   │   │   │   三种类型；可选 args 预填（等价 open + refine）：
 │   │   │   ├── command ── 执行指令（program/talk/return 等），加载关联 trait
 │   │   │   ├── trait ── 加载 trait 知识到上下文
 │   │   │   └── skill ── 加载 skill 内容到上下文
 │   │   │
+│   │   ├── refine ── 累积/修改参数（新）
+│   │   │       在 submit 之前分多步填写或修正 args；不执行。
+│   │   │
 │   │   ├── submit ── 提交执行（仅 command 类型）
-│   │   │       传入 open 返回的 form_id + 指令参数。
+│   │   │       传入 open 返回的 form_id + title + mark；args 经由 refine 累积。
 │   │   │
 │   │   ├── close ── 关闭上下文
 │   │   │       command 类型 = 取消指令，trait/skill 类型 = 卸载知识。
@@ -485,8 +491,8 @@ Context
 │       → 决定哪些知识可见
 │
 ├── 渐进式 Trait 加载
-│   ├── base trait（always）── 始终注入，定义 open/submit/close 三原语
-│   ├── command_binding ── open(command=X) 时加载 X 关联的 trait
+│   ├── base trait（always）── 始终注入，定义 open/refine/submit/close 四原语
+│   ├── activates_on.paths ── open(command=X) 时加载关联 trait（替代旧 command_binding）
 │   │       如 open(command=program) → 加载 computable trait
 │   └── open(type=trait/skill) ── 按需加载任意 trait 或 skill
 │
@@ -530,8 +536,9 @@ Engine（线程树执行引擎）
 │   │               Provider 返回 content + thinkingContent + toolCalls
 │   │               thinkingContent 自动映射为系统 thought action
 │   │               toolCalls 交由 Engine 处理
-│   ├── 执行    ── Engine 处理 tool call（open/submit/close/wait）
+│   ├── 执行    ── Engine 处理 tool call（open/refine/submit/close/wait）
 │   │               open → 创建 form + 加载 trait
+│   │               refine → 累积参数（不执行）
 │   │               submit → 执行指令（program/talk/return 等）
 │   │               close → 取消 form + 卸载 trait
 │   ├── 记录    ── thought + actions + output 写入 thread.json
@@ -552,6 +559,7 @@ Engine（线程树执行引擎）
 │   │   并通过 SSE flow:action 广播给前端 TuiAction 展示。
 │   │
 │   ├── open → FormManager.begin() + collectCommandTraits() + activateTrait()
+│   ├── refine → FormManager.refineArgs()（累积参数，不执行）
 │   ├── submit → FormManager.submit() + 执行指令 + deactivateTrait()
 │   ├── close → FormManager.cancel() + deactivateTrait()
 │   └── wait → tree.setNodeStatus(threadId, "waiting")
@@ -748,7 +756,7 @@ Trait
 │   ├── kind         ── "trait" | "view"（默认 trait；VIEW.md 自动 view）
 │   ├── description  ── 能力描述（注入 Context 让 LLM 理解）
 │   ├── readme       ── TRAIT.md / VIEW.md 内容（激活时注入 Context）
-│   ├── command_binding ── 关联的指令列表（open 时自动加载）
+│   ├── activates_on.paths ── 关联的路径列表（open 时自动加载，替代旧 command_binding）
 │   ├── llmMethods   ── Record<name, TraitMethod>（LLM 沙箱可见）
 │   ├── uiMethods    ── Record<name, TraitMethod>（HTTP call_method 可见）
 │   ├── deps         ── 依赖的 traitId 列表（可省略 namespace，按 self→kernel→library 解析）
@@ -771,7 +779,7 @@ Trait
 │   │
 │   ├── Level 1 ── 精简注入（always-on 父 trait 的精简 TRAIT.md）
 │   ├── Level 2 ── 子 trait 描述可见（active 父 trait 的子 trait 一行描述）
-│   └── Level 3 ── 按需激活（open(type=trait) 或 command_binding 加载完整内容）
+│   └── Level 3 ── 按需激活（open(type=trait) 或 activates_on.paths 加载完整内容）
 │
 ├── 加载链路（四层，同 traitId 后者覆盖前者）
 │   │
@@ -784,10 +792,10 @@ Trait
 │          → 同 traitId（namespace:name）按加载顺序覆盖
 │          → flowObjectDir 可选，用于 Flow 级 views 覆盖 Stone 级
 │
-├── 渐进式激活（command_binding 驱动）
+├── 渐进式激活（activates_on.paths 驱动）
 │   │   Trait 不再始终激活，而是按需加载：
 │   │
-│   ├── open(type=command, command=X) → collectCommandTraits 查找 X 关联的 trait → activateTrait
+│   ├── open(type=command, command=X) → collectCommandTraits 查找 activates_on.paths 含 X 的 trait → activateTrait
 │   ├── open(type=trait, name=Y) → 直接 activateTrait(Y)
 │   ├── submit/close 后 → 检查 refcount → deactivateTrait
 │   └── FormManager 跟踪活跃 form，驱动 trait 加载/卸载
@@ -822,7 +830,7 @@ Trait
     │   ├── 同一个 Loader（loader.loadTrait 支持 TRAIT.md/VIEW.md 两种描述文件）
     │   ├── 同一个 MethodRegistry（双通道同一表）
     │   ├── 同一套 namespace + traitId 规则
-    │   └── 可声明 command_binding（LLM 像普通 trait 一样激活）
+    │   └── 可声明 activates_on.paths（LLM 像普通 trait 一样激活）
     │
     └── view 独有
         ├── frontend.tsx（前端 DynamicUI 加载）
@@ -830,7 +838,7 @@ Trait
 
 代码: kernel/src/trait/loader.ts（loadAllTraits + loadObjectViews）
       kernel/src/trait/registry.ts（MethodRegistry 三元键 + buildSandboxMethods）
-      kernel/src/trait/activator.ts（traitId 构造 + 省略解析）
+      kernel/src/knowledge/activator.ts（KnowledgeRef 统一类型 + 反向索引 + traitId 构造）
       kernel/src/thread/hooks.ts（collectCommandTraits）
       kernel/src/thread/tree.ts（activateTrait/deactivateTrait）
       kernel/src/server/server.ts（POST /call_method endpoint）
@@ -840,7 +848,7 @@ Trait
 #### Kernel Traits — 两层结构
 
 Kernel Traits 是所有对象共享的基础能力，位于 `kernel/traits/`。
-通过 `command_binding` 渐进式加载，组合起来定义了"作为 OOC 对象意味着什么"。
+通过 `activates_on.paths` 渐进式加载，组合起来定义了"作为 OOC 对象意味着什么"。
 
 ```
 Kernel Traits
@@ -848,15 +856,15 @@ Kernel Traits
 ├── 基座层（when: always）── 始终注入
 │   │
 │   └── kernel/base ── 指令系统基座
-│           定义 open/submit/close/wait 四原语 + mark 机制（附加参数）。
+│           定义 open/refine/submit/close/wait 五原语 + mark 机制（附加参数）。
 │           是唯一的 always trait，极简。
 │
-├── 能力层（when: never, command_binding 驱动）── 按需加载
+├── 能力层（when: never, activates_on.paths 驱动）── 按需加载
 │   │
 │   │   这些 trait 在 open(command=X) 时自动加载，submit/close 后自动卸载。
 │   │   它们的组合 = 能思考 + 能交流 + 能成长 + 不自欺 + 会拆解。
 │   │
-│   ├── kernel/computable ── 代码执行（command_binding: program）
+│   ├── kernel/computable ── 代码执行（activates_on.paths: [program]）
 │   │   │   核心 API 签名、沙箱变量、文件操作。
 │   │   │   没有它，对象无法行动。
 │   │   │
@@ -867,7 +875,7 @@ Kernel Traits
 │   │   ├── kernel/computable/web_search     ── 互联网搜索
 │   │   └── kernel/computable/testable       ── 测试执行能力
 │   │
-│   ├── kernel/talkable ── 与他者建立关系（command_binding: talk, talk_sync, return）
+│   ├── kernel/talkable ── 与他者建立关系（activates_on.paths: [talk, talk_sync, return]）
 │   │   │   消息发送、回复、社交原则。
 │   │   │   没有它，对象是孤岛。
 │   │   │
@@ -876,7 +884,7 @@ Kernel Traits
 │   │   ├── kernel/talkable/delivery      ── 交付规范、协作交付
 │   │   └── kernel/talkable/issue-discussion ── Issue 讨论与评论（所有对象共享，虽在 talkable 下但偏向看板）
 │   │
-│   ├── kernel/reflective ── 从经验中学习（command_binding: return）
+│   ├── kernel/reflective ── 从经验中学习（activates_on.paths: [return]）
 │   │   │   反思 = 对话（SuperFlow）：talk(target="super") 投递经验。
 │   │   │   没有它，对象不会成长。
 │   │   │
@@ -884,15 +892,15 @@ Kernel Traits
 │   │   └── kernel/reflective/super         ── 反思镜像分身的沉淀工具集（when: never；
 │   │                                           llm_methods: persist_to_memory, create_trait）
 │   │
-│   ├── kernel/verifiable ── 认识论诚实（command_binding: return）
+│   ├── kernel/verifiable ── 认识论诚实（activates_on.paths: [return]）
 │   │       "没有验证证据，不做完成声明。"
 │   │       没有它，对象会自欺。
 │   │
-│   ├── kernel/plannable        ── 任务拆解（command_binding: think / set_plan）
-│   ├── kernel/debuggable       ── 系统化调试（手动激活，无 command_binding）
+│   ├── kernel/plannable        ── 任务拆解（activates_on.paths: [think, set_plan]）
+│   ├── kernel/debuggable       ── 系统化调试（手动激活，无 activates_on.paths）
 │   ├── kernel/reviewable       ── 代码审查（手动激活，deps: verifiable）
-│   ├── kernel/library_index    ── Library 资源查询（command_binding: program）
-│   └── kernel/object_creation  ── 创建新对象的指南（command_binding: think）
+│   ├── kernel/library_index    ── Library 资源查询（activates_on.paths: [program]）
+│   └── kernel/object_creation  ── 创建新对象的指南（activates_on.paths: [think]）
 │
 └── 组合效应
         基座层的交叉：

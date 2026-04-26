@@ -7,7 +7,7 @@
 @referenced-by kernel/src/process/focus.ts — implemented-by — 结构化遗忘（栈进/栈出）
 @referenced-by kernel/src/process/render.ts — implemented-by — focus 路径详细、其余摘要
 @referenced-by kernel/src/types/process.ts — implemented-by — focus 光标驱动遗忘
-@referenced-by kernel/src/trait/activator.ts — referenced-by — 激活决定 context 注入内容
+@referenced-by kernel/src/knowledge/activator.ts — referenced-by — KnowledgeRef 决定 context 注入内容
 @referenced-by kernel/src/flow/thinkloop.ts — implemented-by — 每轮构建 Context
 -->
 

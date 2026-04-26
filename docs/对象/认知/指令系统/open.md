@@ -29,7 +29,7 @@ open({
 ### 效果
 
 1. FormManager 创建一个 form（type=command, command=X, status=open）
-2. 通过 `collectCommandTraits(X)` 找到所有 `command_binding` 包含 X 的 trait
+2. 通过 `collectCommandTraits(X)` 找到所有 `activates_on.paths` 包含 X 的 trait
 3. 对每个 trait：`activateTrait(trait, threadId)`，refcount++
 4. 下一轮 Context 构建时，激活的 trait 的 readme 注入 `instructions / knowledge`
 
@@ -101,7 +101,7 @@ open({
 |---|---|---|
 | 位置 | kernel/library/stone 三层 | 主要在 library/skills/ |
 | 有方法？ | 可以（methods.ts） | 通常只有文档 |
-| 有 command_binding？ | 可以 | 无 |
+| 有 activates_on.paths？ | 可以 | 无 |
 | 用途 | 长期能力 | 按任务加载的专项指南 |
 
 skill 更像"可按需加载的 markdown 文档"，trait 更像"带有代码的能力单元"。

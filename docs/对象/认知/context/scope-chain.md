@@ -92,7 +92,7 @@ const fullTraits = flat(scopeChain);
 
 ## 与激活机制的配合
 
-Scope Chain 是**读取侧**；渐进式激活（command_binding）是**写入侧**：
+Scope Chain 是**读取侧**；渐进式激活（activates_on.paths）是**写入侧**：
 
 ```
 子线程 open(command=program)

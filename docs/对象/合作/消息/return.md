@@ -32,7 +32,7 @@ submit(form_id, {
 
 ## 激活的三个 trait
 
-`command_binding: return` 的 trait 有三个：
+`activates_on.paths: [return]` 的 trait 有三个：
 
 - **talkable** — 定义如何传递结果
 - **reflective** — 沉淀经验（when_finish hook）
