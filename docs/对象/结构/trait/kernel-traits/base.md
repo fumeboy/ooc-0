@@ -58,13 +58,13 @@ close(form_id)
 
 close 后，FormManager 会 `deactivateTrait`，refcount 归零时 trait 被真正卸载。
 
-### wait — 等待子线程或消息
+### wait — 等待外部消息或事件
 
 ```
 wait(reason)                ← 等待外部消息或事件
 ```
 
-让当前线程进入 `waiting` 状态，让出调度权。当 inbox 有新消息时自动唤醒。等待子线程完成请使用 `await` / `await_all` 或 `think(wait=true)`。
+让当前线程进入 `waiting` 状态，让出调度权。当 inbox 有新消息时自动唤醒。等待子线程完成请使用 `think(wait=true)`。
 
 > **与 meta.md 的关系**：当前 base 实际定义了**四原语**（open/submit/close/wait），而 meta.md 子树 3 早期版本写的是"三原语 + mark"。这里以代码为准，meta.md 需在 Phase 8 修正。
 

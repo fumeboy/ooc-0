@@ -100,8 +100,6 @@ executable/
 │   ├── return.ts
 │   ├── compact.ts
 │   ├── set_plan.ts
-│   ├── await.ts
-│   ├── await_all.ts
 │   └── defer.ts
 ├── sandbox/          # program 执行沙箱和 effect 追踪
 │   ├── executor.ts

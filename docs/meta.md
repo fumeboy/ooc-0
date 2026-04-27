@@ -313,7 +313,7 @@ Object（对象）
 │   │   │
 │   │   ├── 单线程循环 ── 每个 running 线程轮流执行一轮 ThinkLoop
 │   │   ├── 子线程创建 ── think(fork) 创建子线程处理子任务
-│   │   ├── 等待机制 ── await/await_all 等待子线程完成
+│   │   ├── 等待机制 ── think(wait=true) / talk(wait=true) 等待子线程或对方回复
 │   │   └── 完成传播 ── 子线程 return → 结果写入父线程 inbox → 唤醒父线程
 │   │
 │   ├── Effect / 副作用（G10）
@@ -686,7 +686,7 @@ Engine（线程树执行引擎）
 ├── 子线程协作（think 统一）
 │   ├── think(fork) ── 创建子线程处理子任务（替代 create_sub_thread）
 │   ├── think(continue, threadId) ── 向已创建的子线程追加消息（done 线程自动复活；替代 continue_sub_thread）
-│   ├── await / await_all ── 等待子线程完成
+│   ├── think(wait=true) ── 派生子线程并等待其完成
 │   └── 子线程 return → 结果写入父线程 inbox → 唤醒父线程
 │
 ├── Session 管理
