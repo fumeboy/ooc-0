@@ -33,7 +33,7 @@ listIssues(filters?): IssueIndexEntry[]
 
 ## 共享但受限
 
-所有对象都能激活 issue-discussion（通过 readme 的 traits 列表或 open(type=trait)）。但只能做**有限操作**：
+所有对象都能激活 issue-discussion（通过 readme 的 traits 列表或 `open(title="加载 issue 讨论能力", type=trait, name=..., description="...")`）。但只能做**有限操作**：
 
 | 能做 | 不能做 |
 |---|---|

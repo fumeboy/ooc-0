@@ -3,7 +3,6 @@ namespace: library
 name: lark/im
 type: how_to_use_tool
 version: 1.0.0
-when: never
 description: >-
   飞书即时通讯：收发消息和管理群聊。发送和回复消息、搜索聊天记录、管理群聊成员、上传下载图片和文件、管理表情回复。当用户需要发消息、查看或搜索聊天记录、下载聊天中的文件、查看群成员时使用。
 deps: []

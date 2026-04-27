@@ -21,7 +21,7 @@
 | 子目录 | 内容 | 主要基因 |
 |---|---|---|
 | [基础/](基础/) | effect + 线程树调度（合作的底层） | G8, G9, G10 |
-| [消息/](消息/) | talk / talk_sync / return / inbox / 跨对象协作 | G8 |
+| [消息/](消息/) | talk / talk(wait=true) / return / inbox / 跨对象协作 | G8 |
 | [结构化/](结构化/) | Issue / Task / Comment + 看板 trait | — |
 | [角色/](角色/) | Supervisor（全局代理） | — |
 
@@ -39,11 +39,11 @@
 
 ### 消息是合作的原语（G8）
 
-talk / talk_sync / return 是对象间通信的三个原语：
+talk / return 是对象间通信的核心原语；等待回复是 talk 的 `wait=true` 模式：
 
 ```
-talk(target, message)          — 异步：发送不等待
-talk_sync(target, message)     — 同步：发送等回复
+talk(target, msg)              — 异步：发送不等待
+talk(target, msg, wait=true)   — 同步等待：发送后当前线程 waiting
 return(summary)                — 完成线程，返回父/发起方
 ```
 

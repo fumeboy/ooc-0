@@ -7,20 +7,20 @@
 | 文档 | 内容 |
 |---|---|
 | [talk.md](talk.md) | 异步对话：发送不等待 |
-| [talk-sync.md](talk-sync.md) | 同步对话：发送等回复 |
+| [talk-sync.md](talk-sync.md) | 历史名：现已折叠为 `talk(wait=true)` |
 | [return.md](return.md) | 完成当前线程，返回父线程 |
 | [inbox.md](inbox.md) | 消息收件箱机制 |
 | [跨对象协作.md](跨对象协作.md) | Session + 线程树联动 |
 
-## 三个通信原语
+## 通信原语
 
 ```
-talk(target, message)           ← 异步：A → B，A 不等
-talk_sync(target, message)      ← 同步：A → B，A 等回复
-return(summary)                 ← 结束线程，返回父/发起方
+talk(target, msg, wait=false)    ← 异步：A → B，A 不等
+talk(target, msg, wait=true)     ← 同步等待：A → B，A 等回复后继续
+return(summary)                  ← 结束线程，返回父/发起方
 ```
 
-这三个动作覆盖了几乎所有对象间交互模式。
+`talk_sync` 不再是独立 command，只作为历史术语指代 `talk(wait=true)`。
 
 ## inbox — 消息接收端
 

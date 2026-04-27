@@ -7,7 +7,6 @@
 ```yaml
 name: kernel/reviewable
 type: how_to_think
-when: never
 deps: [verifiable]
 description: 两阶段审查：先验证合规性（做对了吗），再验证质量（做好了吗）
 ```
@@ -56,11 +55,11 @@ Stage 2 给出**改进建议**，不阻塞通过（合规即可 merge）。
 
 通常由**另一个对象**（如 `code-reviewer` 角色）激活此 trait 后对代码做审查。
 
-## 无 activates_on.paths
+## 无 activates_on.show_content_when
 
-reviewable 没有 `activates_on.paths`。激活方式：
-- 对象主动 `open(type=trait, name=kernel/reviewable)`
-- 在 `supervisor` 或 `code-reviewer` 的 readme 中 always 激活
+reviewable 没有 `activates_on.show_content_when`。激活方式：
+- 对象主动 `open(title="加载审查能力", type=trait, name=kernel/reviewable, description="查看审查指南")`
+- 在 `supervisor` 或 `code-reviewer` 的 readme 中默认激活
 
 ## 源码锚点
 

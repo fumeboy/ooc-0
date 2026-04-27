@@ -1,6 +1,8 @@
 # Refine Tool + Knowledge Activator Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+>
+> 2026-04-27 实现注记：计划中早期任务仍使用 `COMMAND_TREE` / `command-tree.ts` 名称；当前实现已重构为扁平 `COMMAND_TABLE` / `kernel/src/thread/command-table.ts`，并通过 `getOpenableCommands()` 动态生成 openable command 枚举。
 
 **Goal:** Replace `submit(partial=true)` with a dedicated `refine` tool, remove `args` from `submit`, and unify trait/view/relation activation under a renamed `Knowledge Activator`.
 

@@ -3,7 +3,6 @@ namespace: self
 name: main
 kind: view
 type: how_to_interact
-when: never
 description: Supervisor 的主交互视图（Phase 3 示例 view）
 ---
 

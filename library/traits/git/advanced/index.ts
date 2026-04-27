@@ -189,23 +189,37 @@ export async function blame(
     let i = 0;
     while (i < rawLines.length) {
       const header = rawLines[i];
+      if (!header) {
+        i++;
+        continue;
+      }
       const m = header.match(/^([0-9a-f]+) (\d+) (\d+)/);
       if (!m) {
         i++;
         continue;
       }
       const commit = m[1];
-      const finalLine = parseInt(m[3], 10);
+      const finalLineRaw = m[3];
+      if (!commit || !finalLineRaw) {
+        i++;
+        continue;
+      }
+      const finalLine = parseInt(finalLineRaw, 10);
       let author = "";
       let authorTime = 0;
       let j = i + 1;
-      while (j < rawLines.length && !rawLines[j].startsWith("\t")) {
+      while (j < rawLines.length && !rawLines[j]?.startsWith("\t")) {
         const ln = rawLines[j];
+        if (!ln) {
+          j++;
+          continue;
+        }
         if (ln.startsWith("author ")) author = ln.slice("author ".length);
         else if (ln.startsWith("author-time ")) authorTime = parseInt(ln.slice("author-time ".length), 10);
         j++;
       }
-      const content = j < rawLines.length && rawLines[j].startsWith("\t") ? rawLines[j].slice(1) : "";
+      const contentLine = rawLines[j];
+      const content = contentLine?.startsWith("\t") ? contentLine.slice(1) : "";
       const date = authorTime > 0 ? new Date(authorTime * 1000).toISOString() : "";
       lines.push({ lineNumber: finalLine, commit, author, date, content });
       i = j + 1;

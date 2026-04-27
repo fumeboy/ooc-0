@@ -12,7 +12,7 @@ interface InboxMessage {
   content: string | object;      // 消息内容
   ts: string;                    // 时间戳
   marked: "ack" | "ignore" | "todo" | null;  // 标记状态
-  remoteThreadId?: string;       // talk_sync 回复用
+  remoteThreadId?: string;       // talk(wait=true) 回复用
 }
 ```
 
@@ -22,7 +22,7 @@ interface InboxMessage {
 
 | 来源 | 示例 |
 |---|---|
-| **talk / talk_sync** | 其他对象发来的消息 |
+| **talk / talk(wait=true)** | 其他对象发来的消息 |
 | **system** | 系统通知（如线程错误、Session 事件） |
 | **thread_error** | 其他线程的失败通知（如果设置了监听） |
 
@@ -40,9 +40,10 @@ marked: "todo"    ← 待办
 通过任意 tool call 的 `mark` 参数：
 
 ```typescript
-submit(form_id, {
-  ...args,
-  mark: { id: "msg-123", action: "ack" }
+submit({
+  title: "提交当前动作",
+  form_id,
+  mark: [{ messageId: "msg-123", type: "ack", tip: "已处理" }]
 })
 ```
 

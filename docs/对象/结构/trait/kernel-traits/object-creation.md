@@ -7,9 +7,8 @@
 ```yaml
 name: kernel/object_creation
 type: how_to_interact
-when: never
 activates_on:
-  paths: [think]
+  show_content_when: [think]
 description: 创建新对象或完善对象身份的指南
 ```
 
@@ -50,7 +49,7 @@ object_creation 的 TRAIT.md 强调：一个好的 whoAmI 应该包含：
 用户：创建一个"代码评审助手"对象
 
 supervisor（根线程）:
-  open(type=command, command=think)
+  open(title="创建代码评审助手", type=command, command=think, description="派生子线程设计新对象")
   submit({
     title: "创建代码评审助手",
     context: "fork",
@@ -94,8 +93,9 @@ object_creation 不只用于新建——也用于**完善已有对象的 whoAmI*
 用户：帮我完善 alan 的 whoAmI，加一些关于他对哲学的偏好
 
 supervisor:
-  open(command=think)
-  submit({ title: "完善 alan 身份", context: "fork", msg: "..." })
+  open(title="完善 alan 身份", command=think, description="派生子线程完善 alan 的 whoAmI")
+  refine(form_id, { context: "fork", msg: "..." })
+  submit({ title: "完善 alan 身份", form_id })
 ```
 
 子线程读取现有 readme，分析缺失部分，向用户确认新内容，通过 SelfMeta 写回。

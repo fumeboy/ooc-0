@@ -14,7 +14,7 @@
 </thinking>
 
 <tool_call>
-open(command=program)
+open(title="执行脚本", type=command, command=program, description="运行一段程序")
 </tool_call>
 ```
 
@@ -104,7 +104,7 @@ thinking 和 content 通过**不同字段**返回，天然分开。不需要 par
 {
   "type": "tool_use",
   "tool": "open",
-  "args": { "type": "command", "command": "program", "description": "..." },
+  "args": { "title": "执行脚本", "type": "command", "command": "program", "description": "..." },
   "result": { "form_id": "f_123" },
   "ts": "..."
 }

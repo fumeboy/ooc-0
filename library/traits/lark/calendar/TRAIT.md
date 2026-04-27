@@ -3,7 +3,6 @@ namespace: library
 name: lark/calendar
 type: how_to_use_tool
 version: 1.0.0
-when: never
 description: >-
   飞书日历（calendar）：提供日历与日程（会议）的全面管理能力。核心场景包括：查看/搜索日程、创建/更新日程、管理参会人、查询忙闲状态及推荐空闲时段。高频操作请优先使用
   Shortcuts：+agenda（快速概览今日/近期行程）、+create（创建日程并按需邀请参会人）、+freebusy（查询用户主日历的忙闲信息和rsvp的状态）、+suggestion（针对时间未确定的预约日程需求，提供多个时间推荐方案）。

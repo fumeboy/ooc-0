@@ -83,7 +83,7 @@ Provider（GLM、Claude 等）
 | Engine 主循环 | `kernel/src/thread/engine.ts` |
 | Provider 接口 | `kernel/src/thinkable/client.ts` |
 | TOML 解析 | `kernel/src/thread/parser.ts` |
-| Tool 定义 | `kernel/src/thread/tools.ts` |
+| Tool 定义 | `kernel/src/thread/tools/`（每个 tool 一个文件，`index.ts` 聚合） |
 | Context 构建 | `kernel/src/thread/context-builder.ts` |
 
 ## 与基因的关联

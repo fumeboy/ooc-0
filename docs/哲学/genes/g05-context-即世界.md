@@ -1,14 +1,12 @@
 ## G5: Context 是对象每次思考时看到的全部信息
 
 <!--
-@referenced-by kernel/src/types/context.ts — implemented-by — Context, ContextWindow, WindowConfig
-@referenced-by kernel/src/context/builder.ts — implemented-by — buildContext 构建
-@referenced-by kernel/src/context/formatter.ts — implemented-by — Context → LLM prompt
-@referenced-by kernel/src/process/focus.ts — implemented-by — 结构化遗忘（栈进/栈出）
-@referenced-by kernel/src/process/render.ts — implemented-by — focus 路径详细、其余摘要
-@referenced-by kernel/src/types/process.ts — implemented-by — focus 光标驱动遗忘
+@referenced-by kernel/src/thread/context-builder.ts — implemented-by — Thread Context 构建与渲染
+@referenced-by kernel/src/thread/visibility.ts — implemented-by — focus 线程视角下的可见性分类
+@referenced-by kernel/src/types/context.ts — referenced-by — 兼容类型
+@referenced-by kernel/src/types/process.ts — referenced-by — 兼容 ProcessView 类型
 @referenced-by kernel/src/knowledge/activator.ts — referenced-by — KnowledgeRef 决定 context 注入内容
-@referenced-by kernel/src/flow/thinkloop.ts — implemented-by — 每轮构建 Context
+@referenced-by kernel/src/thread/engine.ts — implemented-by — 每轮构建 Context
 -->
 
 **Context（上下文）**是系统为 Flow 构建的结构化输入。
@@ -33,10 +31,10 @@ Context 就是对象的「此刻能看到的信息」。
 
 ### 注意力管理与结构化遗忘
 
-有限理性意味着 Context 有容量上限。新模型通过**行为树 + focus 光标**（G9）
+有限理性意味着 Context 有容量上限。当前模型通过**线程树 + focus 线程**（G9）
 从源头控制信息的进出，而非事后压缩：
 
-- **focus 在哪个节点**，就只加载该节点及其祖先路径的详细信息
+- **focus 在哪个线程**，就只加载该线程及其祖先路径的详细信息
 - **兄弟节点**只保留一行摘要
 - **已完成的子节点**被回收为完成摘要
 
@@ -54,4 +52,3 @@ Context 就是对象的「此刻能看到的信息」。
 - 真正的学习 = 从经历中提取模式（沉淀为 trait），然后安全地遗忘原始细节
 
 ---
-

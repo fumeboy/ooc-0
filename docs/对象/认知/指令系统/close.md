@@ -44,10 +44,10 @@ trait 类型的 close **等于"用完了，释放 Context 空间"**。
 ### 场景 1：选错了 command
 
 ```
-LLM: open(command=program)
+LLM: open(title="执行程序", command=program, description="准备运行程序")
 LLM: 啊，其实我想用 talk 而不是 program
 LLM: close(form_id=xxx)
-LLM: open(command=talk)
+LLM: open(title="发起对话", command=talk, description="准备发消息")
 LLM: submit(...)
 ```
 
@@ -56,7 +56,7 @@ LLM: submit(...)
 ### 场景 2：不再需要某 trait 的详细文档
 
 ```
-LLM: open(type=trait, name=kernel/computable/file_ops)
+LLM: open(title="加载文件操作文档", type=trait, name=kernel/computable/file_ops, description="查看文件操作 API")
 LLM: 阅读了详细 API
 LLM: submit program 执行 writeFile
 LLM: 不再需要 file_ops 的详细说明了
@@ -68,9 +68,9 @@ LLM: close(form_id=xxx)  // 释放 Context
 ### 场景 3：多个 trait 临时加载
 
 ```
-LLM: open(type=trait, name=A) → 看一眼
+LLM: open(title="查看 A", type=trait, name=A, description="查看 A 的说明") → 看一眼
 LLM: close(form_id=A)
-LLM: open(type=trait, name=B) → 看一眼
+LLM: open(title="查看 B", type=trait, name=B, description="查看 B 的说明") → 看一眼
 LLM: close(form_id=B)
 ```
 
@@ -81,8 +81,8 @@ LLM: close(form_id=B)
 **submit 后不需要手动 close**：
 
 ```
-open(command=program) → f_001
-submit(form_id=f_001, code=...) → form 状态 submitted
+open(title="执行程序", command=program, description="准备运行程序") → f_001
+refine(form_id=f_001, args={code: ...}) → submit(form_id=f_001) → form 状态 submitted
 // 此时 computable trait 的 refcount 已自动 --
 ```
 
@@ -98,8 +98,8 @@ return(...) → f_001, f_002 自动 cancel，关联 trait 全部 deactivate
 如果多个 form 同时激活同一个 trait，close 一个不会立即卸载：
 
 ```
-form_1: open(command=program) → computable.refcount=1
-form_2: open(command=program) → computable.refcount=2
+form_1: open(title="写配置", command=program, description="写配置") → computable.refcount=1
+form_2: open(title="写日志", command=program, description="写日志") → computable.refcount=2
 close(form_1) → computable.refcount=1 （computable 还在）
 close(form_2) → computable.refcount=0 （computable 真正卸载）
 ```
@@ -113,7 +113,7 @@ close(form_2) → computable.refcount=0 （computable 真正卸载）
 
 | 概念 | 实现 |
 |---|---|
-| close tool 定义 | `kernel/src/thread/tools.ts` |
+| close tool 定义 | `kernel/src/thread/tools/close.ts` |
 | handleClose | `kernel/src/thread/engine.ts` |
 | FormManager.cancel | `kernel/src/thread/form.ts` |
 | deactivateTrait | `kernel/src/thread/tree.ts` |

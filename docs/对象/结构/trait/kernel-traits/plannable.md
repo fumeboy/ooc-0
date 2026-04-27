@@ -7,13 +7,12 @@
 ```yaml
 name: kernel/plannable
 type: how_to_think
-when: never
 activates_on:
-  paths: [think, set_plan]
+  show_content_when: [think, set_plan]
 description: 任务拆解与规划 — 先想清楚再动手
 ```
 
-> 2026-04-22 起 plannable 的 activates_on.paths 统一为 `think` + `set_plan`。
+> 2026-04-22 起 plannable 的 activates_on.show_content_when 统一为 `think` + `set_plan`。
 > 旧命令 `create_sub_thread` / `continue_sub_thread` 已被 `think(context="fork"|"continue")` 替代（不做兼容层）。
 
 ## 核心原则
@@ -40,13 +39,13 @@ think {
 #### think(fork) — 创建子线程
 
 ```
-open(type=command, command=think, description="派生搜索子任务")
-submit(form_id, {
-  title: "搜索相关文档",              // 同时作为子线程名
+open(title="搜索相关文档", type=command, command=think, description="派生搜索子任务")
+refine(form_id, {
   context: "fork",
   msg: "在 /docs 下查找与 X 相关的 md 文件",
   traits: ["kernel/computable"]       // 可选
 })
+submit(title="搜索相关文档", form_id)  // title 同时作为子线程名
 ```
 
 在线程树下创建一个子节点，让子节点独立处理子任务。子线程完成后 return 结果给父线程。
@@ -56,13 +55,13 @@ submit(form_id, {
 #### think(continue) — 向子线程追加消息
 
 ```
-open(type=command, command=think, description="给子线程补充信息")
-submit(form_id, {
-  title: "补充 Y 的检查要求",
+open(title="补充信息", type=command, command=think, description="给子线程补充信息")
+refine(form_id, {
   context: "continue",
   threadId: "th_xxx",
   msg: "继续：再检查一下 Y"
 })
+submit(title="补充 Y 的检查要求", form_id)
 ```
 
 向已创建的子线程追加消息（必须指定 `threadId`）。若子线程已 done，自动复活为 running。
@@ -70,10 +69,11 @@ submit(form_id, {
 ### set_plan — 写入计划
 
 ```
-open(type=command, command=set_plan)
-submit(form_id, {
+open(title="保存计划", type=command, command=set_plan, description="写入当前线程计划")
+refine(form_id, {
   text: "..."   // 当前线程的文字计划
 })
+submit(title="保存计划", form_id)
 ```
 
 把当前线程的计划以文字形式写入。对 LLM 可见（进入 Context），帮助它保持对整个任务的视野。

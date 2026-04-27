@@ -9,14 +9,12 @@
 ```typescript
 interface Form {
   id: string;                 // form_id
-  type: "command" | "trait" | "skill";
-  command?: string;           // type=command 时
-  name?: string;              // type=trait 或 skill 时
+  command: string;            // command 名称；trait/skill/file 也以内部 form 表示
   description: string;
-  status: "open" | "submitted" | "cancelled";
-  activatedTraits: string[];  // 这个 form 触发激活了哪些 trait
+  accumulatedArgs: Record<string, unknown>;
+  commandPaths: string[];
+  loadedTraits: string[];     // 这个 form 触发激活了哪些 trait
   createdAt: number;
-  threadId: string;
 }
 ```
 
@@ -25,7 +23,8 @@ interface Form {
 ```typescript
 class FormManager {
   begin(threadId, { type, command, name, description }): formId  // open
-  submit(formId, args): void                                      // submit
+  applyRefine(formId, args): ActiveForm | null                    // refine
+  submit(formId): ActiveForm | null                               // submit
   cancel(formId): void                                            // close 或线程 return
 
   getActive(threadId): Form[]                                     // activeForms
@@ -41,10 +40,10 @@ begin(open)
   → activatedTraits 记录本次 open 激活的 trait
   → 返回 formId
 
-submit(formId, args)
-  → 验证 form status == open
+submit(formId)
+  → 取出累积 args
   → 根据 form.command 执行
-  → Form 状态 → submitted
+  → Form 移出 activeForms
   → 释放 activatedTraits（refcount--）
 
 cancel(formId)
@@ -79,7 +78,7 @@ cancel(formId)
 如果没有 FormManager，可能出现：
 
 ```
-open(command=program) → activateTrait(computable)
+open(title="执行程序", command=program, description="准备运行程序") → activateTrait(computable)
 ... （几十轮过去，LLM 忘了当初 open 的意图）...
 线程 return → 但 trait 没人 deactivate → 永久占用内存
 ```
@@ -107,7 +106,7 @@ form_2 submit → deactivateTrait(computable) → refcount=0  （真正卸载）
 
 | 组件 | 职责 |
 |---|---|
-| **Tool 层**（open/submit/close 四原语） | LLM 交互接口 |
+| **Tool 层**（open/refine/submit/close/wait 五原语） | LLM 交互接口 |
 | **Engine** | 解析 tool call，分派给 FormManager |
 | **FormManager** | 跟踪 form 生命周期 |
 | **tree.ts** | 实际管理线程的 activatedTraits + refcount |

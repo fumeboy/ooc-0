@@ -47,7 +47,7 @@ Kernel 是 OOC 系统的**思想引擎工程师**。
    - 作用域链：Context 从当前帧到帧 0 的自然继承
 
 4. **经验沉淀机制（G12）**
-   - Trait 的有机成长：readme-only → readme+index.ts → always-on
+   - Trait 的有机成长：readme-only → readme+index.ts → 默认激活
    - Mirror 行为观察 + Trait Hooks 生命周期钩子
    - 多轮经验积累的验证
 
@@ -179,14 +179,12 @@ Kernel: 评估现有 Trait 机制 → 如果不支持，设计扩展方案
 
 | 目录/文件 | 职责 |
 |----------|------|
-| `kernel/src/flow/thinkloop.ts` | ThinkLoop 核心循环 |
-| `kernel/src/flow/flow.ts` | Flow 对象生命周期 |
-| `kernel/src/flow/parser.ts` | LLM 输出解析 |
-| `kernel/src/context/` | Context 构建与格式化 |
-| `kernel/src/process/` | 行为树 CRUD + focus + 渲染 |
+| `kernel/src/thread/engine.ts` | Thread 执行循环与调度入口 |
+| `kernel/src/thread/context-builder.ts` | Thread Context 构建与格式化 |
+| `kernel/src/thread/commands/` | openable command 定义与执行逻辑 |
+| `kernel/src/thread/tools/` | OpenAI tool schema 与工具集合 |
 | `kernel/src/trait/` | Trait 加载、激活、注册 |
-| `kernel/src/executable/` | 代码执行器 + Effect 追踪 |
-| `kernel/src/world/` | World、Scheduler、Router、Session |
+| `kernel/src/world/` | World、对象会话与对外编排 |
 | `kernel/src/persistence/` | 持久化层 |
 | `kernel/src/types/` | 全局类型定义 |
 | `kernel/src/server/` | HTTP Server + SSE |

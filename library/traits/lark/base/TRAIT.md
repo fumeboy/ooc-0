@@ -3,7 +3,6 @@ namespace: library
 name: lark/base
 type: how_to_use_tool
 version: 1.2.0
-when: never
 description: >-
   当需要用 lark-cli
   操作飞书多维表格（Base）时调用：适用于建表、字段管理、记录读写、视图配置、历史查询，以及角色/表单/仪表盘管理；也适用于把旧的 +table /

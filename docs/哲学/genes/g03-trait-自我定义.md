@@ -1,12 +1,12 @@
 ## G3: Trait 是对象的自我定义单元
 
 <!--
-@referenced-by kernel/src/types/trait.ts — implemented-by — TraitDefinition, TraitWhen, TraitMethod
+@referenced-by kernel/src/types/trait.ts — implemented-by — TraitDefinition, TraitMethod
 @referenced-by kernel/src/trait/loader.ts — implemented-by — 从文件系统加载 Trait
 @referenced-by kernel/src/knowledge/activator.ts — implemented-by — KnowledgeRef 统一类型 + 反向索引 + traitId 构造
 @referenced-by kernel/src/trait/registry.ts — implemented-by — 方法全量注册
-@referenced-by kernel/src/context/builder.ts — implemented-by — Trait 内容注入 context
-@referenced-by kernel/src/flow/thinkloop.ts — implemented-by — Trait 元编程 API
+@referenced-by kernel/src/thread/context-builder.ts — implemented-by — Trait 内容注入 context
+@referenced-by kernel/src/thread/engine.ts — implemented-by — Trait 方法调用与 program 沙箱
 @referenced-by kernel/web/src/features/TraitsTab.tsx — rendered-by
 @referenced-by docs/对象/结构/trait/README.md — extended-by
 -->
@@ -53,15 +53,15 @@ traits/{trait_name}/
 - **激活状态**：决定的是 trait 的 readme.md 是否被注入到当前 think 的 context 中，
   以及 trait 的 bias 内容是否影响当前的推理。激活是动态的、按需的。
 
-### Trait 的 when 字段
+### Trait 的激活字段
 
-每个 trait 的 readme.md 头部声明 `when` 字段，控制加载策略：
+knowledge frontmatter 不再使用 `when`。按需激活由 `activates_on` 控制：
 
-| when 值 | 加载策略 | 示例 |
-|---------|---------|------|
-| `always` | 系统自动激活，每次 think 都包含 | computable |
-| 自然语言条件 | 以一行摘要出现在 context 中，对象用 `activateTrait(name)` 按需加载完整内容 | "当需要创建新对象时" |
-| `never` / 无 | 只能被其他 trait 依赖或被 program 显式引用 | 内部工具 trait |
+| 字段 | 加载策略 | 示例 |
+|------|---------|------|
+| `show_description_when` | 命中 command path 时只展示描述 | 提示某个 view/trait 可用 |
+| `show_content_when` | 命中 command path 时展示正文内容 | `program` 激活 computable |
+| 对象默认激活清单 | 每轮 think 都包含 | 对象的长期直觉 / kernel:base |
 
 条件 trait 的激活权在对象自己手中——对象看到摘要后决定是否需要加载。
 这是 G3「自我立法」的体现：对象管理自己的认知资源。

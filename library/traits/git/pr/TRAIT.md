@@ -3,7 +3,6 @@ namespace: library
 name: git/pr
 type: how_to_use_tool
 version: 1.0.0
-when: "当需要创建 / 查看 / 评论 / 合并 GitHub PR 时"
 description: GitHub PR 工作流（基于 gh CLI）：create_pr / list_prs / get_pr / get_pr_checks / comment_on_pr / merge_pr
 deps:
   - library:git/ops
@@ -11,7 +10,7 @@ deps:
 
 # GitHub PR 工作流
 
-通过 `gh` CLI 完成 PR 全链路。所有命令在对象的 rootDir 下执行。
+通过 `gh` CLI 完成 PR 全链路。所有命令在对象的 rootDir 下执行。在 `program` 沙箱内使用 `callMethod("library:git/pr", method, args)` 调用；单个方法也可以用 `open({ type: "command", command: "program", title, trait: "library:git/pr", method })` 发起。
 
 ## 前置
 
@@ -23,7 +22,7 @@ deps:
 ### create_pr({ base, head, title, body, draft? })
 
 ```javascript
-const r = await create_pr({
+const r = await callMethod("library:git/pr", "create_pr", {
   base: "main",
   head: "feat/login",
   title: "feat: 新增登录页",
@@ -39,7 +38,7 @@ const r = await create_pr({
 - `limit`: 返回条数（默认 30）
 
 ```javascript
-const r = await list_prs({ state: "open" });
+const r = await callMethod("library:git/pr", "list_prs", { state: "open" });
 // r.data = [{ number, title, state, author, headRefName, baseRefName, url, createdAt, updatedAt }, ...]
 ```
 
@@ -48,14 +47,14 @@ const r = await list_prs({ state: "open" });
 返回 PR 详情，**包含 diff 和评论**。适合 review 场景。
 
 ```javascript
-const r = await get_pr({ number: 42 });
+const r = await callMethod("library:git/pr", "get_pr", { number: 42 });
 // r.data = { number, title, state, body, diff, comments: [{ author, body, createdAt }], ... }
 ```
 
 ### get_pr_checks({ number })
 
 ```javascript
-const r = await get_pr_checks({ number: 42 });
+const r = await callMethod("library:git/pr", "get_pr_checks", { number: 42 });
 // r.data = {
 //   checks: [{ name, state, conclusion, link }, ...],
 //   summary: "pass" | "fail" | "pending" | "unknown"
@@ -71,10 +70,10 @@ const r = await get_pr_checks({ number: 42 });
 
 ```javascript
 // 顶层评论
-await comment_on_pr({ number: 42, body: "LGTM，合并前建议补一个 E2E" });
+await callMethod("library:git/pr", "comment_on_pr", { number: 42, body: "LGTM，合并前建议补一个 E2E" });
 
 // 回复 diff 里某条 review comment
-await comment_on_pr({
+await callMethod("library:git/pr", "comment_on_pr", {
   number: 42,
   body: "已修复，看看这样可以吗？",
   inReplyTo: "PRRC_kwDOXXXX",  // 或 "123456789"（数字 REST id）
@@ -86,7 +85,7 @@ await comment_on_pr({
 **高危**：必须显式传 `method`（squash / merge / rebase），推荐在用户明确确认后调用。
 
 ```javascript
-await merge_pr({ number: 42, method: "squash", deleteBranch: true });
+await callMethod("library:git/pr", "merge_pr", { number: 42, method: "squash", deleteBranch: true });
 ```
 
 ## 注意

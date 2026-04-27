@@ -3,7 +3,6 @@ namespace: library
 name: sessions/index
 type: how_to_use_tool
 version: 1.0.0
-when: never
 description: >-
   Sessions 索引与筛选能力。快速检索、筛选和分析 OOC 系统中的
   Sessions（会话/Flow）。支持按参与对象、时间范围、关键词、状态等条件组合筛选。当需要查找历史对话、分析对象活动、回顾任务执行记录时使用。

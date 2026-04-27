@@ -3,7 +3,6 @@ namespace: library
 name: lark/mail
 type: how_to_use_tool
 version: 1.0.0
-when: never
 description: >-
   飞书邮箱 — draft, compose, send, reply, forward, read, and search emails; manage
   drafts, folders, labels, contacts, and attachments. Use when user mentions

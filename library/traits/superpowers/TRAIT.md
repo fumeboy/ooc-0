@@ -2,7 +2,6 @@
 namespace: library
 name: superpowers
 type: how_to_use_tool
-when: "当需要使用 Superpowers 工作流方法论时"
 description: Superpowers 工作流方法论索引（子 trait 见本目录）
 ---
 

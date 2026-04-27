@@ -2,7 +2,6 @@
 namespace: library
 name: lark
 type: how_to_use_tool
-when: "当需要与飞书/Lark 交互时"
 description: 飞书/Lark 能力索引（子 trait 见本目录）
 ---
 

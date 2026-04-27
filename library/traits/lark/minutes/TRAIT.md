@@ -3,7 +3,6 @@ namespace: library
 name: lark/minutes
 type: how_to_use_tool
 version: 1.0.0
-when: never
 description: >-
   飞书妙记：获取妙记基础信息（标题、封面、时长）和相关的 AI 产物（总结、待办、章节）。飞书妙记的 URL 格式为:
   http(s)://<host>/minutes/<minute-token>

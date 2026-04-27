@@ -3,7 +3,6 @@ namespace: library
 name: news/aggregator
 type: how_to_use_tool
 version: 1.0.0
-when: never
 description: >-
   Comprehensive news aggregator that fetches, filters, and deeply analyzes
   real-time content from 28 sources including Hacker News, GitHub, Hugging Face

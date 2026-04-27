@@ -3,13 +3,12 @@ namespace: library
 name: http/client
 type: how_to_use_tool
 version: 1.0.0
-when: "当需要发送 HTTP GET/POST 请求时"
 description: HTTP 请求能力：GET/POST/通用请求
 deps: []
 ---
 # HTTP 请求能力
 
-你可以通过以下 API 发起 HTTP 请求。基于 Bun 原生 fetch 实现。
+你可以通过 `program` 沙箱里的 `callMethod("library:http/client", method, args)` 发起 HTTP 请求。基于 Bun 原生 fetch 实现。单个方法也可以通过 `open({ type: "command", command: "program", title, trait: "library:http/client", method })` 发起。
 
 ## 可用 API
 
@@ -22,7 +21,7 @@ deps: []
 - `options.timeout` — 超时时间（毫秒，默认 30000）
 
 ```javascript
-const result = await httpGet("https://api.example.com/users");
+const result = await callMethod("library:http/client", "httpGet", { url: "https://api.example.com/users" });
 // result.data = {
 //   status: 200,
 //   headers: { "content-type": "application/json", ... },
@@ -40,7 +39,10 @@ const result = await httpGet("https://api.example.com/users");
 - `options.timeout` — 超时时间（毫秒，默认 30000）
 
 ```javascript
-const result = await httpPost("https://api.example.com/users", { name: "Alice" });
+const result = await callMethod("library:http/client", "httpPost", {
+  url: "https://api.example.com/users",
+  body: { name: "Alice" },
+});
 // result.data = {
 //   status: 201,
 //   headers: { ... },
@@ -59,7 +61,9 @@ const result = await httpPost("https://api.example.com/users", { name: "Alice" }
 - `options.timeout` — 超时时间（毫秒，默认 30000）
 
 ```javascript
-const result = await httpRequest("PUT", "https://api.example.com/users/1", {
+const result = await callMethod("library:http/client", "httpRequest", {
+  method: "PUT",
+  url: "https://api.example.com/users/1",
   body: { name: "Bob" },
   headers: { "Authorization": "Bearer token123" },
   timeout: 10000,

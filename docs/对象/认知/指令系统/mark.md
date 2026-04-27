@@ -7,8 +7,8 @@
 如果"标记消息"是一个独立指令（如 `mark_inbox`），LLM 每处理一条消息都要：
 
 ```
-open(command=mark_inbox) → submit → 处理完这条消息
-open(command=program) → submit → 真正要做的事
+open(title="标记消息", command=mark_inbox, description="标记 inbox 消息") → submit → 处理完这条消息
+open(title="执行查询", command=program, description="真正要做的事") → submit → 真正要做的事
 ```
 
 每处理一条消息多两轮 tool call，浪费 token。
@@ -20,25 +20,28 @@ open(command=program) → submit → 真正要做的事
 ```typescript
 // 在任何 tool 上附加
 open({
+  title: "查询 X",
   type: "command",
   command: "program",
   description: "...",
-  mark: { id: "msg-123", action: "ack" }   // 附加
+  mark: [
+    { messageId: "msg-123", type: "ack", tip: "已处理" }
+  ]
 })
 
 submit({
   form_id: "f_001",
-  ...args,
+  title: "执行查询",
   mark: [
-    { id: "msg-123", action: "ack" },
-    { id: "msg-456", action: "ignore" }
-  ]  // 也可以是数组，标记多条
+    { messageId: "msg-123", type: "ack", tip: "已处理" },
+    { messageId: "msg-456", type: "ignore", tip: "与当前任务无关" }
+  ]
 })
 ```
 
-## 三种 action
+## 三种 type
 
-| action | 含义 | 效果 |
+| type | 含义 | 效果 |
 |---|---|---|
 | `ack` | 已确认（常规处理） | 消息 marked=ack，减少下一轮 inbox 干扰 |
 | `ignore` | 忽略 | 消息 marked=ignore，前端会淡化 |
@@ -78,8 +81,8 @@ Inbox 有：
   - [new] msg-100: 用户问 "X 是什么？"
 
 LLM:
-  open(type=command, command=program, description="查询 X 的定义",
-       mark={id: "msg-100", action: "ack"})
+  open(type=command, command=program, title="查询 X", description="查询 X 的定义",
+       mark=[{messageId: "msg-100", type: "ack", tip: "已理解问题"}])
   // 同时确认已看到消息，并开启 program 来查询
 ```
 
@@ -92,12 +95,15 @@ Inbox 有：
   - [new] msg-102: 系统通知（无关）
 
 LLM:
-  submit({ form_id, target: "user", message: "回答 A 和 B：...",
-           mark: [
-             {id: "msg-100", action: "ack"},
-             {id: "msg-101", action: "ack"},
-             {id: "msg-102", action: "ignore"}
-           ]})
+  submit({
+    title: "提交回复",
+    form_id,
+    mark: [
+      {messageId: "msg-100", type: "ack", tip: "已回答"},
+      {messageId: "msg-101", type: "ack", tip: "已回答"},
+      {messageId: "msg-102", type: "ignore", tip: "无关通知"}
+    ]
+  })
 ```
 
 一次搞定三条消息的标记 + 一次回复。
@@ -110,7 +116,7 @@ LLM:
 
 | 概念 | 实现 |
 |---|---|
-| mark 参数定义 | `kernel/src/thread/tools.ts` (每个 tool 的 schema) |
+| mark 参数定义 | `kernel/src/thread/tools/schema.ts` (每个 tool 复用) |
 | mark 处理 | `kernel/src/thread/engine.ts` → `extractMarks` |
 | markInbox | `kernel/src/thread/tree.ts` / `inbox.ts` |
 

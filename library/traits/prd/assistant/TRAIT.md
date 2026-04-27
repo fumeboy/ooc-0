@@ -3,7 +3,6 @@ namespace: library
 name: prd/assistant
 type: how_to_use_tool
 version: 1.0.0
-when: never
 description: >-
   Write structured product requirements documents (PRDs) with problem
   statements, user stories, requirements, and success metrics. Use when speccing

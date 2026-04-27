@@ -7,12 +7,11 @@
 ```yaml
 name: kernel/debuggable
 type: how_to_think
-when: never
 description: 系统化调试四阶段流程，根因先于修复（需要时 activateTrait 加载）
 ```
 
-**注意**：debuggable 没有 `activates_on.paths`——它不响应任何 command。激活方式是：
-- LLM 主动 `open(type=trait, name=kernel/debuggable)`，或
+**注意**：debuggable 没有 `activates_on.show_content_when`——它不响应任何 command。激活方式是：
+- LLM 主动 `open(title="加载调试能力", type=trait, name=kernel/debuggable, description="查看调试指南")`，或
 - 其他 trait 的 hook 在出错时触发其激活
 
 ## 铁律
@@ -64,13 +63,11 @@ debuggable 定义了 `when_error` hook——当程序执行出错时，自动注
 4. 最小变更验证
 ```
 
-这个 hook **不是 activates_on.paths 触发**，而是 Engine 在 program 执行失败时检测到错误状态后注入。
+这个 hook **不是 activates_on.show_content_when 触发**，而是 Engine 在 program 执行失败时检测到错误状态后注入。
 
 ## 为什么不是默认激活
 
-既然调试能力这么重要，为什么 `when: never` 而不是 `always`？
-
-因为**不是每个任务都出错**。如果 always，每次 Context 里都塞 debuggable 的内容，占用 token。按需加载更经济。
+因为**不是每个任务都出错**。如果默认注入，每次 Context 里都塞 debuggable 的内容，占用 token。按需加载更经济。
 
 hook 机制保证了"**在真正需要时自动出现**"——对象不会错过调试指导。
 

@@ -5,10 +5,11 @@
 ## 签名
 
 ```typescript
-open(type=command, command=return)
-submit(form_id, {
+open(title="返回结果", type=command, command=return, description="完成当前线程并返回摘要")
+refine(form_id, {
   summary: "任务完成：找到 3 份相关文档..."
 })
+submit(title="返回结果", form_id)
 // → 线程 status = done
 ```
 
@@ -32,13 +33,13 @@ submit(form_id, {
 
 ## 激活的三个 trait
 
-`activates_on.paths: [return]` 的 trait 有三个：
+`activates_on.show_content_when: [return]` 的 trait 有三个：
 
 - **talkable** — 定义如何传递结果
 - **reflective** — 沉淀经验（when_finish hook）
 - **verifiable** — 验证证据（when_finish hook）
 
-open(command=return) 时，这三个 trait 全部激活——LLM 看到的 Context 会包含：
+`open(title="返回结果", command=return, description="完成当前线程")` 时，这三个 trait 全部激活——LLM 看到的 Context 会包含：
 - 如何写一个好的 return summary（talkable）
 - 结束前反思的提示（reflective）
 - 验证门禁（verifiable）

@@ -3,13 +3,18 @@ namespace: library
 name: git/ops
 type: how_to_use_tool
 version: 1.0.0
-when: "当需要执行 Git 版本控制操作时"
 description: Git 版本控制操作：status/diff/log/add/commit/branch/checkout/push/pull
 deps: []
 ---
 # Git 版本控制能力
 
-你可以通过以下 API 执行 Git 操作。所有命令在对象的 rootDir 下执行。
+你可以通过 `program` 沙箱里的 `callMethod("library:git/ops", method, args)` 执行 Git 操作。所有命令在对象的 rootDir 下执行。
+
+如果只是发起单个方法调用，也可以直接打开 program 方法表单：
+
+```javascript
+open({ type: "command", command: "program", title: "查看 Git 状态", trait: "library:git/ops", method: "gitStatus" });
+```
 
 ## 可用 API
 
@@ -18,7 +23,7 @@ deps: []
 获取工作区状态，包括分支信息和文件变更。
 
 ```javascript
-const result = await gitStatus();
+const result = await callMethod("library:git/ops", "gitStatus", {});
 // result.data = {
 //   branch: "main",
 //   ahead: 0,
@@ -38,13 +43,13 @@ const result = await gitStatus();
 
 ```javascript
 // 工作区差异
-const result = await gitDiff();
+const result = await callMethod("library:git/ops", "gitDiff", {});
 
 // 暂存区差异
-const result = await gitDiff({ staged: true });
+const result = await callMethod("library:git/ops", "gitDiff", { staged: true });
 
 // 指定文件差异
-const result = await gitDiff({ file: "src/index.ts" });
+const result = await callMethod("library:git/ops", "gitDiff", { file: "src/index.ts" });
 ```
 
 ### gitLog(options?)
@@ -54,7 +59,7 @@ const result = await gitDiff({ file: "src/index.ts" });
 - `options.limit` — 返回条数（默认 10）
 
 ```javascript
-const result = await gitLog({ limit: 5 });
+const result = await callMethod("library:git/ops", "gitLog", { limit: 5 });
 // result.data = [
 //   { hash: "abc1234...", message: "feat: 新功能", author: "Alice", date: "2026-03-30T10:00:00+08:00" },
 //   ...
@@ -68,7 +73,7 @@ const result = await gitLog({ limit: 5 });
 - `files` — 文件路径数组
 
 ```javascript
-const result = await gitAdd(["src/index.ts", "src/utils.ts"]);
+const result = await callMethod("library:git/ops", "gitAdd", { files: ["src/index.ts", "src/utils.ts"] });
 ```
 
 ### gitCommit(message)
@@ -78,7 +83,7 @@ const result = await gitAdd(["src/index.ts", "src/utils.ts"]);
 - `message` — 提交信息
 
 ```javascript
-const result = await gitCommit("feat: 新增用户登录功能");
+const result = await callMethod("library:git/ops", "gitCommit", { message: "feat: 新增用户登录功能" });
 // result.data = { hash: "abc1234..." }
 ```
 
@@ -91,10 +96,10 @@ const result = await gitCommit("feat: 新增用户登录功能");
 
 ```javascript
 // 只创建分支
-const result = await gitBranch("feature/login");
+const result = await callMethod("library:git/ops", "gitBranch", { name: "feature/login" });
 
 // 创建并切换
-const result = await gitBranch("feature/login", { checkout: true });
+const result = await callMethod("library:git/ops", "gitBranch", { name: "feature/login", checkout: true });
 ```
 
 ### gitCheckout(branch)
@@ -104,7 +109,7 @@ const result = await gitBranch("feature/login", { checkout: true });
 - `branch` — 目标分支名称
 
 ```javascript
-const result = await gitCheckout("main");
+const result = await callMethod("library:git/ops", "gitCheckout", { branch: "main" });
 ```
 
 ### gitPush(options?)
@@ -116,10 +121,10 @@ const result = await gitCheckout("main");
 
 ```javascript
 // 普通推送
-const result = await gitPush();
+const result = await callMethod("library:git/ops", "gitPush", {});
 
 // 设置上游并推送
-const result = await gitPush({ upstream: "origin feature/login" });
+const result = await callMethod("library:git/ops", "gitPush", { upstream: "origin feature/login" });
 ```
 
 ### gitPull(options?)
@@ -130,10 +135,10 @@ const result = await gitPush({ upstream: "origin feature/login" });
 
 ```javascript
 // 普通拉取
-const result = await gitPull();
+const result = await callMethod("library:git/ops", "gitPull", {});
 
 // rebase 模式
-const result = await gitPull({ rebase: true });
+const result = await callMethod("library:git/ops", "gitPull", { rebase: true });
 ```
 
 ## 注意事项
@@ -146,6 +151,6 @@ const result = await gitPull({ rebase: true });
 
 以下操作具有破坏性，执行前请三思：
 
-- `gitPush({ force: true })` — 强制推送，可能覆盖他人工作
+- `callMethod("library:git/ops", "gitPush", { force: true })` — 强制推送，可能覆盖他人工作
 - `gitCheckout` — 切换分支时未提交的更改可能丢失
 - `gitCommit` — 确保提交信息准确描述变更内容

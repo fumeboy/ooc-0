@@ -5,6 +5,9 @@
 > 范围：单 thread 内的 open/refine/submit/close 工具重构 + Knowledge Activator 概念升级
 > 明确不包含：sub thread、fork、嵌套 open、填表循环披露机制
 
+> 2026-04-27 实现注记：本文中的 `COMMAND_TREE` / `command-tree.ts` 是设计期命名。
+> 当前代码已改为扁平 `COMMAND_TABLE` / `kernel/src/thread/command-table.ts`，语义为多路径并行匹配。
+
 ## 背景
 
 目前系统里，意图表达和参数累积的机制存在两个让人不舒服的地方：

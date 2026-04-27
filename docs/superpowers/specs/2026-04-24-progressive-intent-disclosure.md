@@ -4,6 +4,7 @@ TODO 还没考虑清楚
 
 > ⚠️ **本文档中描述的 partial submit / submit(partial=true) 机制已于 2026-04-26 退役**，
 > 由 `refine` tool 取代。详见 `docs/superpowers/specs/2026-04-26-refine-tool-and-knowledge-activator.md`。
+> 文中的 `COMMAND_TREE` / 命令树节点设计也已于 2026-04-27 被扁平 `COMMAND_TABLE` / 多路径匹配取代。
 
 > 日期：2026-04-24
 > 状态：思考札记，待继续设计

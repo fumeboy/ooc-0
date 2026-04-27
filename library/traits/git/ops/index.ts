@@ -131,7 +131,7 @@ export async function gitStatus(
       // 领先/落后信息
       if (line.startsWith("# branch.ab ")) {
         const match = line.match(/\+(\d+) -(\d+)/);
-        if (match) {
+        if (match?.[1] && match[2]) {
           ahead = parseInt(match[1], 10);
           behind = parseInt(match[2], 10);
         }
@@ -154,6 +154,7 @@ export async function gitStatus(
           pathPart.length > 1
             ? pathPart[pathPart.length - 1]
             : parts[parts.length - 1];
+        if (!xy || !filePath) continue;
 
         // X 非 . 表示暂存区有变更
         if (xy[0] !== ".") staged.push(filePath);
@@ -291,7 +292,7 @@ export async function gitCommit(
 
     // 从输出中提取 commit hash（格式如 "[main abc1234] message"）
     const match = stdout.match(/\[[\w/.-]+ ([a-f0-9]+)\]/);
-    const hash = match ? match[1] : "";
+    const hash = match?.[1] ?? "";
 
     return toolOk({ hash });
   } catch (err: any) {

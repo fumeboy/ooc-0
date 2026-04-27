@@ -68,7 +68,8 @@ kernel/src/thread/
   ├── tree.ts              → 线程树/
   ├── scheduler.ts         → 线程树/调度.md（部分）+ 合作/基础/线程树调度.md（主）
   ├── engine.ts            → thinkloop/engine.md
-  ├── tools.ts             → 指令系统/
+  ├── tools/               → 指令系统/（每个 tool 一个文件，index.ts 聚合）
+  ├── commands/            → 指令系统/（每个 command 一个文件，index.ts 聚合）
   ├── form.ts              → 指令系统/form-manager.md
   ├── hooks.ts             → 指令系统 + trait 激活
   └── parser.ts            → thinkloop/（TOML 兼容）

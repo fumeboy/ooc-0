@@ -55,12 +55,16 @@ setTaskNewInfo(id, hasNewInfo): void
 trait 实现需要知道"当前 Session 的 issues/ tasks/ 目录在哪"。这通过一个特殊变量 `task_dir` 传入：
 
 ```typescript
-// methods.ts
-export const methods = {
-  createIssue: async (ctx, args) => {
+// index.ts
+export const llm_methods = {
+  createIssue: {
+    description: "创建 issue",
+    params: [],
+    fn: async (ctx, args) => {
     const taskDir = ctx.task_dir;  // e.g., "flows/sess_xxx/"
     const issuesPath = path.join(taskDir, "issues");
     // ...
+  },
   },
 };
 ```

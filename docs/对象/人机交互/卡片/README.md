@@ -31,7 +31,7 @@
 
 - 对象头像（ObjectAvatar）
 - **类型 Badge**：thinking / text / tool_use / mark_inbox
-  - 对 tool_use：显示工具名 + 参数摘要（如 `open(command=program)`）
+  - 对 tool_use：显示工具名 + 参数摘要（如 `open(title="执行程序", command=program)`）
 - 时间戳
 - 工具栏：Zoom-in / Copy / Ref
 

@@ -7,9 +7,8 @@
 ```yaml
 name: kernel/reflective
 type: how_to_think
-when: never
 activates_on:
-  paths: [return]
+  show_content_when: [return]
 description: 经验结晶与自我反思，SuperFlow 驱动的持续学习
 ```
 

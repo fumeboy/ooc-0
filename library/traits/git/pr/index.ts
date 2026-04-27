@@ -179,7 +179,11 @@ export async function createPr(
     if (!match) {
       return toolErr(`gh pr create 输出无法解析 PR number: ${url || stdout.trim()}`);
     }
-    return toolOk({ number: parseInt(match[1], 10), url });
+    const number = Number.parseInt(match[1] ?? "", 10);
+    if (Number.isNaN(number)) {
+      return toolErr(`gh pr create 输出无法解析 PR number: ${url || stdout.trim()}`);
+    }
+    return toolOk({ number, url });
   } catch (err: any) {
     return toolErr(`createPr 执行失败: ${err?.message ?? String(err)}`);
   }

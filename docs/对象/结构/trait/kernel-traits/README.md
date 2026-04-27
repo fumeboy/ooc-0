@@ -7,10 +7,10 @@
 Kernel Traits 分两层：
 
 ```
-基座层（when: always）        ← 始终注入
+基座层（kernel:base）         ← 协议基座默认注入
   └── kernel/base             ← 指令系统基座
 
-能力层（when: never）         ← 按需加载（activates_on.paths 驱动）
+能力层                         ← 按需加载（activates_on.show_content_when 驱动）
   ├── kernel/computable       ← 代码执行
   ├── kernel/talkable         ← 对象间通信
   ├── kernel/reflective       ← 反思与沉淀
@@ -24,7 +24,7 @@ Kernel Traits 分两层：
 
 ## 基座层
 
-**[base](base.md)** — 指令系统基座（五原语：`open`、`refine`、`submit`、`close`、`wait`）。是唯一的 always trait。
+**[base](base.md)** — 指令系统基座（五原语：`open`、`refine`、`submit`、`close`、`wait`）。它是内建协议基座，不再依赖 frontmatter `when`。
 
 ## 能力层
 
@@ -36,14 +36,14 @@ Kernel Traits 分两层：
 |---|---|---|---|
 | **computable** | `program` | JavaScript 代码执行 + 沙箱 API | [computable.md](computable.md) |
 | **plannable** | `think`, `set_plan` | 任务拆解、子线程规划（think 统一 fork/continue 子线程） | [plannable.md](plannable.md) |
-| **debuggable** | (无 activates_on.paths，手动激活) | 系统化调试四阶段流程 | [debuggable.md](debuggable.md) |
-| **reviewable** | (无 activates_on.paths) | 两阶段代码审查（合规 + 质量） | [reviewable.md](reviewable.md) |
+| **debuggable** | (无 activates_on.show_content_when，手动激活) | 系统化调试四阶段流程 | [debuggable.md](debuggable.md) |
+| **reviewable** | (无 activates_on.show_content_when) | 两阶段代码审查（合规 + 质量） | [reviewable.md](reviewable.md) |
 
 ### 交流与协作
 
 | Trait | 触发 command | 简述 | 详细 |
 |---|---|---|---|
-| **talkable** | `talk`, `talk_sync`, `return` | 对象间消息传递 | [talkable.md](talkable.md) |
+| **talkable** | `talk`, `return` | 对象间消息传递；`talk(wait=true)` 表示等待回复 | [talkable.md](talkable.md) |
 | **object_creation** | `think` | 创建新对象的指南 | [object-creation.md](object-creation.md) |
 
 ### 成长与诚实
@@ -73,10 +73,9 @@ plannable × debuggable   = 会分解任务且会自查的智能体
 
 ## 激活策略
 
-- **always**: 基座层（base）始终加载
-- **never**: 能力层默认不加载，通过 `activates_on.paths` 或 `open(type=trait)` 按需激活
-
-`when: never` 不意味着"永不激活"——意思是"不主动加载"。实际上能力层 trait 被频繁激活，只是激活时机由 activates_on.paths 或 LLM 主动触发。
+- **基座层**：`kernel:base` 由系统默认注入。
+- **能力层**：默认不加载，通过 `activates_on.show_content_when` 或 `open(title="...", type=trait, name=..., description="...")` 按需激活。
+- **描述层**：需要只提示存在、不注入正文时，用 `activates_on.show_description_when`。
 
 ## hooks 机制
 
@@ -94,7 +93,8 @@ plannable × debuggable   = 会分解任务且会自查的智能体
 |---|---|
 | 所有 kernel traits | `kernel/traits/` |
 | trait 加载 | `kernel/src/trait/loader.ts` |
-| activates_on.paths 处理 | `kernel/src/thread/hooks.ts` |
+| show_content_when 处理 | `kernel/src/thread/hooks.ts` |
+| show_description_when / show_content_when 分流 | `kernel/src/knowledge/activator.ts` |
 
 ## 与基因的关联
 

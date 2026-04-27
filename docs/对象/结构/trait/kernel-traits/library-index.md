@@ -7,9 +7,8 @@
 ```yaml
 name: kernel/library_index
 type: how_to_use_tool
-when: never
 activates_on:
-  paths: [program]
+  show_content_when: [program]
 description: Library 公共资源索引 — 查找和使用 library 中的 traits
 ```
 
@@ -86,11 +85,11 @@ const chartCode = await readUIComponent("Chart");
 Library 作为一个对象，还可以通过 talk 互动：
 
 ```typescript
-// 请求 Library 安装一个 skill
-await talk_sync("library", {
+// 请求 Library 安装一个 skill，并等待结果
+await talk("library", {
   method: "install_skill",
   args: { name: "claude-api" }
-});
+}, { wait: true });
 ```
 
 这个能力通过 Library 的 skill 市场 trait 实现，不在 library_index 范围内。

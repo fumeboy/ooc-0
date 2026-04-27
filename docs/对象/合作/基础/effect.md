@@ -58,7 +58,7 @@ await createObject({ name, whoAmI, traits, ... })
 
 ```typescript
 await talk(target, message)
-await talk_sync(target, message)
+await talk(target, message, { wait: true })
 ```
 
 **边界**：消息投递到对方的 inbox，不直接修改对方的状态。对方如何处理由对方决定。

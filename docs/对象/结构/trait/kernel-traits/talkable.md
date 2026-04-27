@@ -7,39 +7,41 @@
 ```yaml
 name: kernel/talkable
 type: how_to_interact
-when: never
 activates_on:
-  paths: [talk, talk_sync, return]
-description: 对象间通信协议 — talk/talk_sync 消息传递
+  show_content_when: [talk, return]
+description: 对象间通信协议 — talk 消息传递与等待回复
 ```
 
-## 三个指令
+## 两个指令
 
-### talk — 异步对话
+### talk — 对话
 
 ```
-open(type=command, command=talk)
-submit(form_id, { target, message })
+open(title="发送消息", type=command, command=talk, description="发送异步消息")
+refine(form_id, { target, msg, context: "fork" })
+submit(title="发送消息", form_id)
 ```
 
 发送消息给目标对象，**不等待回复**。发送方继续自己的流程；对方的回复以后会出现在 inbox 中（含 `[remote_thread_id: th_xxx]`）。
 
-### talk_sync — 同步对话
+如果需要等待回复，给同一个 talk form 增加 `wait: true`：
 
 ```
-open(type=command, command=talk_sync)
-submit(form_id, { target, message })
+open(title="发送并等待", type=command, command=talk, description="发送消息并等待回复")
+refine(form_id, { target, msg, context: "fork", wait: true })
+submit(title="发送并等待", form_id)
 ```
 
-发送消息并**等待回复**。当前线程进入 waiting 状态，对方完成后结果作为 submit 返回值。
+当前线程会进入 waiting，收到对方回复后继续。
 
 适用场景：像调用函数一样调用其他对象（如 filesystem 的 listDir）。
 
 ### return — 完成当前线程
 
 ```
-open(type=command, command=return)
-submit(form_id, { summary })
+open(title="返回结果", type=command, command=return, description="完成当前线程")
+refine(form_id, { summary })
+submit(title="返回结果", form_id)
 ```
 
 结束当前线程，返回结果给**创建者**（父线程或外部 talk 发起方）。
@@ -58,13 +60,16 @@ kernel/talkable/
 
 ### cross_object
 
-定义"跨对象函数调用"的协议。本质是 talk_sync 的一种约定格式：
+定义"跨对象函数调用"的协议。本质是 `talk(wait=true)` 的一种约定格式：
 
 ```typescript
-const result = await talk_sync("filesystem", {
-  method: "readFile",
-  args: { path: "..." }
-});
+open(title="读取文件", command=talk, description="请求 filesystem 读取文件", args={
+  target: "filesystem",
+  msg: { method: "readFile", args: { path: "..." } },
+  context: "fork",
+  wait: true
+})
+submit(title="读取文件", form_id)
 ```
 
 对方对象（filesystem）收到后识别这是 method call，调用对应的 trait 方法，返回结果。

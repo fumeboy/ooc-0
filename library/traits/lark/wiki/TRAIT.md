@@ -3,7 +3,6 @@ namespace: library
 name: lark/wiki
 type: how_to_use_tool
 version: 1.0.0
-when: never
 description: >-
   飞书知识库：管理知识空间和文档节点。创建和查询知识空间、管理节点层级结构、在知识库中组织文档和快捷方式。当用户需要在知识库中查找或创建文档、浏览知识空间结构、移动或复制节点时使用。
 deps: ["library:lark/shared"]

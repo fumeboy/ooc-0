@@ -92,10 +92,10 @@ const fullTraits = flat(scopeChain);
 
 ## 与激活机制的配合
 
-Scope Chain 是**读取侧**；渐进式激活（activates_on.paths）是**写入侧**：
+Scope Chain 是**读取侧**；渐进式激活（activates_on.show_content_when）是**写入侧**：
 
 ```
-子线程 open(command=program)
+子线程 open(title="执行程序", command=program, description="...")
   → activateTrait(computable) ON 子线程
   → 子线程的 Context 中，computable 的 Level 1 注入
   → 孙线程启动时，孙线程的 Context 也会看到 computable（通过 scope chain 向上）

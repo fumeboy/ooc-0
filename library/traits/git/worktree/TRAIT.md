@@ -3,13 +3,14 @@ namespace: library
 name: git/worktree
 type: how_to_use_tool
 version: 1.0.0
-when: "当需要为线程 fork 准备隔离工作区时"
 description: Git worktree 管理（对应线程 fork 的物理容器）：worktree_add / worktree_remove / worktree_list
 deps:
   - library:git/ops
 ---
 
 # Git Worktree 管理
+
+在 `program` 沙箱内使用 `callMethod("library:git/worktree", method, args)` 调用。单个方法也可以通过 `open({ type: "command", command: "program", title, trait: "library:git/worktree", method })` 发起。
 
 把 Git worktree 作为 OOC 线程 fork 的物理容器：
 
@@ -26,21 +27,21 @@ deps:
 - `path` 默认为 `.ooc/worktrees/{branch 斜杠转连字符}`
 
 ```javascript
-const r = await worktree_add({ branch: "feat/login" });
+const r = await callMethod("library:git/worktree", "worktree_add", { branch: "feat/login" });
 // r.data = { branch: "feat/login", path: ".ooc/worktrees/feat-login" }
 ```
 
 ### worktree_remove({ path, force? })
 
 ```javascript
-await worktree_remove({ path: ".ooc/worktrees/feat-login" });
+await callMethod("library:git/worktree", "worktree_remove", { path: ".ooc/worktrees/feat-login" });
 // 有未提交改动 → 失败；force=true 强制删除
 ```
 
 ### worktree_list()
 
 ```javascript
-const r = await worktree_list();
+const r = await callMethod("library:git/worktree", "worktree_list", {});
 // r.data = [{ path, branch, head }, ...]
 ```
 

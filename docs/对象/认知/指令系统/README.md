@@ -1,6 +1,6 @@
 # 指令系统 — 思考的产出形式
 
-> 对象通过 `open / submit / close / wait` 四原语与系统交互。
+> 对象通过 `open / refine / submit / close / wait` 五原语与系统交互。
 > 这是基座 trait（`kernel/base`）定义的唯一交互协议。
 
 ## 八个文档
@@ -49,8 +49,8 @@
 open 不只是"声明意图"——它还是**按需加载的入口**：
 
 ```
-open(command=program)
-  → 激活 kernel/computable（activates_on.paths 触发）
+open(title="执行程序", command=program, description="准备运行程序")
+  → 激活 kernel/computable（activates_on.show_content_when 触发）
   → kernel/computable 的 readme 注入 Context
   → 子 trait 描述也可见（Level 2）
 ```
@@ -64,7 +64,7 @@ open(command=program)
 defer 是一个元指令，允许对象**在某个 command 被 submit 时**注入提醒文本到 Context。灵感来自 Go 的 defer 语句。
 
 ```
-open(command=defer) + submit({ on_command: "program", content: "..." })
+open(title="注册 program hook", command=defer, description="注册 program 前提醒", args={ on_command: "program", content: "..." }) + submit(form_id)
   → 下次 submit(command=program) 时，自动注入 content 到 Context
 ```
 
@@ -76,12 +76,12 @@ open(command=defer) + submit({ on_command: "program", content: "..." })
 
 | 概念 | 实现 |
 |---|---|
-| Tool 定义 | `kernel/src/thread/tools.ts` |
+| Tool 定义 | `kernel/src/thread/tools/`（每个 tool 一个文件，`index.ts` 聚合） |
 | Form 管理 | `kernel/src/thread/form.ts` |
 | Tool call 处理 | `kernel/src/thread/engine.ts` |
 | 基座 trait | `kernel/traits/base/TRAIT.md` |
 
 ## 与基因的关联
 
-- **G4**（输出程序以行动）— 四原语是 G4 的工程协议
+- **G4**（输出程序以行动）— 五原语是 G4 的工程协议
 - **G3**（trait 是自我定义）— 指令激活 trait 的机制

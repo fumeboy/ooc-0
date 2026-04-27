@@ -2,34 +2,40 @@
 
 > 声明"我要做什么"，系统加载相关知识并返回 `form_id`。
 
-## 三种类型
+## 四种类型
 
 | type | 用途 | 加载内容 |
 |---|---|---|
 | `command` | 执行指令（program / talk / return 等） | command 关联的 trait |
 | `trait` | 加载 trait 知识 | 指定 trait 的 readme |
 | `skill` | 加载 skill 内容 | 指定 skill 的 SKILL.md |
+| `file` | 加载文件内容 | 指定文件进入 context 窗口 |
 
 ## command 类型
 
 ```typescript
 open({
+  title: "写入配置文件",
   type: "command",
   command: "program",
-  description: "写入配置文件"
+  description: "写入配置文件",
+  args: { code: "print('hello')" }
 })
 // → { form_id: "f_001" }
 ```
 
 ### 参数
 
-- `command` (必填): 指令名称（`program` / `think` / `talk` / `talk_sync` / `return` / `call_function` / `set_plan` / `await` / `await_all` / `defer`）
+- `title` (必填): 一句话说明本次 open 在做什么
+- `command` (必填): 指令名称（`program` / `think` / `talk` / `return` / `set_plan` / `await` / `await_all` / `defer` / `compact`）
 - `description` (必填): 描述此次 open 的目的（用于 activeForms 展示、便于回看）
+- `args` (可选): 预填参数，等价于 open 后立即 `refine({ args })`
+- `trait` / `method` (可选): `command=program` 时直接调用 trait 方法，例如 `trait="kernel:computable/file_ops", method="readFile"`
 
 ### 效果
 
 1. FormManager 创建一个 form（type=command, command=X, status=open）
-2. 通过 `collectCommandTraits(X)` 找到所有 `activates_on.paths` 包含 X 的 trait
+2. 通过 `collectCommandTraits(X)` 找到所有 `activates_on.show_content_when` 包含 X 的 trait
 3. 对每个 trait：`activateTrait(trait, threadId)`，refcount++
 4. 下一轮 Context 构建时，激活的 trait 的 readme 注入 `instructions / knowledge`
 
@@ -46,6 +52,7 @@ open({
 
 ```typescript
 open({
+  title: "加载文件操作文档",
   type: "trait",
   name: "kernel/computable/file_ops",
   description: "需要详细的文件操作 API"
@@ -74,15 +81,17 @@ open({
   - shell_exec: shell 命令执行
 
 LLM: 我要写文件，需要完整的 file_ops 文档
-  → open(type=trait, name=kernel/computable/file_ops)
+  → open(title="加载文件操作文档", type=trait, name=kernel/computable/file_ops, description="查看 file_ops 的完整 API")
 ```
 
 ## skill 类型
 
 ```typescript
 open({
+  title: "加载 claude-api skill",
   type: "skill",
-  name: "claude-api"
+  name: "claude-api",
+  description: "查看 Claude API 使用指南"
 })
 // → { form_id: "f_003" }
 ```
@@ -101,18 +110,19 @@ open({
 |---|---|---|
 | 位置 | kernel/library/stone 三层 | 主要在 library/skills/ |
 | 有方法？ | 可以（methods.ts） | 通常只有文档 |
-| 有 activates_on.paths？ | 可以 | 无 |
+| 有 activates_on.show_content_when？ | 可以 | 无 |
 | 用途 | 长期能力 | 按任务加载的专项指南 |
 
 skill 更像"可按需加载的 markdown 文档"，trait 更像"带有代码的能力单元"。
 
 ## form_id
 
-open 返回 `form_id`，后续 submit / close 必须带此 id：
+open 返回 `form_id`，后续 refine / submit / close 必须带此 id：
 
 ```typescript
 const { form_id } = await open(...)
-await submit({ form_id, ...args })
+await refine({ form_id, args: {...} })
+await submit({ title: "执行指令", form_id })
 await close({ form_id })
 ```
 
@@ -123,9 +133,9 @@ form_id 让系统跟踪"哪个 form 属于哪次 open"，避免参数混乱。
 一个线程可以同时持有多个 open 的 form：
 
 ```
-open(command=program, description="写配置") → f_001
-open(command=program, description="写日志") → f_002
-open(type=trait, name=library/browser) → f_003
+open(title="写配置", command=program, description="写配置") → f_001
+open(title="写日志", command=program, description="写日志") → f_002
+open(title="加载 browser trait", type=trait, name=library/browser, description="查看浏览器能力") → f_003
 ```
 
 activeForms 字段会展示这些 form。submit 时按 form_id 区分。
@@ -138,8 +148,9 @@ activeForms 字段会展示这些 form。submit 时按 form_id 区分。
 open({
   type: "command",
   command: "program",
+  title: "查询 X",
   description: "...",
-  mark: { id: "msg-123", action: "ack" }  // 同时确认消息 msg-123
+  mark: [{ messageId: "msg-123", type: "ack", tip: "已处理" }]
 })
 ```
 
@@ -149,7 +160,7 @@ open({
 
 | 概念 | 实现 |
 |---|---|
-| open tool 定义 | `kernel/src/thread/tools.ts` |
+| open tool 定义 | `kernel/src/thread/tools/open.ts` |
 | handleOpen | `kernel/src/thread/engine.ts` |
 | collectCommandTraits | `kernel/src/thread/hooks.ts` |
 | FormManager.begin | `kernel/src/thread/form.ts` |

@@ -66,15 +66,15 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │       ├── api/          ← API 客户端
 │   │       └── lib/          ← 工具函数
 │   ├── traits/               ← Kernel Traits（所有对象共享的基础能力）
-│   │   ├── base/            ← 指令系统基座（唯一 always trait，open/refine/submit/close/wait 五原语）
-│   │   ├── computable/       ← 代码执行（activates_on.paths: [program]，含 program_api, file_ops, file_search, shell_exec, web_search, testable 子 trait）
-│   │   ├── talkable/         ← 跨对象通信（activates_on.paths: [talk, return]，含 cross_object, ooc_links, delivery 子 trait）
-│   │   ├── reflective/       ← 记忆与反思（activates_on.paths: [return]，含 memory_api, super 子 trait）
-│   │   ├── verifiable/       ← 验证能力（activates_on.paths: [return]）
-│   │   ├── plannable/        ← 任务规划（activates_on.paths: [think, set_plan]）
-│   │   ├── debuggable/       ← 系统化调试（activates_on.paths: [program]）
-│   │   ├── reviewable/       ← 代码审查（activates_on.paths: [program]）
-│   │   ├── library_index/    ← Library 资源查询（activates_on.paths: [program]）
+│   │   ├── base/            ← 指令系统基座（协议基座，open/refine/submit/close/wait 五原语）
+│   │   ├── computable/       ← 代码执行（activates_on.show_content_when: [program]，含 program_api, file_ops, file_search, shell_exec, web_search, testable 子 trait）
+│   │   ├── talkable/         ← 跨对象通信（activates_on.show_content_when: [talk, return]，含 cross_object, ooc_links, delivery 子 trait）
+│   │   ├── reflective/       ← 记忆与反思（activates_on.show_content_when: [return]，含 memory_api, super 子 trait）
+│   │   ├── verifiable/       ← 验证能力（activates_on.show_content_when: [return]）
+│   │   ├── plannable/        ← 任务规划（activates_on.show_content_when: [think, set_plan]）
+│   │   ├── debuggable/       ← 系统化调试（手动激活，无 activates_on.show_content_when）
+│   │   ├── reviewable/       ← 代码审查（手动激活，deps: verifiable）
+│   │   ├── library_index/    ← Library 资源查询（activates_on.show_content_when: [program]）
 │   │   └── ...
 │   ├── tests/                ← 单元测试（bun:test）
 │   └── package.json
@@ -106,7 +106,7 @@ ooc/                          ← user repo（用户仓库，git 根）
     └── {sessionId}/
         ├── .session.json     ← Session 元数据（title）
         ├── readme.md         ← Session 工作状态摘要（supervisor 维护）
-        ├── objects/{name}/   ← 单个 Object 的运行时数据（原 flows/ 重命名）
+        ├── objects/{name}/   ← 单个 Object 的运行时数据
         ├── issues/           ← Issue 跟踪目录
         │   ├── index.json    ← 轻量索引
         │   └── issue-{id}.json ← 单条 issue 详情
@@ -186,7 +186,7 @@ Object（对象）
 │   │   │   而是对象定义"我如何思考、我遵守什么规则"。
 │   │   │
 │   │   ├── 可组合 ── 多个 trait 叠加形成复合能力
-│   │   ├── 可进化 ── 从 readme-only → always-on → 内化为直觉
+│   │   ├── 可进化 ── 从 readme-only → 默认激活 → 内化为直觉
 │   │   └── 自约束 ── trait 可以限制对象的行为边界
 │   │
 │   └── 关系 / Relation（G1, G6）
@@ -231,7 +231,7 @@ Object（对象）
 │   │   │       决定哪些 trait 被激活、哪些知识可见。
 │   │   │
 │   │   ├── 节点状态 ── running / waiting / done / failed
-│   │   │       waiting 细分 waitingType：await_children / talk_sync / explicit_wait（唤醒时自动清除）
+│   │   │       waiting 细分 waitingType：await_children / talk_sync / explicit_wait（talk_sync 为 talk(wait=true) 的内部等待类型）
 │   │   │       failed 时 failureReason 字段记录原因（GET /api/flows 透出）
 │   │   │
 │   │   ├── 线程复活（Thread Revival）
@@ -329,7 +329,7 @@ Object（对象）
 │   │   │   对象间通信的机制。消息是一种特殊的 Effect。
 │   │   │
 │   │   ├── talk ── 异步对话（发送消息，不等待回复）
-│   │   ├── talk_sync ── 同步对话（发送消息，等待回复后继续）
+│   │   ├── talk(wait=true) ── 同步等待（发送消息，等待回复后继续）
 │   │   └── inbox ── 消息收件箱（unread → Object 主动 mark）
 │   │
 │   └── Supervisor（全局代理）
@@ -376,7 +376,7 @@ Object（对象）
 │   │   │
 │   │   ├── 知识 ── 记住发生了什么（actions 历史）
 │   │   ├── 能力 ── 提炼出怎么做（方法、模式）
-│   │   ├── 直觉 ── 内化为不需要思考就能做（trait 升级为 always-on）
+│   │   ├── 直觉 ── 内化为不需要思考就能做（trait 升级为默认激活）
 │   │   │
 │   │   └── 沉淀循环
 │   │           经历 → 记录(G10) → 反思(talk → super)
@@ -491,8 +491,9 @@ Context
 │       → 决定哪些知识可见
 │
 ├── 渐进式 Trait 加载
-│   ├── base trait（always）── 始终注入，定义 open/refine/submit/close 四原语
-│   ├── activates_on.paths ── open(command=X) 时加载关联 trait（替代旧 command_binding）
+│   ├── base trait（协议基座）── 默认注入，定义 open/refine/submit/close/wait 五原语
+│   ├── activates_on.show_description_when ── open(command=X) 时只展示关联 knowledge 描述
+│   ├── activates_on.show_content_when ── open(command=X) 时加载关联 knowledge 正文
 │   │       如 open(command=program) → 加载 computable trait
 │   └── open(type=trait/skill) ── 按需加载任意 trait 或 skill
 │
@@ -510,7 +511,7 @@ Context
     └── 恢复时: 读取 llm.output.txt 作为实际输出执行
 
 代码: kernel/src/thread/context-builder.ts（组装）, kernel/src/thread/engine.ts（Engine 循环）
-      kernel/src/thread/tools.ts（Tool 定义）, kernel/src/thread/form.ts（FormManager）
+      kernel/src/thread/tools/（Tool 定义：每个 tool 一个文件，index.ts 聚合）, kernel/src/thread/form.ts（FormManager）
 ```
 
 **可见性分类（4 色）** —— 每个节点在 focus 线程 Context 中的呈现形态：
@@ -585,7 +586,7 @@ Engine（线程树执行引擎）
     ├── 生命周期: 常驻、横跨所有 session（反思是长期的，不跟随一次对话结束）
     ├── 线程复活: tree.writeInbox 内置 done→running 复活（revivalCount +1）
     │
-    ├── 沉淀工具（reflective/super trait llm_methods，when: never 天然权限隔离）:
+    ├── 沉淀工具（reflective/super trait llm_methods，显式激活隔离）:
     │   ├── persist_to_memory({key, content}) ── append 到 stones/{name}/memory.md
     │   └── create_trait({relativePath, content}) ── 创建 stones/{name}/traits/**/TRAIT.md
     │     （仅 super 对象激活本 trait；普通对象无法越权）
@@ -625,7 +626,7 @@ Engine（线程树执行引擎）
       kernel/src/thread/super-scheduler.ts（跨 session 常驻 super 调度器）
       kernel/src/thread/tree.ts（线程树数据结构）
       kernel/src/thread/context-builder.ts（Context 构建 + memory 注入）
-      kernel/src/thread/tools.ts（Tool 定义，含所有 tool 的 title 参数）
+      kernel/src/thread/tools/（Tool 定义：每个 tool 一个文件，index.ts 聚合，含所有 tool 的 title 参数）
       kernel/src/thread/form.ts（FormManager）, kernel/src/thread/hooks.ts（Trait 加载钩子）
       kernel/src/world/super.ts（SuperFlow 落盘：handleOnTalkToSuper + getSuperThreadDir）
       kernel/src/thread/collaboration.ts（talk / sub_thread_on_node 协作原语）
@@ -649,7 +650,7 @@ Engine（线程树执行引擎）
 │   ├── talk(target, msg, context="fork")         ── 对方新根线程（原 talk）
 │   ├── talk(target, msg, threadId, context="fork")     ── 对方线程下 fork（新能力）
 │   ├── talk(target, msg, threadId, context="continue") ── 向对方已有线程投递（新能力）
-│   ├── talk_sync(target, msg, ...)               ── 同步对话：等待回复
+│   ├── talk(target, msg, wait=true)              ── 同步等待：发送后等待回复
 │   ├── talk + form(可选)           ── 结构化表单消息（发起方心里有候选回复时用）
 │   │       args.form = { type: single_choice/multi_choice, options[{id,label,detail}] }
 │   │       engine 自动生成 formId，写入 message_out action.form 字段落盘
@@ -679,7 +680,7 @@ Engine（线程树执行引擎）
 │   ├── 写入时机 ── 任意对象 talk(target="user") 时，world 在 SSE 广播外追加一条引用
 │   ├── 写失败不阻塞 ── console.error，不回滚 SSE，不抛
 │   ├── 串行化 ── per-sessionId Promise 链（防并发写丢）
-│   ├── talk_sync(user) ── 不设 waiting 状态（user 永不回复，避免死锁）
+│   ├── talk(wait=true, target=user) ── 降级为普通 talk（user 永不回复，避免死锁）
 │   └── HTTP API ── GET /api/sessions/:sid/user-inbox → { inbox: [...] }
 │
 ├── 子线程协作（think 统一）
@@ -756,7 +757,8 @@ Trait
 │   ├── kind         ── "trait" | "view"（默认 trait；VIEW.md 自动 view）
 │   ├── description  ── 能力描述（注入 Context 让 LLM 理解）
 │   ├── readme       ── TRAIT.md / VIEW.md 内容（激活时注入 Context）
-│   ├── activates_on.paths ── 关联的路径列表（open 时自动加载，替代旧 command_binding）
+│   ├── activates_on.show_description_when ── 关联路径命中时只展示描述
+│   ├── activates_on.show_content_when ── 关联路径命中时展示正文内容
 │   ├── llmMethods   ── Record<name, TraitMethod>（LLM 沙箱可见）
 │   ├── uiMethods    ── Record<name, TraitMethod>（HTTP call_method 可见）
 │   ├── deps         ── 依赖的 traitId 列表（可省略 namespace，按 self→kernel→library 解析）
@@ -777,9 +779,9 @@ Trait
 │   │   Trait 支持任意深度的树形嵌套（name 含 `/`）。
 │   │   三层加载策略减少 Context 注入量：
 │   │
-│   ├── Level 1 ── 精简注入（always-on 父 trait 的精简 TRAIT.md）
+│   ├── Level 1 ── 精简注入（基座 / 已激活父 trait 的精简 TRAIT.md）
 │   ├── Level 2 ── 子 trait 描述可见（active 父 trait 的子 trait 一行描述）
-│   └── Level 3 ── 按需激活（open(type=trait) 或 activates_on.paths 加载完整内容）
+│   └── Level 3 ── 按需激活（open(type=trait) 或 activates_on.show_content_when 加载完整内容）
 │
 ├── 加载链路（四层，同 traitId 后者覆盖前者）
 │   │
@@ -792,10 +794,10 @@ Trait
 │          → 同 traitId（namespace:name）按加载顺序覆盖
 │          → flowObjectDir 可选，用于 Flow 级 views 覆盖 Stone 级
 │
-├── 渐进式激活（activates_on.paths 驱动）
+├── 渐进式激活（activates_on.show_*_when 驱动）
 │   │   Trait 不再始终激活，而是按需加载：
 │   │
-│   ├── open(type=command, command=X) → collectCommandTraits 查找 activates_on.paths 含 X 的 trait → activateTrait
+│   ├── open(type=command, command=X) → show_description_when 命中则展示描述，show_content_when 命中则 activateTrait
 │   ├── open(type=trait, name=Y) → 直接 activateTrait(Y)
 │   ├── submit/close 后 → 检查 refcount → deactivateTrait
 │   └── FormManager 跟踪活跃 form，驱动 trait 加载/卸载
@@ -830,7 +832,7 @@ Trait
     │   ├── 同一个 Loader（loader.loadTrait 支持 TRAIT.md/VIEW.md 两种描述文件）
     │   ├── 同一个 MethodRegistry（双通道同一表）
     │   ├── 同一套 namespace + traitId 规则
-    │   └── 可声明 activates_on.paths（LLM 像普通 trait 一样激活）
+    │   └── 可声明 activates_on.show_content_when（LLM 像普通 trait 一样激活）
     │
     └── view 独有
         ├── frontend.tsx（前端 DynamicUI 加载）
@@ -848,23 +850,23 @@ Trait
 #### Kernel Traits — 两层结构
 
 Kernel Traits 是所有对象共享的基础能力，位于 `kernel/traits/`。
-通过 `activates_on.paths` 渐进式加载，组合起来定义了"作为 OOC 对象意味着什么"。
+通过 `activates_on.show_*_when` 渐进式加载，组合起来定义了"作为 OOC 对象意味着什么"。
 
 ```
 Kernel Traits
 │
-├── 基座层（when: always）── 始终注入
+├── 基座层（kernel:base）── 协议基座默认注入
 │   │
 │   └── kernel/base ── 指令系统基座
 │           定义 open/refine/submit/close/wait 五原语 + mark 机制（附加参数）。
-│           是唯一的 always trait，极简。
+│           是唯一的协议基座，极简。
 │
-├── 能力层（when: never, activates_on.paths 驱动）── 按需加载
+├── 能力层（activates_on.show_content_when 驱动）── 按需加载正文
 │   │
 │   │   这些 trait 在 open(command=X) 时自动加载，submit/close 后自动卸载。
 │   │   它们的组合 = 能思考 + 能交流 + 能成长 + 不自欺 + 会拆解。
 │   │
-│   ├── kernel/computable ── 代码执行（activates_on.paths: [program]）
+│   ├── kernel/computable ── 代码执行（activates_on.show_content_when: [program]）
 │   │   │   核心 API 签名、沙箱变量、文件操作。
 │   │   │   没有它，对象无法行动。
 │   │   │
@@ -875,7 +877,7 @@ Kernel Traits
 │   │   ├── kernel/computable/web_search     ── 互联网搜索
 │   │   └── kernel/computable/testable       ── 测试执行能力
 │   │
-│   ├── kernel/talkable ── 与他者建立关系（activates_on.paths: [talk, talk_sync, return]）
+│   ├── kernel/talkable ── 与他者建立关系（activates_on.show_content_when: [talk, return]）
 │   │   │   消息发送、回复、社交原则。
 │   │   │   没有它，对象是孤岛。
 │   │   │
@@ -884,23 +886,23 @@ Kernel Traits
 │   │   ├── kernel/talkable/delivery      ── 交付规范、协作交付
 │   │   └── kernel/talkable/issue-discussion ── Issue 讨论与评论（所有对象共享，虽在 talkable 下但偏向看板）
 │   │
-│   ├── kernel/reflective ── 从经验中学习（activates_on.paths: [return]）
+│   ├── kernel/reflective ── 从经验中学习（activates_on.show_content_when: [return]）
 │   │   │   反思 = 对话（SuperFlow）：talk(target="super") 投递经验。
 │   │   │   没有它，对象不会成长。
 │   │   │
 │   │   ├── kernel/reflective/memory_api    ── 记忆 API（Flow Summary, Self/Session）
-│   │   └── kernel/reflective/super         ── 反思镜像分身的沉淀工具集（when: never；
-│   │                                           llm_methods: persist_to_memory, create_trait）
+│   │   └── kernel/reflective/super         ── 反思镜像分身的沉淀工具集
+│   │                                           llm_methods: persist_to_memory, create_trait
 │   │
-│   ├── kernel/verifiable ── 认识论诚实（activates_on.paths: [return]）
+│   ├── kernel/verifiable ── 认识论诚实（activates_on.show_content_when: [return]）
 │   │       "没有验证证据，不做完成声明。"
 │   │       没有它，对象会自欺。
 │   │
-│   ├── kernel/plannable        ── 任务拆解（activates_on.paths: [think, set_plan]）
-│   ├── kernel/debuggable       ── 系统化调试（手动激活，无 activates_on.paths）
+│   ├── kernel/plannable        ── 任务拆解（activates_on.show_content_when: [think, set_plan]）
+│   ├── kernel/debuggable       ── 系统化调试（手动激活，无 activates_on.show_content_when）
 │   ├── kernel/reviewable       ── 代码审查（手动激活，deps: verifiable）
-│   ├── kernel/library_index    ── Library 资源查询（activates_on.paths: [program]）
-│   └── kernel/object_creation  ── 创建新对象的指南（activates_on.paths: [think]）
+│   ├── kernel/library_index    ── Library 资源查询（activates_on.show_content_when: [program]）
+│   └── kernel/object_creation  ── 创建新对象的指南（activates_on.show_content_when: [think]）
 │
 └── 组合效应
         基座层的交叉：

@@ -6,37 +6,32 @@
 
 ```typescript
 wait({
-  thread_ids?: string[]   // 等待指定子线程
+  reason: "等待用户补充需求"
 })
 ```
 
-## 两种模式
+`wait` 现在只表示显式等待外部输入或事件。等待子线程请使用 `await` / `await_all`，或者在派生子线程时使用 `think(..., wait=true)`。
 
-### 等待子线程完成
-
-```typescript
-wait({ thread_ids: ["th_xxx"] })          // 等一个
-wait({ thread_ids: ["th_xxx", "th_yyy"] })  // 等多个（全部 done 才唤醒）
-```
-
-### 等待任何 inbox 消息
+## 等待外部消息
 
 ```typescript
-wait()  // 任意新消息到达即唤醒
+wait({ reason: "等待用户确认方案" })
 ```
+
+任意新 inbox 消息到达时，线程会被唤醒。
 
 ## 状态转换
 
 ```
 running
-  → submit wait 指令
+  → wait({ reason })
   → status = waiting
-  → thread.waitFor = thread_ids 或 null
+  → waitingType = explicit_wait
   → 释放调度权
 
 ... 等待 ...
 
-  → 子线程 done 且 全部等待的已满足，或 inbox 收到新消息
+  → inbox 收到新消息
   → status = waiting → running
   → 下一轮 ThinkLoop 继续
 ```
@@ -63,32 +58,30 @@ ThreadScheduler 检测到全部 waiting 且无外部事件时，**强制唤醒**
 
 详见 [../../合作/基础/线程树调度.md](../../合作/基础/线程树调度.md)。
 
-## talk_sync 隐式 wait
+## talk(wait=true) 隐式 wait
 
-`talk_sync` 内部使用 wait：
+旧的 `talk_sync` 已折叠为 `talk(..., wait=true)`：
 
 ```typescript
-// 用户看到的
-const result = await talk_sync("filesystem", {...})
-
-// 实际发生的
-await talk("filesystem", {...})  // 发消息
-await wait()                      // 等待对方回复
-// 从 inbox 中读取对方的回复
+open({
+  title: "请求 filesystem",
+  type: "command",
+  command: "talk",
+  description: "需要对方回复后继续",
+  args: { target: "filesystem", msg: {...}, context: "fork", wait: true }
+})
+submit({ title: "发送并等待回复", form_id })
 ```
 
-这让 talk_sync 看起来像"函数调用"，但内部是显式 wait 机制。
+engine 会把当前线程置为 `waitingType=talk_sync`，收到对方回复后自动唤醒。
 
 ## 典型用法
 
 ### 并行子线程后汇总
 
 ```typescript
-const t1 = await open_and_submit(think, { title: "搜索 A", context: "fork", msg: "搜索 A" })
-const t2 = await open_and_submit(think, { title: "搜索 B", context: "fork", msg: "搜索 B" })
-const t3 = await open_and_submit(think, { title: "搜索 C", context: "fork", msg: "搜索 C" })
-
-await wait({ thread_ids: [t1, t2, t3] })
+open(title="等待搜索完成", command=await_all, description="等待三个搜索子线程完成", args={ thread_ids: [t1, t2, t3] })
+submit({ title: "等待搜索完成", form_id })
 // 三个子线程都 done，结果在各自的 return summary 里
 ```
 
@@ -97,7 +90,7 @@ await wait({ thread_ids: [t1, t2, t3] })
 ```typescript
 // 发消息等对方处理
 await talk("reviewer", { review: "please review PR #123" })
-await wait()  // 阻塞，等 reviewer 回复
+await wait({ reason: "等待 reviewer 回复" })
 // reviewer 回复进入 inbox，wait 唤醒
 ```
 
@@ -109,13 +102,13 @@ await wait()  // 阻塞，等 reviewer 回复
 1. 配合 `think(context="fork")` 创建一个"定时器子线程"，到点 return
 2. 主线程 wait 主任务 和 定时器子线程 其中任一完成（需要 wait_any 语义，目前未直接支持）
 
-目前只支持 `wait_all`（全部完成才唤醒）。如需 wait_any，用户自己通过 inbox + 轮询实现。
+目前子线程等待只支持 `await_all` 语义（全部完成才唤醒）。如需 wait_any，用户自己通过 inbox + 轮询实现。
 
 ## 源码锚点
 
 | 概念 | 实现 |
 |---|---|
-| wait tool 定义 | `kernel/src/thread/tools.ts` |
+| wait tool 定义 | `kernel/src/thread/tools/wait.ts` |
 | handleWait | `kernel/src/thread/engine.ts` |
 | 唤醒检查 | `kernel/src/thread/scheduler.ts` → `checkAndWake()` |
 | 死锁检测 | 同文件 |

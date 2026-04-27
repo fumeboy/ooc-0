@@ -3,7 +3,6 @@ namespace: library
 name: lark/vc
 type: how_to_use_tool
 version: 1.0.0
-when: never
 description: >-
   飞书视频会议：查询会议记录、获取会议纪要产物（总结、待办、章节、逐字稿）。1. 查询已经结束的会议数量或详情时使用本技能(如昨天 | 上周 |
   今天已经开过的会议等场景)，查询未开始的会议日程使用 lark-calendar 技能。2.
