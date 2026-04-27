@@ -11,9 +11,9 @@
  * @ref docs/工程管理/迭代/all/20260422_feature_git_pr_workflow.md — implements — Phase 2
  */
 
-import { toolOk, toolErr } from "../../../../kernel/src/types/tool-result";
-import type { ToolResult } from "../../../../kernel/src/types/tool-result";
-import type { TraitMethod } from "../../../../kernel/src/types/index";
+import { toolOk, toolErr } from "../../../../kernel/src/shared/types/tool-result";
+import type { ToolResult } from "../../../../kernel/src/shared/types/tool-result";
+import type { TraitMethod } from "../../../../kernel/src/shared/types/index";
 
 // ─── 内部辅助 ─────────────────────────────────────────────
 

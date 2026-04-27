@@ -5,8 +5,8 @@
  * 所有命令通过 Bun.spawn 在对象的 rootDir 下执行。
  */
 
-import { toolOk, toolErr } from "../../../../kernel/src/types/tool-result";
-import type { ToolResult } from "../../../../kernel/src/types/tool-result";
+import { toolOk, toolErr } from "../../../../kernel/src/shared/types/tool-result";
+import type { ToolResult } from "../../../../kernel/src/shared/types/tool-result";
 
 // ─── 内部辅助 ─────────────────────────────────────────────
 
@@ -406,7 +406,7 @@ export async function gitPull(
 
 /* ========== Phase 2 新协议：llm_methods 对象导出 ========== */
 
-import type { TraitMethod } from "../../../../kernel/src/types/index";
+import type { TraitMethod } from "../../../../kernel/src/shared/types/index";
 
 export const llm_methods: Record<string, TraitMethod> = {
   gitStatus: {
