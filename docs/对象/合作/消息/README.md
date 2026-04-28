@@ -8,7 +8,7 @@
 |---|---|
 | [talk.md](talk.md) | 异步对话：发送不等待 |
 | [talk-sync.md](talk-sync.md) | 历史名：现已折叠为 `talk(wait=true)` |
-| [return.md](return.md) | 完成当前线程，返回父线程 |
+| [return.md](return.md) | 向 thread creator 交付 summary |
 | [inbox.md](inbox.md) | 消息收件箱机制 |
 | [跨对象协作.md](跨对象协作.md) | Session + 线程树联动 |
 
@@ -17,10 +17,11 @@
 ```
 talk(target, msg, wait=false)    ← 异步：A → B，A 不等
 talk(target, msg, wait=true)     ← 同步等待：A → B，A 等回复后继续
-return(summary)                  ← 结束线程，返回父/发起方
+return(summary)                  ← 向 thread creator 交付 summary
 ```
 
 `talk_sync` 不再是独立 command，只作为历史术语指代 `talk(wait=true)`。
+如果已经通过 `talk` 回复了 thread creator，不要再 `return` 重复回复；如果需要主动停下来等待后续输入，用 `wait(reason)`。
 
 ## inbox — 消息接收端
 

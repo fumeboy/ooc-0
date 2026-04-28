@@ -29,6 +29,7 @@ Context
 ├── instructions        ← 激活的 kernel trait 的 TRAIT.md（系统指令）
 ├── knowledge           ← 激活的 library/user trait 的 TRAIT.md（知识窗口）
 ├── parentExpectation   ← 线程树节点的 title + description
+├── creator             ← thread creator：user、外部对象，或自己在另一个线程中的过程
 ├── processEvents       ← 当前线程的 process events 历史（独立 messages）
 ├── inbox               ← 未读消息（含 messageId）
 ├── activeForms         ← FormManager 中的活跃 form 列表

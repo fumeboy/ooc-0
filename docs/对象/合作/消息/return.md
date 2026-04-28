@@ -1,6 +1,6 @@
-# return — 完成当前线程
+# return — 向创建者交付 summary
 
-> 结束当前线程，把 summary 返回给**创建者**（父线程或外部 talk 发起方）。
+> 把 summary 返回给**创建者**（父线程、自己在另一个线程中的过程，或外部 talk 发起方）。`return` 不是"当前过程停止"的通用信号；如果要主动停下来等待后续输入，应调用 `wait`。
 
 ## 签名
 
@@ -20,13 +20,19 @@ submit(title="返回结果", form_id)
 3. 关联的 trait 释放（refcount--）
 4. SSE 推送 `thread:returned` 事件
 
+## 与 talk / wait 的关系
+
+- 如果结果已经通过 `talk` 返回给 thread creator，就不需要再次调用 `return` 发送同一份回复。
+- 如果交付后还需要继续验证、沉淀经验或整理后续事项，可以继续做；不要把 `return` 当作"当前思考过程必须马上结束"。
+- 如果希望当前过程停下来、等待创建者/用户/外部事件或主动让出执行权，调用 `wait(reason="...")`。
+
 ## 创建者是谁
 
 取决于线程如何被创建：
 
 | 创建方式 | 创建者 | summary 去向 |
 |---|---|---|
-| `do(context="fork")` | 父线程 | 父线程 inbox |
+| `do(context="fork")` | 自己的父线程 | 父线程 inbox |
 | 用户直接 talk | （用户侧） | 通过 SSE 推送给前端 |
 | 其他对象 talk | 对方线程 | 对方线程 inbox |
 | `do(context="continue")` | 原线程创建者 | 原线程创建者 inbox |

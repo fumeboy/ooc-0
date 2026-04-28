@@ -36,7 +36,7 @@ submit(title="发送并等待", form_id)
 
 适用场景：像调用函数一样调用其他对象（如 filesystem 的 listDir）。
 
-### return — 完成当前线程
+### return — 向创建者交付 summary
 
 ```
 open(title="返回结果", type=command, command=return, description="完成当前线程")
@@ -44,7 +44,9 @@ refine(form_id, { summary })
 submit(title="返回结果", form_id)
 ```
 
-结束当前线程，返回结果给**创建者**（父线程或外部 talk 发起方）。
+返回结果给**创建者**（父线程、自己在另一个线程中的过程，或外部 talk 发起方）。
+
+`return` 不是"当前过程停止"的通用信号。如果已经用 `talk` 把结果回复给 thread creator，不要再调用 `return` 重复发送同一份结果。若希望主动停下来等待后续输入，调用 `wait(reason="...")`。
 
 return 激活了三个 trait：`talkable`（这里讲如何返回）、`reflective`（沉淀经验）、`verifiable`（完成前要有验证证据）。详见各对应 trait 文档。
 
