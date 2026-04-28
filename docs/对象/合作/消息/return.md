@@ -26,10 +26,10 @@ submit(title="返回结果", form_id)
 
 | 创建方式 | 创建者 | summary 去向 |
 |---|---|---|
-| `think(context="fork")` | 父线程 | 父线程 inbox |
+| `do(context="fork")` | 父线程 | 父线程 inbox |
 | 用户直接 talk | （用户侧） | 通过 SSE 推送给前端 |
 | 其他对象 talk | 对方线程 | 对方线程 inbox |
-| `think(context="continue")` | 原线程创建者 | 原线程创建者 inbox |
+| `do(context="continue")` | 原线程创建者 | 原线程创建者 inbox |
 
 ## 激活的三个 trait
 
@@ -76,7 +76,7 @@ submit(title="返回结果", form_id)
 下一步：如需继续的建议
 ```
 
-这个结构让**父线程**在收到消息时能快速理解，不需要去读完整 actions 历史。
+这个结构让**父线程**在收到消息时能快速理解，不需要去读完整 events 历史。
 
 ## 线程 done 后的命运
 

@@ -14,7 +14,7 @@
 ```
 
 每个节点是一个**线程**，有自己的：
-- `actions`（本线程的思考/行动历史）
+- `events`（本线程的思考/行动历史）
 - `inbox`（本线程的未读消息）
 - `activatedTraits`（本线程激活的 trait）
 - `status`（running / waiting / done / failed）

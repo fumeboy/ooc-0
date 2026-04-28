@@ -50,7 +50,7 @@ stones/{name}/                  flows/{sessionId}/objects/{name}/
 
 ## 与其他维度的关系
 
-- **存在是所有维度的前提**。没有目录就没有 readme（结构）、没有 thread.json（认知）、没有 actions（合作）、没有 trait 升级（成长）、没有 ui/（人机交互）
+- **存在是所有维度的前提**。没有目录就没有 readme（结构）、没有 thread.json events（认知/合作）、没有 trait 升级（成长）、没有 ui/（人机交互）
 - **改变任何维度都是在改变存在**。修改 readme = 改变对象的物理字节 = 改变存在本身
 
 详见 [../../哲学/统一性.md](../../哲学/统一性.md)。

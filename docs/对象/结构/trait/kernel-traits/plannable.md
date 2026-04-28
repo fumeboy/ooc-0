@@ -8,27 +8,27 @@
 name: kernel/plannable
 type: how_to_think
 activates_on:
-  show_content_when: [think, set_plan]
+  show_content_when: [do, plan]
 description: 任务拆解与规划 — 先想清楚再动手
 ```
 
-> 2026-04-22 起 plannable 的 activates_on.show_content_when 统一为 `think` + `set_plan`。
-> 旧命令 `create_sub_thread` / `continue_sub_thread` 已被 `think(context="fork"|"continue")` 替代（不做兼容层）。
+> 2026-04-22 起 plannable 的 activates_on.show_content_when 统一为 `do` + `plan`。
+> 旧命令 `create_sub_thread` / `continue_sub_thread` 已被 `do(context="fork"|"continue")` 替代（不做兼容层）。
 
 ## 核心原则
 
-1. **先拆解再执行** — 复杂任务先用 `set_plan` 写出计划，再逐步执行
+1. **先拆解再执行** — 复杂任务先用 `plan` 写出计划，再逐步执行
 2. **一次只做一步** — 每步完成后验证，再进入下一步
-3. **子线程处理子任务** — 用 `think(fork)` 将独立子任务委托给子线程
+3. **子线程处理子任务** — 用 `do(fork)` 将独立子任务委托给子线程
 
 ## 两个指令
 
-### think — 对自己的线程操作
+### do — 对自己的线程操作
 
-`think` 统一了 fork（派生新子线程）和 continue（向已有线程补充信息）两种意图：
+`do` 统一了 fork（派生新子线程）和 continue（向已有线程补充信息）两种意图：
 
 ```
-think {
+do {
   msg: string,                       # 必填：消息内容
   threadId?: string,                 # 目标线程（context=continue 时必填）
   context: "fork" | "continue",      # 必填：操作模式
@@ -36,10 +36,10 @@ think {
 }
 ```
 
-#### think(fork) — 创建子线程
+#### do(fork) — 创建子线程
 
 ```
-open(title="搜索相关文档", type=command, command=think, description="派生搜索子任务")
+open(title="搜索相关文档", type=command, command=do, description="派生搜索子任务")
 refine(form_id, {
   context: "fork",
   msg: "在 /docs 下查找与 X 相关的 md 文件",
@@ -52,10 +52,10 @@ submit(title="搜索相关文档", form_id)  // title 同时作为子线程名
 
 详见 [../../../认知/线程树/子线程.md](../../../认知/线程树/子线程.md)。
 
-#### think(continue) — 向子线程追加消息
+#### do(continue) — 向子线程追加消息
 
 ```
-open(title="补充信息", type=command, command=think, description="给子线程补充信息")
+open(title="补充信息", type=command, command=do, description="给子线程补充信息")
 refine(form_id, {
   context: "continue",
   threadId: "th_xxx",
@@ -66,10 +66,10 @@ submit(title="补充 Y 的检查要求", form_id)
 
 向已创建的子线程追加消息（必须指定 `threadId`）。若子线程已 done，自动复活为 running。
 
-### set_plan — 写入计划
+### plan — 写入计划
 
 ```
-open(title="保存计划", type=command, command=set_plan, description="写入当前线程计划")
+open(title="保存计划", type=command, command=plan, description="写入当前线程计划")
 refine(form_id, {
   text: "..."   // 当前线程的文字计划
 })
@@ -89,16 +89,16 @@ kernel/plannable/
 
 plannable 的 TRAIT.md 含若干规划经验：
 
-- **子线程 vs 同线程**：只有**真正独立**的子任务才值得 `think(fork)` 开子线程；线性依赖的步骤在同一线程里做
+- **子线程 vs 同线程**：只有**真正独立**的子任务才值得 `do(fork)` 开子线程；线性依赖的步骤在同一线程里做
 - **计划粒度**：不要拆太细（5 步够用），但要能让验证单独进行
-- **计划可更新**：执行中发现新情况，随时 set_plan 重写计划——不要死守旧计划
+- **计划可更新**：执行中发现新情况，随时 plan 重写计划——不要死守旧计划
 
 ## 源码锚点
 
 | 概念 | 实现 |
 |---|---|
 | Trait 定义 | `kernel/traits/plannable/TRAIT.md` |
-| think 处理 | `kernel/src/thread/engine.ts`（think 分支，4 模式） |
+| do 处理 | `kernel/src/thread/engine.ts`（do 分支，4 模式） |
 | 线程树创建 | `kernel/src/thread/tree.ts` |
 | plan 字段 | `kernel/src/thread/types.ts` |
 

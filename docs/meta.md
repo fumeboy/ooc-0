@@ -71,7 +71,7 @@ ooc/                          ← user repo（用户仓库，git 根）
 │   │   ├── talkable/         ← 跨对象通信（activates_on.show_content_when: [talk, return]，含 cross_object, ooc_links, delivery 子 trait）
 │   │   ├── reflective/       ← 记忆与反思（activates_on.show_content_when: [return]，含 memory_api, super 子 trait）
 │   │   ├── verifiable/       ← 验证能力（activates_on.show_content_when: [return]）
-│   │   ├── plannable/        ← 任务规划（activates_on.show_content_when: [think, set_plan]）
+│   │   ├── plannable/        ← 任务规划（activates_on.show_content_when: [do, plan]）
 │   │   ├── debuggable/       ← 系统化调试（手动激活，无 activates_on.show_content_when）
 │   │   ├── reviewable/       ← 代码审查（手动激活，deps: verifiable）
 │   │   ├── library_index/    ← Library 资源查询（activates_on.show_content_when: [program]）
@@ -223,7 +223,7 @@ Object（对象）
 │   │   ├── 根线程 ── 由用户消息或 talk 创建
 │   │   │       是对象处理一个请求的入口。
 │   │   │
-│   │   ├── 子线程 ── 由 think(fork) 创建
+│   │   ├── 子线程 ── 由 do(fork) 创建
 │   │   │       继承父线程的 trait 作用域。
 │   │   │       独立执行，完成后 return 结果通知父线程。
 │   │   │
@@ -312,8 +312,8 @@ Object（对象）
 │   │   │   ThreadScheduler 管理线程执行顺序。
 │   │   │
 │   │   ├── 单线程循环 ── 每个 running 线程轮流执行一轮 ThinkLoop
-│   │   ├── 子线程创建 ── think(fork) 创建子线程处理子任务
-│   │   ├── 等待机制 ── think(wait=true) / talk(wait=true) 等待子线程或对方回复
+│   │   ├── 子线程创建 ── do(fork) 创建子线程处理子任务
+│   │   ├── 等待机制 ── do(wait=true) / talk(wait=true) 等待子线程或对方回复
 │   │   └── 完成传播 ── 子线程 return → 结果写入父线程 inbox → 唤醒父线程
 │   │
 │   ├── Effect / 副作用（G10）
@@ -443,14 +443,14 @@ stones/
     ├── user/                        ── user 的 session 级数据（身份挂牌，不参与 ThinkLoop）
     │   └── data.json               ── user inbox 引用索引：{ inbox: [{threadId, messageId}, ...] }
     │                                 每次 talk(target="user") 追加一条引用（不存正文）
-    │                                 前端凭 (threadId, messageId) 反查 thread.json.actions 里的正文
+    │                                 前端凭 (threadId, messageId) 反查 thread.json.events 里的正文
     ├── objects/{name}/              ── 一个 Flow = 一个目录（原 flows/ 重命名）
     │   ├── .flow                   ── 标记文件（Flow 存活标志）
     │   ├── data.json               ── Flow 的运行时数据
     │   ├── process.json            ── 行为树（旧架构，节点状态、actions 历史）
     │   ├── threads.json            ── 线程树索引（新架构，rootId + nodes 元数据）
     │   ├── threads/{threadId}/     ── 线程运行时数据
-    │   │   └── thread.json         ── 单个线程的 actions、locals、plan
+    │   │   └── thread.json         ── 单个线程的 events、locals、plan
     │   ├── memory.md               ── 会话记忆（仅当前任务可见）
     │   ├── views/{viewName}/       ── Flow 级 View（2026-04-21 取代 ui/pages/）
     │   │   ├── VIEW.md             ── 元数据（kind=view，namespace=self）
@@ -516,7 +516,7 @@ Context
 
 **可见性分类（4 色）** —— 每个节点在 focus 线程 Context 中的呈现形态：
 
-- `detailed` — focus 自身：process 区段完整 actions 可见
+- `detailed` — focus 自身：process 区段完整 events 可见
 - `summary`  — 祖先 / 直接子 / 同级兄弟，拥有 summary 字段
 - `title_only` — 祖先 / 直接子 / 同级兄弟，没有 summary
 - `hidden` — 其他节点（uncle / cousin / 孙节点等）
@@ -556,7 +556,7 @@ Engine（线程树执行引擎）
 │
 ├── Tool Calling 路径（唯一路径）
 │   │   LLM 必须返回 toolCalls；Engine 从每次 tool call 顶层
-│   │   提取 title（一句话行动说明），写入 ThreadAction.title，
+│   │   提取 title（一句话行动说明），写入 ProcessEvent.title，
 │   │   并通过 SSE flow:action 广播给前端 TuiAction 展示。
 │   │
 │   ├── open → FormManager.begin() + collectCommandTraits() + activateTrait()
@@ -639,14 +639,14 @@ Engine（线程树执行引擎）
 ```
 协作模型
 │
-├── 通信原语（2026-04-22 think/talk 统一）
-│   │   think 对自己的线程操作；talk 对其他对象的线程操作；参数一致。
-│   │   think/talk {msg, threadId?, context: "fork"|"continue", target?}
+├── 通信原语（2026-04-22 do/talk 统一）
+│   │   do 对自己的线程操作；talk 对其他对象的线程操作；参数一致。
+│   │   do/talk {msg, threadId?, context: "fork"|"continue", target?}
 │   │   - fork：派生新线程（原线程 readonly）
 │   │   - continue：向原线程投递消息（产生影响，唤醒）
 │   │
-│   ├── think(msg, context="fork")                ── 在当前线程下派生子线程（原 create_sub_thread）
-│   ├── think(msg, threadId, context="continue")  ── 向自己的已有线程投递消息（原 continue_sub_thread）
+│   ├── do(msg, context="fork")                ── 在当前线程下派生子线程（原 create_sub_thread）
+│   ├── do(msg, threadId, context="continue")  ── 向自己的已有线程投递消息（原 continue_sub_thread）
 │   ├── talk(target, msg, context="fork")         ── 对方新根线程（原 talk）
 │   ├── talk(target, msg, threadId, context="fork")     ── 对方线程下 fork（新能力）
 │   ├── talk(target, msg, threadId, context="continue") ── 向对方已有线程投递（新能力）
@@ -676,17 +676,17 @@ Engine（线程树执行引擎）
 │   ├── 路径 ── flows/{sessionId}/user/data.json
 │   ├── 结构 ── { inbox: [{threadId, messageId}, ...] }
 │   ├── 引用式 ── 只存 (threadId, messageId) 对，不复制消息正文
-│   │       正文在发起对象的 thread.json.actions[] 里，前端凭 id 反查
+│   │       正文在发起对象的 thread.json.events[] 里，前端凭 id 反查
 │   ├── 写入时机 ── 任意对象 talk(target="user") 时，world 在 SSE 广播外追加一条引用
 │   ├── 写失败不阻塞 ── console.error，不回滚 SSE，不抛
 │   ├── 串行化 ── per-sessionId Promise 链（防并发写丢）
 │   ├── talk(wait=true, target=user) ── 降级为普通 talk（user 永不回复，避免死锁）
 │   └── HTTP API ── GET /api/sessions/:sid/user-inbox → { inbox: [...] }
 │
-├── 子线程协作（think 统一）
-│   ├── think(fork) ── 创建子线程处理子任务（替代 create_sub_thread）
-│   ├── think(continue, threadId) ── 向已创建的子线程追加消息（done 线程自动复活；替代 continue_sub_thread）
-│   ├── think(wait=true) ── 派生子线程并等待其完成
+├── 子线程协作（do 统一）
+│   ├── do(fork) ── 创建子线程处理子任务（替代 create_sub_thread）
+│   ├── do(continue, threadId) ── 向已创建的子线程追加消息（done 线程自动复活；替代 continue_sub_thread）
+│   ├── do(wait=true) ── 派生子线程并等待其完成
 │   └── 子线程 return → 结果写入父线程 inbox → 唤醒父线程
 │
 ├── Session 管理
@@ -736,7 +736,7 @@ Engine（线程树执行引擎）
         新 session bruce talk → context-builder 注入 memory →
         bruce 引用沉淀的经验
 
-代码: kernel/src/thread/engine.ts（执行引擎，含 think/talk 四模式统一处理）
+代码: kernel/src/thread/engine.ts（执行引擎，含 do/talk 四模式统一处理）
       kernel/src/thread/scheduler.ts（线程调度器）
       kernel/src/thread/tree.ts（线程树，含 writeInbox/markInbox/awaitThreads）
       kernel/src/thread/collaboration.ts（跨对象协作 API）
@@ -898,11 +898,11 @@ Kernel Traits
 │   │       "没有验证证据，不做完成声明。"
 │   │       没有它，对象会自欺。
 │   │
-│   ├── kernel/plannable        ── 任务拆解（activates_on.show_content_when: [think, set_plan]）
+│   ├── kernel/plannable        ── 任务拆解（activates_on.show_content_when: [do, plan]）
 │   ├── kernel/debuggable       ── 系统化调试（手动激活，无 activates_on.show_content_when）
 │   ├── kernel/reviewable       ── 代码审查（手动激活，deps: verifiable）
 │   ├── kernel/library_index    ── Library 资源查询（activates_on.show_content_when: [program]）
-│   └── kernel/object_creation  ── 创建新对象的指南（activates_on.show_content_when: [think]）
+│   └── kernel/object_creation  ── 创建新对象的指南（activates_on.show_content_when: [do]）
 │
 └── 组合效应
         基座层的交叉：
@@ -1141,8 +1141,8 @@ Web UI 概念树
 │   │
 │   ├── TuiAction（Action 一行展示）── 展示单条 action
 │   │   │   TUI 风格：一行前缀字符 + label + 内容；inject 默认折叠
-│   │   │   ThreadAction 类型：thinking/text/tool_use/program/inject/message_in/
-│   │   │                     message_out/set_plan/mark_inbox/create_thread/thread_return
+│   │   │   ProcessEvent 类型：thinking/text/tool_use/program/inject/message_in/
+│   │   │                     message_out/plan/mark_inbox/create_thread/thread_return
 │   │   │
 │   │   ├── HeaderLine ── 头部一行
 │   │   │   ├── 前缀字符 + label（类型着色）

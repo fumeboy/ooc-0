@@ -212,7 +212,7 @@ spawn Sophia 评审：
 - `docs/哲学/emergences/metacognitive_pressure.md` — E13 元认知压力调节涌现条目
 
 **修改文件**：
-- `kernel/src/thread/types.ts` — `ThreadAction.type` 扩展 `compact_summary`（含 `original` / `kept`）；`ThreadDataFile` 扩展 `compactMarks`
+- `kernel/src/thread/types.ts` — `ProcessEvent.type` 扩展 `compact_summary`（含 `original` / `kept`）；`ThreadDataFile` 扩展 `compactMarks`
 - `kernel/src/thread/tools.ts` — `OPEN_TOOL.command` 枚举追加 `compact`；`summary` 字段描述补上 compact 用法
 - `kernel/src/thread/context-builder.ts` — `renderThreadProcess` 为 `compact_summary` 特化渲染
 - `kernel/src/thread/engine.ts` — 两条路径（run + resume）：
@@ -234,7 +234,7 @@ spawn Sophia 评审：
 ### 2026-04-22 调研与设计（Kernel）
 
 **已调研**：
-- `kernel/src/thread/types.ts` — `ThreadAction.type` 枚举、`ThreadDataFile` 结构
+- `kernel/src/thread/types.ts` — `ProcessEvent.type` 枚举、`ThreadDataFile` 结构
 - `kernel/src/thread/engine.ts` — open/submit 分发（双路径 runWithThreadTree + resumeWithThreadTree）
 - `kernel/src/thread/context-builder.ts` — `renderThreadProcess` 按 type 分支渲染
 - `kernel/src/thread/tools.ts` — `OPEN_TOOL` command enum 必须更新
@@ -243,7 +243,7 @@ spawn Sophia 评审：
 - `kernel/traits/reflective/super/` — 模板：command_binding + when:never + llm_methods
 
 **设计**：
-- 扩展 `ThreadAction.type` 增加 `"compact_summary"`，可选 `original?` / `kept?`
+- 扩展 `ProcessEvent.type` 增加 `"compact_summary"`，可选 `original?` / `kept?`
 - 扩展 `ThreadDataFile` 增加 `compactMarks?`（drops/truncates，落盘于 thread.json）
 - tools.ts `OPEN_TOOL.command` enum 追加 `"compact"`
 - 新建 `kernel/traits/compact/` — 5 个 llm_methods：list_actions / truncate_action / drop_action / close_trait / preview_compact

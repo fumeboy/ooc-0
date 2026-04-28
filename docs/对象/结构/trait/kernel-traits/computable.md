@@ -83,7 +83,7 @@ kernel/computable/
 
 沙箱抛出的错误会：
 
-1. 进入当前线程的 actions 历史
+1. 进入当前线程的 events 历史
 2. 如果激活了 debuggable trait，触发 `when_error` hook 注入调试提示
 3. 作为 submit 的返回结果呈现给 LLM
 

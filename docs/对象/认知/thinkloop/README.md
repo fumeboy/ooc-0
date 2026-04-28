@@ -11,7 +11,7 @@
   ↓
 行动   ──  Engine 处理 tool call（open/submit/close/wait）
   ↓
-记录   ──  thought + actions 写入 thread.json
+记录   ──  ProcessEvent 写入 thread.json.events
   ↓
 循环   ──  进入下一轮（或切换状态）
 ```

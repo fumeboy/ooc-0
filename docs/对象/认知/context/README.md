@@ -10,7 +10,7 @@
 - 无结构，LLM 难以定位关键信息
 - 一次性，不同任务之间没有隔离
 
-OOC 的 Context = **一个结构化的对象**，由 9 个字段组成，每个字段有明确来源和容量上限。
+OOC 的 Context = **一组结构化信息窗口 + 一条 process events 消息流**。信息窗口放入 system prompt，process events 作为独立 LLM messages 输入。
 
 ## 四个子领域
 
@@ -29,12 +29,26 @@ Context
 ├── instructions        ← 激活的 kernel trait 的 TRAIT.md（系统指令）
 ├── knowledge           ← 激活的 library/user trait 的 TRAIT.md（知识窗口）
 ├── parentExpectation   ← 线程树节点的 title + description
-├── process             ← 当前线程的 actions 历史
+├── processEvents       ← 当前线程的 process events 历史（独立 messages）
 ├── inbox               ← 未读消息（含 messageId）
 ├── activeForms         ← FormManager 中的活跃 form 列表
 ├── directory           ← 对象的目录列表（包括 relations）
 └── childrenSummary     ← 子线程完成摘要
 ```
+
+## LLM Input 拆分
+
+每轮 LLM 输入分两层：
+
+1. **system prompt：`<context>` 信息窗口**
+   - identity / instructions / knowledge
+   - task / creator / plan / inbox / activeForms / directory / relations / status
+   - 这些信息描述“当前世界长什么样”，不再混入完整历史。
+2. **process event messages：上下文变化历史**
+   - `llm_interaction`：LLM 交互过程，例如 `message_in`、`message_out`、`text`、`tool_use`
+   - `context_change`：上下文变化提示，例如 `inject`、`program`、`plan`、`create_thread`、`thread_return`
+
+这样做接近 Claude Code / Codex 的输入组织方式：稳定规则和状态由 system/developer 层承载，历史交互作为可裁剪的 transcript/messages 进入模型。
 
 ## Context 的三个容量管理机制
 
@@ -49,12 +63,12 @@ Context
 - **session**：当前任务的笔记
 - **recent**：最近 N 轮的完整记录
 
-历史 actions 不全部注入——只有 recent 被完整保留，更早的会被压缩或遗忘。
+历史 process events 不全部注入——只有 recent 被完整保留，更早的会被压缩或遗忘。
 详见 [三层记忆.md](三层记忆.md)。
 
 ### 3. Scope Chain（空间维度过滤）
 
-线程树向上收集时，只有作用域内的 trait / 知识可见。子线程不会自动看到兄弟线程的 actions。
+线程树向上收集时，只有作用域内的 trait / 知识可见。子线程不会自动看到兄弟线程的 events。
 详见 [scope-chain.md](scope-chain.md)。
 
 ## Pause — 检查点机制
@@ -71,10 +85,11 @@ Engine 可以在 LLM 返回后、执行前暂停，让人类介入：
 
 | 概念 | 实现 |
 |---|---|
-| Context 构建 | `kernel/src/thread/context-builder.ts` |
-| ContextData 类型 | `kernel/src/types/context.ts` |
-| Scope Chain | `kernel/src/thread/tree.ts` |
-| 三层记忆 | `kernel/src/thread/context-builder.ts`（各 memory 收集函数） |
+| Context 构建 | `kernel/src/thinkable/context/builder.ts` |
+| LLM Messages 构造 | `kernel/src/thinkable/context/messages.ts` |
+| Context 类型 | `kernel/src/thinkable/context/builder.ts` |
+| Scope Chain | `kernel/src/thinkable/thread-tree/tree.ts` |
+| 三层记忆 | `kernel/src/thinkable/context/builder.ts`（各 memory 收集函数） |
 
 ## 与基因的关联
 

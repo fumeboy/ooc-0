@@ -96,10 +96,10 @@ executable/
 │   ├── types.ts
 │   ├── program.ts
 │   ├── talk.ts
-│   ├── think.ts
+│   ├── do.ts
 │   ├── return.ts
 │   ├── compact.ts
-│   ├── set_plan.ts
+│   ├── plan.ts
 │   └── defer.ts
 ├── sandbox/          # program 执行沙箱和 effect 追踪
 │   ├── executor.ts

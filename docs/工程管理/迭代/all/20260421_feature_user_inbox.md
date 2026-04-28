@@ -149,7 +149,7 @@ curl http://localhost:8080/api/sessions/<sid>/user-inbox
 
 代码调研结果：
 
-1. **messageId 来源**：当前 `ThreadAction` 类型已有 `id?: string` 字段（`kernel/src/thread/types.ts:130`），但 engine.ts 在 push `message_out` 时并未显式赋 id（`kernel/src/thread/engine.ts:1077/1978`——两处 tool-calling 分支）。`tree.ts` 中的 `msg_` 生成器（`tree.ts:356/494`）用于 inbox 消息 id，不是 action id。**方案**：engine 在写 message_out action 时显式生成 `msg_xxx` 格式的 id，并把它作为 messageId 参数传给 `config.onTalk` 新增的 `messageId` 入参；action.id 同时落盘到 thread.json，前端反查就是 `actions.find(a => a.id === messageId)`。
+1. **messageId 来源**：当前 `ProcessEvent` 类型已有 `id?: string` 字段（`kernel/src/thread/types.ts:130`），但 engine.ts 在 push `message_out` 时并未显式赋 id（`kernel/src/thread/engine.ts:1077/1978`——两处 tool-calling 分支）。`tree.ts` 中的 `msg_` 生成器（`tree.ts:356/494`）用于 inbox 消息 id，不是 action id。**方案**：engine 在写 message_out action 时显式生成 `msg_xxx` 格式的 id，并把它作为 messageId 参数传给 `config.onTalk` 新增的 `messageId` 入参；action.id 同时落盘到 thread.json，前端反查就是 `actions.find(a => a.id === messageId)`。
 
 2. **_fromThreadId 可靠性**：engine.ts:1083 和 1984 两处调用 `config.onTalk(args.target, args.message, objectName, threadId, sessionId, continueThreadId)`——`threadId` 是当前 run 循环的当前线程变量，在 talk 分支被执行时必然非空（如果为空代表 engine bug 比 inbox 更严重的问题）。无需额外处理。
 

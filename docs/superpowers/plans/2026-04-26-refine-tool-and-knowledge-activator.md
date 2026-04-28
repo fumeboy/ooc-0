@@ -109,7 +109,7 @@ Then edit the header comment in the new file to:
 /**
  * Knowledge 激活器（原 Trait Activator 升级）
  *
- * 决定哪些 Knowledge（trait / view / relation）在当前 think 中被激活。
+ * 决定哪些 Knowledge（trait / view / relation）在当前思考轮次中被激活。
  * 沿用 G3/G13 设计：激活由作用域链 + 反向索引驱动。
  *
  * @ref docs/superpowers/specs/2026-04-26-refine-tool-and-knowledge-activator.md
@@ -710,7 +710,7 @@ Edit `/Users/zhangzhefu/x/ooc/kernel/src/thread/tools.ts`:
 Replace SUBMIT_TOOL.function.description (line 145):
 
 ```typescript
-    description: "提交指令执行。必须先 open 获取 form_id，所有参数通过 refine() 累积；submit() 本身不接受参数。think/talk 指令通过 context=fork|continue 表达四种语义：think(fork) 派生自己的子线程；think(continue,threadId) 向自己某线程补充；talk(fork,target) 向别人新根线程；talk(continue,target,threadId) 向别人已有线程补充。talk 可选带 form 参数（结构化表单）——记得用 refine() 提供。记得带 title 参数，用一句话说明本次提交的意图。",
+    description: "提交指令执行。必须先 open 获取 form_id，所有参数通过 refine() 累积；submit() 本身不接受参数。do/talk 指令通过 context=fork|continue 表达四种语义：do(fork) 派生自己的子线程；do(continue,threadId) 向自己某线程补充；talk(fork,target) 向别人新根线程；talk(continue,target,threadId) 向别人已有线程补充。talk 可选带 form 参数（结构化表单）——记得用 refine() 提供。记得带 title 参数，用一句话说明本次提交的意图。",
 ```
 
 In SUBMIT_TOOL.function.parameters.properties, **delete** these entries:

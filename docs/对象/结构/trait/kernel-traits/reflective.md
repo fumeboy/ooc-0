@@ -77,7 +77,7 @@ kernel/reflective/
 reflective 是沉淀循环的入口：
 
 ```
-经验（thread.json actions）
+经验（thread.json events）
   → talk(target="super") 调用
   → SelfMeta 审视
   → 选择性写入 readme / data / memory / traits
@@ -103,4 +103,4 @@ reflective 是沉淀循环的入口：
 ## 与基因的关联
 
 - **G12**（经验沉淀）— 本 trait 是 G12 的核心工程实现
-- **G10**（行动记录不可变）— 反思材料来自 actions 历史
+- **G10**（行动记录不可变）— 反思材料来自 events 历史

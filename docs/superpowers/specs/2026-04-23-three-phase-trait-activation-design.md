@@ -169,7 +169,7 @@ engine:
 ### Sticky vs Transient
 
 - `open` / `submit` 类 tool → sticky=true，TRAIT.md 需显式 close 或 form 完结才释放
-- `talk` / `think` / `program` 类 tool → sticky=false，transient 只对下一轮有效
+- `talk` / `do` / `program` 类 tool → sticky=false，transient 只对下一轮有效
 
 ---
 

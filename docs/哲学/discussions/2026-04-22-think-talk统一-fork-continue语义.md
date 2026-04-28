@@ -93,7 +93,7 @@ think/talk {
 ## 实现要点
 
 - **tools.ts**：open 的 command enum 替换；submit 参数新增 `msg` / `threadId` / `context`，删除 `continue_thread`
-- **types.ts**：ThreadAction 新增可选 `context` 字段（fork / continue），前端/持久化可追溯
+- **types.ts**：ProcessEvent 新增可选 `context` 字段（fork / continue），前端/持久化可追溯
 - **engine.ts**：run/resume 两路径同步重写 talk/think 分支，删除 create_sub_thread / continue_sub_thread 分支
 - **engine.runWithThreadTree**：新增 `forkUnderThreadId` 参数（对方线程下 fork 子线程）
 - **world.ts** & **world.super.ts**：onTalk 签名加 `forkUnderThreadId`，两处（`_talkWithThreadTree` + `_buildEngineConfig`）同步

@@ -35,7 +35,7 @@ Kernel Traits 分两层：
 | Trait | 触发 command | 简述 | 详细 |
 |---|---|---|---|
 | **computable** | `program` | JavaScript 代码执行 + 沙箱 API | [computable.md](computable.md) |
-| **plannable** | `think`, `set_plan` | 任务拆解、子线程规划（think 统一 fork/continue 子线程） | [plannable.md](plannable.md) |
+| **plannable** | `do`, `plan` | 任务拆解、子线程规划（do 统一 fork/continue 子线程） | [plannable.md](plannable.md) |
 | **debuggable** | (无 activates_on.show_content_when，手动激活) | 系统化调试四阶段流程 | [debuggable.md](debuggable.md) |
 | **reviewable** | (无 activates_on.show_content_when) | 两阶段代码审查（合规 + 质量） | [reviewable.md](reviewable.md) |
 
@@ -44,7 +44,7 @@ Kernel Traits 分两层：
 | Trait | 触发 command | 简述 | 详细 |
 |---|---|---|---|
 | **talkable** | `talk`, `return` | 对象间消息传递；`talk(wait=true)` 表示等待回复 | [talkable.md](talkable.md) |
-| **object_creation** | `think` | 创建新对象的指南 | [object-creation.md](object-creation.md) |
+| **object_creation** | `do` | 创建新对象的指南 | [object-creation.md](object-creation.md) |
 
 ### 成长与诚实
 

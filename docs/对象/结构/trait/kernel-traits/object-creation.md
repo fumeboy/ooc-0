@@ -8,13 +8,13 @@
 name: kernel/object_creation
 type: how_to_interact
 activates_on:
-  show_content_when: [think]
+  show_content_when: [do]
 description: 创建新对象或完善对象身份的指南
 ```
 
 **注意**：meta.md 子树 5 中未列出此 trait。本目录的 README 已补充。后续 meta.md 会同步修正。
 
-## 为什么关联 think
+## 为什么关联 do
 
 在 OOC 中，**创建新对象**通常是一个子任务——需要一个专门的子线程来：
 1. 设计对象的 whoAmI（身份定义）
@@ -22,7 +22,7 @@ description: 创建新对象或完善对象身份的指南
 3. 生成初始 readme.md 和 data.json
 4. 创建对象目录
 
-`think(context="fork")` 触发此 trait 激活，让子线程获得"如何设计一个对象"的指导。
+`do(context="fork")` 触发此 trait 激活，让子线程获得"如何设计一个对象"的指导。
 
 ## whoAmI 的结构
 
@@ -49,7 +49,7 @@ object_creation 的 TRAIT.md 强调：一个好的 whoAmI 应该包含：
 用户：创建一个"代码评审助手"对象
 
 supervisor（根线程）:
-  open(title="创建代码评审助手", type=command, command=think, description="派生子线程设计新对象")
+  open(title="创建代码评审助手", type=command, command=do, description="派生子线程设计新对象")
   submit({
     title: "创建代码评审助手",
     context: "fork",
@@ -93,7 +93,7 @@ object_creation 不只用于新建——也用于**完善已有对象的 whoAmI*
 用户：帮我完善 alan 的 whoAmI，加一些关于他对哲学的偏好
 
 supervisor:
-  open(title="完善 alan 身份", command=think, description="派生子线程完善 alan 的 whoAmI")
+  open(title="完善 alan 身份", command=do, description="派生子线程完善 alan 的 whoAmI")
   refine(form_id, { context: "fork", msg: "..." })
   submit({ title: "完善 alan 身份", form_id })
 ```

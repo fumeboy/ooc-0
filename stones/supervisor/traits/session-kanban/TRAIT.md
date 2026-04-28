@@ -3,7 +3,7 @@ namespace: self
 name: session-kanban
 type: how_to_think
 command_binding:
-  commands: ["think", "set_plan"]
+  commands: ["do", "plan"]
 description: 用 Issue/Task 看板管理和推进 Session 中的工作
 deps: []
 ---

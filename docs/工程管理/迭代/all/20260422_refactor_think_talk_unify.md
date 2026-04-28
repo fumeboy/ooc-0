@@ -90,7 +90,7 @@ think/talk {
   - `talk_sync` 同步扩展（如仍存在）
   - 标记 `create_sub_thread` / `continue_sub_thread` 命令为 **deprecated**（按 OOC"不考虑旧版本兼容"原则，**直接删除**，不做兼容层）
 - `kernel/src/thread/types.ts`：
-  - ThreadAction 的 tool_use / message_out 记录扩展 `context` 字段
+  - ProcessEvent 的 tool_use / message_out 记录扩展 `context` 字段
 - 单元测试：schema 正确性、`context=continue` 要求 threadId
 
 ### Phase 2 — Engine 处理层（engine.ts）
@@ -223,7 +223,7 @@ think/talk {
 - `tools.ts`：
   - open 的 command enum 替换：新增 "think"，删除 "create_sub_thread" / "continue_sub_thread"
   - submit 参数新增 `msg` / `threadId` / `context`，删除 `continue_thread`
-- `types.ts`：ThreadAction 新增可选 `context: "fork" | "continue"` 字段
+- `types.ts`：ProcessEvent 新增可选 `context: "fork" | "continue"` 字段
 - `engine.ts`：
   - run/resume 两路径同步重写 talk / think 分支
   - 删除 create_sub_thread / continue_sub_thread 分支

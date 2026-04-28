@@ -85,7 +85,7 @@
 
 - **后端**：
   - `kernel/src/thread/tools.ts` — talk / talk_sync schema 扩展
-  - `kernel/src/thread/types.ts` — ThreadAction.tool_use（或 message action）+ InboxMessage 增加 form 字段
+  - `kernel/src/thread/types.ts` — ProcessEvent.tool_use（或 message action）+ InboxMessage 增加 form 字段
   - `kernel/src/thread/engine.ts` — 读取 form、持久化 form、返回 formResponse
   - `kernel/src/world/world.ts` — onTalk 透传 form 到 SSE
   - `kernel/src/server/server.ts` — `POST /api/talk/:target` 接受 `formResponse`
@@ -185,7 +185,7 @@ interface FormResponse {
 合并原因：tools.ts 的 FORM_PARAM 和 types.ts 的 TalkFormPayload/FormResponse 是契约的两面，解耦拆分意义小，合并 commit 更清晰。
 
 - `kernel/src/thread/tools.ts`: 新增 `FORM_PARAM` schema；submit tool args.form 加入 properties（不在 required）；submit description 补 form 说明
-- `kernel/src/thread/types.ts`: 新增 `TalkFormOption` / `TalkFormPayload` / `FormResponse`；`ThreadAction.form` / `.formResponse`（optional）；`ThreadInboxMessage.form` / `.formResponse`（optional）
+- `kernel/src/thread/types.ts`: 新增 `TalkFormOption` / `TalkFormPayload` / `FormResponse`；`ProcessEvent.form` / `.formResponse`（optional）；`ThreadInboxMessage.form` / `.formResponse`（optional）
 
 并行 agent 冲突：ReflectFlow agent 曾把我未提交的 tools.ts/types.ts 暂存误纳入他们的 commit `1f42aa1`——他们察觉后立即 amend 掉了（HEAD 变成 `e5d04f7`，只含 reflect.ts+reflect-thread.test.ts）。我随后独立 commit 自己的 tools.ts/types.ts 到 `e472a1d`。期间我**没有使用 git stash**（按硬约束）。
 

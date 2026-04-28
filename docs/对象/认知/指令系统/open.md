@@ -27,7 +27,7 @@ open({
 ### 参数
 
 - `title` (必填): 一句话说明本次 open 在做什么
-- `command` (必填): 指令名称（`program` / `think` / `talk` / `return` / `set_plan` / `defer` / `compact`）
+- `command` (必填): 指令名称（`program` / `do` / `talk` / `return` / `plan` / `defer` / `compact`）
 - `description` (必填): 描述此次 open 的目的（用于 activeForms 展示、便于回看）
 - `args` (可选): 预填参数，等价于 open 后立即 `refine({ args })`
 - `trait` / `method` (可选): `command=program` 时直接调用 trait 方法，例如 `trait="kernel:computable/file_ops", method="readFile"`

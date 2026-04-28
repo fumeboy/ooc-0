@@ -10,7 +10,7 @@ flows/{sessionId}/objects/{name}/
 ├── data.json                ← Flow 运行时数据
 ├── threads.json             ← 线程树索引（rootId + nodes 元数据）
 ├── threads/{threadId}/
-│   └── thread.json          ← 单个线程的 actions、locals、plan
+│   └── thread.json          ← 单个线程的 events、locals、plan
 ├── memory.md                ← 会话记忆（仅当前任务可见）
 ├── ui/pages/                ← Flow 演示页面
 │   └── *.tsx
@@ -64,7 +64,7 @@ flows/sess_C/objects/alan/            ← 处理任务 C
 |---|---|---|
 | `data.json` | Flow 级 | 当前任务进度、临时计算结果 |
 | `memory.md` | Flow 级 | 本次会话的思考笔记 |
-| `threads/*/thread.json` | 线程级 | 单线程的 actions 历史 |
+| `threads/*/thread.json` | 线程级 | 单线程的 events 历史 |
 
 **所有 Flow 级数据在任务结束后都不进入下一次任务的 Context**。如果要沉淀到 Stone，必须走 SelfMeta。
 
@@ -109,7 +109,7 @@ flows/sess_C/objects/alan/            ← 处理任务 C
   "id": "thread-001",
   "title": "处理用户查询",
   "description": "用户询问了 X，需要查 Y 并回答",
-  "actions": [
+  "events": [
     { "type": "thought", "content": "...", "ts": "..." },
     { "type": "tool_use", "tool": "open", "args": {...}, "ts": "..." }
   ],

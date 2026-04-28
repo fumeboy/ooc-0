@@ -19,7 +19,7 @@
 ## 目标
 
 1. **协议层**：所有 tool call（open/submit/close/wait/mark/defer 等，不局限某一种）在入口层统一支持参数 `title: string`，用于"一句话说明本次操作的意图"。倾向于 **required**（因为 TOML 兼容路径同步移除后，唯一路径就是 tool calling，不存在老路径回退问题）。
-2. **执行层**：Engine 接收 tool call 时记录 `title` 到 ThreadAction 的持久化结构中（落盘 thread.json），并通过 SSE 发出，使前端实时可见。
+2. **执行层**：Engine 接收 tool call 时记录 `title` 到 ProcessEvent 的持久化结构中（落盘 thread.json），并通过 SSE 发出，使前端实时可见。
 3. **展示层**：前端 `TuiBlock` / `TuiAction` 组件在 tool_use 类型的行/卡片头部显著展示 `title`。
 4. **清理层（本次迭代同步完成）**：
    - **移除 TOML 兼容路径**：删除 `kernel/src/thread/parser.ts`、`kernel/src/thread/thinkloop.ts`，以及 Engine/Scheduler/World 中对它们的引用；主路径只保留 tool calling。
@@ -62,18 +62,18 @@
    - 更新这些 tool 的 description，鼓励"总是带上 title"。
 
 4. **Action 类型扩展** — `kernel/src/thread/types.ts`：
-   - 在 `ThreadAction.tool_use` 分支增加 `title?: string` 字段（保持 optional 以兼容历史落盘数据）。
+   - 在 `ProcessEvent.tool_use` 分支增加 `title?: string` 字段（保持 optional 以兼容历史落盘数据）。
    - 其他 action 类型本次不改。
 
 5. **Engine 读取与记录** — `kernel/src/thread/engine.ts`：
    - 处理 tool call 时从 arguments 中取出 `title`，剥离后再进入具体执行路径（不透传给 program/talk 指令体）。
-   - 写入 ThreadAction 时把 title 放进 action 记录。
+   - 写入 ProcessEvent 时把 title 放进 action 记录。
    - SSE 事件 `flow:action` / `stream:action` 的 payload 中一并带上 title。
 
 ### 阶段 C：前端展示
 
 6. **类型同步** — `kernel/web/src/api/types.ts`：
-   - `ThreadAction` / 对应 tool_use 结构增加 `title?: string`。
+   - `ProcessEvent` / 对应 tool_use 结构增加 `title?: string`。
 
 7. **TuiBlock / TuiAction 组件** — `kernel/web/src/components/ui/TuiBlock.tsx`：
    - props 增加 `title?: string`。
@@ -100,7 +100,7 @@
   - `kernel/tests/` — 删除 TOML 路径相关测试
 - **涉及代码（后端，阶段 B 修改）**：
   - `kernel/src/thread/tools.ts` — schema 新增 title
-  - `kernel/src/thread/types.ts` — ThreadAction.tool_use 扩展
+  - `kernel/src/thread/types.ts` — ProcessEvent.tool_use 扩展
   - `kernel/src/thread/engine.ts` — 读取、记录、SSE 发送 title
   - `kernel/tests/` — 新增 title 字段的单元测试
 - **涉及代码（前端，阶段 A 删除/迁移）**：
@@ -108,7 +108,7 @@
   - `kernel/web/src/components/ui/NodeCard.tsx`（line 13, 256） — 迁移到 TuiAction
   - `kernel/web/src/components/ui/InlineNode.tsx`（line 7, 87） — 迁移到 TuiAction
 - **涉及代码（前端，阶段 C 修改）**：
-  - `kernel/web/src/api/types.ts` — ThreadAction 类型同步
+  - `kernel/web/src/api/types.ts` — ProcessEvent 类型同步
   - `kernel/web/src/components/ui/TuiBlock.tsx` — TuiAction 支持 title 展示
   - 其他间接使用的页面（SessionKanban、FlowView、ChatPage、ThreadsTreeView、MessageSidebar 等）——视觉检查即可
 - **涉及文档**：
@@ -127,7 +127,7 @@
 
 2. **阶段 B 后端单元测试**
    - Tool schema 的 parameters 包含 title（类型正确）。
-   - Engine 处理带 title 的 tool call 时，ThreadAction 正确落盘 title，SSE payload 正确发送。
+   - Engine 处理带 title 的 tool call 时，ProcessEvent 正确落盘 title，SSE payload 正确发送。
    - `bun test` 全绿。
 
 3. **阶段 C 端到端体验验证**（spawn Bruce 角色）
@@ -184,8 +184,8 @@
 
 **核心改动**
 - `kernel/src/thread/tools.ts`：新增通用 `TITLE_PARAM` schema 片段。在 `OPEN_TOOL`、`SUBMIT_TOOL` 的 parameters.properties 中加入 `title`，并放入 `required`。`CLOSE_TOOL` 和 `WAIT_TOOL` 未改（语义上 close/wait 的意图自明，title 冗余）。
-- `kernel/src/thread/types.ts`：`ThreadAction` 新增 `title?: string` 字段（注释：前端 TuiAction 用它作卡片行首主标题）。
-- `kernel/src/thread/engine.ts`：在 `runWithThreadTree` 和 `resumeWithThreadTree` 两处 tool call 处理入口，从 `args.title` 提取 `actionTitle`，写入 `ThreadAction.title`。新增 SSE `flow:action` 事件广播 title（前端可实时看到）。
+- `kernel/src/thread/types.ts`：`ProcessEvent` 新增 `title?: string` 字段（注释：前端 TuiAction 用它作卡片行首主标题）。
+- `kernel/src/thread/engine.ts`：在 `runWithThreadTree` 和 `resumeWithThreadTree` 两处 tool call 处理入口，从 `args.title` 提取 `actionTitle`，写入 `ProcessEvent.title`。新增 SSE `flow:action` 事件广播 title（前端可实时看到）。
 - `kernel/src/thread/engine.ts`：处理 submit + create_sub_thread 的 title 命名冲突——子线程标题由 `args.child_title`（新字段）或 `args.title`（向后兼容老用法）提供；engine 两处调用 `tree.createSubThread` 都读 `args.child_title ?? args.title`。
 - `kernel/src/thread/tools.ts`：submit tool 的 schema 中同时声明 `title`（顶层行动标题，required）和 `child_title`（create_sub_thread 的子线程名，optional）。
 

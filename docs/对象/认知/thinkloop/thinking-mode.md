@@ -165,4 +165,4 @@ interface LLMClient {
 ## 与基因的关联
 
 - **G4**（输出程序以行动）— thought 是"思考的记录"，action 是"行动的轨迹"
-- **G10**（行动记录不可变）— 所有 action 类型都追加到 actions，从不改写
+- **G10**（行动记录不可变）— 所有 ProcessEvent 都追加到 events，从不改写

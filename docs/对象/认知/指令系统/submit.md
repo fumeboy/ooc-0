@@ -80,13 +80,13 @@ submit({ title: "返回结果", form_id })
 // → 线程 done
 ```
 
-### think(context="fork")（替代 create_sub_thread）
+### do(context="fork")（替代 create_sub_thread）
 
 ```typescript
 open({
   title: "分析 X",
   type: "command",
-  command: "think",
+  command: "do",
   description: "派生子线程分析 X",
   args: { context: "fork", msg: "请分析 X 模块的 API" }
 })
@@ -97,13 +97,13 @@ submit({ title: "分析 X", form_id })
 `title` 同时是新子线程的名字。
 `threadId` 省略时：fork 当前线程；填写时：fork 指定线程。
 
-### think(context="continue")（替代 continue_sub_thread）
+### do(context="continue")（替代 continue_sub_thread）
 
 ```typescript
 open({
   title: "补充上下文",
   type: "command",
-  command: "think",
+  command: "do",
   description: "补充信息给子线程",
   args: { context: "continue", threadId: "th_xxx", msg: "忘了告诉你：X 在 Y 目录" }
 })
@@ -113,13 +113,13 @@ submit({ title: "补充上下文", form_id })
 
 continue 模式下 `threadId` 必填（engine 会校验）。
 
-### set_plan
+### plan
 
 ```typescript
 open({
   title: "更新计划",
   type: "command",
-  command: "set_plan",
+  command: "plan",
   description: "记录执行计划",
   args: { plan: [ { step: 1, title: "...", status: "pending" }, ... ] }
 })
