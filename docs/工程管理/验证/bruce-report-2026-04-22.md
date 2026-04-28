@@ -130,7 +130,7 @@
 - **期望**：有一个清晰的对象"首页"视图（包含身份、traits、最近会话、记忆），可点 view 进行切换。
 - **实际**：
   - Readme 面板：左侧 bio + 思维偏置 + 职责边界（markdown 正常），右侧彩色 header + 头像 + "OOC 项目的 Supervisor，1+3 组织的总指挥" + TRAITS (12) 列表（kernel:debuggable / kernel:reviewable / kernel:talkable / kernel:object_creation / kernel:verifiable …）。观感非常专业。
-  - Data 面板：一行 key/value `_traits_ref: [git_ops, http_client]`。
+  - Data 面板：曾显示对象级默认 trait 配置；该配置入口已在 2026-04-28 退役。
   - Effects 面板：最近 session 列表（例如 "1min ago · finished · 2 msg · 7 act · 你好，请一句话介绍一下 OOC 项目"）— 非常有用的"对象行为流水"。
   - Memory 面板：结构见 #6。
   - 侧边 `views/main` 子目录里有 `backend.ts / frontend.tsx / VIEW.md`。**点击"main"这个 view 文件夹仅展开子文件列表，并不会渲染/切换到该 view** — 用户找不到"激活 view 渲染"的入口。

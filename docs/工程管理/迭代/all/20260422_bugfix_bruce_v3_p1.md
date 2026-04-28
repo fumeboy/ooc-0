@@ -23,13 +23,13 @@ Bruce v3 回归（`bruce-report-2026-04-22-v3.md`）9 项新能力 8/9 通过，
 **根因**：trait 默认可用性由 `command_binding` 或 `when: always` 决定；新 trait 都 `when: never`，且没有 command_binding 把它们挂到常用指令上；supervisor 的 scope chain 里也没显式激活。
 
 **修复方向**（两条路任选）：
-1. `stones/supervisor/readme.md` 或 `.data.json` 列出 `_traits_ref` 引用这几个 trait
+1. 显式 `open(type="trait", name="...")` 并 pin 到需要的线程
 2. 给这几个 trait 加 `command_binding`：
    - `review_api` → bind to `return`（Supervisor 完成任务时可能想 review 代码）
    - `memory_api` → bind to `return`（反思时需要查记忆）
    - `git/*` → bind to `program`（通过 program 调用 git 命令）
 
-推荐方式：**给 supervisor 的 readme 添加 `_traits_ref`**——精准范围，不污染其他对象。
+当前推荐方式：优先使用 command binding 或显式 open/pin；对象级默认 trait 配置已取消。
 
 ### P1-b：build_feedback 不触发 writeFile 路径
 
@@ -66,8 +66,8 @@ Bruce v3 回归（`bruce-report-2026-04-22-v3.md`）9 项新能力 8/9 通过，
 
 ## 方案（Phase）
 
-### Phase 1 — P1-a supervisor trait_refs
-- 加 `_traits_ref` 到 `stones/supervisor/data.json` 或 readme frontmatter
+### Phase 1 — P1-a supervisor trait refs
+- 通过显式 open/pin 或 command binding 让 supervisor 获得所需 trait
 - 验证：supervisor prompt → "用 review_api 看一下某 diff"，LLM 不再 fallback shell
 
 ### Phase 2 — P1-b build feedback 触发
@@ -90,10 +90,10 @@ Bruce v3 回归（`bruce-report-2026-04-22-v3.md`）9 项新能力 8/9 通过，
 
 ## 执行记录
 
-### Phase 1 (P1-a) — stone 级 activated_traits（2026-04-22）
+### Phase 1 (P1-a) — stone 级默认 trait（2026-04-22，已退役）
 
 - kernel commit `8e32170`（feat: stone 级默认激活 trait）+ user commit `93d3cce`
-- readme.md frontmatter 增加 `activated_traits` 字段；data._traits_ref 合并
+- readme.md frontmatter 与 data.json 的对象级默认 trait 配置已于 2026-04-28 退役
 - supervisor readme 添加 5 个 trait 激活（review_api / memory_api / git/pr / git/worktree / git/advanced）
 - Context builder 扩展 computeThreadScopeChain 支持 stoneRefs
 

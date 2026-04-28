@@ -17,7 +17,7 @@ OOC 的 Agent 原本对 "激活 trait" 这件事有多重模糊的抽象：有 `
 
 | 阶段 | 触发 | open 的文件 | 回答的问题 |
 |------|------|-------------|-----------|
-| **Origin**（起点） | 对象初始化 | stone readme.activated_traits / data._traits_ref | 我能做什么 |
+| **Origin**（起点） | 对象初始化 | 系统协议基座 + 线程显式 pin | 我能做什么 |
 | **Process**（过程） | LLM 发出 tool_use（含 partial submit） | 匹配 command_binding 的 TRAIT.md | 做某事注意什么 |
 | **Target**（终点） | 线程涉及 peer 对象 | `<relations>` 索引 + 按需 open 的关系文件 | 影响某物时注意什么 |
 

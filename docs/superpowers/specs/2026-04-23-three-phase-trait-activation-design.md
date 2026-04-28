@@ -3,6 +3,7 @@
 > ⚠️ **本文档中描述的 partial submit / submit(partial=true) 机制已于 2026-04-26 退役**，
 > 由 `refine` tool 取代。详见 `docs/superpowers/specs/2026-04-26-refine-tool-and-knowledge-activator.md`。
 > 文中的 `COMMAND_TREE` / `command-tree.ts` 设计也已于 2026-04-27 被扁平 `COMMAND_TABLE` / `command-table.ts` 取代。
+> 文中的 stone/frontmatter 默认激活设计已于 2026-04-28 退役：不再通过 readme frontmatter 或 data.json 配置对象默认 traits。
 
 > 创建日期：2026-04-23
 > 状态：已定稿，待落地
@@ -14,7 +15,7 @@
 
 | 语义 | 回答什么问题 | 现状 |
 |---|---|---|
-| **起点 Origin** | 我能做什么 | stone `readme.activated_traits` / `data._traits_ref` |
+| **起点 Origin** | 我能做什么 | 系统协议基座 + 线程显式 pin |
 | **过程 Process** | 做某事注意什么 | `command_binding` |
 | **终点 Target** | 影响某物时注意什么 | **空缺** |
 
@@ -33,7 +34,7 @@
 
 | 阶段 | 触发规则 | 被 open 的文件 |
 |---|---|---|
-| Origin | 对象初始化 | stone readme 声明的 TRAIT.md |
+| Origin | 对象初始化 | 系统协议基座与显式 pin 的 TRAIT.md |
 | Process | LLM 发出 tool_use（含 partial submit） | command_binding 匹配的 TRAIT.md |
 | Target | 线程涉及 peer 对象 | `<relations>` 索引 + 按需的 relation 文件 |
 
@@ -50,12 +51,12 @@
 
 ### 触发
 
-对象（stone 或 flow obj）初始化时，engine 读取：
+对象（stone 或 flow obj）初始化时，不再读取对象级默认 trait 配置。
 
-- `stones/{name}/readme.md` 的 frontmatter `activated_traits: [...]`
-- `stones/{name}/data.json` 的 `_traits_ref: [...]`
+当前只保留两类常驻来源：
 
-合并后调用 `openFile('@trait:xxx/yyy/...')` 把对应 TRAIT.md 批量 open 到本对象所有线程的 `pinned` 集合。
+- 系统协议基座（如 `kernel:base`）
+- 线程显式 `open(type="trait", name="...")` 后 pin 的 trait
 
 ### 虚拟路径
 

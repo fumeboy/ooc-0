@@ -71,10 +71,10 @@
 
 - commit: `1518a86`（kernel main）
 - 改动：
-  - `kernel/src/types/context.ts`：新增 `ContextWindowSource` 枚举（11 值：always_on / thread_pinned / stone_default / command_binding / scope_chain / skill_index / memory / coverage / build_feedback / file_window / extra）
+  - `kernel/src/types/context.ts`：新增 `ContextWindowSource` 枚举（10 值：always_on / thread_pinned / command_binding / from_parent / skill_index / memory / coverage / build_feedback / file_window / extra）
   - `kernel/src/types/index.ts`：re-export `ContextWindowSource`
   - `kernel/src/thread/open-files.ts`：
-    - 新增 `determineSource` 函数，按 always_on > thread_pinned > stone_default > command_binding > scope_chain 优先级判定
+    - 新增 `determineSource` 函数，按 always_on > thread_pinned > command_binding > from_parent 优先级判定
     - 每个 pinned/transient window 带 source 字段
   - `kernel/src/thread/context-builder.ts`：memory/coverage/build_feedback/skill/file_window/extraWindows 各自归类 source
   - `kernel/src/thread/engine.ts`：
@@ -126,15 +126,14 @@
 
 ### Source 枚举最终值
 
-11 个值（见 types/context.ts::ContextWindowSource）：
+10 个值（见 types/context.ts::ContextWindowSource）：
 
 | source | 语义 |
 |-------|------|
 | always_on | Trait when="always" 声明的常驻 |
 | thread_pinned | 当前线程显式 open(type=trait) pin |
-| stone_default | stone.data._traits_ref 声明 |
 | command_binding | open(type=command) / partial submit 动态激活 |
-| scope_chain | 祖先线程 traits 静态声明 |
+| from_parent | 祖先线程 traits 静态声明 |
 | skill_index | available-skills 索引窗口 |
 | memory | stone/memory/index.md 或 legacy memory.md |
 | coverage | bun test --coverage 结果 |
@@ -142,7 +141,7 @@
 | file_window | open(type=file) 文件内容 |
 | extra | engine 调用方 extraWindows 注入 |
 
-优先级（同时命中多项时取最精确）：always_on > thread_pinned > stone_default > command_binding > scope_chain。
+优先级（同时命中多项时取最精确）：always_on > thread_pinned > command_binding > from_parent。
 
 ### 挂起问题 / backlog
 

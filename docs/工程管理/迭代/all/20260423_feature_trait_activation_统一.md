@@ -2,6 +2,7 @@
 
 > ⚠️ **本文档中描述的 partial submit / submit(partial=true) 机制已于 2026-04-26 退役**，
 > 由 `refine` tool 取代。详见 `docs/superpowers/specs/2026-04-26-refine-tool-and-knowledge-activator.md`。
+> stone/readme 默认 trait 配置也已于 2026-04-28 退役：不再通过 frontmatter 或 data.json 配置对象默认 traits。
 
 > 类型：feature
 > 创建日期：2026-04-23
@@ -15,7 +16,7 @@
 
 当前 trait 激活系统有三个事实上不同的触发通路：
 
-1. **起点（Origin）**——stone `readme.activated_traits` / `data._traits_ref`（对象自身有的能力）
+1. **起点（Origin）**——系统协议基座 + 线程显式 pin（对象级默认 trait 配置已取消）
 2. **过程（Process）**——`command_binding`（做某事时需要的能力，目前只挂在基础 command 上，无法挂在子命令上）
 3. **终点（Target）**——和互动对象相关的约束——**完全空缺**
 
