@@ -1,0 +1,3 @@
+I see there's already a form f_moid9kh3_9c3r that was listed in active-forms. Now I have a new one with the same ID? Let me check - the active forms section showed f_moid9kh3_9c3r already. But the inject says "Form f_moid9kh3_9c3r 已创建" - so it reused the same form_id. That's fine.
+
+Let me refine with the args and submit.

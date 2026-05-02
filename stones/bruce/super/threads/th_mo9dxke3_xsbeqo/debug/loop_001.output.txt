@@ -1,0 +1,13 @@
+收到新消息，这是一条来自 bruce 主线程的体验测试关键发现，包含 7 个具体观察点。内容有价值，值得沉淀到长期记忆。
+
+先调用 `persist_to_memory` 沉淀这条经验：
+
+[tool_call] open
+{
+  "title": "沉淀体验测试发现",
+  "type": "command",
+  "command": "program",
+  "trait": "kernel:reflective/super",
+  "method": "persist_to_memory",
+  "description": "将 2026-04-28 体验测试的 7 条关键发现沉淀到 memory.md"
+}

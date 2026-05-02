@@ -1,0 +1,19 @@
+The `persist_to_memory` method keeps failing with "key 必须是非空字符串" even though I'm clearly passing a key. Let me think about what might be going wrong.
+
+Looking at the method signature more carefully:
+```javascript
+await callMethod("reflective/super", "persist_to_memory", {
+  key: "并行策略",
+  content: "复杂任务拆成 3 个子线程并行跑比串行快 2.5 倍。",
+});
+```
+
+The method expects `key` and `content` as its parameters. When using `program` command with trait/method, the args should be passed through refine. But maybe the issue is that the program command wraps the args differently.
+
+Let me check - when I do `open(type="command", command="program", trait="kernel:reflective/super", method="persist_to_memory")`, and then `refine(args={"key": "...", "content": "..."})`, the system should pass these as the method arguments.
+
+But the error keeps saying "key 必须是非空字符串". This suggests the `key` parameter isn't reaching the method correctly. 
+
+Maybe I should try using `program` with code execution instead, calling the method directly. Or maybe the args need to be structured differently.
+
+Let me try using `program` with code instead of trait/method invocation.

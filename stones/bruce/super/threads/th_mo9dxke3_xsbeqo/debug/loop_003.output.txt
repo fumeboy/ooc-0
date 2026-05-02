@@ -1,0 +1,14 @@
+Good, the refine was successful. Now I need to submit the form to execute the persist_to_memory call, and simultaneously mark the inbox message as ack.
+
+[tool_call] submit
+{
+  "title": "沉淀体验测试发现",
+  "form_id": "f_moid90k1_k0ch",
+  "mark": [
+    {
+      "messageId": "msg_moid8p15_cbmx",
+      "type": "ack",
+      "tip": "已沉淀到 memory.md"
+    }
+  ]
+}

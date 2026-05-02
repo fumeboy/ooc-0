@@ -1,0 +1,1 @@
+The persist_to_memory call failed because the key must be a non-empty string. Looking at my refine call, I did pass `"key": "2026-04-28 体验测试关键发现"` which is a non-empty string. Let me check - maybe the args weren't properly accumulated. Let me try again with a new open call.

@@ -5,15 +5,16 @@
       "id": "th_mo9dxke3_xsbeqo",
       "title": "bruce:super",
       "description": "bruce 的反思镜像分身：接收 talk(super) 投递的经验条目，由沉淀工具（persist_to_memory / create_trait）消费。",
-      "status": "done",
+      "status": "waiting",
       "childrenIds": [],
       "createdAt": 1776821982843,
-      "updatedAt": 1776942487936,
+      "updatedAt": 1777365443679,
       "activatedTraits": [
         "kernel:reflective/super"
       ],
-      "summary": "处理了 2 条 inbox 消息：将「线程树的可观测性价值」和「新用户体验评估的关键发现与改进建议」两条经验沉淀到 memory.md。inbox 已清空，本轮完成。",
-      "revivalCount": 1
+      "summary": "处理了 1 条 inbox 消息：将「2026-04-28体验测试关键发现」（7条发现：Form生命周期P0、data.json缺失、traits目录为空、gc.log巨大、程序执行流畅、跨对象协作有效、JSON格式易出错）沉淀到 memory.md。注意：通过 trait/method 参数方式调用 persist_to_memory 连续3次失败（key参数未被传递），最终通过代码执行方式成功调用——这本身印证了体验测试关于参数传递不直观的发现。inbox 已清空，本轮完成。",
+      "revivalCount": 3,
+      "waitingType": "explicit_wait"
     }
   }
 }

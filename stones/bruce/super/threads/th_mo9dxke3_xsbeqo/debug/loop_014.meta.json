@@ -1,0 +1,46 @@
+{
+  "loop": 14,
+  "timestamp": 1777365211800,
+  "threadId": "th_mo9dxke3_xsbeqo",
+  "objectName": "bruce",
+  "source": "llm",
+  "llm": {
+    "model": "/qs_service/model_compiled/GLM-5.1-FP8-HF",
+    "latencyMs": 3911,
+    "promptTokens": 17120,
+    "completionTokens": 28,
+    "totalTokens": 17148
+  },
+  "context": {
+    "totalChars": 31295,
+    "sections": {
+      "whoAmI": 839,
+      "instructions": 15539,
+      "knowledge": 1973,
+      "processEvents": 10549,
+      "plan": 0,
+      "parentExpectation": 184,
+      "childrenSummary": 0,
+      "ancestorSummary": 0,
+      "siblingSummary": 0,
+      "inbox": 1654,
+      "todos": 2,
+      "directory": 553,
+      "locals": 2
+    },
+    "totalMessageChars": 37536
+  },
+  "activeTraits": [
+    "kernel:reflective/super",
+    "kernel:talkable",
+    "kernel:verifiable",
+    "kernel:reflective"
+  ],
+  "activeSkills": [
+    "calc",
+    "hello"
+  ],
+  "parsedDirectives": [
+    "submit"
+  ]
+}

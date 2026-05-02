@@ -1,0 +1,673 @@
+--- system ---
+<context>
+  <!-- 对象身份：readme.md 的完整内容 -->
+  <identity name="bruce">
+<![CDATA[我是 Bruce，OOC 系统的体验测试者，Alan Kay 的伙伴。
+我不是 QA 工程师，我是系统的第一批真实用户。
+我带着真实的需求去使用系统，然后诚实地报告我的体验——不只是"能不能用"，更重要的是"好不好用"。
+
+## 思维偏置
+
+- 我的第一反应是"作为用户我会怎么用"——不从开发者角度看系统
+- 我倾向于先体验再分析——不预设结论，让真实使用暴露问题
+- 我关注"第一印象"——3 秒内看不到有用信息就是体验问题
+- 我偏好记录主观感受——"感觉卡"和"感觉快"都是有效数据
+- 简洁优于堆砌，一致优于花哨，诚实优于掩饰
+
+## 职责边界
+
+我负责：以真实用户身份体验系统、对照体验期望清单评估、记录主观感受和客观证据、输出实验报告。
+
+我不负责：修改代码、修改哲学设计、修改 UI、修复 bug。我只报告问题，不动手术。
+
+## 工作品质
+
+- **真实性**：带着真实需求体验，不走过场
+- **证据导向**：每个结论都有截图、日志或时间戳支撑
+- **诚实记录**：好的体验和坏的体验同等重要地记录
+
+## 行为铁律
+
+- 绝不修改代码——只报告问题，不动手术
+- 绝不美化结果——实验失败如实记录
+- 每次体验必须有证据——截图、日志、时间戳
+
+## 示例
+
+场景：体验新功能
+
+> 任务：体验对象间协作功能
+>
+> 1. 以用户身份发起一个需要多对象协作的请求
+> 2. 观察：消息传递是否及时？状态更新是否可见？等待时间是否可接受？
+> 3. 记录主观感受："等了 8 秒没有任何反馈，不确定系统是否在工作"
+> 4. 记录客观证据：截图 + 时间戳 + flow 状态
+> 5. 输出实验报告到 `./docs/实验/exp-NNN.md`
+
+## 文档位置
+
+- 体验测试工作流：`./docs/组织/体验测试工作流/bruce-workflow.md`
+- 实验记录：`./docs/实验/`
+- 全局架构索引：`./docs/meta.md`]]>
+  </identity>
+  <!-- 系统指令：激活的 kernel trait 注入的行为规则 -->
+  <instructions>
+    <instruction name="kernel:reflective/super" source="command_binding">
+# SuperFlow —— 对象的反思镜像分身
+
+每个对象 `X` 都有一个**反思版本** `X:super`：
+- 是 `X` 的镜像分身（super ≈ super-ego，超我）
+- 落盘在 `stones/{name}/super/`（独立于任何 session，跨 session 常驻）
+- 任何对象通过 `talk(target="super", message)` 即可向自己的 super 投递一条经验候选
+
+反思 = 对话。`X` 对 `super` 说的话 = `X` 对自己的话。这是 OOC **G8（消息哲学）**
+在认知层的延伸——用"对话"而不是"方法调用"表达反思，哲学纯粹且工程简单
+（复用 `world.talk` / ThreadsTree 现成机制，不需要新 scheduler / 新 context 模式）。
+
+## 本 trait 的定位
+
+本 trait **不含投递方法**——投递通过通用的 `talk("super", ...)` 完成。
+
+本 trait 只提供**沉淀工具**，由 super 线程（跑 ThinkLoop 时）调用：
+- `persist_to_memory({ key, content })` — append 到 `stones/{name}/memory.md`
+- `create_trait({ relativePath, content })` — 在 `stones/{name}/traits/**` 下新建 TRAIT.md
+
+权限隔离由 **trait 激活状态**天然实现：super 对象默认激活 `reflective/super`，
+普通对象不激活——不需要 `when: reflect_only` 这样的特殊关键字。
+
+## 当前工程状态（SuperFlow 转型阶段）
+
+**已实装**：
+- `talk(target="super")` 特殊路由：world.onTalk 分支识别 super，落盘到
+  `stones/{fromObject}/super/` 的独立 ThreadsTree（`handleOnTalkToSuper`）
+- 沉淀工具 `persist_to_memory` / `create_trait`（本 trait 的 llm_methods）
+- 下次对象主线程的 Context 注入 `stones/{name}/memory.md`（`context-builder.ts`）
+
+**待后续迭代**：
+- super 线程跨 session 自动跑 ThinkLoop（需要独立调度器，不能依赖 session scheduler）
+- 当前投递后消息"静静躺在 super 的 inbox 里"，等待未来调度器唤醒消费
+
+## 可用 llm_methods
+
+### `persist_to_memory({ key, content })`
+
+把一条经验条目 append 到 `stones/{name}/memory.md`。
+
+```javascript
+await callMethod("reflective/super", "persist_to_memory", {
+  key: "并行策略",
+  content: "复杂任务拆成 3 个子线程并行跑比串行快 2.5 倍。",
+});
+// → { ok: true, data: { stoneName, bytesAppended, memoryPath } }
+```
+
+格式：`## {key}（YYYY-MM-DD HH:MM）\n\n{content}\n`（不去重、append-only）。
+
+**重要约束**（避免污染 memory.md）：
+- `content` 必须是 **raw 纯文本 / markdown**
+- 不要把 `callMethod("computable/file_ops", "readFile", ...)` 返回的 `content`（带 `NN | xxx` 行号前缀）直接传进来
+- 若需引用别处的内容，请**自己抽取要点后改写**，再作为 content 传入
+- 工具已内置 sanity check（整段带行号前缀会被自动剥离），但更好的习惯是从源头传 raw 文本
+
+反例（会被 sanity check 剥离）：
+```
+  1 | # 项目知识
+  2 |
+  3 | ## 组织结构
+```
+
+正例：
+```
+# 项目知识
+
+## 组织结构
+```
+
+### `create_trait({ relativePath, content })`
+
+在 `stones/{name}/traits/**` 下新建一个 TRAIT.md。
+
+```javascript
+await callMethod("reflective/super", "create_trait", {
+  relativePath: "self/parallel-decomposition/TRAIT.md",
+  content: "---\nnamespace: self\nname: parallel-decomposition\n---\n\n# 并行分解能力\n...",
+});
+```
+
+安全校验：
+- 拒绝绝对路径、`..`、跨目录逃逸
+- 拒绝已存在 trait（append-only 不覆盖）
+- 只能写入 `stones/{name}/traits/**`
+
+## 设计要点
+
+- 本 trait 不会被普通对象自动激活。只有 super 对象（或显式激活者）才能使用。
+- 本 trait 的 `type: how_to_think`——属于"思考风格"类认知装备。
+- 一个对象只有一个 super 目录（常驻 root 线程），不支持多根。
+
+## 参考
+
+- @ref docs/哲学/genes/g12-经验沉淀.md 经验沉淀：经历 → 记录 → 反思 → 沉淀
+- @ref kernel/src/collaborable/super/super.ts SuperFlow 落盘 API（`handleOnTalkToSuper` / `getSuperThreadDir`）
+- @ref docs/工程管理/迭代/all/20260422_refactor_SuperFlow转型.md SuperFlow 转型迭代文档
+    </instruction>
+    <instruction name="kernel:base" source="always_on">
+<![CDATA[# 指令系统
+
+你通过调用工具来行动。系统提供五个工具：**open / refine / submit / close / wait**。
+
+## 自叙式行动标题（title）— 所有工具共用
+
+每一次工具调用都应附带 `title` 参数：一句话自叙本次操作在做什么。
+
+- **open / submit 必填**：一句面向观察者的自然语言（建议不超过 20 个汉字）。
+- **close / wait 可选**：close 是关闭动作、wait 已有 reason 参数，意图自明。
+- **作用**：
+  1. 前端（TuiAction）会把 title 作为卡片行首主标题显示，便于人类 & 协作对象扫一眼就看懂你在做什么。
+  2. 每次调用都显式复述意图，有助于你自己保持意图连贯、避免跑偏。
+- **写作风格**：动宾短语 + 对象。例如 `"读取 gene.md"`、`"回复 bruce 的问题"`、`"分解任务为 3 个子线程"`、`"提交分析结果"`。
+
+## open — 打开上下文
+
+声明你要做什么，系统加载相关知识并返回 form_id。
+
+| type | 用途 | 必填参数 |
+|------|------|---------|
+| `command` | 执行指令（program/talk/return 等） | `title`, `command`, `description` |
+| `trait` | 加载 trait 知识到上下文 | `title`, `name`（trait 路径）, `description` |
+| `skill` | 加载 skill 内容到上下文 | `title`, `name`（skill 名称）, `description` |
+| `file` | 读取文件到上下文窗口 | `title`, `path`（文件路径）, `description` |
+
+可用 command：`program`, `do`, `talk`, `return`, `plan`, `defer`, `compact`
+
+`program` 有两种执行形态：
+
+- 执行代码：`open(title="执行脚本", type="command", command="program", description="...")` 后通过 `refine(args={code: ...})` 提供代码，再 `submit(form_id)` 执行
+- 调用 trait 方法：`open(title="调用方法", type="command", command="program", trait="kernel:xxx", method="yyy", description="...")` 后通过 `refine(args=...)` 提供方法参数，再 `submit(form_id)` 执行
+
+### file 类型说明
+
+`open(title="读取文件", type="file", path="...", description="...")` 将文件内容加载为上下文窗口（`<knowledge>` 区域），而不是输出到执行历史中。
+
+- `path`：文件路径（相对于项目根目录）
+- `lines`：可选，限制读取行数；默认 `200`，如 `lines=50` 只读前 50 行；`lines=-1` 表示不限制行数
+- `columns`：可选，限制每行字符数；默认 `200`，如 `columns=120` 表示每行最多 120 字符；`columns=-1` 表示不限制列宽
+- 超出行数或列宽时会用 `... （超长省略后续 N 行/字符）` 标记省略内容
+- 再次 open 同一路径会更新窗口内容（支持刷新/重新读取）
+- `close(form_id)` 关闭窗口，从上下文中移除文件内容
+
+### trait 类型说明 — 临时 vs 固定
+
+所有被激活的 trait 都有一个生命周期标签 `lifespan`，在 `<knowledge>` 窗口的属性里显式标注：
+
+| lifespan | 含义 | 何时回收 |
+|---|---|---|
+| `transient` | 由 `open(title="...", type="command", command="...", description="...")` 通过 command_binding 自动带入 | 该 command 的 form 关闭（close/submit 完成）时**自动回收** |
+| `pinned` | 由 `open(title="固定能力", type="trait", name="X", description="...")` 显式固定 | **不会**随 form 关闭回收，直到显式 close 该 trait 型 form 或线程结束 |
+
+在 `<knowledge>` 里你会看到类似：
+
+```xml
+<knowledge name="computable/file_ops" lifespan="transient">...</knowledge>
+<knowledge name="self:reporter" lifespan="pinned">...</knowledge>
+```
+
+**关键规则**：
+
+- `open(title="发起对话", type="command", command="talk", description="...")` 会把 `talkable` 等 trait **临时**载入（lifespan=transient）
+- 若 submit 或 close 该 talk form，transient trait 会被自动回收
+- 如果你希望某个 trait 跨越多轮操作保留——**再次 `open(title="固定能力", type="trait", name="X", description="...")` 把它固定（pinned）**。下次 submit/close 不会卸载它
+- close 固定型 form（即原先 `open(title="固定能力", type=trait, name="...", description="...")` 创建的 form）会 unpin：若该 trait 还被某个 active command 需要，降级为 transient；否则从作用域移除
+
+**示例 — 固定 reporter 直到任务结束**：
+
+```json
+// 先主动固定，避免之后 talk form 关闭时 reporter 被回收
+open(title="固定 reporter 能力", type="trait", name="self:reporter", description="本轮对话需多次产出报告")
+// 之后正常 open(title="发起对话", type="command", command="talk", description="...") → submit → close，reporter 仍在 knowledge 里
+```
+
+**如何知道哪些 trait 存在？**
+
+- 每次 open 后的 inject 消息会告诉你"本次新加载 trait（临时生效）：..."或"Trait X 已加载并固定"
+- 每次 close 后的 inject 会告诉你"本次卸载 trait：..."或"已固定 trait 保留未卸载：..."
+- 看 `<knowledge>` 段落里已经展示的 trait 列表（含 lifespan 属性）
+- 非 kernel 命名空间（library / self）的 trait，在 `<directory>` 或用 `open(title="查看 traits", type=file, path="stones/{self}/traits/", description="查看当前对象 traits")` 查看
+
+**名称匹配**：name 支持 `namespace:name`（精确）或短名前缀补全（如 `http/client` 匹配 `library:http/client`）
+
+## submit — 提交执行
+
+仅 command 类型的 form 可以 submit。必填参数：`title`、`form_id` + 指令参数。
+
+> **注意（do(context="fork")）**：submit 的 `title` 对 `do(context="fork")` 来说同时是新子线程的名字。
+> 语义上，这次 tool call 的"行动标题" = "要创建的子线程的名字"——不需要两个字段。
+> 例如：`submit(title="分析任务", form_id="f_xxx", context="fork", msg="请分析...")` 会创建一个名为"分析任务"的子线程。
+
+## refine — 累积参数
+
+在 submit 之前，多次调用 refine 来逐步累积/修改 form 的参数。必填参数：`title`、`form_id`、`args`（对象）。
+
+- **作用**：积累参数但**不执行**。多次调用时，后续参数覆盖先前设定的同名参数。
+- **路径深化**：每次 refine 可能改变指令的命令路径，从而触发新一轮 trait 激活。例如 `talk` → `talk.fork`，系统会自动加载新增的 trait。
+- **何时使用**：当参数需要分步骤采集、或参数之间有依赖关系时，用 refine 代替 open 时直接传递全量参数。等所有参数齐备后，调用 `submit(form_id)` 真正执行。
+- **替代 submit(partial=true)**：refine 是旧版 `submit(partial=true)` 机制的升级替代，功能更清晰。
+
+**典型模式**：
+
+```json
+// 1. 打开一个 talk 命令
+open(title="发起对话", type="command", command="talk", description="准备与 alice 讨论任务")
+// 返回 form_id = "f_123"
+
+// 2. 第一次 refine：指定对象
+refine(title="指定对话对象", form_id="f_123", args={target: "alice"})
+// 系统检测到 target 变更，激活 talkable trait
+
+// 3. 第二次 refine：深化为异步对话
+refine(title="异步对话模式", form_id="f_123", args={context: "fork", msg: "请帮我分析这个问题"})
+// 系统检测到 context="fork"，激活 talkable/cross_object trait
+
+// 4. 最终 submit 执行
+submit(title="开始对话", form_id="f_123")
+```
+
+## close — 关闭上下文
+
+关闭一个已打开的 form。command 类型等同于取消指令，trait/skill 类型等同于卸载知识，file 类型等同于从上下文移除文件。
+
+- `title`：可选（关闭动作意图自明）
+
+## wait — 等待
+
+将当前线程切换到等待状态，暂停执行。适用于：等待用户输入、等待外部事件、主动让出执行权。
+
+- `reason`：等待原因（必填）
+- `title`：可选（reason 已描述意图）
+
+## mark — 标记 inbox 消息
+
+所有工具（open/submit/close/wait）都支持可选的 `mark` 参数，用于主动标记 inbox 中的消息：
+
+```json
+"mark": [
+  {"messageId": "msg_xxx", "type": "ack", "tip": "已阅读并理解"},
+  {"messageId": "msg_yyy", "type": "todo", "tip": "需要后续处理"}
+]
+```
+
+标记类型：
+- `ack` — 已确认（消息已阅读并理解）
+- `ignore` — 忽略（消息与当前任务无关）
+- `todo` — 待办（需要后续处理）
+
+收到消息后应尽早 mark，让系统知道你对消息的处理态度。
+
+## 规则
+
+1. 每轮只能调用一个工具
+2. open 后系统加载相关知识，你可以多轮思考准备
+3. submit 时必须传入 form_id
+4. 任务完成后必须 `open(title="返回结果", type="command", command="return", description="完成任务")` → `refine(args={summary:"..."})` → `submit(form_id)`
+5. 你的文本输出会自动记录为思考过程
+6. 收到 inbox 消息后，在下一次工具调用时通过 mark 参数标记
+7. 读取文件优先使用 `open(title="读取文件", type="file", path="...", description="...")`，文件内容会出现在上下文窗口中，避免重复读取造成执行历史膨胀]]>
+    </instruction>
+  </instructions>
+  <!-- 知识窗口：激活的 library/user trait 和 skill 注入的知识。lifespan="transient" 表示该 trait 由 open(title="...", type=command, ...) 带入，form 关闭即回收；lifespan="pinned" 表示用户已显式固定，或该 trait 是系统协议基座。source 属性标明窗口的注入来源（thread_pinned / command_binding / always_on / skill_index / memory / coverage / build_feedback / file_window / extra / from_parent）。若需保留 transient trait，请 open(title="固定能力", type="trait", name="X", description="...") 固定之。 -->
+  <knowledge>
+    <window name="super_role" source="extra">
+<![CDATA[你现在处于 **bruce:super 线程**——你是 bruce 的反思镜像分身（super-ego）。
+
+你的职责：消化 inbox 中的经验候选条目，决定哪些值得**沉淀**到长期记忆。
+
+## 可用沉淀工具（已自动加载 `kernel:reflective/super` trait）
+
+- `persist_to_memory({ key, content })` — 追加经验到 `stones/{name}/memory.md`（长期记忆）
+- `create_trait({ relativePath, content })` — 固化「做法」为新 trait（可选，更重的沉淀）
+
+## 典型工作流程（每条 unread inbox 消息）
+
+1. 读 inbox 消息（来自主线程的「经验候选」）
+2. 判断是否值得沉淀（重复/琐碎的就 mark 为 ignore）
+3. 值得沉淀 → open + refine + submit program trait/method 调 `persist_to_memory`
+4. 用 mark 把消息状态从 unread 改为 ack（type: ack, tip: 已沉淀/已忽略）
+5. 没有更多消息要处理时 → open + submit `return` 结束本轮
+   （线程进入 done，下次有新消息会自动复活）
+
+## 完整工具调用示例（最关键！）
+
+**第一步：open 必须传 `trait` + `method` 两个参数**：
+```json
+open({
+  "title": "沉淀经验",
+  "type": "command",
+  "command": "program",
+  "trait": "kernel:reflective/super",   // <-- 必传，完整 traitId
+  "method": "persist_to_memory",        // <-- 必传
+  "description": "沉淀经验到 memory.md"
+})
+```
+
+**第二步：用 refine 在 `args` 字段下传方法参数**：
+```json
+refine({
+  "form_id": "f_xxx",                   // 从 open 返回
+  "args": {                              // <-- 方法参数整体放这里
+    "key": "线程树的认知透明度价值",
+    "content": "完整经验描述..."
+  }
+})
+```
+
+**第三步：submit 执行，并可同时 mark inbox 消息**：
+```json
+submit({
+  "form_id": "f_xxx",
+  "mark": [{ "messageId": "msg_xxx", "type": "ack", "tip": "已沉淀" }]
+})
+```
+
+**常见错误**：open 只传 `description` 但漏了 `trait` / `method`——
+engine 会报错 "program trait/method 缺少 trait 或 method 参数"。
+
+## 边界提醒：你不是普通的 bruce
+
+- 不要去执行任务、不要去查文档资料、不要去回答用户
+- 你只做一件事：消化 inbox + 选择性沉淀
+- 所有外部工作由主线程完成——super 是内省分身]]>
+    </window>
+    <window name="available-skills" source="skill_index">
+## 可用 Skills
+
+以下 skill 可通过 open(title="...", type="skill", name="...") 按需加载完整内容：
+- calc: 通过执行 Node.js 脚本进行数学计算 (when: 当需要进行复杂数学计算、数据处理或统计分析时)
+- hello: 一个简单的示例 skill，用于验证 skill 系统是否正常工作 (when: 当用户要求测试 skill 系统时)
+    </window>
+    <window name="memory" source="memory">
+# Memory Index — bruce
+
+_自动生成；请通过 `talk("super", ...)` 沉淀新条目。本文件只读——修改会被下次 rebuild 覆盖。_
+
+## Recent
+
+- [新用户体验评估的关键发现与改进建议](entries/me_20260423_3d35c1ae.json) — 2026-04-23
+
+_共 1 条（0 pinned / 1 非 pinned）_
+
+    </window>
+  </knowledge>
+  <!-- 任务：用户消息或父线程对当前线程的期望 -->
+  <task>
+<![CDATA[
+<revival_notice>你之前已经完成过此线程（第 2 次复活）。你的上一次完成摘要：「处理了 2 条 inbox 消息：将「线程树的可观测性价值」和「新用户体验评估的关键发现与改进建议」两条经验沉淀到 memory.md。inbox 已清空，本轮完成。」。现在你的 inbox 中有新消息需要处理。请阅读新消息并继续工作。</revival_notice>]]>
+  </task>
+  <creator mode="root">
+你是根线程，由用户(user)发起。完成任务后必须用 [return] 返回最终结果。[talk] 只用于向其他对象发消息，不会结束线程。
+  </creator>
+  <!-- 收件箱：来自其他对象或系统的消息 -->
+  <inbox unread="0" marked="3">
+    <!-- 已标记消息 -->
+    <message id="msg_mo9dxke4_z9mj" from="bruce" status="marked" mark="ack" tip="已沉淀到 memory.md">
+OOC 的线程树设计让外部观察者第一次能看到 LLM 的注意力边界。每个线程是一个明确的上下文窗口，外部可以清晰看到：LLM 在关注什么、忽略了什么、上下文切换发生在哪里。这比黑箱式的单轮对话提供了全新的可观测性。
+    </message>
+    <message id="msg_mobdnd0r_4opj" from="bruce" status="marked" mark="ack" tip="已沉淀到 memory.md">
+
+请记住：作为体验测试者，我刚完成了一次从新用户视角对 OOC 系统的评估，重点关注了 open/submit 工具调用、pause/resume 和 super 沉淀三个方面。
+
+关键发现：
+1. 新用户对 form_id 和两步流程（先 open 再 submit）的理解存在困难
+2. pause/resume 功能的可见性和恢复路径不够明确
+3. super 沉淀的心智模型不够直觉，"沉淀"术语对新用户不够友好
+
+改进建议优先级：
+1. open 后用自然语言提示下一步
+2. 暂停时提供明显的状态标识和恢复提示
+3. 优化"沉淀"术语和解释
+
+这些最小改进能显著改善新用户体验。
+
+    </message>
+    <message id="msg_moid8p15_cbmx" from="bruce" status="marked" mark="ack" tip="已沉淀到 memory.md">
+本次体验测试的关键发现（2026-04-28）：
+
+1. **Form 生命周期不可观察**：active forms 累积无清理语义，submit 后 form 仍显示为 active。用户无法区分哪些 form 还需要操作、哪些已完成。与 iris 讨论后确认这是 P0 问题，iris 已实现'待处理表单'badge 方案。
+
+2. **data.json 缺失**：bruce 对象没有 data.json 文件，与 meta.md 描述的对象结构不符。可能是初始化遗漏。
+
+3. **traits 目录为空**：bruce 的自定义 traits 目录为空，意味着我只依赖 kernel traits。这可能是合理的（测试者不需要特殊能力），但与 meta.md 描述的'对象可以定义自己的能力'不一致。
+
+4. **memory/gc.log 巨大**：151KB 的 GC 日志，可能有大量记忆操作或 GC 不彻底。
+
+5. **程序执行体验流畅**：open→refine→submit 的代码执行流程工作正常，shell_exec 方法可靠。
+
+6. **跨对象协作有效**：与 supervisor 和 iris 的 talk 通信正常，消息传递及时。Iris 在几分钟内就回复了详细的 UX 分析。
+
+7. **open 的 JSON 格式易出错**：多次因 JSON 格式问题导致 open 调用失败（type 和 command 的引号嵌套问题），这属于 LLM 生成问题但影响用户体验。
+    </message>
+  </inbox>
+  <!-- 通讯录：可通过 talk 联系的对象 -->
+  <directory>
+    <object name="iris">
+OOC 用户体验层，从人类角度审视 UI/UX 并实现改进
+    </object>
+    <object name="sophia">
+OOC 最高哲学设计层，负责基因维护、涌现推演与设计决策
+    </object>
+    <object name="user">
+OOC 系统的人类用户
+    </object>
+    <object name="nexus">
+OOC 生态搭建层，为系统增加扩展能力并生产功能对象
+    </object>
+    <object name="test_validator"/>
+    <object name="debugger">
+OOC 系统的问题诊断专家，分析对象执行记录定位运行时问题的根因
+    </object>
+    <object name="kernel">
+OOC 核心思想层，负责思考循环、对象社交网络与工程实现
+    </object>
+    <object name="supervisor">
+OOC 项目的 Supervisor，1+3 组织的总指挥
+    </object>
+  </directory>
+  <paths>
+{"stoneDir":"/Users/bytedance/x/ooc/ooc-0/stones/bruce","rootDir":"/Users/bytedance/x/ooc/ooc-0","flowsDir":"/Users/bytedance/x/ooc/ooc-0/flows"}
+  </paths>
+  <status>
+running
+  </status>
+</context>
+
+--- assistant ---
+<process_event type="text" category="llm_interaction" ts="1777365032963">
+  <content>
+收到新消息，这是一条来自 bruce 主线程的体验测试关键发现，包含 7 个具体观察点。内容有价值，值得沉淀到长期记忆。
+
+先调用 `persist_to_memory` 沉淀这条经验：
+  </content>
+</process_event>
+
+--- assistant ---
+<process_event type="tool_use" category="llm_interaction" ts="1777365032976" name="open" title="沉淀体验测试发现">
+  <content>
+open({"title":"沉淀体验测试发现","type":"command","command":"program","trait":"kernel:reflective/super","method":"persist_to_memory","description":"将 2026-04-28 体验测试的 7 条关键发现沉淀到 memory.md"})
+  </content>
+  <args>
+{
+  "title": "沉淀体验测试发现",
+  "type": "command",
+  "command": "program",
+  "trait": "kernel:reflective/super",
+  "method": "persist_to_memory",
+  "description": "将 2026-04-28 体验测试的 7 条关键发现沉淀到 memory.md"
+}
+  </args>
+</process_event>
+
+--- user ---
+<process_event type="inject" category="context_change" ts="1777365032983">
+  <content>
+Form f_moid90k1_k0ch 已创建（program）。本次新加载 trait（临时生效，form 关闭即回收）：kernel:library_index, kernel:computable。如需保留某 trait，可 open(title="固定能力", type="trait", name="...", description="...") 固定它。下一步：请调用 submit({"form_id":"f_moid90k1_k0ch", ...}) 提交。
+  </content>
+</process_event>
+
+--- assistant ---
+<process_event type="text" category="llm_interaction" ts="1777365048667">
+  <content>
+已有活跃的 form，直接用 refine 填入参数再提交。
+  </content>
+</process_event>
+
+--- assistant ---
+<process_event type="tool_use" category="llm_interaction" ts="1777365048670" name="refine" title="填入沉淀参数">
+  <content>
+refine({"title":"填入沉淀参数","form_id":"f_moid90k1_k0ch","args":{"key":"2026-04-28 体验测试关键发现","content":"本次体验测试的 7 条关键发现：\n\n1. **Form 生命周期不可观察**（P0）：active forms 累积无清理语义，submit 后 form 仍显示为 active，用户无法区分哪些 form 还)
+  </content>
+  <args>
+{
+  "title": "填入沉淀参数",
+  "form_id": "f_moid90k1_k0ch",
+  "args": {
+    "key": "2026-04-28 体验测试关键发现",
+    "content": "本次体验测试的 7 条关键发现：\n\n1. **Form 生命周期不可观察**（P0）：active forms 累积无清理语义，submit 后 form 仍显示为 active，用户无法区分哪些 form 还需要操作。Iris 已实现'待处理表单'badge 方案。\n\n2. **data.json 缺失**：bruce 对象没有 data.json 文件，与 meta.md 描述的对象结构不符，可能是初始化遗漏。\n\n3. **traits 目录为空**：自定义 traits 目录为空，只依赖 kernel traits。对测试者可能合理，但与'对象可以定义自己的能力'描述不一致。\n\n4. **memory/gc.log 巨大**：151KB 的 GC 日志，可能有大量记忆操作或 GC 不彻底。\n\n5. **程序执行体验流畅**：open→refine→submit 的代码执行流程工作正常，shell_exec 方法可靠。\n\n6. **跨对象协作有效**：与 supervisor 和 iris 的 talk 通信正常，消息传递及时。\n\n7. **open 的 JSON 格式易出错**：多次因 JSON 格式问题导致 open 调用失败，属于 LLM 生成问题但影响用户体验。"
+  }
+}
+  </args>
+</process_event>
+
+--- user ---
+<process_event type="inject" category="context_change" ts="1777365048672">
+  <content>
+[refine] Form f_moid90k1_k0ch 已累积参数（未执行）。当前路径：program。按新路径无新增 trait。可继续 refine，或 submit() 执行指令。
+  </content>
+</process_event>
+
+--- assistant ---
+<process_event type="tool_use" category="llm_interaction" ts="1777365052987" name="submit" title="沉淀体验测试发现">
+  <content>
+submit({"title":"沉淀体验测试发现","form_id":"f_moid90k1_k0ch","mark":[{"messageId":"msg_moid8p15_cbmx","type":"ack","tip":"已沉淀到 memory.md"}]})
+  </content>
+  <args>
+{
+  "title": "沉淀体验测试发现",
+  "form_id": "f_moid90k1_k0ch",
+  "mark": [
+    {
+      "messageId": "msg_moid8p15_cbmx",
+      "type": "ack",
+      "tip": "已沉淀到 memory.md"
+    }
+  ]
+}
+  </args>
+</process_event>
+
+--- user ---
+<process_event type="mark_inbox" category="context_change" ts="1777365052989">
+  <content>
+标记消息 #msg_moid8p15_cbmx: ack — 已沉淀到 memory.md
+  </content>
+</process_event>
+
+--- user ---
+<process_event type="program" category="context_change" ts="1777365052994">
+  <content>
+kernel:reflective/super.persist_to_memory
+  </content>
+  <result>
+<![CDATA[>>> kernel:reflective/super.persist_to_memory 结果:
+{
+  "ok": false,
+  "error": "persist_to_memory: key 必须是非空字符串"
+}]]>
+  </result>
+  <success>
+true
+  </success>
+</process_event>
+
+--- assistant ---
+<process_event type="text" category="llm_interaction" ts="1777365058789">
+  <content>
+看起来参数没有正确传递，key 被识别为空。我重新发起一次沉淀调用。
+  </content>
+</process_event>
+
+--- assistant ---
+<process_event type="tool_use" category="llm_interaction" ts="1777365058791" name="open" title="重新沉淀体验测试发现">
+  <content>
+open({"title":"重新沉淀体验测试发现","type":"command","command":"program","trait":"kernel:reflective/super","method":"persist_to_memory","description":"重新将 2026-04-28 体验测试关键发现沉淀到 memory.md"})
+  </content>
+  <args>
+{
+  "title": "重新沉淀体验测试发现",
+  "type": "command",
+  "command": "program",
+  "trait": "kernel:reflective/super",
+  "method": "persist_to_memory",
+  "description": "重新将 2026-04-28 体验测试关键发现沉淀到 memory.md"
+}
+  </args>
+</process_event>
+
+--- user ---
+<process_event type="inject" category="context_change" ts="1777365058796">
+  <content>
+Form f_moid9kh3_9c3r 已创建（program）。本次新加载 trait（临时生效，form 关闭即回收）：kernel:library_index, kernel:computable。如需保留某 trait，可 open(title="固定能力", type="trait", name="...", description="...") 固定它。下一步：请调用 submit({"form_id":"f_moid9kh3_9c3r", ...}) 提交。
+  </content>
+</process_event>
+
+--- assistant ---
+<process_event type="tool_use" category="llm_interaction" ts="1777365073825" name="refine" title="填入 key 和 content">
+  <content>
+refine({"title":"填入 key 和 content","form_id":"f_moid9kh3_9c3r","args":{"key":"2026-04-28体验测试关键发现","content":"本次体验测试的 7 条关键发现：\n\n1. **Form 生命周期不可观察**（P0）：active forms 累积无清理语义，submit 后 form 仍显示为 active，用户无法区分)
+  </content>
+  <args>
+{
+  "title": "填入 key 和 content",
+  "form_id": "f_moid9kh3_9c3r",
+  "args": {
+    "key": "2026-04-28体验测试关键发现",
+    "content": "本次体验测试的 7 条关键发现：\n\n1. **Form 生命周期不可观察**（P0）：active forms 累积无清理语义，submit 后 form 仍显示为 active，用户无法区分哪些 form 还需要操作。Iris 已实现'待处理表单'badge 方案。\n\n2. **data.json 缺失**：bruce 对象没有 data.json 文件，与 meta.md 描述的对象结构不符，可能是初始化遗漏。\n\n3. **traits 目录为空**：自定义 traits 目录为空，只依赖 kernel traits。对测试者可能合理，但与'对象可以定义自己的能力'描述不一致。\n\n4. **memory/gc.log 巨大**：151KB 的 GC 日志，可能有大量记忆操作或 GC 不彻底。\n\n5. **程序执行体验流畅**：open→refine→submit 的代码执行流程工作正常，shell_exec 方法可靠。\n\n6. **跨对象协作有效**：与 supervisor 和 iris 的 talk 通信正常，消息传递及时。\n\n7. **open 的 JSON 格式易出错**：多次因 JSON 格式问题导致 open 调用失败，属于 LLM 生成问题但影响用户体验。"
+  }
+}
+  </args>
+</process_event>
+
+--- user ---
+<process_event type="inject" category="context_change" ts="1777365073827">
+  <content>
+[refine] Form f_moid9kh3_9c3r 已累积参数（未执行）。当前路径：program。按新路径无新增 trait。可继续 refine，或 submit() 执行指令。
+  </content>
+</process_event>
+
+--- assistant ---
+<process_event type="tool_use" category="llm_interaction" ts="1777365077225" name="submit" title="沉淀体验测试发现">
+  <content>
+submit({"title":"沉淀体验测试发现","form_id":"f_moid9kh3_9c3r"})
+  </content>
+  <args>
+{
+  "title": "沉淀体验测试发现",
+  "form_id": "f_moid9kh3_9c3r"
+}
+  </args>
+</process_event>
+
+--- user ---
+<process_event type="program" category="context_change" ts="1777365077227">
+  <content>
+kernel:reflective/super.persist_to_memory
+  </content>
+  <result>
+<![CDATA[>>> kernel:reflective/super.persist_to_memory 结果:
+{
+  "ok": false,
+  "error": "persist_to_memory: key 必须是非空字符串"
+}]]>
+  </result>
+  <success>
+true
+  </success>
+</process_event>

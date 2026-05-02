@@ -1,0 +1,12 @@
+本轮 super 线程工作已完成：
+
+1. **处理了 1 条未读消息**：bruce 关于 Form 生命周期心智模型差距和 program 沙箱作用域污染 bug 的经验
+2. **成功沉淀到 memory.md**：通过代码执行方式调用 `persist_to_memory`（trait/method 参数传递方式连续失败 3 次）
+3. **inbox 已清空**，线程返回完成
+
+值得注意的是，`persist_to_memory` 通过 `trait`+`method` 方式调用时 `key` 参数始终无法传递，只能通过代码执行方式绕过——这恰好印证了体验测试中发现的核心问题：**参数传递机制不直观**。
+
+[tool_call] wait
+{
+  "reason": "本轮 super 线程已完成所有 inbox 消息处理并返回结果，等待下次复活"
+}

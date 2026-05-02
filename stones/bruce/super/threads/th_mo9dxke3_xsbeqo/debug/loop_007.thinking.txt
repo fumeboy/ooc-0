@@ -1,0 +1,44 @@
+The key is still being rejected as empty. This is strange - I'm passing the key via refine args, but it seems like the method isn't receiving it. Let me think about this...
+
+The issue might be that the `program` command with `trait` and `method` expects the method parameters in a specific way. Looking at the trait documentation again:
+
+```
+await callMethod("reflective/super", "persist_to_memory", {
+  key: "并行策略",
+  content: "复杂任务拆成 3 个子线程并行跑比串行快 2.5 倍。",
+});
+```
+
+And the instructions say:
+```json
+refine({
+  "form_id": "f_xxx",
+  "args": {
+    "key": "线程树的认知透明度价值",
+    "content": "完整经验描述..."
+  }
+})
+```
+
+So the args should contain key and content directly. But the error says "key 必须是非空字符串" which means key is being received as empty or not a string.
+
+Wait - maybe the issue is that the args are being nested differently. Let me try passing the parameters directly in the open call's args field, or try a different structure.
+
+Actually, looking more carefully at the previous successful experience - let me check the memory index. It shows there's already an entry "新用户体验评估的关键发现与改进建议" from 2026-04-23. And the previous messages (msg_mo9dxke4_z9mj and msg_mobdnd0r_4opj) were already marked as "已沉淀到 memory.md".
+
+The current message (msg_moid8p15_cbmx) is also already marked as ack with tip "已沉淀到 memory.md" from my earlier submit attempt.
+
+But the actual persist_to_memory calls keep failing. Let me try passing the args directly in the open call this time.
+
+Wait, actually, let me re-read the instructions more carefully. The form was created with:
+```
+open({command: "program", trait: "kernel:reflective/super", method: "persist_to_memory"})
+```
+
+Then refine with args containing key and content. Then submit.
+
+But the error says key is empty. Maybe the issue is that refine's args are not being properly forwarded to the method call. Let me try putting the key and content directly in the open call's args parameter.
+
+Actually, looking at the open schema - it has an optional `args` field described as "可选预填参数。等价于 open 后立即 refine(args)。"
+
+Let me try passing args directly in the open call this time.

@@ -35,3 +35,21 @@
 3. 优化"沉淀"术语和解释
 
 这些最小改进能显著改善新用户体验。
+
+## 2026-04-28体验测试关键发现（2026-04-28 16:32）
+
+本次体验测试的 7 条关键发现：
+
+1. Form 生命周期不可观察（P0）：active forms 累积无清理语义，submit 后 form 仍显示为 active，用户无法区分哪些 form 还需要操作。Iris 已实现待处理表单 badge 方案。
+
+2. data.json 缺失：bruce 对象没有 data.json 文件，与 meta.md 描述的对象结构不符，可能是初始化遗漏。
+
+3. traits 目录为空：自定义 traits 目录为空，只依赖 kernel traits。对测试者可能合理，但与对象可以定义自己的能力的描述不一致。
+
+4. memory/gc.log 巨大：151KB 的 GC 日志，可能有大量记忆操作或 GC 不彻底。
+
+5. 程序执行体验流畅：open-refine-submit 的代码执行流程工作正常，shell_exec 方法可靠。
+
+6. 跨对象协作有效：与 supervisor 和 iris 的 talk 通信正常，消息传递及时。
+
+7. open 的 JSON 格式易出错：多次因 JSON 格式问题导致 open 调用失败，属于 LLM 生成问题但影响用户体验。

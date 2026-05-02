@@ -1,0 +1,11 @@
+看起来参数没有正确传递，key 被识别为空。我重新发起一次沉淀调用。
+
+[tool_call] open
+{
+  "title": "重新沉淀体验测试发现",
+  "type": "command",
+  "command": "program",
+  "trait": "kernel:reflective/super",
+  "method": "persist_to_memory",
+  "description": "重新将 2026-04-28 体验测试关键发现沉淀到 memory.md"
+}
