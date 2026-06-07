@@ -1,0 +1,11 @@
+{
+  "name": "@ooc-obj/supervisor-reflectable",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "ooc": {
+    "objectId": "supervisor/reflectable",
+    "kind": "object",
+    "type": "agent"
+  }
+}

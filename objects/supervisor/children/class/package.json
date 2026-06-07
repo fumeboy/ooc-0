@@ -1,0 +1,7 @@
+{
+  "name": "@ooc-obj/supervisor-class",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "ooc": { "objectId": "supervisor/class", "kind": "object", "type": "agent" }
+}

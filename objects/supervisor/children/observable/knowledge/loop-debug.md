@@ -1,0 +1,30 @@
+---
+title: loop-level debug 落盘 —— 每轮思考的可回放产物
+description: LlmObservation + loop_NNNN.{input,output,meta}.json + windowsSnapshot
+activates_on: {"window::root": "show_content"}
+---
+
+# loop-level debug 落盘
+
+observable 在 thinkloop 周围加观测点，把每一轮 LLM 调用的输入/输出/元数据落盘，供控制面回放与前端 Time Machine 做 window diff。**所有写盘动作委托 `packages/@ooc/core/persistable/debug-file.ts`**，observable 只决定「何时写 / 写什么」。
+
+## LlmObservation（内存最近一次）
+
+`packages/@ooc/core/observable/index.ts:87-118`：
+- `writeLatestLlmInput` / `writeLatestLlmOutput`：thinkloop 在请求前后调用；有 persistence 时同步落盘 `llm.input.json` / `llm.output.json`（始终落盘，与 debug 开关无关）。
+- `getLatestLlmObservation`：测试与控制面读取最近一次 input/output/provider/model。
+
+**单例约束**：LlmObservation 是模块顶层变量，同进程只反映最近一次调用；并发多 thread 谁后写谁覆盖。要按 thread 区分历史，请用下面的 loop-level debug 文件。
+
+## loop_NNNN 三类文件（默认关闭，enableDebug 开启）
+
+`packages/@ooc/core/observable/index.ts:126-221` 的 `beginLlmLoop` / `finishLlmLoop` 分配 loopIndex（4 位 0 padding）、计时、字节统计，开启后写 `<threadDir>/debug/`：
+- `loop_NNNN.input.json`：本轮 inputItems + contextSnapshot。
+- `loop_NNNN.output.json`：normalized outputItems + provider/model。
+- `loop_NNNN.meta.json`：provider / model / latencyMs / messageCount / toolCount / toolCallCount / contextBytes / status / error / **windowsSnapshot**。
+
+loopIndex 由 `packages/@ooc/core/runtime/observable-store.ts:94-110` 的 `loopKey`（persistence 跨进程 / ephemeral 单进程）+ `allocateLoopIndex` 分配。
+
+## windowsSnapshot（window content hash）
+
+`packages/@ooc/core/observable/window-hash.ts` 的 `buildWindowsSnapshot`：type-agnostic 算每个 ContextWindow 的 contentHash——`Bun.hash(JSON.stringify(stripVolatile(window), sortedKeys)).toString(36)`。sorted key 防 V8 字段顺序漂移；剥 volatile（compressLevel 默认值等）与 persist 同款规则。前端拿 loop N + loop N-1 的 windowsSnapshot 算 added/changed/removed/unchanged 四态 diff（渲染属 visible，observable 只产数据）。

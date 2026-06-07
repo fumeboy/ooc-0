@@ -1,0 +1,11 @@
+{
+  "name": "@ooc-obj/supervisor-programmable",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "ooc": {
+    "objectId": "supervisor/programmable",
+    "kind": "object",
+    "type": "agent"
+  }
+}
