@@ -34,15 +34,14 @@ stone = 设计（code）不是数据（data）：低频、要 review。物理骨
 - `knowledge/memory/<slug>.md` + `knowledge/relations/<peer>.md` — **sediment knowledge**：运行时由 reflectable / collaborable 自动沉淀，写就生效。与 stone 的 seed 配对，synthesizer 双源扫描。
 - `files/` — 任意 blob。
 
-pool **不挂 metaprog branch**：事实单向积累，不跟分支切来切去。
+pool **不进 git / 不走 worktree 模型**：事实单向积累，写就生效。
 
 ## flow — 运行层（ephemeral）
 
-`flows/<sessionId>/objects/<objectId>/`（`flow-object.ts`）：
+`flows/<sessionId>/`（`flow-object.ts`）：
 
-- `.flow.json` / `threads/<tid>/thread.json`（+ `debug/`）。
-- `data.json` — **session-scoped** 结构化数据（ProgramSelf.getData/setData 载体；不再跨 session 共享）。
-- `knowledge/relations/<peer>.md` — session 层关系（与 pool 的 long_term 配对）。
+- **session worktree 根**：`flows/<sid>/` 本身是从 `stones/main` 派生的 git worktree（分支 `session-<sid>`），session 创建即 eager checkout main 全量 stone 文件；运行时产物由 `.gitignore` 白名单 `objects/` 排除，不污染 git 状态。LLM 在 session 内的所有 stone 写直接落此目录，合入经 super flow evolve_self。
+- `objects/<objectId>/`：`.flow.json` / `threads/<tid>/thread.json`（+ `debug/`）/ `data.json`（session-scoped 结构化数据，ProgramSelf.getData/setData 载体）/ `knowledge/relations/<peer>.md`（session 层关系）。
 
 ## 边界
 

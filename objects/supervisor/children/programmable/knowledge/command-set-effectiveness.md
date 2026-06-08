@@ -32,7 +32,7 @@ UI / agent-native 客户端走第三条独立通道：HTTP `callMethod` → `loa
 
 演化自身 self window 的标准路径（`programmable.window_evolution`）：
 
-1. 触发点（典型：reflectable.metaprogramming 的反思请求）。
+1. 触发点（典型：reflectable 的反思请求，或显式 write_file 指令）。
 2. super flow 经 `exec(command="write_file", path="stones/<self>/executable/index.ts", content="...")` 重写源码。
 3. 下一次调命令时 loader 看到 mtime 变化 → 重新 import → 新形态生效（详见 self-written-method-hot-reload）。
 
@@ -42,5 +42,5 @@ UI / agent-native 客户端走第三条独立通道：HTTP `callMethod` → `loa
 
 - **per-object isolation**：`executable/index.ts` 在 `stones/<self>/` 下而非 `flows/<sid>/`，同一 Object 跨 session 共享同一份 self window；多 session 并发调用共享 loader 缓存，mtime 变化对所有 session 一起生效。session 特化逻辑应在命令内经 `ctx.thread` / `self.getData` 区分，而非 fork 新 server。
 - **生效需 main-canonical**：命令集 / readable 为全局 main-canonical；per-session worktree 里改的命令须经 reflectable `evolve_self` 合入 main 后重注册才对所有 session 生效。
-- **谁可以写不由本维度规定**：programmable 只描述 *如何写* 才生效（mtime 热更条件）。路径权限 / 是否允许 super flow 自动写 → 由 reflectable.business_task_isolation + caller 显式请求决定。自改 `executable/index.ts` 当前无硬 deny（仅 metaprog/write_file 弱 ask）——这是 executable/programmable 共担的显式技术债。
-- **HTTP 写经 versioning**：HTTP 写 stone 入口经 `versionedStoneWrite`（`packages/@ooc/core/programmable/versioned-write.ts`）单一 owner：openMetaprogWorktree → write → commit → tryMergeSelf。
+- **谁可以写不由本维度规定**：programmable 只描述 *如何写* 才生效（mtime 热更条件）。路径权限 / 是否允许 super flow 自动写 → 由 reflectable.business_task_isolation + caller 显式请求决定。自改 `executable/index.ts` 当前无硬 deny（write_file 弱 ask）——这是 executable/programmable 共担的显式技术债。
+- **HTTP 写直 commit main**：HTTP 写 stone 入口（`putSelf` / `putServerSource`）直接 commit main，立即生效；`versionedStoneWrite` / `openMetaprogWorktree` 已于 2026-06-09 删除。

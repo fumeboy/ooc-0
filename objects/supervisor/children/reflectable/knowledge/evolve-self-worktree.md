@@ -7,22 +7,26 @@ activates_on:
 
 # evolve_self = session worktree 演化单元
 
-每个业务 session 在 stone 侧有一份**完整副本** worktree，对自身 identity 的读写都收敛到这一个目录；evolve_self 把这份 session 副本的改动**整体合回 main**，让下一轮 thread 看见演化后的身份。
+每个业务 session 在 stone 侧有一份**完整副本** worktree，对自身 / 他人 identity 的读写都收敛到这一个目录；evolve_self 把这份 session 副本的改动**整体合回 main**，让下一轮 thread 看见演化后的身份。
 
 ## 演化单元 = session 分支
 
-- `packages/@ooc/core/persistable/stone-worktree.ts:25` `sessionStoneBranch(sessionId)` —— session 分支名。
-- `:35` `sessionWorktreePath` —— 落在 `stones/session-<sid>/`，是该 session 的完整工作副本。
+- `packages/@ooc/core/persistable/stone-worktree.ts:25` `sessionStoneBranch(sessionId)` —— session 分支名（`session-<sid>`）。
+- 物理路径 = **`flows/<sid>/`**（session 一创建即 eager `git worktree add flows/<sid>` checkout main 全量文件）；运行时数据（thread.json / inbox / .flow.json 等）由 `stones/main` 的 `.gitignore` 白名单 `objects/` 排除，不污染 git status / evolve diff。
 
-「session worktree 即演化单元」（commit db9e54ea，2026-06-06）取代了旧 plain-overlay 模型：旧模型业务 session 改动落 shadow overlay，evolve_self 要逐文件读 overlay 再应用进新建实验 worktree（双目录、shadow 不可裸读、合入路径绕）。新模型读写收敛到单一副本，merge 直接 commit 该分支。
+设计权威：`docs/2026-06-09-remove-metaprog-unify-session-worktree-design.md`（2026-06-09）。取代旧 plain-overlay 模型：读写收敛到单一完整副本，merge 直接 commit 该分支。
 
 ## diff / merge 两步
 
-- `packages/@ooc/core/programmable/evolve-self.ts:98` `evolveSelfDiff` —— 用 git porcelain 列 session worktree 工作树相对 HEAD 的改动文件（`porcelainLineToRel`，:83，映射回相对 object 自治区）；worktree 未建 → 空数组。
-- `:124` `evolveSelfMerge` —— commit session worktree → rebase 到 main → **self-scope ff-merge** 回 main → GC（移除 worktree + 删分支）。署名 = objectId（非 bootstrap），契合 self-scope 自治区 ff-merge；冲突 / 越界由底层 merge 上抛，worktree 保留、main 不变（fail-loud）。
+- `packages/@ooc/core/programmable/evolve-self.ts:98` `evolveSelfDiff` —— 用 git porcelain 列 session worktree **全部**改动（含 cross-object），让 super flow 看见要评审什么。
+- `:124` `evolveSelfMerge` —— commit session worktree → rebase 到 main → `tryMergeSelf` 分类：
+  - **self-scope（只改自己）** → ff-merge 回 main，署名 = objectId。
+  - **cross-scope（改别人 / 建新对象）** → `must-pr-issue`，自动转 PR-Issue 给 supervisor → supervisor `resolve` 评审合入。
+  - 合入后 GC：`gitWorktreeUnregister` 解除 `.git` link，**保留 `flows/<sid>` 运行时数据**，session 对话历史不丢。
 
 ## 边界
 
-- self-scope 自治区的 identity 改动（self.md / readable.md 等）走 ff-merge，不经他人 review；cross-object 改别人子树才 PR-Issue，super 本身从不跨 object。
-- 改身体形状（executable / visible）是高赌注，走 programmable / visible 的 worktree 演化路径 + stone-versioning，不由反思直接合入。
-- 未决：`evolveSelfMerge` 的 must-pr-issue 是「理论上不该越界」的防御性分支；self-scope identity worktree 与 cross-scope metaprog worktree 的边界尚未在 doc 完全统一表达。
+- LLM session 内所有 stone 写（改自己 / 改别人 / 建新对象）→ 直接 `write_file` 落 session worktree，不再有「先 open 再写」手动流程。
+- 唯一合入闸门 = super flow evolve_self；super flow 本身不直接 write_file 改 stone（它是闸门 + sediment 沉淀 + 治理）。
+- HTTP 控制面写（前端保存 self/readable/executable）→ 直接 commit main，立即生效，不开 worktree。
+- cross-scope PR-Issue 经 `metaprog resolve` / `rollback` 治理；metaprog 不再有写动作（open_worktree / commit / merge / create_object 已删）。

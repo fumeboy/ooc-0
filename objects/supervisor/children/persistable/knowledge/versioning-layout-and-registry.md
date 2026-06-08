@@ -9,7 +9,7 @@ activates_on: {"window::root": "show_content"}
 ## 两种 stone 布局
 
 - **flat layout**（ooc-6 canonical）：`stones/<objectId>/` —— 无 branch / objects 中间层。普通用户在 world 根直接放 `stones/supervisor/` 即可，不需理解 git worktree。
-- **versioning layout**：`stones/<branch>/objects/<objectId>/` —— 有 `<branch>/objects/` 中间层，保留给 metaprog / stone-versioning 的 git 工作流（main = canonical 分支）。
+- **versioning layout**：`stones/<branch>/objects/<objectId>/` —— 有 `<branch>/objects/` 中间层，供 git 工作流使用（main = canonical 分支；session 分支 `session-<sid>` 的 worktree 物理落在 `flows/<sid>/`）。
 
 `<branch>/objects/` 中间层让 `stones/<branch>/` 根本身可承载未来 world-level 持久资源（注册表、共享知识、PR-Issue 长寿存储），不必为它们造新顶级目录。LLM 提示词仍写 `stones/<self>/...`（`session-path.ts:rewriteStonesPath` 自动注入 branch 与 `objects/`）。
 
@@ -32,7 +32,7 @@ activates_on: {"window::root": "show_content"}
 **扫描三类来源 + 优先级（first-seen wins）**：
 
 1. flat layout `stones/<id>/` —— canonical，用户本地覆盖优先。
-2. versioning layout `stones/<branch>/objects/<id>/` —— metaprog 分支产物。
+2. versioning layout `stones/<branch>/objects/<id>/` —— session 分支（`session-<sid>`，worktree 落 `flows/<sid>/`）产物。
 3. builtins `@ooc/builtins/<id>/` —— 平台默认对象。
 
 （deprecated `<world>/packages/<id>/` 扫描已于 2026-06-07 随兼容层移除——该布局无活跃使用。）

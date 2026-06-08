@@ -16,7 +16,7 @@ root 注册一组顶层 method（与 `packages/@ooc/builtins/root/executable/ind
 - **open_file** / **open_knowledge** — 把文件 / 知识载入 context。
 - **write_file** — 创建或覆盖文件（落盘与版本化重定向在 file builtin，`packages/@ooc/builtins/file/executable/index.ts`）。
 - **glob** / **grep** — 按文件名 / 内容搜索，创建 search_object。
-- **metaprog** — 开元编程 worktree 沙箱，自改 `stones/<branch>/objects/<self>/` 方法库 / 界面 / 身份。
+- **metaprog** — supervisor 治理动作（`resolve` / `rollback`）：评审 cross-scope PR-Issue / 回滚合入。写动作（open_worktree / commit / merge / create_object）已删；LLM 改 stone 直接 write_file 落 session worktree，走 super flow evolve_self 合入。
 - **open_feishu_chat** / **open_feishu_doc** — 飞书外接（经 extendable 注册，寄生于 executable）。
 
 其它 object 也注册命令：do_object（continue/wait/close/move）、talk_object（say/wait/close）、file_object（edit/reload/set_range/close）、method_exec（refine/submit）。

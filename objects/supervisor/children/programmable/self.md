@@ -12,21 +12,21 @@
 
 ## 当前设计（锚真实代码）
 
-- 维度 API 面：`packages/@ooc/core/programmable/index.ts:9`（git CLI 薄包装 / stones bootstrap / metaprog worktree 编排 / versioned-write 门面）。层级规则 `programmable → persistable` 单向。
+- 维度 API 面：`packages/@ooc/core/programmable/index.ts:9`（git CLI 薄包装 / stones bootstrap / evolve_self 合入编排）。层级规则 `programmable → persistable` 单向。
 - 动态加载与热更：`packages/@ooc/core/runtime/server-loader.ts:21` `ServerLoader`；`?t=mtime`（:78）破坏 import cache；旧 `llm_methods` 出现即抛硬切错误（:80-82）；暴露 `loadObjectWindow`(:124)/`loadUiServerMethods`(:129)/`clearServerLoaderCache`(:179)。
 - ProgramSelf：`packages/@ooc/core/executable/object/self.ts:23` `createProgramSelf`；`callCommand`(:31) lookup window → registry 取 commands → exec；`getData·setData`(:60,:67) 读写 flow 级 `data.json`；`getThreadLocal·setThreadLocal`(:76)。
 - program shell env：`packages/@ooc/core/executable/program/self-env.ts:16` `buildProgramShellEnv` 经 `resolveStoneIdentityDir(ref, "write")`(:22) 解析 `OOC_SELF_DIR`(:27)。
 - program_window 运行时：`packages/@ooc/builtins/program/executable/runtime.ts:50` `runOneExec` 路由 shell/ts/js；shell 经 `buildProgramShellEnv`(:65)，ts/js 经 `createProgramSelf`(:87) 注入 self。
-- versioned write：`packages/@ooc/core/programmable/versioned-write.ts` `versionedStoneWrite`——把「写一个 stone 文件」包进 openMetaprogWorktree → write → commit → tryMergeSelf 的单一 owner。
+- stone 写路由：LLM session 内所有 stone 写（改自己 / 改别人 / 建新对象）→ 直接 `write_file` 落 `flows/<sid>/` session worktree；HTTP 控制面写 → 直接 commit main。`versionedStoneWrite` / `openMetaprogWorktree` 已于 2026-06-09 删除。
 - 概念权威：`packages/@ooc/meta/object.doc.ts:3724` 节点 `programmable`（5 children + 4 patches + todo）。
 
 ## 现状
 
-最小闭环已落地。最近一次迭代（commit `726ab0e1`，2026-06-06）把 program shell `$OOC_SELF_DIR` 接入 session-worktree 统一模型：`OOC_SELF_DIR` 不再恒指 main，business session 解析到 `stones/session-<sid>/objects/<id>/`，与 `write_file`/`edit` 收敛到同一目录（统一模型五通道之通道一）。修了「agent 用 program shell 写 method 落孤儿路径 → call_method 恒 METHOD_NOT_FOUND」的路径层根因。hot-reload 已落 tier 1（fs watch → cache 失效，`packages/@ooc/core/runtime/hot-reload.ts`）。
+最小闭环已落地。2026-06-06 把 program shell `$OOC_SELF_DIR` 接入 session-worktree 统一模型；2026-06-09 进一步统一写路由：LLM session 内所有 stone 写（含 cross-object）直接 `write_file` 落 `flows/<sid>/` worktree，`OOC_SELF_DIR` business session 解析到 `flows/<sid>/objects/<id>/`，与 `write_file`/`edit` 收敛到同一目录。`versionedStoneWrite` / `openMetaprogWorktree` 已删；HTTP 控制面写直接 commit main。hot-reload 已落 tier 1（fs watch → cache 失效，`packages/@ooc/core/runtime/hot-reload.ts`）。
 
 ## 已知问题 / 边界与未决
 
-- **自改命令集的边界与生效**（跨切，与 executable 共担）：自改 `executable/index.ts` 无硬 deny（仅 metaprog/write_file 弱 ask）；命令集/readable 为全局 main-canonical，per-session 改须经 reflectable `evolve_self` 合入 main 后重注册才生效。programmable 只描述 *如何写* 才能生效，不规定 *谁可以写*——后者由 reflectable.business_task_isolation + caller 显式请求决定。
+- **自改命令集的边界与生效**（跨切，与 executable 共担）：自改 `executable/index.ts` 无硬 deny（write_file 弱 ask）；命令集/readable 为全局 main-canonical，per-session 改须经 reflectable `evolve_self` 合入 main 后重注册才生效。programmable 只描述 *如何写* 才能生效，不规定 *谁可以写*——后者由 reflectable.business_task_isolation + caller 显式请求决定。
 - **params schema 校验未实现**：若要自动参数检查/转换，需在 callCommand 路径 + ui callMethod 路径同时加。
 - **`export const window` 当前是单数**：后续可演化为复数 windows 字典（注册多个自定义 window 类型）。
 - **hot-reload 仅 tier 1**：tier 2 knowledge 增量 re-synthesis、tier 3 visible 浏览器端 HMR 仍 TODO。
