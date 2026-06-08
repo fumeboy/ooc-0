@@ -40,4 +40,5 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 - **executable 命令集 / 注册的 readable** 全局 main-canonical（类型系统全局共享），loader 通道不 per-session 路由（per-session 改命令集本就走 evolve_self → main → 重注册）。
 - **pool sediment**（`pools/<id>/knowledge/**`）不在 worktree 模型内：独立、直写、不进 git；super flow 反思写 memory 直接落 main。
 - 硬约束：identity 必须已 git-commit 到 main 才被新 worktree 看到（低层 writeSelf 只写文件不 commit）。
-- 生命周期：worktree 随 session 存在，evolve_self 合入后 GC（`evolve-self.ts:169`）、session 清理即消亡；未合入的改动不进 canonical——「试验不污染身份」。**未决**：异常未清理的 abandoned worktree 缺独立 orphan 回收器。
+- 生命周期：worktree 随 session 存在，evolve_self 合入后 GC（`evolve-self.ts:169`）、session 清理即消亡；未合入的改动不进 canonical——「试验不污染身份」。
+- metaprog worktree（控制面 HTTP putSelf/putServerSource 经 versioning 写 main 用的 `stones/metaprog/<id>/<token>`）的清理：`gitWorktreeRemove` 后由 `gcEmptyWorktreeParents` 逐级删空父目录；启动期 `pruneStaleWorktrees` 调 `gcEmptyMetaprogTree` 后序清扫整棵 `stones/metaprog/` 残留（2026-06-07 补，`programmable/versioning.ts`）——杜绝「worktree 已删但空父目录 `stones/metaprog/<id>/` 长期堆积」。**未决**：业务 session 的 abandoned worktree（异常未清理）仍缺独立 orphan 回收器。

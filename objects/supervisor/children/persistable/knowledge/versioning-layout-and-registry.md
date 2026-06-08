@@ -21,9 +21,9 @@ activates_on: {"window::root": "show_content"}
 
 集中在 `packages/@ooc/core/persistable/common.ts`：
 
-- `:47` objectDir / `:57` threadDir / `:72` stoneDir / sessionDir。
-- `:131` resolveStoneDir —— async **3-path fallback**：flat `stones/<id>/` → versioning `stones/<branch>/objects/<id>/` → deprecated `packages/<id>/`（命中 console.warn）。
-- pool 路径在 `pool-object.ts:54` poolDir。
+- objectDir / threadDir / stoneDir / sessionDir。
+- resolveStoneDir —— async **2-path**：canonical `stones/main/objects/<id>/` → versioning `stones/<branch>/objects/<id>/`；都不存在返回 canonical（caller 处理 ENOENT）。deprecated `<world>/packages/<id>/` 兼容层已于 2026-06-07 整体移除（含 `_deprecatedPackageDir` 与第 3 路 fallback）。
+- pool 路径在 `pool-object.ts` poolDir。
 
 ## StoneRegistry —— stone 权威发现
 
@@ -33,8 +33,9 @@ activates_on: {"window::root": "show_content"}
 
 1. flat layout `stones/<id>/` —— canonical，用户本地覆盖优先。
 2. versioning layout `stones/<branch>/objects/<id>/` —— metaprog 分支产物。
-3. deprecated `packages/<id>/` —— 仅 fallback，console.warn。
-4. builtins `@ooc/builtins/<id>/` —— 平台默认对象。
+3. builtins `@ooc/builtins/<id>/` —— 平台默认对象。
+
+（deprecated `<world>/packages/<id>/` 扫描已于 2026-06-07 随兼容层移除——该布局无活跃使用。）
 
 用户可在 `stones/<id>/` 下放与内置同名 object 实现本地覆盖。关键 API：`rescan(worldBase)` / `invalidate(objectId, files?)` / `listStones()` / `resolveStoneDir(objectId)`。
 

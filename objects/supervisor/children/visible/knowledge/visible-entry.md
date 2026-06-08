@@ -23,8 +23,9 @@ Object 的 UI 页面有两类入口（meta `dimensions.visible`，`packages/@ooc
 
 前端不自拼路径，而是调 `GET /api/objects/:scope/:objectId/client-source-url`，后端返回 `{absPath, fsUrl}`，前端据 `fsUrl` 做 `dynamic import`。
 
-- endpoint：`packages/@ooc/core/app/server/modules/ui/api.client-source-url.ts:45`；文件不存在 → 404 `NOT_FOUND`（`:99`）。
-- 渲染器：`packages/@ooc/web/src/domains/clients/ObjectClientRenderer.tsx:159` 动态 `import(fsUrl)`；404 → `StoneFallback`/`NotProducedYet`，加载/渲染错 → `LoadErrorBox`/ErrorBoundary。
+- endpoint：`packages/@ooc/core/app/server/modules/ui/api.client-source-url.ts`；文件不存在 → 404 `NOT_FOUND`。
+- stone scope 默认解析 `visible/index.tsx`（+ legacy `client/index.tsx` 回退）；`?file=diff` 白名单则解析 `visible/diff.tsx`（**无 legacy 回退**，缺失干净 404 → 调用方回退 before-after，见 [[window-diff-resolver]]）。
+- 渲染器：`packages/@ooc/web/src/domains/clients/ObjectClientRenderer.tsx` 动态 `import(fsUrl)`；404 → `StoneFallback`/`NotProducedYet`，加载/渲染错 → `LoadErrorBox`/ErrorBoundary。
 
 ## ui_methods 调用通道
 
