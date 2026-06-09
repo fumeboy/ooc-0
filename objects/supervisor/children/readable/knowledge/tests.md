@@ -9,11 +9,11 @@ activates_on: {"window::root": "show_content"}
 readable 验的是：**window method 只控展示状态、与 object method 物理分维、经 registerReadable 注册**。
 我是 2026-06-09 才独立的第 9 维度，**还没有独立的 capability spec 与 Tier B agent-native rubric**——
 当前由 executable 单元 catalog（L3）里属我的几条 + builtin file 的 window-method 测试覆盖。测试代码在
-`packages/@ooc/meta/storybook/`（runner / `test:storybook` CI gate 可跑）。
+`packages/@ooc/storybook/`（runner / `test:storybook` CI gate 可跑）。
 
 ## Tier A —— 控制面确定性（单元 catalog，归我的条目）
 
-来自 `packages/@ooc/meta/storybook/stories/L3_executable.stories.ts`（文件 layer 标 executable，但下列条目验的是 readable）：
+来自 `packages/@ooc/storybook/stories/L3_executable.stories.ts`（文件 layer 标 executable，但下列条目验的是 readable）：
 
 - **L3-REG-READABLE** —— registerReadable 注册 windowMethods/readable，与 executable 维度互不覆盖。
 - **L3-FILE-WINDOWMETHOD** —— builtin file 的 set_viewport 是 windowMethod，不在 object methods 表。

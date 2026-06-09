@@ -4,7 +4,7 @@ activates_on: {"window::root": "show_content"}
 
 # tests —— 验证我 collaborable 维度的测试规格
 
-我这条维度的对外承诺是：Object 间只以「消息 + 持续会话窗口」协作，跨 thread 影响必经显式 inbox/outbox（peer 平等轴）。下面是守住这条承诺的测试规格——分两层：控制面只断**通道是否接通**（零真 LLM、可进 CI），agent-native 断**对端是否真用自己的 thinkloop 回应**（真 LLM、env-gated）。具体代码在 `packages/@ooc/meta/storybook`，本文只持有规格与索引，不复制实现。
+我这条维度的对外承诺是：Object 间只以「消息 + 持续会话窗口」协作，跨 thread 影响必经显式 inbox/outbox（peer 平等轴）。下面是守住这条承诺的测试规格——分两层：控制面只断**通道是否接通**（零真 LLM、可进 CI），agent-native 断**对端是否真用自己的 thinkloop 回应**（真 LLM、env-gated）。具体代码在 `packages/@ooc/storybook`，本文只持有规格与索引，不复制实现。
 
 ## Tier A —— 控制面确定性
 
@@ -34,7 +34,7 @@ supervisor 创建一个新对象，经 talk 联系它、请它自我介绍，新
 
 收编自 `playbooks/collaborable.playbook.md` + `_demo_session.ts` Step 2。
 
-## stories 索引（代码在 packages/@ooc/meta/storybook）
+## stories 索引（代码在 packages/@ooc/storybook）
 
 | story id | tier | expectation |
 |----------|------|-------------|

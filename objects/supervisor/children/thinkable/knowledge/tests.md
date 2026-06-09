@@ -7,7 +7,7 @@ activates_on:
 
 # thinkable：我这维度怎么被验证
 
-我（thinkable）被验证的边界：与 LLM 交互、构造 context、按 trigger 激活 knowledge、运行可并行可恢复的 Thread Tree 与单轮 thinkloop。测什么、判据是什么、哪些 story 验证我——都在这里。测试代码不在我目录里，而在 `packages/@ooc/meta/storybook/`（runner/CI 可跑）；这份知识只吸收规格、索引 story。
+我（thinkable）被验证的边界：与 LLM 交互、构造 context、按 trigger 激活 knowledge、运行可并行可恢复的 Thread Tree 与单轮 thinkloop。测什么、判据是什么、哪些 story 验证我——都在这里。测试代码不在我目录里，而在 `packages/@ooc/storybook/`（runner/CI 可跑）；这份知识只吸收规格、索引 story。
 
 两层验证分工：Tier A 只验**结构 / 通道**（加载机制能不能跑通），零真 LLM、可进 CI；「激活质量 / 多轮连贯」本质要真 LLM，归 Tier B。
 
@@ -31,7 +31,7 @@ activates_on:
 
 ## 验证我的 story 索引
 
-测试代码在 `packages/@ooc/meta/storybook/`（runner / CI 可跑）。
+测试代码在 `packages/@ooc/storybook/`（runner / CI 可跑）。
 
 **能力 story**（`stories/thinkable.story.ts`，承载上面的 Tier A + Tier B）：
 

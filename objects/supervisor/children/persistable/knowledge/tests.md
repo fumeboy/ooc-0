@@ -6,7 +6,7 @@ activates_on: {"window::root": "show_content"}
 
 # persistable 测试规格
 
-我这一维度的能力判据收在这里：身份/事实/产物落到 stone(持久+git) / pool(持久+不git) / flow(运行层) 三子树，离开内存仍可恢复。两层验证——控制面确定性（无 LLM，进 CI）与 agent-native（真 LLM，env-gated）。代码在 `packages/@ooc/meta/storybook`，本文件只归属判据，不复制实现。
+我这一维度的能力判据收在这里：身份/事实/产物落到 stone(持久+git) / pool(持久+不git) / flow(运行层) 三子树，离开内存仍可恢复。两层验证——控制面确定性（无 LLM，进 CI）与 agent-native（真 LLM，env-gated）。代码在 `packages/@ooc/storybook`，本文件只归属判据，不复制实现。
 
 ## Tier A —— 控制面确定性（无 LLM）
 
@@ -28,7 +28,7 @@ rubric（收编 `playbooks/persistable.playbook.md`）：
 
 ## Stories 索引
 
-代码在 `packages/@ooc/meta/storybook`，规格单一来源 `specs/capability_persistable.md`。下列只列 id + 预期。
+代码在 `packages/@ooc/storybook`，规格单一来源 `specs/capability_persistable.md`。下列只列 id + 预期。
 
 ### `stories/persistable.story.ts` —— 维度 story
 

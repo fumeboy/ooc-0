@@ -5,7 +5,7 @@ activates_on: {"window::root": "show_content"}
 # class 维度的测试规格
 
 验证我的 class 能力的规格。两层：Tier A 控制面确定性（零真 LLM、进 CI gate）、Tier B agent-native（真 LLM、env-gated）。
-代码在 `packages/@ooc/meta/storybook/`，我只在这里收编自己的规格归属。
+代码在 `packages/@ooc/storybook/`，我只在这里收编自己的规格归属。
 
 ## Tier A —— 控制面确定性
 
@@ -33,4 +33,4 @@ rubric（原样）：
 - **L9-CLASS-NOT-USER** —— user 是被动对象，不被实例化为可交互 instance。
 - **L9-CLASS-NONINTERACTIVE** —— seedSession 拒绝 `_builtin/` class 作对话目标（400）。
 
-权威：`packages/@ooc/meta/storybook/specs/capability_class.md`（规格单一来源）；概念见 sibling `class-vs-object` / `builtin-addressing-and-instantiate` / `class-chain-knowledge-inheritance`。
+权威：`packages/@ooc/storybook/specs/capability_class.md`（规格单一来源）；概念见 sibling `class-vs-object` / `builtin-addressing-and-instantiate` / `class-chain-knowledge-inheritance`。

@@ -6,7 +6,7 @@ activates_on: {"object::root": "show_content"}
 
 # observable 测试规格
 
-我在 thinkloop 周围加观测点：每轮 LLM 输入输出 / tool / context 可记录、可查、可暂停、可回放。这份知识记录用来验证这件事是否成立的规格——下面的 TC 与 rubric 即「我的可观测面板是否真的可观测」的判据。代码在 `packages/@ooc/meta/storybook`，下文只锚定 id 与期望，不复述实现。
+我在 thinkloop 周围加观测点：每轮 LLM 输入输出 / tool / context 可记录、可查、可暂停、可回放。这份知识记录用来验证这件事是否成立的规格——下面的 TC 与 rubric 即「我的可观测面板是否真的可观测」的判据。代码在 `packages/@ooc/storybook`，下文只锚定 id 与期望，不复述实现。
 
 ## Tier A —— 控制面确定性（零真 LLM，可进 CI）
 
@@ -27,7 +27,7 @@ activates_on: {"object::root": "show_content"}
 
 ## 验证我的 stories（索引）
 
-代码在 `packages/@ooc/meta/storybook/stories/`，跑法见根 `CLAUDE.md` 的 storybook 段。
+代码在 `packages/@ooc/storybook/stories/`，跑法见根 `CLAUDE.md` 的 storybook 段。
 
 ### story 维度档：`observable.story.ts`
 

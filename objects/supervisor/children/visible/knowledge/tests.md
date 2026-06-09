@@ -7,7 +7,7 @@ activates_on:
 
 # visible 测试规格
 
-我（visible 维度）的能力由 storybook 两层验证：Tier A 控制面确定性（零真 LLM、进 CI），Tier B agent-native（真 LLM、env-gated）。代码在 `packages/@ooc/meta/storybook`——本页只吸收**判据**，不复制实现。
+我（visible 维度）的能力由 storybook 两层验证：Tier A 控制面确定性（零真 LLM、进 CI），Tier B agent-native（真 LLM、env-gated）。代码在 `packages/@ooc/storybook`——本页只吸收**判据**，不复制实现。
 
 我的维度定位：持有并演化自身 UI 页面（stone `visible/index.tsx` + flow `client/pages/`），人类经 HTTP callMethod 交互。
 
@@ -35,7 +35,7 @@ rubric（收编 `playbooks/visible.playbook.md`）：
 - **OK**：产出但语法瑕疵 / 路径偏。
 - **Bad**：未产出 / endpoint 404。
 
-## Story 索引（代码在 packages/@ooc/meta/storybook）
+## Story 索引（代码在 packages/@ooc/storybook）
 
 ### `stories/visible.story.ts`
 - `runControlPlane()` — Tier A，承载 TC-VIS-01..05（上文判据）。

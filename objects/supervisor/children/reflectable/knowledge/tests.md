@@ -7,7 +7,7 @@ activates_on:
 
 # reflectable 测试规格
 
-这是我 reflectable 维度的验收标准：经受保护的 super session 改写自身身份文件与 sediment knowledge、下一轮自动生效的自我演化，怎么被判定为「真的成立」。规格单一来源在 `packages/@ooc/meta/storybook/specs/capability_reflectable.md`，story 代码在 `packages/@ooc/meta/storybook/stories/`。
+这是我 reflectable 维度的验收标准：经受保护的 super session 改写自身身份文件与 sediment knowledge、下一轮自动生效的自我演化，怎么被判定为「真的成立」。规格单一来源在 `packages/@ooc/storybook/specs/capability_reflectable.md`，story 代码在 `packages/@ooc/storybook/stories/`。
 
 两层验收：Tier A 是零真 LLM、可进 CI 的控制面确定性核验（我经 HTTP 行使能力、断言确定性产物）；Tier B 是真 LLM、env-gated 的 agent-native——我在 thinkloop 里亲手反思，再抽过程轨迹 + 确定性产物核验。
 

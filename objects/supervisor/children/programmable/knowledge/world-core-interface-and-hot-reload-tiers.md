@@ -4,7 +4,7 @@ activates_on: {"window::root": "show_content"}
 
 # World / Core 接口契约与热更三档
 
-自写方法的热更（写 `executable/index.ts` 即生效，见 self-written-method-hot-reload）是「程序运行起来后单个文件怎么换」。这一片往上一层：**整个 World 与 Core 的关系**，以及热更在更大范围里如何按修改内容分级。设计权威 `packages/@ooc/meta/world-core-interface-and-hot-reload.md`（2026-06-02）。
+自写方法的热更（写 `executable/index.ts` 即生效，见 self-written-method-hot-reload）是「程序运行起来后单个文件怎么换」。这一片往上一层：**整个 World 与 Core 的关系**，以及热更在更大范围里如何按修改内容分级（设计源 2026-06-02，已收编进本知识）。
 
 ## Core 是 JVM，World 是项目目录
 
@@ -79,7 +79,7 @@ stone 包 `package.json` 的 `ooc` 段声明身份：`objectId / kind:"stone" / 
 
 ### npm 包拆分（设计 §4）
 
-发布时 `packages/@ooc/*` 拆成：`@ooc/core`（运行时内核，导 `createWorldRuntime` + 所有 runtime 类型）/ `@ooc/web`（dev 提供 Vite 工厂、prod 提供 SPA bundle）/ `@ooc/cli`（init/dev/build/start）/ `@ooc/tsconfig`（stone base）/ `@ooc/builtins/<id>`（每个 builtin 独立 semver、结构同 stone，World 按需声明）/ `@ooc/meta`（纯文档，运行时不加载）。builtin 拆成独立包的理由：用户选择权、独立 semver、与 stone 同构加载。**现状**：以上包目录都已在 `packages/@ooc/` 下存在并以 `workspace:*` 互链；真正 `npm publish`（changesets）属 M5 未落地。
+发布时 `packages/@ooc/*` 拆成：`@ooc/core`（运行时内核，导 `createWorldRuntime` + 所有 runtime 类型）/ `@ooc/web`（dev 提供 Vite 工厂、prod 提供 SPA bundle）/ `@ooc/cli`（init/dev/build/start）/ `@ooc/tsconfig`（stone base）/ `@ooc/builtins/<id>`（每个 builtin 独立 semver、结构同 stone，World 按需声明）/ `@ooc/storybook`（能力测试框架，运行时不加载、不发布）。builtin 拆成独立包的理由：用户选择权、独立 semver、与 stone 同构加载。**现状**：以上包目录都已在 `packages/@ooc/` 下存在并以 `workspace:*` 互链；真正 `npm publish`（changesets）属 M5 未落地。
 
 ### CLI lifecycle（已落地，四命令均为真实实现）
 

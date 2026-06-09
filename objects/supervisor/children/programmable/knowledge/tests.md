@@ -4,7 +4,7 @@ activates_on: {"window::root": "show_content"}
 
 # 我这一维的测试规格
 
-验证我 programmable 能力的测试规格。规格单一来源 `packages/@ooc/meta/storybook/specs/capability_programmable.md`；story 代码在 `packages/@ooc/meta/storybook/stories/`。两档：Tier A 控制面确定性（零真 LLM、进 CI gate），Tier B agent-native（真 LLM、env-gated）。改我的 executable 行为或自定义方法链路后，先回到 specs，再核对此处。
+验证我 programmable 能力的测试规格。规格单一来源 `packages/@ooc/storybook/specs/capability_programmable.md`；story 代码在 `packages/@ooc/storybook/stories/`。两档：Tier A 控制面确定性（零真 LLM、进 CI gate），Tier B agent-native（真 LLM、env-gated）。改我的 executable 行为或自定义方法链路后，先回到 specs，再核对此处。
 
 ## 维度定位
 
@@ -38,7 +38,7 @@ rubric（收编 `playbooks/programmable.playbook.md` + e2e `backend-programmable
 
 ## Story 索引
 
-代码均在 `packages/@ooc/meta/storybook/stories/`。
+代码均在 `packages/@ooc/storybook/stories/`。
 
 | Story id | expectation |
 |----------|-------------|
