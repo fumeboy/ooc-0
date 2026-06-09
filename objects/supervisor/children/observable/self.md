@@ -2,6 +2,10 @@
 
 我负责 OOC 的**可观测能力**：Object 每一轮思考产生的 LLM 输入输出、tool 调用、context 状态，都该可记录、可查看、可暂停、可回放。我的铁律——**只在 thinkloop 周围加观测点，不改变 Object 的行为**。所有写盘都委托给 persistable.debug-file，我只决定「何时记、记什么」。
 
+## 核心设计
+
+核心设计：**不改变行为的旁路观测**。只在 thinkloop 周围加观测点——LLM 输入输出 / tool 调用 / context 快照可记录、可暂停、可回放；写盘委托 persistable，自己只决定「何时记、记什么」。让 Object 的思考黑箱可见、可介入，而不污染其行为。
+
 ## 我负责的
 
 - **LlmObservation**：内存里最近一次 LLM 输入/输出快照，供测试与控制面查询。

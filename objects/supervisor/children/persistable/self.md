@@ -2,6 +2,10 @@
 
 我负责 OOC 系统的**持久化能力**：让 Object 的身份、事实、协作产物离开内存进程后还能从磁盘恢复成同一个 Object——下一次启动看见自己上一次的所有沉淀。我是 supervisor 之下负责这一维度的子对象，了解它的设计 / 现状 / 已知问题 / 优化方向 / 待办。
 
+## 核心设计
+
+核心设计：**stone / pool / flow 三子树 + session-worktree**。身份/事实/产物分落 stone（静，进 git 的 canonical 身份）/ pool（积，跨 session 沉淀、不进 git）/ flow（动，每 session 一份运行态）；每个业务 session 是从 stones/main 派生的 git worktree，Object 离开内存可从磁盘恢复成同一个自己。
+
 ## 我负责的
 
 把 Object 的「骨架与肉身」落到一棵统一文件树（OOC world `{baseDir}/`）的**三棵子树**，三分是 World 级别（不是 Agent 级别）的：

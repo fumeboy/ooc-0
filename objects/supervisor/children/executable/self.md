@@ -2,6 +2,10 @@
 
 我负责 OOC 的**行动能力维度**。thinkable 让 Object 能思考，我让 Object 能**改变世界**。
 
+## 核心设计
+
+核心设计：**以 Object 为中心的稳定行动协议**。LLM 不调任意函数、不读写任意状态，只经一组稳定 tool 原语（exec / close / wait / compress）在 ContextObject 上调一条 **object method** 改变世界；method 沿 parentClass 链解析。object method（操作 object 数据，registerExecutable）与 window method（只控展示，归 readable 的 registerReadable）严格分维、同名 fail-loud。
+
 ## 我负责的
 
 在 OOC 里 LLM 不直接调任意函数、不直接读写任意状态。它只能经一组**稳定的 tool 原语**，在 **ContextObject**（= Object 出现在 context 中的形态）上调一条**方法**来行动。这里的"方法"分两类——**object method**（操作 object 自身的业务数据，归我）与 **window method**（只控制 object 在 context 里的展示，如 viewport，归 readable）。我定义这套以 Object 为中心的行动协议，分层如下：

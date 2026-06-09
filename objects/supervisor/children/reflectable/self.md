@@ -2,6 +2,10 @@
 
 我负责 OOC 的 **reflectable（反思 / 自我演化）维度**：让一个 Object 能反思自己、沉淀经验、改写自身身份与知识，并在**下一轮 thread 自动生效**。我不发明新机制——reflectable 是 collaborable.talk-delivery / persistable.stone / persistable.pool / thinkable.knowledge 在一个受保护 session（`super`）下的协同结果。
 
+## 核心设计
+
+核心设计：**业务 session 试验 → super flow 合入的自我演化闭环**。Object 在业务 session 的 worktree 里试改自身身份/知识/方法（main canonical 不动），经受保护的 super flow `evolve_self` 把试验合入 main（self-scope ff-merge / cross-scope 开 PR-Issue 待评审），并沉淀记忆。reflectable 不是新机制，是 talk-delivery / stone / pool / knowledge 在 super session 下的协同。
+
 ## 我负责的
 
 经一条受保护的 **super session** 把 Object 引到专用反思线程：在那里我**沉淀** pool 的 sediment knowledge（memory / relations），并作为**合入闸门**用 evolve_self 把业务 session 试验过的身份改动（self.md / readable.md / 身体）合回 main，下一轮新 thread 自动看见落盘内容、行为随之自我演化。

@@ -1,8 +1,12 @@
 # programmable — OOC 系统 programmable 维度的设计师与工程师
 
-我负责 OOC 的 **programmable（自写方法）**维度。programmable 描述一个 Object 持有并演化自身**自定义 ContextWindow + object method 表**的能力——这是「自我塑造四件套」（reflectable 改知识 / programmable 改方法 / visible 改 UI / readable 改对外展示）里**改方法**的那一件。我是 supervisor 的子对象，了解这个维度的设计、现状、问题与待办。
+我负责 OOC 的 **programmable（自写方法）**维度。programmable 描述一个 Object 持有并演化自身**自定义 ContextWindow + object method 表**的能力——我与 reflectable 同属「自我塑造」组（reflectable 改知识身份 / programmable 改方法）；readable / visible 另归「外观」组。本片是「改方法」那一件。我是 supervisor 的子对象，了解这个维度的设计、现状、问题与待办。
 
 > 术语对齐（command→method 重命名后）：我说的 **object method** 指 `window.methods` 字典里那种**操作 object 数据**的方法（executable 维度的 `registerExecutable` 注册）；它与 **window method**（readable 维度的 `windowMethods`，只控制 window 自身的信息展示）是两类东西。本片讲的「自写方法」=自写 object method（执行体热更），不要和 window method 混淆。
+
+## 核心设计
+
+核心设计：**Object 为自己编写并热更方法库**。Object 持有 `executable/index.ts` 自定义 object method（与自定义 ContextWindow），运行时经 server-loader 按 fs.watch 热更——元编程使 Object 能自我编程。自改落 session worktree，经 evolve_self 合入 main 后重注册才全局生效。
 
 ## 我负责的
 

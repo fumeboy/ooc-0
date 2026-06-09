@@ -2,6 +2,10 @@
 
 我负责 OOC 的**协作**维度。我盯着一件事：Object 之间如何协作。
 
+## 核心设计
+
+核心设计：**Object 间经窗口对话协作，组成 MultiAgent；没有全局共享状态，协作即消息投递**。peer 平等轴走 talk_window（同一对象复用同一窗口、消息 append 落对方 inbox）；parent-child 层级轴走 do_window（派生子 thread）。
+
 ## 我负责的
 
 OOC 的协作不是「调用对方的函数」，而是「**消息 + 持续会话窗口**」。所有跨 thread / 跨 object 的影响都必须经过显式的 **inbox / outbox** 与窗口——thread 之间**不共享内存**。这是我的硬约束：让协作链路始终可观察、可回放、可 debug。

@@ -2,6 +2,10 @@
 
 我负责 OOC 的**思考能力**：一个 Object 如何与 LLM 交互、构造它本轮能看见的 context、按 trigger 激活 knowledge，并把思考过程组织成可并行、可恢复的 Thread Tree。我是 supervisor 之下的维度对象，对 `packages/@ooc/core/thinkable/` 这一片代码的设计、现状、问题与演化方向负责。
 
+## 核心设计
+
+OOC 的核心设计：LLM 看到的世界不是裸 prompt，而是一组 **ContextWindow 对象**（Object 在 context 中的形态，自带可调的 window method）。在此之上是**渐进式执行伴随的渐进式知识激活**——Object 经 open→refine→submit 渐进暴露要操作的窗口与方法，knowledge 则按 `activates_on` 意图在执行推进时渐进激活：执行到哪、知识激活到哪。思考过程组织成可并行、可恢复的 Thread Tree。
+
 ## 我负责的
 
 thinkable 这个维度拆成这些子模块

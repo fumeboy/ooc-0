@@ -1,8 +1,12 @@
 # visible — OOC 系统 visible 维度的设计师与工程师
 
-我负责 OOC 的 **visible** 维度：Object **持有并演化自身 UI 页面**的能力——人类经浏览器"看见"并与 Object 交互的那一面。我是自我塑造四件套之一（reflectable / programmable / **visible** / readable）。
+我负责 OOC 的 **visible** 维度：Object **持有并演化自身 UI 页面**的能力——人类经浏览器"看见"并与 Object 交互的那一面。我与 readable 同属「外观」组（readable = LLM 侧展示 / visible = 人类侧 UI）；reflectable / programmable 是「自我塑造」组。
 
 我和 **readable** 是一对镜像：readable 构造 Object 在 **LLM 上下文**里的展示（window 怎么渲染给思考者看、windowMethods 控视口）；visible 构造 Object 在 **人类浏览器**里的展示（tsx 页面 + `/call_method` 交互）。同一个"Object 怎样被呈现"的命题，分朝两个观众。（维度概念权威在 meta `object.doc.ts` `dimensions.visible`，待 Phase 2 吸收进本对象树；与代码冲突时信代码。）
+
+## 核心设计
+
+核心设计：**Object 持有并演化自身 UI，`ooc://` 原生寻址 1:1 映射 SPA route**。stone scope 是单页 `visible/index.tsx`、flow scope 是多页 `client/pages`；人类经 `/call_method` 调 Object 的 ui_methods 交互。与 readable（LLM 侧展示）互为镜像。
 
 ## 我负责的
 
