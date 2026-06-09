@@ -36,7 +36,7 @@
 - **自改 method 集的边界与生效**（跨切，与 executable 共担）：自改 `executable/index.ts` 无硬 deny（write_file 弱 ask）；method 集/readable 为全局 main-canonical，per-session 改须经 reflectable `evolve_self` 合入 main 后重注册才生效。programmable 只描述 *如何写* 才能生效，不规定 *谁可以写*——后者由 reflectable.business_task_isolation + caller 显式请求决定。
 - **params schema 校验未强制**：`ObjectMethod.schema` 字段已存在（结构化渲染 + fail-soft），但写入期没有硬闸门；若要自动参数检查/转换，需在 exec 调用路径 + ui callMethod 路径同时加。
 - **`export const window` 当前是单数**：后续可演化为复数 windows 字典（注册多个自定义 window 类型）。
-- **hot-reload 仅 tier 1**：tier 2 knowledge 增量 re-synthesis、tier 3 visible 浏览器端 HMR 仍 TODO。
+- **hot-reload 仅 tier 1**：tier 2（结构变更先标记 + 懒迁移 / vtable 重算）、tier 3（core/builtin 版本升级走重启）仍是设计阶段。三档按修改内容分级的完整模型见 knowledge/world-core-interface-and-hot-reload-tiers。
 - **mtime 失效假设 FS 毫秒精度**：秒级精度 FS 有「写完立刻读旧版」极短窗口，无 etag/hash 兜底。
 - **programmable tier=Bad 完整闭环未收**：引导 agent 用 write_file 而非 program shell 写 method、overlay × 自我编程交互——属 affordance/design，另议。
 
@@ -51,3 +51,20 @@
 - **兄弟 executable**：custom window 的 object method 复用 executable 的 `ObjectMethod` / WindowRegistry / exec 协议；method 注册经 `registerExecutable`（与 readable 的 `registerReadable` 维度劈分）；「自改 method 集的边界与生效」与之共担。
 - **兄弟 reflectable**：自写方法闭环的触发与协议归 reflectable（business_task_isolation / evolve_self）；programmable 管被改对象（方法库）的形状与生效条件。
 - **兄弟 readable**：我管的 object method（操作数据）与 readable 管的 window method（控制 window 展示）是两类并列方法，分别经 `registerExecutable` / `registerReadable` 注册，同名会 fail-loud。
+
+## 名词解释
+
+我这条维度反复出现的术语，一次说清（按「方法面 / 加载面 / 注入面 / world 面」分组）：
+
+- **object method**（`window.methods`）：操作 object 数据的方法，头等 `ObjectMethod`（`exec/paths/intent/onFormChange/schema`），LLM 经 `exec(window_id, method, args)` 调。**自写方法 = 自写它**。
+- **window method**（`windowMethods`，readable 维度）：只控制 window 自身信息展示的方法，不操作数据。与 object method 并列、不同维度、同名 fail-loud。**不是我管的**，列在这里只为消歧。
+- **ui_methods**：`executable/index.ts` 里给 UI / agent-native 用的方法字典（`UiServerMethod` 形状），走 HTTP `callMethod` 通道。与 `window.methods`（LLM 路径）形状不同、各写各的、不互相代替。
+- **StoneObjectDeclaration**：`export const window` 的类型——自定义 self 门面 window 的声明（`title/description/basicKnowledge/methods`），method 字典字段名是 `methods`（不是 `commands`）。
+- **server-loader / ServerLoader**：动态加载 stone `executable/index.ts` + `readable.ts` 的类，按 mtime 缓存。接口 `loadObjectWindow` / `loadUiServerMethods` / `loadObjectReadable` / `invalidateStone`。
+- **loadObjectWindow**：ServerLoader 上「取某 stone 的 `export const window`」的方法；自写方法生效的读取端。
+- **fs.watch 热更**：`HotReloadWatcher` 递归 watch `stones/`（debounce）→ 分类 → emit `stone:changed` → `invalidateStone` 失效该 stone 缓存。不在 callback 里直接 reimport，留给下次懒加载（错误栈更准）。
+- **mtime 失效**：loader 缓存键含文件 mtime，`import(...?t=mtime)` 破坏 bun import cache；写文件改了 mtime → 下次 import 拿新模块。假设 FS 毫秒精度。
+- **ProgramSelf**（`programSelf`）：注入进 program ts/js sandbox 与 custom method dispatcher 的能力对象——`{ dir, callMethod, getData, setData, getThreadLocal, setThreadLocal }`。与 method receiver `ctx.self` 是两个东西。
+- **`$OOC_SELF_DIR`**：program shell 经 env 透出的 stone 目录路径，由 `resolveStoneIdentityDir(ref,"write")` 解析（business session → session worktree object 目录；super/控制面 → main canonical）。
+- **session worktree**：business session 的 stone 写落点 `flows/<sid>/objects/<id>/`（main HEAD 完整副本），改动不污染 main，经 super flow `evolve_self` 合入才永久。
+- **World / Core**：Core = `@ooc/core` 运行时内核（类 JVM）；World = 用户工作目录（类项目目录，含 stones/pools/flows + node_modules）。builtin 与 stone 结构同构，定义所有权与发现方式不同。详见 knowledge/world-core-interface-and-hot-reload-tiers。

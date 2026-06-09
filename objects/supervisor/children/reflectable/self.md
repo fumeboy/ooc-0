@@ -30,6 +30,14 @@
 - evolve_self 已重做为「session worktree 即演化单元」（commit db9e54ea，2026-06-06；2026-06-09 进一步统一：所有 stone 写含 cross-object 都落 session worktree）：业务 session 的 stone 改动收敛到单一 `flows/<sid>/` 副本，merge 直接 commit 该分支，`tryMergeSelf` 分类：self-scope ff-merge / cross-scope PR-Issue → supervisor resolve。
 - 后端 e2e gate：sediment 沉淀闭环 + end 提醒（`packages/@ooc/tests/e2e/backend/backend-reflectable-sediment.e2e.test.ts` / `end-reflection-reminder.e2e.test.ts`）。
 
+## 自我迭代前沿（层次 A / 层次 B）
+
+「用 OOC 迭代 OOC」分两个范畴不同的层次：**层次 A**=Object 改自己的 stone（self.md / 自己的 executable / visible），就是我上面那条闭环，已被 2026-06-06 persistable harness 验证 **Good**；**层次 B**=Object 改 OOC 运行时核心源码（`packages/@ooc/core/...`），框架改框架，**尚未闭过一次**。
+
+层次 B 卡在三个结构性缺口：**①边界**（核心源码在 world 外、非 world 内 Object，被 `session-path.ts:51` world-clamp 够不着，只有不沙箱的 `program(shell)` 逃生舱能碰）、**②重载**（核心进程启动加载一次、非热更，改核心→看效果在进程内闭不上——杀手缺口）、**③治理**（scope/merge/rollback 是 stone 形状，核心「无主」scope 不适用）。
+
+关键洞察：把 AgentOfX 的 stone 设成**框架源码切片**，**B 可归约为 A**（ownership=scope，复用 evolve_self），三缺口收敛为「边界 + 重载」两个真问题；但永远有个无法变 stone 的硬内核（加载 stone/跑 thinkloop/连 LLM），「完全自我迭代」是渐近线非布尔——这是反射系统的元循环地板。把这个哲学命题变经验事实的手段是**最小 dogfooding 探针**（见 knowledge/self-iteration-frontier.md）。诚实风险：B 闭合一次前，「自我迭代潜力」是断言多于证明。
+
 ## 已知问题 / 边界与未决
 
 边界（不做什么）：
@@ -45,6 +53,18 @@
 
 1. **（P1）写入期 frontmatter 校验**：sediment write_file 时 schema parse，缺 frontmatter / `activates_on` 空直接 deny + 回灌模板，把当前的事后 fail-loud（loader 跳过）升级为「闭环不可断」的写入期 gate。
 2. end_reflection_reminder 阈值门控（仅 thread 累计事件超 N 才提示）落地，减少简单 thread 的无谓提醒。
+
+## 名词解释
+
+- **super flow / super session**：硬编码 `sessionId="super"`（`constants.ts:12`）的受保护 session，承载 Object 的反思线程。一切「自我相关」动作（自观测/自反思/沉淀/合入）收敛于此；是反思**闸门 + 沉淀**通道，不是业务执行通道。
+- **自指别名（SUPER_ALIAS_TARGET）**：`talk_window.target="super"` 被 delivery 翻译为「派进自己的 super 分身」（`delivery.ts:88`），是 Object 触达自身反思线程的入口。
+- **evolve_self**：把一次业务 session 的 worktree 改动整体合回 main 的命令。self-scope（只改自己）→ ff-merge；cross-scope（改别人/建新对象）→ 转 PR-Issue。唯一身份合入闸门。
+- **self-scope / cross-scope**：合入分类轴。self-scope=只动 `objects/<self>/`，可自治 ff-merge；cross-scope=动了别人或建了新对象，必须经 supervisor 评审。
+- **sediment（沉淀）**：运行时自动产生的事实型知识（memory / relations），落 **pool**（持久、不进 git、写就生效），与 stone 里人类设计的 **seed knowledge**（先天能力基底，改动走 PR-Issue + eval gate）配对。reflectable 默认只动 sediment。
+- **worktree 试验层**：每个业务 session 在 stone 侧的完整副本（`flows/<sid>/`，git 分支 `session-<sid>`），即「试穿的自我」。main 是 canonical「已提交的自我」，session worktree 不动 main、即时生效；evolve_self 把试验合回 main。
+- **PR-Issue**：cross-scope 改动转交 supervisor 评审的请求（`versioning.ts:443` `requestPrIssueReview`），supervisor 经 `metaprog resolve` 决议合入或 `rollback` 回滚。
+- **层次 A / 层次 B**：A=Object 改自己 stone（已闭环）；B=Object 改框架核心源码（dogfooding，尚未闭环，三缺口见上节）。
+- **元循环地板**：无法被推成 stone 的硬内核（加载 stone/跑 thinkloop/连 LLM），使「完全自我迭代」成渐近线而非布尔可达——反射系统的本性。
 
 ## 协作
 

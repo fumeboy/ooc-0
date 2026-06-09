@@ -24,6 +24,10 @@
 - **root 注册 17 个全局 object method**（`packages/@ooc/builtins/root/executable/index.ts:58` 的 `ROOT_METHODS`，每条一个 `method.*.ts`，经 `registerExecutable("root", { methods })` 注入 `:190`）。其它 object 也注册自己的 method：file（edit/reload/set_range/close）、method_exec（refine/submit，是 object method `windows/method_exec/index.ts:53`）。
 - **args 不齐 → form**：args 齐立即执行；不齐时系统创建 `method_exec` form，LLM 经 `exec(form_id, "refine"/"submit")` 推进。
 
+## method 级准入：permission 三档
+
+行动协议带准入：每条 method 回答「该不该让 LLM 直接执行」。这是 `ObjectMethod` 上的一个声明字段（`packages/@ooc/core/_shared/types/method.ts:60`，是个 `(args) => "allow"|"ask"|"deny"` 函数，按 args 动态判档），不是独立拦截器。runtime 在 thinkloop 分派 tool call **前**查它（`packages/@ooc/core/executable/permissions.ts`）：allow 直接执行 / ask 写 permission_ask + paused 等控制面 approve / deny 写 permission_denied + 合成 function_call_output 让 LLM 看见拒绝原因。决策链：PermissionDecider（注入 escape hatch）> policies.json override > ObjectMethod 声明 > 缺省 allow。详见 knowledge/permission.md。**deny 档当前 0 项**——自改 executable/index.ts 应 deny 但只有弱 ask 约束，是我的硬拦待办。
+
 ## 现状
 
 最小闭环已落地。最近两次主线迭代：
@@ -41,6 +45,18 @@
 
 - 补 compress scope=auto（emergency_guard）。
 - 落自改方法集的硬 deny（write_file exec 路径前缀检查 `executable/index.ts` → deny），消除弱约束。
+
+## 名词解释
+
+- **ContextObject** —— Object 出现在 context 里的形态（旧称 ContextWindow）。既是信息展示单元、又是行动挂载点；持有 id/type/title/status/parentWindowId。每个 ContextObject 背后都是一个 OOC Object（builtin 或 user-defined）。
+- **object method** —— 操作 object 自身业务数据的方法，归我，经 `registerExecutable` 注册。canonical 类型 `ObjectMethod`（`packages/@ooc/core/_shared/types/method.ts:48`）。
+- **window method** —— 只控制 object 在 context 里展示状态（如 `set_viewport` 写 `state.viewport`）的方法，`kind:"window"`，归 readable，经 `registerReadable` 注册。与 object method 经同一 `exec` 入口分派，同名 fail-loud（`object-registry.ts:52`）。
+- **tool 原语** —— LLM 直接可见可调的 4 个稳定接口（`OOC_TOOLS`）：**exec**（在某 object 上调一条 method）/ **close**（关一个 ContextObject）/ **wait**（声明 thread 等某 IO）/ **compress**（操纵 thread 自身 windows[]+events[] 控上下文体积）。
+- **constructor** —— `kind:"constructor"` 的 object method，必须返回 `{ ok:true, object }`；manager 看到后把 object mount 进 thread 并写盘。root 上 talk/do/program/… 退化为薄分发器，`exec` 体内 `lookupConstructor("<type>").exec(ctx)` 委托给 type 自身的 constructor（按 kind 索引，非按名字，`object-registry.ts:280`）。
+- **registerExecutable** —— 我的维度注册入口（`object-registry.ts:115`），只收 object methods + 类元（parentClass / isBuiltinFeature）；类型层即拒绝 readable 字段越界。与 `registerReadable` 配对，同一 type 两维度分注册、互不覆盖。
+- **form（open→refine→submit）** —— exec 时 args 不齐或引入新 path/knowledge，系统创建一个 `method_exec` object（form），LLM 经 `exec(form_id, "refine", args)` 多次补参（每次可触发更细知识激活）、`exec(form_id, "submit")` 提交执行。refine/submit 是 method_exec 上注册的两条 object method，与 do.continue / talk.say 同构。
+- **permission** —— ObjectMethod 上的三档（allow/ask/deny）准入声明，thinkloop 分派前查；见 knowledge/permission.md。
+- **knowledge activation** —— 按 method path 渐进披露知识：method form open 时对应 intent 命中，knowledge frontmatter 的 `activates_on` 声明同表达式即按需激活。LLM 只在真正进入某条行动路径时看到该路径完整操作说明。
 
 ## 协作
 

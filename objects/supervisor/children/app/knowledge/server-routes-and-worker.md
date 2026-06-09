@@ -15,13 +15,28 @@ Elysia app 在 `packages/@ooc/core/app/server/index.ts` 装配：`:212` 是 `onE
 每个 module 目录：`index.ts`（route composition）+ `service.ts` + `model.ts` + `api.<action>.ts`。
 
 - **health**：`GET /api/health` 最小存活探针。
-- **runtime**（`modules/runtime/`）：llm-config / jobs / global-pause（status/enable/disable）/ debug（status/enable/disable）/ activity / thread debug 文件读取。pause、debug、job 是**进程内状态**，不是 world 持久化真相，但通过 HTTP 明确出入口暴露成可查询、可切换。
+- **runtime**（`modules/runtime/`）：llm-config / jobs（list + get-by-id）/ global-pause（status/enable/disable）/ debug（status/enable/disable）/ activity / thread debug 文件读取（latest + loop list/get）/ HITL permission decision。pause、debug、job 是**进程内状态**，不是 world 持久化真相，但通过 HTTP 明确出入口暴露成可查询、可切换。
+  - `GET /api/runtime/activity`：进程内运行时活动快照（log-aggregator 聚合），长跑/超时排查时不干等，用它定位根因。
+  - `POST /api/runtime/flows/:sid/:oid/threads/:tid/permission`（body `{eventId?, action:"approve"|"reject", reason?}`）：**HITL** approve/reject 入口（permission model §F / Q0c）。要求 thread status=paused、命中最近一条未 decided 的 `permission_ask` 事件；写 decided + 翻 running + `notifyThreadActivated`（与 talk-delivery 同款续跑路径）。注意实际路径挂在 `/runtime/flows/...` 前缀下（非 design 文档里的 `/api/threads/:tid/permission`），复用 threadDebugParams 避免按 threadId 全局扫 session。
+  - debug 文件读取（latest / loop list / loop get）允许 query `baseDir` 覆盖 world 根；**未传时回退 `process.cwd()`**，不是固定读 server 启动的 baseDir。
 - **stones**：stone 五件套读写 + call_method。**所有写 stone 的 HTTP 必经 stone-versioning**（worktree → commit → merge），无 uncommitted 半成品。
 - **pools**（`modules/pools/`）：knowledge / data / files 沉淀的 HTTP 入口（pool 不挂 branch、不进 git）；旧 `/api/stones/.../knowledge/*` 保留并加 `X-Deprecated` header。
 - **flows**：session / flow object / thread 生命周期 + call_method；list 附带 paused 状态。`POST /api/sessions`（seedSession）一次性 seed session + user flow object + talk_window + 派送 initialMessage；`POST /api/flows/:sid/continue`（body `{text, targetWindowId?}`）走 user.root.talk_window。`SUPER_SESSION_ID` 在 `modules/flows/service.ts:46`（`assertNotSuperSessionId`，抛于 `:48`）被显式拒绝（reflectable 专用，外部只读保留）。
 - **ui**（`modules/ui/`）：`GET /api/tree`（整树递归 + 基于 `.stone.json`/`.pool.json`/`.flow.json` 元数据存在性打 marker）/ `/api/tree/file`（world 内安全读）/ `/api/file/read`（**有意绕过隔离**，仅本地可信）/ `/api/objects/:scope/:id/client-source-url`（backend 权威解析 client 入口，frontend 不硬编码路径）。
   - ⚠️ `modules/ui/api.list-flows.ts` 定义 `GET /api/flows`（`listFlowsApi`），service 侧 `ui/service.ts:183` 的 `listFlows()` 已实现，但 `ui/index.ts` 从未 `.use(listFlowsApi(...))` —— 路由没挂上的半孤儿，待补挂或删文件。
-- **world-config**：world 级配置读取。
+- **world-config**（`modules/world-config/`，单文件 `index.ts`）：world 级配置（`.world.json`）的只读 HTTP 入口，供前端读 LLM provider 等 world 级设置。
+
+## 启动期自检链（`if (import.meta.main)`，非每请求）
+
+`index.ts` 在 listen 前按序跑一组**幂等**的 bootstrap 步骤，再 `buildServer(config).listen({port, hostname:"0.0.0.0"})`：
+
+1. `ensureStoneRepo`：init bare stones git repo + main worktree，迁移旧扁平布局。必须先于任何 metaprog 写。
+2. `createPoolObject` for `BUILTIN_OBJECT_IDS`（supervisor / user）：builtin 的 stone/definition 随代码仓发布不写 world，但 pool 是 world 内跨 session 沉淀层，需保证 `pools/<id>/` 存在。
+3. `instantiateBuiltinClassObjects`：把带 `ooc.instantiate_with_new_world` 的框架 builtin class（supervisor）幂等实例化为可交互 `objects/<id>`（拷 self.md + 写 `ooc.class`），让全新 world 自动有 supervisor object。
+4. `runRecoveryCheck`（非阻塞）：遍历 `stones/main/<obj>/executable/index.ts`，加载失败的开 PR-Issue 到 super session，dump objectId + reason，供 Supervisor 决策回滚。
+5. `checkFlowChildrenMigration` / `checkStateContextSplit`：flow 子 object 迁到 `children/` marker、state(对象维) vs context(线程维) 拆分归位，幂等。
+
+另：`buildServer` 若 `workerEnabled` 且 `.world.json` 配了 Lark 凭证，会 fire-and-forget 起 `startLarkEventRelay`（ws 长连接收 im.message 反向触发 OOC session；缺凭证 noop），并把 thread 状态翻转 `maybeForwardToLark`。
 
 ## runtime 编排（`server/runtime/`）
 

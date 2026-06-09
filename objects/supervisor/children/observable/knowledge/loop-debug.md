@@ -23,7 +23,17 @@ observable 在 thinkloop 周围加观测点，把每一轮 LLM 调用的输入/�
 - `loop_NNNN.output.json`：normalized outputItems + provider/model。
 - `loop_NNNN.meta.json`：provider / model / latencyMs / messageCount / toolCount / toolCallCount / contextBytes / status / error / **windowsSnapshot**。
 
-loopIndex 由 `packages/@ooc/core/runtime/observable-store.ts:94-110` 的 `loopKey`（persistence 跨进程 / ephemeral 单进程）+ `allocateLoopIndex` 分配。
+loopIndex 由 `packages/@ooc/core/runtime/observable-store.ts:94-110` 的 `loopKey` + `allocateLoopIndex` 分配。
+
+**为何按 persistence 分两套 key**（observable-store.ts:94-98）：
+- 有 persistence：key = `{baseDir}:{sessionId}:{objectId}:{threadId}`——同一 thread 跨进程（worker 重启 / 多进程）共享计数，loopIndex 连续。
+- 无 persistence（测试 fixture / ephemeral）：key = `ephemeral:{thread.id}`——加 `ephemeral:` 前缀隔离，避免不同测试线程 id 偶然相同互踩同一个计数器。ephemeral 线程不落 loop_NNNN.*.json，只维护单进程内的轮次连续性。
+
+## ContextSnapshot（与 XML 同源的结构化快照）
+
+`captureContextSnapshot`（`packages/@ooc/core/persistable/debug-file.ts`）从 ThreadContext 抽取调用 LLM 时刻的子集：id / status / plan / contextWindows / inbox / outbox / events / creatorThreadId / parentThreadId。
+
+**关键取舍——同源而非二次解析**：同一份 thread 状态先 render 成 system message XML 喂给 LLM，再 capture 成 JSON 给 UI。两条路同源，所以 UI 拿到的是 LLM 真正看到的那一份，且**不必 re-parse XML**——直接渲染结构化字段。contextSnapshot 字段附在 LlmInputDebugRecord 上，写进 `llm.input.json` / `loop_NNNN.input.json`；旧文件无此字段，UI 做兼容判断。
 
 ## windowsSnapshot（window content hash）
 

@@ -13,6 +13,8 @@ OOC 只写 tsx 文件 + 给出绝对路径与 `fsUrl`；真正的打包/渲染�
 
 `client-source-url` endpoint 返回 `fsUrl: \`/@fs${absPath}\``（`packages/@ooc/core/app/server/modules/ui/api.client-source-url.ts:117`）。
 
+两个消费入口共用同一 `/@fs/` 动态加载契约：主控制面内嵌的 `ObjectClientRenderer`，与独立预览页 `packages/@ooc/web/object-client.html` + `object-client-preview.tsx`（脱离 AppShell 单独渲染一个 Object 的 visible 组件）。
+
 ## worktree 预览路由（自己改的界面自己看见）
 
 stone 升级为 session-worktree 模型后，业务 session 在自己 worktree 里改 `visible/index.tsx`。endpoint stone scope 带 `?sessionId` 时经 `resolveStoneIdentityRef(read)` 路由：

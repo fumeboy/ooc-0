@@ -9,6 +9,24 @@ activates_on:
 
 思考过程被拆成一棵 **Thread Tree**——每个 thread 可派生子 thread、可并行、可等待、可恢复。这是 OOC 的类 SubAgent 模式底座。
 
+## 为什么要 Thread Tree（设计理由）
+
+一个 Object 一次 session 不是一条线性对话。拆成树拿到四件事：
+1. **焦点隔离**：主任务不被子任务细节污染。
+2. **作用域隔离**：不同子任务激活不同 knowledge / windows。
+3. **并行执行**：多个 running thread 由 scheduler 分别推进。
+4. **协作显式化**：跨 thread 信息流必须过 message / transcript，**不共享内存**——所有协作痕迹可观察、可回放、可 debug。唯一例外是 do_window.move 提供的跨 thread window ref/移交。
+
+thread 状态语义：running（可被调度跑下一轮）/ waiting（等 talk/do window 上的 IO）/ done（任务完成，但新 inbox 消息可重新唤醒）/ failed（严重错误，新消息也可重入 running）/ paused（控制面暂停待人工 resume）。
+
+## sub-thread vs child Agent —— 委派任务时分的是什么
+
+「让别的执行体替我干活」有两种机制，性质和代价完全不同：
+- **fork sub-thread**（同 object，do method + do_window）：把自己「分身」成并行子线程，子 thread **共享我这个 object 的 seed / pool**，只有 session / thread-local 状态独立；临时，session 结束即归档，无独立身份。分的是**算力**。
+- **建 child Agent**（跨 object，物理嵌套 `children/<child>/`）：独立 object，有自己的 seed/sediment/super/self.md，经 talk 协作；持久、跨 session、可被独立发现引用。分的是**身份与经验**。
+
+固化触发器：同一类 sub-thread 任务在多个 session 反复出现、每次都要重喂同样领域知识时，就该固化成 child Agent——把反复用的领域知识沉淀进 child 的 seed knowledge（接 knowledge 的 inheritable 继承）。
+
 ## llm item 模型（Responses-first）
 
 思考的核心是与 LLM 交互。OOC 内部用 Responses-first 的 item 模型表达消息：

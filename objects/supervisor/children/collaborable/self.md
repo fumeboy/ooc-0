@@ -16,10 +16,13 @@ OOC 的协作不是「调用对方的函数」，而是「**消息 + 持续会�
 - **ThreadMessage** — 跨 thread 的最小消息单元（from/to、object、windowId、source）。
 - **talk_window** — 跨 object 的持续会话窗口；`say` 发消息，可 `wait`。
 - **do_window** — 同 object 内 fork 子线程的对话窗口；`continue` 追加（父→子下达 / 子→父回报双向，子→父 reply 走自身 creator do_window，是子→父唯一合法通道，不夹带在 `end({result})` 里）（`packages/@ooc/core/executable/windows/do/method.continue.ts:21`）。
-- **relation_window** — self 对某 peer 的关系窗口，按 thread 中 `target=peerId` 的 talk_window **自动派生**（id=`w_rel_<peerId>`），`edit` 整文件替换 relation 文件，scope=`session`（写 `flows/<sid>/<self>/knowledge/relations/<peer>.md`）或 `long_term`（派 talk 给 super flow，由 super 写 `pools/<self>/knowledge/relations/<peer>.md`）（`packages/@ooc/core/executable/windows/relation/index.ts:147`）。注：window type 本身标 `@deprecated`（2026-05-28，已被 peer Object 自动注入机制覆盖），但 `edit` 与 relation 文件机制现行仍在用，Phase 9 cleanup 才移除。
+- **relation_window** — self 对某 peer 的关系窗口，按 thread 中 `target=peerId` 的 talk_window **自动派生**（id=`w_rel_<peerId>`），`edit` 整文件替换 relation 文件，scope=`session`（写 `flows/<sid>/<self>/knowledge/relations/<peer>.md`）或 `long_term`（派 talk 给 super flow，由 super 写 `pools/<self>/knowledge/relations/<peer>.md`）（`packages/@ooc/core/executable/windows/relation/index.ts:117`）。
+  - **default visibility**：除 talk 派生的 peer 外，每轮还默认派生「同级 Agent（同父其它 OOC Agent）」+「一级 children Agent」的 relation_window，让 Agent 一上场就看见身边有谁、不必先 talk 才能写 relation。判定：含 `self.md` 的 stone 目录视为 Agent，`user` 永远过滤，自身排除（`discoverStoneHierarchicalPeers`）。peer 的 `readme.md` 作只读字段挂回窗口，免再 file_window open。
+  - **新旧两套并存**：旧 `relation_window`（type=`relation`）标 `@deprecated`（2026-05-28，已被 **peer Object 自动注入机制**替代），派生不持久化进 thread.contextWindows、Phase 9 才移除；**新 peer Object window**（type=objectId、id=objectId）是 sibling + 一级 children 的 first-class contextWindow，thread 初始化即注入、每轮 reconcile 补齐、跨轮持久化可直接 exec。relation 文件机制（含 `edit` 双 scope）现行仍在用。
 - **talk-delivery** — 跨 object 派送的唯一入口（双写 inbox/outbox、事件驱动入队）。
-- **creator window** — 每个 thread 启动时指向创建方的恒在通道，不可 close。
+- **creator window** — 每个 thread 启动时指向创建方的恒在通道，不可 close。子→父回报的唯一合法通道。
 - **inbox 存储** — per-message 落盘，并发回报互不覆盖。
+- **do_window.move** — inbox/outbox 文本消息之外的**第二条协作通道**：把整个 ContextWindow（含内部状态）以 ref / move 模式传给对端 thread。这是 `no_shared_state_across_threads` 硬约束的**唯一例外**——除此之外 thread 间一律不共享内存（`packages/@ooc/core/executable/windows/do/method.move.ts:8`）。
 
 ## 当前设计（锚真实代码）
 
@@ -29,8 +32,21 @@ OOC 的协作不是「调用对方的函数」，而是「**消息 + 持续会�
 - `target="super"` 自指别名：翻译为派往自己的 super 分身，跨 session 自我协作（`delivery.ts:11` 注释、`_shared/super-constants.ts`）。
 - `isCreatorSelf`：按 creatorObjectId 是否=自身（且同 session）判定 creator window 是 do 还是 talk（`packages/@ooc/core/executable/windows/_shared/init.ts:55`）。
 - inbox per-message 存储：`persistInboxMessages` 幂等 append、`readInboxMessages` 扫目录合并（`packages/@ooc/core/persistable/inbox-store.ts:34` / `:58`）；`writeThread` 先落目录再从 thread.json strip（`packages/@ooc/core/persistable/thread-json.ts:68` / `stripVolatileForPersist:45`）。
+- `do_window.move`：`exec(window_id=<do_window_id>, method="move", args={window_id:<target>, mode:"ref"|"move"})`。**ref**=对端拿分享时刻 freeze snapshot（ref 上不能 exec，仅 close 释放本地引用），自己保留 owner 继续 live；**move**=所有权移交对端（对端拿 live owner），自己变 lent_out 占位临时只读。**归还**：borrower 在 creator do_window 用 `mode="move"` 发起，按 id 检测对端有同 id 的 lent_out → 视为归还，原 owner 吸收 latest 内容恢复 live；do_window archive 时所有 borrowed owner 自动归还。跨 thread window id 严格不变（用于 lent_out↔owner 配对）。可 share：file/knowledge/search/program/todo/talk/plan/relation/custom；do_window 自身/method_exec/root 不可（`packages/@ooc/core/executable/windows/do/method.move.ts:8`、`:44`）。消息通道仍是协作主路径，window 共享只是把已组织好的上下文一次性带过去，省对端重复打开。
+- 子→父 reply：唯一合法通道是 creator do_window 上 `continue`（或 creator talk_window 上 `say`）写 transcript，自动 deliver 到父 inbox。**`end({result})` 不是回报通道**——end 只声明本轮结束，传 result 时其内容被自动作为最后一条 continue 写入 creator window（auto-archive 触发器，不是隐式回报）。缺这条 prompt 子 LLM 会 hallucinate `end({result})` 致 result 静默吞、父侧 do_window 永不 archive（`packages/@ooc/meta/object.doc.ts:1981` creator_window.子→父 reply 协议）。
+- ThreadMessage 数据边界契约：写路径只用 canonical（`content` / `toObjectId` / `createdAt` ms 数字）；读边界做运行时兼容 legacy 别名（`content ?? text`、`toObjectId ?? targetObjectId`、ISO string createdAt 走 Date.parse）。TS 类型 ≠ 磁盘真实数据，系统边界（磁盘读 / HTTP body / 跨 Agent 消息）必须归一化（`packages/@ooc/meta/object.doc.ts:1847` messages.patches.field_alias_compat）。
 - PR-Issue：stone-versioning 跨自治区改动的评审 token，**不在我的运行时通道内**，落 `flows/super/issues/`、仅 supervisor 决议（`createPrIssue`，`packages/@ooc/core/persistable/pr-issue.ts:230`）。这是 Issue 在系统里**仅存的**承担形态。
 - **「Issue 看板」已废弃**（2026-05-26 移除）：曾设想用 session 级共享 Issue（含订阅 / @mention / comment 流）承载多个对象就同一 topic 会话——这条路已被否，**不是我现行的协作机制**。多对象会话现在一律走 talk_window + inbox/outbox，不再有共享议题对象（见 `pr-issue.ts:1`-`:17` 头注对二者的区分）。
+
+## 名词解释
+
+- **talk_window** — 跨 object 的持续会话窗口，承载 peer 平等轴。`root.talk` 创建、target=对端 flow object id（`"user"` 也是一个 flow object），注册 `say`/`wait`/`close`/`set_transcript_window`。同一对端复用同一窗口，不要每发一条就关再开。
+- **do_window** — 同 object 内 `root.do` fork 子线程的对话窗口，承载父-子算力分身。注册 `continue`/`wait`/`close`/`move`/`set_transcript_window`，消息 source=`do`。判定 creator window 是 do 还是 talk 由 `isCreatorSelf`（creatorObjectId 是否=自身且同 session）决定。
+- **inbox / outbox** — thread 接收 / 发出消息的列表，是**跨 thread 影响的唯一通道**（do_window.move 是唯一例外）。inbox 落 `<threadDir>/inbox/<msgId>.json` per-message 文件，append-only 幂等，消费靠 `consumedMessageIds` 派生过滤而非物理移除。
+- **ThreadMessage** — 跨 thread 最小消息单元：id（caller/callee 共享）、fromThreadId/toThreadId、fromObjectId、content、source（do/talk/user/system）、windowId（发件方视角）、replyToWindowId（收件方视角）。
+- **creator window** — thread 启动时指向创建方的恒在通道，`isCreatorWindow=true` 拒 close，是子→父回报的唯一合法通道。
+- **PR-Issue** — stone-versioning 跨自治区改动的评审 token，落 `flows/super/issues/`、仅 supervisor 决议；是设计期产物，不在运行时协作通道内。与已废弃的「Issue 看板」（session 级共享议题 + 订阅/@mention/comment）是两个概念。
+- **peer 平等轴 / parent-child 层级轴** — 对象关系三轴中的两轴。peer：同级 Agent 平等协作，只能 talk 说服、不能支配对方或改其运行时状态（我主要承载）；parent-child：child Agent 物理嵌套在 parent `children/` 下，层级治理；自我（super）轴归 reflectable。完整语义见 `root.patches.object_relations`。
 
 ## 现状
 

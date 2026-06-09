@@ -6,6 +6,18 @@
 
 核心设计：**不改变行为的旁路观测**。只在 thinkloop 周围加观测点——LLM 输入输出 / tool 调用 / context 快照可记录、可暂停、可回放；写盘委托 persistable，自己只决定「何时记、记什么」。让 Object 的思考黑箱可见、可介入，而不污染其行为。
 
+## 名词解释
+
+- **LlmObservation**：内存里最近一次 LLM 调用的 input/output/provider/model 快照。单例（模块顶层变量），同进程只反映最近一次；并发多 thread 谁后写谁覆盖——要按 thread 区分历史用 loop-level debug 文件。
+- **debug 快照**：thinkloop 周围落盘的产物，分两类。① **始终落盘**（只要 thread 有 persistence，与 debug 开关无关）：`llm.input.json` / `llm.output.json`，随最近一次写覆盖。② **loop-level**（enableDebug 开启后才写）：每轮一组 `loop_NNNN.{input,output,meta}.json`，`NNNN` 是 4 位 0 padding 的轮次号。`loop_N.input.json`=本轮 inputItems + contextSnapshot；`.output.json`=normalized outputItems + provider/model；`.meta.json`=provider/model/latencyMs/messageCount/toolCount/toolCallCount/contextBytes/status/error + windowsSnapshot。
+- **loop_N / loopIndex**：thread 内的轮次编号，由 `loopKey(thread)` 定位计数器分配——有 persistence 时 key=`{baseDir}:{sessionId}:{objectId}:{threadId}`（跨进程同一 thread 共享计数），无 persistence 时 key=`ephemeral:{thread.id}`（避免不同测试线程 id 偶然相同互踩）。
+- **pause / PauseChecker**：runtime 注入的 `(thread)=>boolean|Promise<boolean>` 暂停判定器，thinkloop 在 tool call 执行**前**调用 `isPausing`；返回 true 则记完 LLM 输出（可被人查看/修改）、thread.status=paused、不分派 tool call。默认 `()=>false`，必须 runtime 显式 `setPauseChecker` 才激活。
+- **global-pause**：控制面把 PauseChecker 暴露成 UI 开关——`api.enable-global-pause` / `disable` / `get-status` 全局切换暂停态；`api.permission-decision` 让人工对 pending tool call 下 approve/reject。
+- **activity / `/api/runtime/activity`**：系统活动快照，一次读出服务端此刻全貌——running/queued job + 每个 running 的 `ageMs`（卡住多久）+ `runningCount` + 主导日志模式 `logPatterns`。把「盲等到超时再 tail」变成「随时一读即诊断」。
+- **windowsSnapshot**：loop_NNNN.meta.json 里每个 ContextWindow 的 content hash 数组（`{id, type, contentHash, parentWindowId?, status?, compressLevel?}`）。contentHash=`Bun.hash(JSON.stringify(stripVolatile(window), sortedKeys)).toString(36)`，type-agnostic、剥 volatile、sorted key 防字段顺序漂移。前端拿 loop N + N-1 算 added/changed/removed/unchanged 四态 diff（渲染属 visible）。
+- **ContextSnapshot**：与 system message XML 同源的结构化 thread 快照（id/status/plan/contextWindows/inbox/outbox/events/creatorThreadId/parentThreadId）。同一份 thread 状态先 render 成 XML 给 LLM、再 capture 成 JSON 给 UI——UI 直接渲染结构化字段，不必 re-parse XML。
+- **log-aggregator**：单一受控 console 收口，按稳定 `key` 去重计数 + 限流（首 3 条直出、之后每 100 条采样带 `(×count)`），并维护滚动 tally 供 activity 快照消费。
+
 ## 我负责的
 
 - **LlmObservation**：内存里最近一次 LLM 输入/输出快照，供测试与控制面查询。
@@ -32,7 +44,7 @@
 
 ## 已知问题 / 边界与未决
 
-- **agent 面 parity 缺口**：Agent 自读历史并据此调整仍是演化方向。自观测**不在业务 thread 内做**（会撞 thinkable.context_budget），而在 **super flow**（sessionId="super" 反思通道）读「另一个自己」的落盘产物——从属 reflectable.super 通道（object.doc.ts:2460 起 reflectable 节点；super alias target 见 object.doc.ts:2472）。目前主要靠 super flow 读落盘，缺独立成熟入口。
+- **agent 面 parity 缺口**：Agent 自读历史并据此调整仍是演化方向。自观测**不在业务 thread 内做**（会撞 thinkable.context_budget），而在 **super flow**（sessionId="super" 反思通道）读「另一个自己」的落盘产物——从属 reflectable.super 通道（object.doc.ts:2453 起 reflectable 节点；super alias target 见 object.doc.ts:2472）。目前主要靠 super flow 读落盘，缺独立成熟入口。
 - **LlmObservation 是单例**：模块顶层变量，同进程只反映最近一次调用；并发多 thread 谁后写谁覆盖，要按 thread 区分历史须用 loop-level debug 文件。
 - **职责边界**：我不持有调度或业务逻辑（写盘委托 persistable）；不画 UI（loop_timeline / LoopDiffView 属 visible，我只产数据）；debug 派生字段（contentHash 等）不进 thread.json。
 

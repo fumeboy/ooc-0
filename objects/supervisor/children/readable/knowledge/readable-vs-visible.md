@@ -6,13 +6,14 @@ activates_on:
 
 # 两个展示维度，两个观众
 
-同一个 Object 有两条展示线，分朝两个观众。readable 与 visible 并列、不互相吞并：
+同一个 Object 有两条展示线，分朝两个观众。readable 决定"Object 怎样被读进思考者的 context"（含静态自我介绍 + 动态渲染两个面），visible 决定"Object 怎样被画进人类的屏幕"。两者并列、不互相吞并：
 
 | | **readable**（我） | **visible** |
 |---|---|---|
 | 观众 | Object 的 LLM（思考者） | 人类（浏览器） |
 | 渲染目标 | context 里的 XML 子节点序列 | tsx 页面 / SPA route |
-| 入口 | `registerReadable`（readable / renderXml） | `visible/index.tsx`（stone 单页）/ `client/pages`（flow 多页） |
+| 静态自我介绍 | `readable.md`（对外名片，与 self.md 双面身份） | （无独立对应；UI 即自述） |
+| 入口 | `registerReadable`（readable / renderXml）+ 持久层 readable.md | `visible/index.tsx`（stone 单页）/ `client/pages`（flow 多页） |
 | 变化的控制 | window method（写 `state`，如 set_viewport） | `/call_method`（ui_methods，人类侧触发） |
 | 变化的呈现 | compressView（折叠/快照态进 context） | `visible/diff.tsx`（diff 渲染进浏览器） |
 | 寻址 | thinkable context 管线消费 | `ooc://client/...` 1:1 映射 SPA route |

@@ -10,7 +10,7 @@ OOC 的核心设计：LLM 看到的世界不是裸 prompt，而是一组 **Conte
 
 thinkable 这个维度拆成这些子模块
 
-- **identity**：Object 的身份——`self.md`（写给自己）
+- **identity**：Object 的双面身份。`self.md` 偏内向（写给自己，进 LLM `instructions` 字段、权重高于 system message，定义目标/风格/行为偏好，是自我约束）；`readable.md` 偏外向（写给外部世界的名片，让别的 Object/user 理解「我是谁、能做什么、何时找我」，可被动态 `readable.ts` 替代）。两者共同界定 Object 的人格边界。注意 XML 里只放 `<self object_id/>` 对外标记，详细身份正文走 instructions——两层互补、不重复塞进 XML。
 - **llm**：对接 OpenAI / Claude provider。
 - **context**：LLM 的 Input，由若干 ContextWindow 组成，ContextWindow 具有 window methods 可以调用。Object 不知道 context 之外的任何事。
 - **knowledge**：Object 持有的知识，具有 `activates_on` 条件，用于在 OOC Object 执行某一意图的行动时触发激活。
@@ -44,6 +44,23 @@ thinkable 这个维度拆成这些子模块
 - 给 knowledge 写入加统一校验闸门：frontmatter schema 不合法即拒绝（而非 warn 跳过），消灭「死知识」。
 - 收敛 derived 窗口的两套读取分支，让真实渲染与 mock 路径走同一条。
 - compress 已支持 scope=windows（切 window compressLevel）与 scope=events（LLM 提供 summary 折叠事件段，`executable/tools/compress.ts:378`）；仅 scope=auto 仍抛 not-implemented（`compress.ts:372`，留给 emergency_guard），待补。
+
+## 名词解释
+
+- **ContextWindow / ContextObject**：同一个东西的两个名字。它不是独立于 Object 的数据结构，而是 **Object 出现在当前 thread context 中的形态**——window 上挂的 method 就是 Object 的 method。Context 因此不是一段字符串，而是一组可 open/close/update/exec 的 Object 集合。
+- **Context**：Object 本轮思考能看见的全部世界，也是它的世界边界——context 之外的状态（内存/文件）对它不存在。
+- **Thread**：思考过程的运行时节点，持有自己的 context/windows/inbox/outbox/events/status。
+- **Thread Tree**：thread 派生子 thread 形成的树，多 thread 可并行思考；OOC 的类 SubAgent 底座。
+- **thinkloop**：单 thread 一轮「构造 context → 调 LLM → 执行 tool → 写事件」循环。
+- **activates_on**：knowledge frontmatter 里声明「我何时进入 context」的 trigger map（表达式→级别）。
+- **trigger**：activates_on 的 key 表达式，五类——`object::<type>` / `method::<objtype>::<method>` / `object_id::<id>` / `intent::<name>`（支持 `program.*` wildcard）/ `super`；旧 `window::<type>` 归一化为 `object::<type>`。
+- **show_description / show_content**：两个激活级别（只露标题描述 / 展开正文）；多 trigger 命中取 max。
+- **渐进式知识激活**：执行经 open→refine→submit 渐进暴露窗口与方法，knowledge 随之按 trigger 渐进激活——执行到哪、知识激活到哪，控制每轮 context 体积。
+- **seed / sediment**：knowledge 双源。seed=设计期写定的 stone `knowledge/`（进 git）；sediment=运行时沉淀的 pool `knowledge/{memory,relations}/`（不进 git）。同名 sediment 覆盖 seed。
+- **inheritable**：knowledge frontmatter 字段，唯有显式 `true` 才下传给嵌套子 Agent（领域层级轴）。
+- **exec / close / wait / compress**：LLM 操作世界的 4 个基础 tool。
+- **ProcessEvent**：thread 运行产生的过程事件流（LLM 输出 / tool 调用 / context 变化），构成 transcript 过程事件层。
+- **BudgetManager**：相关度排序的预算实施器，按 score 在 token 预算内纳入/排除窗口（取代退役的自然衰减 / emergency guard）。
 
 ## 协作
 

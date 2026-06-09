@@ -18,6 +18,16 @@ Object 持有的 markdown 知识不是一次全喂——按 `activates_on` trigg
 
 继承链合并规则：祖先 seed + parentClass 链 seed + self stone + self pool，子级永远 override 父级（CSS-cascade 语义），运行时 sediment override 设计层 seed。同相对路径冲突时后 set 胜出；仅 sediment↔seed 冲突 console.warn，继承覆盖不 warn（设计正常路径）。祖先的 sediment 默认私有、**不下传**。
 
+### 二维激活 grid：任务进度轴 × 领域层级轴
+
+knowledge 激活实际是二维的：
+- **横轴 = 任务进度**（method path / form refinement）—— 由 `activates_on` trigger 表达，执行推进到哪激活到哪。
+- **纵轴 = 领域层级**（B-tree 父子继承）—— 由物理嵌套 + frontmatter `inheritable` 表达。
+
+纵轴解决的问题：一组同领域子 Agent（如 sentry/*）的公共知识无处放——放全局没人加载、放每个子 Agent 又重复 N 份。方案是子 Agent 物理嵌套在 parent 的 `children/` 下（objectId 用 `/` 编码层级，如 `sentry/sentry_event`），parent 的 knowledge 只有显式标 `inheritable: true` 才下传。
+
+**默认安全设计**：缺省 / `false` 都不下传——避免父级 knowledge 误下传膨胀子 Agent context。要跨 Agent 共享某条认知，必须把它从 sediment 提升到 stone seed 并标 inheritable，进 git review。loader 只扫祖先 `stoneKnowledgeDir`、**从不扫祖先 poolKnowledgeDir**——即便 sediment 写了 inheritable 也不下传，这是 loader 路径选择决定的、不是 frontmatter 决定的（sediment 是 Agent 私有运行时认知，跨 Agent 共享有隐私问题）。
+
 ## 激活级别（`knowledge/activator.ts:26`）
 
 `computeActivations()` 对每篇知识按当前 thread 求激活级别：
