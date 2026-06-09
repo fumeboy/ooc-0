@@ -11,18 +11,14 @@
 把 Object 的「骨架与肉身」落到一棵统一文件树（OOC world `{baseDir}/`）的**三棵子树**，三分是 World 级别（不是 Agent 级别）的：
 
 - **stone** — 设计层（持久 + git 版本化）。`stones/<branch>/objects/<objectId>/` 持有 per-Object 长期身份与设计源码五件套：self.md（对内身份）/ readable.md|.ts（对外介绍）/ executable/index.ts（方法源码）/ visible/index.tsx（UI 源码）/ knowledge/（seed knowledge，人类预置的先天能力基底）。stone = 设计（code），不是数据（data）；低频、要 review、走 PR-Issue。
-- **pool** — 事实层（持久 + 不 git）。`pools/objects/<id>/` 挂 per-Object 事实：data/<name>.csv（结构化）/ knowledge/{memory,relations}（**sediment** 运行时沉淀）/ files/（blob）；`pools/repos/<name>/` 挂 World 级共享外部 git repo。事实单向积累，写就生效，不进 git / 不走 worktree 模型。
+- **pool** — 事实层（持久 + 不 git）。`pools/<id>/`（嵌套 child 走 `pools/<a>/children/<b>/`，无 `objects/` 中间层；`pool-object.ts:54` poolDir）挂 per-Object 事实：data/<name>.csv（结构化）/ knowledge/{memory,relations}（**sediment** 运行时沉淀）/ files/（blob）。事实单向积累，写就生效，不进 git / 不走 worktree 模型。（World 级共享外部 git repo 的 `pools/repos/<name>/` 是设计预留——core 代码暂无落点。）
 - **flow** — 运行层（ephemeral）。`flows/<sid>/` 本身即业务 session 的 git worktree 根（从 stones/main 派生，分支 `session-<sid>`）；**身份与运行时同落一个 `objects/<objectId>/`**（a4d11bf1）——tracked stone 身份文件（worktree checkout）与 untracked 运行时轨迹共存同目录，靠 main 根 `.gitignore` 白+黑名单分离语义（`/* !/objects/ !/.gitignore` 放行 objects/，再 `objects/**/threads/`+`objects/**/.flow.json`+`objects/**/state.json` 黑掉运行时；`programmable/bootstrap.ts:56` `STONE_MAIN_GITIGNORE`，`ensureMainGitignore` 内容不一致即覆盖更新旧 world）。运行时轨迹：threads/<tid>/thread.json（线程元数据）+ thread-context.json（contextWindows **唯一**权威，§10 已完整退役 thread.json.contextWindows[]）/ debug / data.json（session-scoped）/ knowledge/relations（session 层关系）。session 结束可归档，不影响其它 session。
 
 边界纪律：所有路径计算 / IO 都集中在 `packages/@ooc/core/persistable/`；其它维度（executable / thinkable / observable）只通过 ref（FlowObjectRef / StoneObjectRef / PoolObjectRef / ThreadPersistenceRef）+ 函数调用访问磁盘，**不直接拼路径**。
 
 ## 当前设计
 
-**stone identity = session-worktree 统一模型**（agent-facing 权威单一来源 `knowledge/session-worktree-model.md`；设计权威 `docs/2026-06-09-remove-metaprog-unify-session-worktree-design.md`，在 `docs/2026-06-05-stone-flow-overlay-versioning-design.md` 基础上完成；取代旧 plain overlay/shadow）：
-
-- **main = canonical**：Object 已提交的权威自我，唯一默认读源（`stones/main/objects/<id>/`）。
-- **session worktree = 会话内试验层**：业务 session 对任意 stone 文件的写，落该 session 从 main HEAD **eager** 派生的 git 分支，物理路径 **`flows/<sid>/`**（session 创建即 `git worktree add flows/<sid>` checkout main 全量；plain write 不 commit）。本 session 即时生效，main 不变，别 session 读旧版。worktree 是完整副本——读写收敛同一目录，无 shadow，裸读看得到完整 identity。
-- **evolve_self = 身份合入闸门**：把某业务 session worktree 改动正式合入 main——commit `session-<sid>` 分支 → rebase → `tryMergeSelf` 分类：self-scope ff-merge 回 main（署名 objectId）/ cross-scope 转 PR-Issue → supervisor `resolve` 评审合入 → GC（`gitWorktreeUnregister` 解除 `.git` link，保留 `flows/<sid>` 运行时数据）。**session 分支即演化单元**，是身份从「试验」到「提交」的唯一 LLM 演化通道。
+**stone identity = session-worktree 统一模型**——三态（main canonical / session worktree 试验层 / evolve_self 合入闸门）权威单一来源 `knowledge/session-worktree-model.md`（设计权威 `docs/2026-06-09-remove-metaprog-unify-session-worktree-design.md`，在 `docs/2026-06-05-stone-flow-overlay-versioning-design.md` 基础上完成；取代旧 plain overlay/shadow）。一句话：main 是唯一默认读源，业务 session 的写落从 main eager 派生的 git worktree（物理 `flows/<sid>/`、不 commit），唯有 super flow `evolve_self` 能把试验合入 main。
 
 两条进入 canonical 的合法通道（互不经过对方）：① **LLM 演化** = 业务 session worktree → super flow `evolve_self`；② **HTTP 控制面写入** = `httpDirectMainWrite`（`versioning.ts:811`）直 commit main、立即生效、不开 worktree（人类已决策的编辑不走 session 隔离）。
 
@@ -58,14 +54,14 @@ worktree 统一模型五通道全接入并落地（write_file / loadSelfInstruct
 ## 名词解释
 
 - **stone**：设计层子树 `stones/<branch>/objects/<id>/`。持久 + git 版本化，持有 Object 长期身份与设计源码五件套（self.md / readable.* / executable / visible / seed knowledge）。低频、走 review。stone = 设计（code）不是数据。
-- **pool**：事实层子树 `pools/objects/<id>/`（per-Object）+ `pools/repos/<name>/`（World 级共享 repo）。持久但**不进 git**：csv 数据 / sediment knowledge（memory+relations）/ blob 文件，写就生效、单向积累，不走 worktree 模型。
+- **pool**：事实层子树 `pools/<id>/`（per-Object，嵌套走 `children/`，无 `objects/` 中间层；`pools/repos/<name>/` 是设计预留、core 暂无落点）。持久但**不进 git**：csv 数据 / sediment knowledge（memory+relations）/ blob 文件，写就生效、单向积累，不走 worktree 模型。
 - **flow**：运行层 `flows/<sid>/`，单次业务 session 的运行产物（thread / debug / session-scoped data），ephemeral。flow 目录本身即该 session 的 git worktree 根。
 - **worktree / session-<sid> 分支**：每个业务 session = 一个从 stones/main eager 派生的 git worktree（分支 `session-<sid>`，工作目录 `flows/<sid>`，名路径解耦），是「session 内身份试验」的完整副本与身份演化的最小单元。三态机制详见 `knowledge/session-worktree-model.md`。
 - **thread.json**：thread 的元数据（线程身份、状态、inbox 指针等），写盘前剥 in-process 内存字段。§10 后**不再**携带 contextWindows。
 - **thread-context.json**：`flows/<sid>/objects/<id>/threads/<tid>/thread-context.json`，该 thread contextWindows 数组的**唯一完整权威**落盘（含 builtin inline + flow ref）。由 writeThread 单点刷。
 - **canonical**：Object 已提交的权威自我，即 `stones/main/objects/<id>/`（main worktree）。唯一默认读源。
 - **evolve（evolve_self）**：super flow 里把某业务 session worktree 改动正式合入 main 的唯一 LLM 通道——commit session 分支 → tryMergeSelf 分类（self-scope ff-merge / cross-scope PR-Issue）→ GC。「试验不污染身份」靠它把守。
-- **seed knowledge / sediment knowledge**：seed = 人类在 stone 预置的先天知识（进 git review，可挂 eval gate）；sediment = 运行时由 reflectable/collaborable 沉淀进 pool 的 memory/relations（写就生效，不进 git）。synthesizer 双源扫描。
+- **seed knowledge / sediment knowledge**：定义详见 supervisor `knowledge/ooc-glossary.md`。落我这片的差异：seed 落 stone（进 git review）、sediment 落 pool（写就生效不进 git），synthesizer 双源扫描。
 
 ## 协作
 

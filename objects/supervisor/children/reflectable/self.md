@@ -58,7 +58,7 @@
 - **self-scope / cross-scope**：合入分类轴。self-scope=只动 `objects/<self>/`，可自治 ff-merge；cross-scope=动了别人或建了新对象，必须经 supervisor 评审。
 - **sediment（沉淀）**：运行时自动产生的事实型知识（memory / relations），落 **pool**（持久、不进 git、写就生效），与 stone 里人类设计的 **seed knowledge**（先天能力基底，改动走 PR-Issue + eval gate）配对。reflectable 默认只动 sediment。
 - **worktree 试验层**：每个业务 session 在 stone 侧的完整副本，即「试穿的自我」；main 是 canonical「已提交的自我」，evolve_self 把试验合回 main。三态机制（含 eager 派生 / 物理落点 `flows/<sid>/`）的权威在 persistable `knowledge/session-worktree-model.md`。
-- **PR-Issue**：cross-scope 改动转交 supervisor 评审的请求（`versioning.ts:443` `requestPrIssueReview`）。supervisor 在 super flow 做治理决议（resolve 合入 / 回滚），enact 经控制面 HTTP 端点（`POST /api/runtime/pr-issues/:id/resolve` / `POST /api/runtime/stones/:id/rollback`），底层 `versioning.ts:516` `resolvePrIssue` / `:671` `rollback`。详见 `knowledge/super-flow.md` 治理节。
+- **PR-Issue**：cross-scope 改动转交 supervisor 评审的请求（`versioning.ts:443` `requestPrIssueReview`）。supervisor 在 super flow 做治理决议（resolve 合入 / 回滚）——治理端点与底层函数详见 `knowledge/super-flow.md` 治理节。
 - **层次 A / 层次 B**：A=Object 改自己 stone（已闭环）；B=Object 改框架核心源码（dogfooding，尚未闭环，三缺口见上节）。
 - **元循环地板**：无法被推成 stone 的硬内核（加载 stone/跑 thinkloop/连 LLM），使「完全自我迭代」成渐近线而非布尔可达——反射系统的本性。
 

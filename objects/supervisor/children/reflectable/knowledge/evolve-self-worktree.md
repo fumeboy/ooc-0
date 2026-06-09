@@ -2,7 +2,7 @@
 title: evolve_self —— session worktree 即演化单元
 description: 一次 session 的身份改动怎么 commit + 合回 main；问 self-scope 合入 / worktree 演化时看这篇
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_content"
 ---
 
 # evolve_self = session worktree 演化单元
@@ -29,4 +29,4 @@ activates_on:
 - LLM session 内所有 stone 写（改自己 / 改别人 / 建新对象）→ 直接 `write_file` 落 session worktree，不再有「先 open 再写」手动流程。
 - 唯一合入闸门 = super flow evolve_self；super flow 本身不直接 write_file 改 stone（它是闸门 + sediment 沉淀 + 治理）。
 - HTTP 控制面写（前端保存 self/readable/executable）→ 直接 commit main，立即生效，不开 worktree。
-- cross-scope PR-Issue 由 supervisor 在 super flow 做治理决议（resolve / rollback），enact 经控制面 HTTP（`POST /api/runtime/pr-issues/:id/resolve` / `POST /api/runtime/stones/:id/rollback`，底层 `versioning.ts:516` / `:671`）。改自己 / 改别人 / 建新对象现在都直接 `write_file` / `create_object` 落 session worktree，无单独固化写动作通道。
+- cross-scope PR-Issue 由 supervisor 在 super flow 做治理决议（resolve / rollback，端点与底层函数详见 `knowledge/super-flow.md` 治理节）。改自己 / 改别人 / 建新对象现在都直接 `write_file` / `create_object` 落 session worktree，无单独固化写动作通道。

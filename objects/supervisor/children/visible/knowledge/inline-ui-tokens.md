@@ -2,7 +2,7 @@
 title: inline UI tokens — Object 在消息文本里嵌可交互组件
 description: [[ui{...}ui]] token 语法、注册组件、失败回退与渲染入口；Object 只产 token 文本，前端集中 dispatch（零 dangerouslySetInnerHTML）
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_content"
 ---
 
 # inline UI tokens
@@ -34,4 +34,4 @@ Object 向 user 发消息时，可在文本里嵌 `[[ui{"comp":"<name>",...}ui]]
 
 ## 协议来源与扩展
 
-约定的权威文本是 user 的 readme——Object 在 super flow 注入 LLM context 时读 user readme 学这套语法。加新组件只需在 `InlineUiComponent` switch 加一条 case + 更新 user readme 注册表，Object 端零改动；都走同一通道，零 `dangerouslySetInnerHTML`。
+约定的权威文本是 user 对象的 `readable.md`（inline-ui 语法注册表）——Object 在 super flow 注入 LLM context 时读它学这套语法。加新组件只需在 `InlineUiComponent` switch 加一条 case + 更新 user 对象 `readable.md` 的注册表，Object 端零改动；都走同一通道，零 `dangerouslySetInnerHTML`。

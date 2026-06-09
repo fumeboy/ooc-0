@@ -1,14 +1,14 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_content"}
 ---
 
 # 我这一维的测试规格
 
-验证我 programmable 能力的测试规格。规格单一来源 `packages/@ooc/storybook/specs/capability_programmable.md`；story 代码在 `packages/@ooc/storybook/stories/`。两档：Tier A 控制面确定性（零真 LLM、进 CI gate），Tier B agent-native（真 LLM、env-gated）。改我的 executable 行为或自定义方法链路后，先回到 specs，再核对此处。
+验证我 programmable 能力的测试规格。规格已就地收编进本 tests.md；story 代码在 `packages/@ooc/storybook/stories/`。两档：Tier A 控制面确定性（零真 LLM、进 CI gate），Tier B agent-native（真 LLM、env-gated）。改我的 executable 行为或自写方法链路后，先回本篇更新判据，再核对 story 代码。
 
 ## 维度定位
 
-我持有并演化自身的自定义 ContextWindow + 命令表，写 `executable/index.ts` 即热更。
+我持有并演化自身的自定义 ContextWindow + 方法表（`window.methods`），写 `executable/index.ts` 即热更。
 
 ## Tier A —— 控制面确定性
 
@@ -16,18 +16,18 @@ activates_on: {"window::root": "show_content"}
 
 | TC | 断言 |
 |----|------|
-| TC-PROG-01 | 定义 `ui_methods` 经 HTTP `call_method` 返回正确值。 |
+| TC-PROG-01 | 定义 `ui_methods` 经 HTTP `call_method` 返回正确值。注：`ui_methods` 调用语义归 **visible**；此 TC 测的是 `ui_methods` 的写入/加载/热更路径（与 `window.methods` 同住 `executable/index.ts`、共用 loader），这一面 programmable 与 visible 共担。 |
 | TC-PROG-02 | 方法拿到 `ctx.self.dir`（自己的 stone 路径）且目录真实存在。 |
-| TC-PROG-03 | `window.commands` 经 `loadObjectWindow` 可加载（LLM 路径自定义命令）。 |
+| TC-PROG-03 | `window.methods` 经 `loadObjectWindow` 可加载（LLM 路径 object method）。 |
 | TC-PROG-04 | 热更新 —— 改 `executable` 后已有方法变更、新增方法立即生效。 |
 
 > 热更 fs.watch 有 debounce：改 `executable` 源码后等 ~350ms 再调用才反映新版本。
 
 ## Tier B —— agent-native（真 LLM，env-gated）
 
-我（supervisor）在业务 session 内 `write_file` 写 `objects/<newId>/...` 建对象并写自定义命令，经 super flow `evolve_self`（cross-scope → PR-Issue → 自审 resolve）合入 main；`customWindowInvocations` + `functionOutputFor` 实证命令真执行。代码：`stories/programmable.story.ts` 的 `runAgentNative()`。
+我（supervisor）在业务 session 内 `write_file` 写 `objects/<newId>/...` 建对象并写自定义 object method，经 super flow `evolve_self`（cross-scope → PR-Issue → 自审 resolve）合入 main；`customWindowInvocations` + `functionOutputFor` 实证 method 真执行。代码：`stories/programmable.story.ts` 的 `runAgentNative()`。
 
-rubric（收编 `playbooks/programmable.playbook.md` + e2e `backend-programmable-self-command`）：
+rubric（已就地收编，对应 e2e `backend-programmable-self-command`）：
 
 - **Good**：method 写出、注册、被 LLM 成功调用、返回正确。
 - **OK**：写出但调用绕行 / 重试。

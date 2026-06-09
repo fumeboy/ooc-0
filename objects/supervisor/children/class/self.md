@@ -56,7 +56,8 @@
 - **class**：不可交互的一等继承抽象。持五件套（self.md / readable / executable / visible / knowledge），与 object 平级，但不能被 talk、不跑 thinkloop——仅供 object 单继承。OOC 里唯一的继承机制。
 - **object 实例**：可交互 Agent。普通 `objects/<id>` stone，经 `ooc.class` 声明继承某个 class。class 与 object 的区别是「是否可交互」，组成相同。
 - **`_builtin/<id>` 寻址**：框架 builtin class 的寻址前缀。磁盘五件套读运行进程的框架包 `@ooc/builtins/<id>`（不 vendor 进 world），由 `resolveBuiltinDir` / `resolveBuiltinReadDir` 解析；registry 以此前缀直接注册为 class 键。bare id（如 `supervisor`）反而解析回 `objects/<id>` 实例目录——前缀专用收窄避免 class 遮蔽同名 instance 磁盘。
-- **`ooc.class`**：stone `package.json` 的继承声明字段，替代已删除的 `prototype`。值为父类 id（如 `"_builtin/supervisor"`）；registrar/synthesizer 读它设 `ObjectDefinition.parentClass`。是 object 的权威父类。
+- **`ooc.kind`**：stone `package.json` 标记**自身是 class 还是 object** 的字段，值 `"class"` / `"object"`——回答「我是类还是实例」。class 的 package.json 写 `kind:"class"`（如 supervisor，`packages/@ooc/builtins/supervisor/package.json:13`）；`createStone` 实例化的 object 写 `kind:"object"`（`packages/@ooc/core/persistable/stone-object.ts:168`），`ui/service.ts:81` 据 `ooc.kind==="object"` 判 stone marker。与 `ooc.class`（声明父类继承）正交：`kind` 答「我是什么」，`class` 答「我继承谁」。
+- **`ooc.class`**：stone `package.json` 的**继承声明**字段，替代已删除的 `prototype`，回答「我继承谁」。值为父类 id（如 `"_builtin/supervisor"`）；registrar/synthesizer 读它设 `ObjectDefinition.parentClass`。是 object 的权威父类。class 身份本身由 `ooc.kind` 决定，不由本字段决定。
 - **parentClass（三态）**：`ObjectDefinition.parentClass`。`undefined`→隐式继承 `"root"`（拿 talk/do/todo/plan/program 等通用方法）；`null`→显式不继承（仅 root 与 method_exec）；`string`→具名父类，须已注册。
 - **parentClass 链**：自 `self.type` 沿 `parentClass` 向上的 class id 序列（`resolveParentClassChain`，closest→farthest）。method / window-method / knowledge 在自身 miss 后沿此链回退；带 `seen` Set 环检测与 `MAX_DEPTH=64`。
 - **instantiate_with_new_world**：class `package.json` 的 boolean flag。为 true 时 world bootstrap 幂等实例化出同名 `objects/<id>` object（拷 class self.md 为 own 身份、写 `ooc.class`、commit on main；`objects/<id>/` 已存在则跳过）。supervisor 即此类 class。

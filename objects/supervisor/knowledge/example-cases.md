@@ -2,7 +2,7 @@
 title: 应用例 —— OOC 拿来干嘛（外部场景收编）
 description: OOC 被用于外部场景的例证（因子开发助手、飞书集成）；问"OOC 能拿来做什么""外部业务/SaaS 怎么用 OOC 表达"时看这篇
 activates_on:
-  "window::root": "show_description"
+  "object::root": "show_description"
 ---
 
 # OOC 应用例

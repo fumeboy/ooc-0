@@ -21,4 +21,4 @@ readable 是与 executable 并列的**一等注册维度**。`ObjectRegistry` �
 
 标准对象定义样板：`packages/@ooc/builtins/example/`（self.md + executable/index.ts + readable.ts + visible/，barrel 分注册）。
 
-**沿 class 链回退**：registry 有 `resolveWindowMethod`（window method 沿 parentClass 链回退，镜像 object method 的 `resolveMethod`，`object-registry.ts:264/273`）。当前无自定义对象覆盖 readable，该链尚未被真正行使（已知问题）。
+**沿 class 链回退**：registry 有 `resolveWindowMethod`（window method 沿 parentClass 链回退，镜像 object method 的 `resolveMethod`，`object-registry.ts:264/273`）；当前无自定义对象覆盖 readable，该链尚未被真正行使——详见 self.md「已知问题」。

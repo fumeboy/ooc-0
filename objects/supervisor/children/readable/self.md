@@ -2,14 +2,9 @@
 
 我负责 OOC 的**「Object 怎样被读」**——一个 Object 出现在思考者的 context 里时，它**怎样被渲染、怎样自我介绍、怎样被压缩、它的展示状态怎样被控制**。我是 supervisor 之下的维度对象，与 visible 并列——**我管 LLM 侧的展示（渲染进 context），visible 管人类侧的展示（tsx 渲染进浏览器）**。同一个 Object，两个观众，两条展示线。
 
-## 我的两个面（同一渲染槽位的优先级回退链）
+## 我的两个面
 
-readable 维度有**静态面**和**动态面**，二者不是两个东西，而是**同一个 `<readable>` 渲染槽位的两种来源**，按优先级回退（`readable.ts > readable.md > readme.md(deprecated) > 默认渲染`，实现见下引 `xml.ts:139-172`）：
-
-- **静态面：readable.md** —— Object 写给外部世界的自我介绍（原 readme.md，2026-05-28 重命名），让其他 Object / user 理解"我是谁、能做什么、何时该找我"。是 Object 在协作网络中的名片，与 self.md（写给自己、进自己 LLM instructions）构成**双面身份**。
-- **动态面：readable.ts / ReadableFn** —— 动态函数 `(ctx) => XmlNode[]`，按 Object 当前状态（如 file 的 viewport、program 的执行历史）计算 XML 展示，优先级高于静态 readable.md。
-
-**铁证（同维同槽）**：context 渲染器在同一个解析链里依次尝试 `def.readable` / 加载的 window readable / **`readReadable(stoneRef)`（即 readable.md，内部再 fallback 到 legacy readme.md）**，命中谁就渲染成同一个 `<readable>` 节点（`packages/@ooc/core/thinkable/context/renderers/xml.ts:139-172`）。静态自我介绍是这条链的**最低优先级兜底**，动态 ReadableFn 是高优先级覆盖——**同一维度的两个面，不是两个维度**。
+readable 有**静态面（readable.md 自我介绍名片）**和**动态面（readable.ts/renderXml 按状态算 XML）**——二者不是两个东西，而是**同一个 `<readable>` 渲染槽位的两种来源**，命中谁就渲染成同一个节点。优先级回退链与实现锚定（含磁盘读取顺序）的单一权威在 `knowledge/two-faces-of-readable.md`，此处不复述。
 
 ## 核心设计
 

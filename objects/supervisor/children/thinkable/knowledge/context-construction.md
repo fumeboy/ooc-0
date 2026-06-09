@@ -36,7 +36,7 @@ Object 不知道 context 之外的任何事——内存/文件系统里再多状
 
 ## context_windows 的六个来源（合成 ≠ 持久化）
 
-`thread.contextWindows` 只是持久化那一份；每轮渲染前 synthesizer（`knowledge/synthesizer.ts:collectExecutableKnowledgeEntries`）把它和多组**合成窗口**拼成最终 window 列表。六大来源：
+`thread.contextWindows` 只是持久化那一份；每轮渲染前 **ContextPipeline processor 链**（`createDefaultPipeline().run(thread)`，`context/pipeline.ts:97`）把它和多组**合成窗口**拼成最终 window 列表（旧的单函数入口 `collectExecutableKnowledgeEntries` 已于 Phase F 2026-06-04 拆解进 pipeline，各来源现由独立 processor / 模块产出：protocol.ts / activator-windows.ts / skill-index.ts / window-enrichment.ts / synthesizer.ts 的 derivePeerObjectWindows）。六大来源：
 
 1. **持久化窗口**（thread-context.json）：LLM/user 主动 open 的 root/talk/do/todo/plan/program/file/explicit-knowledge/search/method_exec/自定义 object。
 2. **protocol knowledge**（source=`protocol`）：每轮按条件注入的框架常量窗口——`internal/basic`（机制说明）、`internal/root/basic`（root method 清单）、`internal/windows/<type>/basic`（该 type 出现时）、`internal/reflectable/*`（super session）、creator-reply（含 isCreatorWindow do/talk 时）、end-reflection-reminder（业务 thread 开 end form 时）。

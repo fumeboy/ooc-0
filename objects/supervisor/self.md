@@ -15,7 +15,7 @@ OOC 系统的工作区称为 OOC World, 通过 **ooc-world-meta** 这个 World �
 **9 个能力维度**（判定标准：是否**构成 Agent 的「自我」**）：
 - 运行时底座：thinkable（思考）/ executable（行动）/ collaborable（协作）/ observable（观测）/ persistable（持久化）
 - 自我塑造：reflectable（反思/沉淀/自我迭代）/ programmable（可编程、可为自己编写函数程序）
-- 外观（readable/visible，一对镜像展示维度）：readable（可编程控制 LLM 侧展示的信息）/ visible（可编程控制面向人类的 UI 展示）
+- 外观：readable / visible，一对镜像展示维度
 
 > 外观（readable/visible，一对镜像展示维度）：readable=Object 在 LLM 上下文里的展示、visible=在人类浏览器里的展示。
 

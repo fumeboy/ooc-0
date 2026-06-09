@@ -2,7 +2,7 @@
 title: sediment knowledge —— 运行时沉淀的记忆与关系
 description: super flow 写哪些路径、frontmatter write contract、写错为何 silently 断裂；问沉淀协议时看这篇
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_content"
 ---
 
 # sediment knowledge
@@ -12,14 +12,14 @@ activates_on:
 ## super flow 写入面（只直写 sediment）
 
 super flow 自己**直写**的只有 pool 侧 sediment（不进 git、写就生效），落点见 `packages/@ooc/core/persistable/pool-object.ts:68,73`：
-- `pools/objects/<self>/knowledge/memory/<slug>.md` —— 长期记忆，一条一个文件，slug 用 kebab-case。
-- `pools/objects/<self>/knowledge/relations/<peer>.md` —— long_term relation 文件。
+- `pools/<self>/knowledge/memory/<slug>.md` —— 长期记忆，一条一个文件，slug 用 kebab-case。
+- `pools/<self>/knowledge/relations/<peer>.md` —— long_term relation 文件。
 
 身份/身体（stone 侧 `self.md` / `readable.md` / `executable/` / `visible/`）**不在 super flow 直写**——super flow 只直写 sediment、用 `evolve_self` 合入业务 session 的身体改动（职责切分详见 `knowledge/super-flow.md`）。
 
 super flow 禁止动：业务 thread.json / pool 的 data/ 与 files/（运行时业务态，不是反思沉淀）。
 
-写入方式：`open(method="write_file", path="pools/objects/<self>/knowledge/memory/<slug>.md", content="...")`；已存在文件用 open_file + edit 增量更新。
+写入方式：`open(method="write_file", path="pools/<self>/knowledge/memory/<slug>.md", content="...")`；已存在文件用 open_file + edit 增量更新。
 
 ## sediment write contract（自演化闭环关键）
 

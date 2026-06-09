@@ -1,5 +1,5 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_content"}
 ---
 
 # tests —— 验证我 collaborable 维度的测试规格

@@ -1,7 +1,7 @@
 ---
 title: persistable 测试规格
 description: 验证「身份/事实/产物落 stone/pool/flow 三子树且离内存可恢复」的两层判据——Tier A 控制面 TC + Tier B agent-native rubric + stories 索引
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_content"}
 ---
 
 # persistable 测试规格
@@ -20,7 +20,7 @@ activates_on: {"window::root": "show_content"}
 
 业务 session 内 agent 改 self → 落 `flows/<sid>/` session worktree（`stones/main` canonical 不变）；evolve_self 合入 main 有非 bootstrap 署名 commit；重读 HTTP 证明可恢复。
 
-rubric（收编 `playbooks/persistable.playbook.md`）：
+rubric（规格已就地收编进本 tests.md；story 代码在 `packages/@ooc/storybook/stories/`）：
 
 - **Good**：worktree 试验层落对（`flows/<sid>/`）、main canonical 不变、evolve_self 署名 commit。
 - **OK**：落对但 evolve 未合入 / 残留 uncommitted。
@@ -28,7 +28,7 @@ rubric（收编 `playbooks/persistable.playbook.md`）：
 
 ## Stories 索引
 
-代码在 `packages/@ooc/storybook`，规格单一来源 `specs/capability_persistable.md`。下列只列 id + 预期。
+规格已就地收编进本 tests.md；story 代码在 `packages/@ooc/storybook/stories/`。下列只列 id + 预期。
 
 ### `stories/persistable.story.ts` —— 维度 story
 

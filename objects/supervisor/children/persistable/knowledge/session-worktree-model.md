@@ -1,7 +1,7 @@
 ---
 title: stone identity = session-worktree 统一模型
 description: main = canonical / session worktree 试验层 / evolve_self 合入闸门，五通道全接入
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_content"}
 ---
 
 # stone identity = session-worktree 统一模型

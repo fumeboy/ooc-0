@@ -1,5 +1,5 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_content"}
 ---
 
 # app.server — 路由表与 worker 调度
@@ -23,14 +23,14 @@ Elysia app 在 `packages/@ooc/core/app/server/index.ts` 装配：`:212` 是 `onE
 - **pools**（`modules/pools/`）：knowledge / data / files 沉淀的 HTTP 入口（pool 不挂 branch、不进 git）；旧 `/api/stones/.../knowledge/*` 保留并加 `X-Deprecated` header。
 - **flows**：session / flow object / thread 生命周期 + call_method；list 附带 paused 状态。`POST /api/sessions`（seedSession）一次性 seed session + user flow object + talk_window + 派送 initialMessage；`POST /api/flows/:sid/continue`（body `{text, targetWindowId?}`）走 user.root.talk_window。`SUPER_SESSION_ID` 在 `modules/flows/service.ts:46`（`assertNotSuperSessionId`，抛于 `:48`）被显式拒绝（reflectable 专用，外部只读保留）。
 - **ui**（`modules/ui/`）：`GET /api/tree`（整树递归 + 基于 `.stone.json`/`.pool.json`/`.flow.json` 元数据存在性打 marker）/ `/api/tree/file`（world 内安全读）/ `/api/file/read`（**有意绕过隔离**，仅本地可信）/ `/api/objects/:scope/:id/client-source-url`（backend 权威解析 client 入口，frontend 不硬编码路径）。
-  - ⚠️ `modules/ui/api.list-flows.ts` 定义 `GET /api/flows`（`listFlowsApi`），service 侧 `ui/service.ts:183` 的 `listFlows()` 已实现，但 `ui/index.ts` 从未 `.use(listFlowsApi(...))` —— 路由没挂上的半孤儿，待补挂或删文件。
+  - ⚠️ `modules/ui/api.list-flows.ts` 的 `GET /api/flows`（`listFlowsApi`）从未挂载到 `ui/index.ts`，是半孤儿路由——决断（补挂 or 删文件）见 self.md「已知问题」。
 - **world-config**（`modules/world-config/`，单文件 `index.ts`）：world 级配置（`.world.json`）的只读 HTTP 入口，供前端读 LLM provider 等 world 级设置。
 
 ## 启动期自检链（`if (import.meta.main)`，非每请求）
 
 `index.ts` 在 listen 前按序跑一组**幂等**的 bootstrap 步骤，再 `buildServer(config).listen({port, hostname:"0.0.0.0"})`：
 
-1. `ensureStoneRepo`：init bare stones git repo + main worktree，迁移旧扁平布局。必须先于任何 metaprog 写。
+1. `ensureStoneRepo`：init bare stones git repo + main worktree，迁移旧扁平布局。必须先于任何版本化 stone 写。
 2. `createPoolObject` for `BUILTIN_OBJECT_IDS`（supervisor / user）：builtin 的 stone/definition 随代码仓发布不写 world，但 pool 是 world 内跨 session 沉淀层，需保证 `pools/<id>/` 存在。
 3. `instantiateBuiltinClassObjects`：把带 `ooc.instantiate_with_new_world` 的框架 builtin class（supervisor）幂等实例化为可交互 `objects/<id>`（拷 self.md + 写 `ooc.class`），让全新 world 自动有 supervisor object。
 4. `runRecoveryCheck`（非阻塞）：遍历 `stones/main/<obj>/executable/index.ts`，加载失败的开 PR-Issue 到 super session，dump objectId + reason，供 Supervisor 决策回滚。

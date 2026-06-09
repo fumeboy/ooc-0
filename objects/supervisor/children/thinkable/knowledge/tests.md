@@ -36,12 +36,12 @@ activates_on:
 **能力 story**（`stories/thinkable.story.ts`，承载上面的 Tier A + Tier B）：
 
 - `runControlPlane()`：跑 TC-THINK-01/02/03（控制面确定性）。
-- `runAgentNative()`：真 LLM 经 supervisor 答「8 个能力维度分别是什么」，验我用继承的 seed knowledge 回答而非即兴。
+- `runAgentNative()`：真 LLM 经 supervisor 答「9 个能力维度分别是什么」，验我用继承的 seed knowledge 回答而非即兴。
 
 **单元 catalog story**（`stories/L2_thinkable.stories.ts`，layer = thinkable，每条带 id + expectation）：
 
 - `L2-KNOWLEDGE-INDEX`：对象 knowledge/*.md 经 `loadKnowledgeIndex` 可加载进索引。
 - `L2-ROOT-KNOWLEDGE`：root 协议知识（`ROOT_KNOWLEDGE`）列出可用 root method（talk / program 等）。
 - `L2-CONTEXT-WINDOW-TYPES`：已注册 ObjectType 经 `/api/windows/_shared/types` 暴露 type + methods（含 file / talk）。
-- `L2-KNOWLEDGE-INHERIT`：instance 经 class 链继承框架 class 的 seed knowledge（如 `eight-dimensions`）。
+- `L2-KNOWLEDGE-INHERIT`：instance 经 class 链继承框架 class 的 seed knowledge（如 `nine-dimensions`）。
 - `L2-CONTEXT-MULTITURN`：多轮 context 连贯（窗口跨轮保留 / 压缩）——需真 LLM，控制面 skip，归 Tier B。

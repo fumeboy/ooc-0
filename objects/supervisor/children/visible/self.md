@@ -9,7 +9,7 @@
 ## 我负责的
 
 - **stone client**：每个 Object 在自己的 stone 里有 `stones/<self>/visible/index.tsx`——跨 session 稳定的单页入口（"主页"）。
-- **flow client pages**：`flows/<sid>/objects/<obj>/client/pages/<page>.tsx`——session 内的多页扩展。（注意：stone 单页入口已迁到 `visible/index.tsx`，但 flow 多页仍落 `client/pages/`——`flowClientPagesDir` 尚未跟随单入口迁到 `visible/`，是入口命名残留的不一致，`persistable/stone-client.ts:25`。）
+- **flow client pages**：`flows/<sid>/objects/<obj>/client/pages/<page>.tsx`——session 内的多页扩展（单入口迁移的命名残留见「名词解释 · client/pages」）。
 - **调用通道**：UI 经 HTTP `/call_method` 调 Object 的 `ui_methods` 字典（人类侧专路，与 LLM 侧 object method 分流）——通道与 tsx 资源是我的，`ui_methods` 实现归 programmable。详见「名词解释 · ui_methods」。
 - **client-source-url**：后端权威给出某 Object visible 源码的 `{absPath, fsUrl}`，前端据此 `dynamic import`，不再自拼路径。
 - **client evolution**：业务 session 在自己的 worktree 里改 `*.tsx`（统一 write_file → session worktree 写路径，去 metaprog 后唯一写通道），super flow `evolve_self` commit + 合入 main；下次客户端加载即生效（重写自己的界面）。

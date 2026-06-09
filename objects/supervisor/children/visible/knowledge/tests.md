@@ -2,7 +2,7 @@
 title: visible 测试规格 — Tier A 控制面判据 + Tier B agent-native rubric
 description: 验证我可见性维度的测试契约：client-source-url / Vite serve 安全边界 / stone:changed kind=view / UI↔行为闭环，外加 agent-native 产出 rubric 与 story 索引
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_content"
 ---
 
 # visible 测试规格
@@ -29,7 +29,7 @@ agent-native 对运行中的 world 派任务，由真 LLM 亲手行使能力，�
 
 注：supervisor 的 self.md 明确「✗ 不直接编辑 UI（派 visible 维度的 Agent）」——它正确地不亲手写 `visible/index.tsx`。故 agent-native 演示验证 supervisor 能做的部分（**创建可被赋予 UI 的对象**，create_object 落 session worktree 即算成功）；visible 页面**产出**由 visible 维度 agent 负责，确定性产物验证落在 Tier A TC-VIS-01/05 + frontend e2e F3。若 supervisor 恰好也顺手写了 visible（url 可解析）则更佳。
 
-rubric（收编 `playbooks/visible.playbook.md`）：
+rubric（规格已就地收编进本 tests.md；story 代码在 `packages/@ooc/storybook/stories/`）：
 
 - **Good**：tsx 在 worktree、含 `default export`、endpoint 200。
 - **OK**：产出但语法瑕疵 / 路径偏。

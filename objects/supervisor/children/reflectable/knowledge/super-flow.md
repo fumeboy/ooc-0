@@ -2,7 +2,7 @@
 title: super flow —— Object 自我相关动作的统一执行场所
 description: super session 是什么、自指别名翻译、协议知识注入；问 OOC 反思通道怎么工作时看这篇
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_content"
 ---
 
 # super flow

@@ -2,7 +2,7 @@
 title: OOC 面向对象哲学（为什么是 OO、与传统 OO 的差异）
 description: OOC 把上下文工程还原成面向对象抽象的论证根；问"为什么用 OO""OOC 跟传统 OO 差在哪"时看这篇
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_content"
 ---
 
 # OOC 面向对象哲学

@@ -1,5 +1,5 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_content"}
 ---
 
 # executable 维度的测试规格
@@ -13,7 +13,7 @@ activates_on: {"window::root": "show_content"}
 判据（结构验证，无 LLM）：
 
 - **TC-EXEC-01**：Object 自定义的 `ui_methods` 在 ContextObject 上执行并返回结果——经 `/api/stones/{id}/call_method` 调 `add(x,y)` 返回 `{ sum: 5 }`（method 调用改变/返回世界状态）。
-- **TC-EXEC-02**：Object 定义的 `window.commands`（即 `window.methods`，LLM 路径命令）经 `loadObjectWindow` loader 可加载，且 `paths` 还原正确。
+- **TC-EXEC-02**：Object 定义的 `window.methods`（LLM 路径方法）经 `loadObjectWindow` loader 可加载，且 `paths` 还原正确。
 
 代码：`packages/@ooc/storybook/stories/executable.story.ts`（`runControlPlane`），收为 `bun:test` 的入口在 `stories/_control-plane.test.ts`。
 

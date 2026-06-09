@@ -1,7 +1,7 @@
 ---
 title: stone / pool / flow 三分
 description: OOC world 持久层的设计 / 事实 / 运行三棵子树及其边界
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_content"}
 ---
 
 # stone / pool / flow 三分
@@ -30,7 +30,7 @@ stone = 设计（code）不是数据（data）：低频、要 review。物理骨
 
 ## pool — 事实层（持久 + 不 git）
 
-`pools/objects/<id>/` 挂 per-Object 事实，`pools/repos/<name>/` 挂 World 级共享外部 git repo。
+`pools/<id>/`（嵌套 child 走 `pools/<a>/children/<b>/`，无 `objects/` 中间层；`pool-object.ts:54` poolDir）挂 per-Object 事实。（`pools/repos/<name>/` 共享外部 git repo 是设计预留——core 代码暂无落点。）
 
 - `data/<name>.csv` — 结构化数据，一张表一个文件（csv 替代 sql，无 migration runner；`pool-object.ts:54` poolDir）。
 - `knowledge/memory/<slug>.md` + `knowledge/relations/<peer>.md` — **sediment knowledge**：运行时由 reflectable / collaborable 自动沉淀，写就生效。与 stone 的 seed 配对，synthesizer 双源扫描。

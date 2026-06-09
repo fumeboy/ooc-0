@@ -43,7 +43,7 @@ OOC 的协作不是「调用对方的函数」，而是「**消息 + 持续会�
 
 - **talk_window** — 跨 object 的持续会话窗口，承载 peer 平等轴。`root.talk` 创建、target=对端 flow object id（`"user"` 也是一个 flow object），注册 `say`/`wait`/`close`/`set_transcript_window`。同一对端复用同一窗口，不要每发一条就关再开。
 - **do_window** — 同 object 内 `root.do` fork 子线程的对话窗口，承载父-子算力分身。注册 `continue`/`wait`/`close`/`move`/`set_transcript_window`，消息 source=`do`。判定 creator window 是 do 还是 talk 由 `isCreatorSelf`（creatorObjectId 是否=自身且同 session）决定。
-- **peer Object window** — self 感知身边 Agent 的现行机制（取代已废弃的 relation_window）。type=objectId、id=objectId，把 sibling（同父其它 OOC Agent）+ 一级 children Agent 作为 first-class contextWindow：thread 初始化即注入、每轮 reconcile 补齐、跨轮持久化、可直接 exec。让 Agent 不必先 talk 就看见身边有谁（`discoverStoneHierarchicalPeers` 发现，含 `self.md` 的 stone 目录视为 Agent，`user`/自身排除）。
+- **peer Object window** — self 感知身边 Agent 的现行机制（peer 感知三态：现行 peer Object window / 过渡 relation 文件 / 废弃 relation_window，完整三态见上「我负责的」§peer 感知三态）。
 - **inbox / outbox** — thread 接收 / 发出消息的列表，是**跨 thread 影响的唯一通道**（do_window.move 是唯一例外）。inbox 落 `<threadDir>/inbox/<msgId>.json` per-message 文件，append-only 幂等，消费靠 `consumedMessageIds` 派生过滤而非物理移除。
 - **ThreadMessage** — 跨 thread 最小消息单元：id（caller/callee 共享）、fromThreadId/toThreadId、fromObjectId、content、source（do/talk/user/system）、windowId（发件方视角）、replyToWindowId（收件方视角）。
 - **creator window** — thread 启动时指向创建方的恒在通道，`isCreatorWindow=true` 拒 close，是子→父回报的唯一合法通道。

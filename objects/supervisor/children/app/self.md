@@ -27,7 +27,7 @@
 
 ## 现状
 
-前后端工程**基本完善**，OOC 8 维度的人类面最小闭环已落地：建 session、cross-object talk、浏览 world/thread、看 LLM 调试输入、渲染 Object 自带 UI、切 pause/debug 都通。
+前后端工程**基本完善**，OOC 9 维度的人类面最小闭环已落地：建 session、cross-object talk、浏览 world/thread、看 LLM 调试输入、渲染 Object 自带 UI、切 pause/debug 都通。
 
 ## 已知问题 / 边界与未决
 
@@ -47,15 +47,17 @@
 
 ## 名词解释
 
-- **job**：worker 调度的一次任务，两种 kind——`run-thread`（跑一个 thread 的 thinkloop）/ `resume-thread`（恢复一个 paused thread）。状态机 queued → running → done|failed。`createRunThreadJob` 按 session+object 去重（复用已 queued/running 的）；`createResumeThreadJob` 不去重，每次显式恢复都入队新 job。
-- **worker · scheduler**：worker 是只跑队列的执行器（不周期扫 fs）；它对取到的 job 调 `runScheduler` 推进 thread 的 thinkloop，单批最多跑 `workerMaxTicks`（默认 15）轮。"worker 标记 done" ≠ "thread 到达 done"——thread 可能仍停在 running/waiting/paused。
-- **scheduler yield**：thread 跑满 maxTicks 仍 running 时，worker 写一条 `scheduler_yielded` 事件（reason=max_ticks）留痕，并在当前 job 标 done 后由 `processQueuedJobs` 把自己再入队续跑，让长任务跨 job 公平推进而非静默冻结。
-- **pause · resume**：pause 是进程内开关（session 级或 global），暂停 thinkloop 调度。resume 是**半轮粒度**恢复——不重跑模型，而是接着执行上次已拿到但未消费的 LLM 输出（先补 assistant text，再逐个重放 tool calls），避免一次模型调用被 pause/resume 重复扣费。
-- **notifyThreadActivated**：事件源（talk-delivery / do_window.continue / issue appendComment / end auto-reply / resume / scheduler-yield / permission-decision）写完目标 inbox 或翻状态后调用的薄通知，由 server 注入后转成 `createRunThreadJob`——这是"状态翻转 → enqueue"的唯一通道，取代旧的周期扫 fs。
-- **AppShell**：client 顶层布局组件，**URL 即单向真相**——从 react-router 当前 URL 派生 scope/sessionId/objectId/threadId/path，所有导航走 `navigate(toPath(...))` 回流，不 setState 改导航字段；本地 useState 只承担数据缓存与 transient UI。
-- **ui_methods vs window.methods**：ui_methods 是 Object 暴露给 UI（人类）调用的方法集，**只有它经 HTTP `call_method` 暴露**；window.methods 是 Object 暴露给 LLM 调用的方法集，不经 HTTP 暴露。
-- **--world 解析**：world 根目录解析顺序 `--world(/--world-dir/--base-dir) flag → OOC_WORLD_DIR env → OOC_BASE_DIR env → process.cwd()`。启动 server 必须显式传 `--world`，否则回退到 cwd 把源码目录当 world 污染源码树。`--world` 会归一为绝对路径（否则前端 `/@fs` import 坏）。
-- **user object**：web session 中由人类驱动的被动 flow object（`objectId="user"`）；worker 显式跳过对它的调度（`worker.ts:40,46`），它的 thread 思考全在 UI 上由人完成。
+（一句定义 + 指向篇目；机制细节不在此重复。job/worker/scheduler-yield/pause-resume/notifyThreadActivated 的完整语义在 `knowledge/server-routes-and-worker.md`「runtime 编排」，AppShell/ui_methods 在 `knowledge/client-appshell-and-chat.md`，`--world` 解析在 `knowledge/startup-constraints.md`。）
+
+- **job**：worker 调度的一次任务（kind=`run-thread`/`resume-thread`，状态机 queued→running→done|failed）。
+- **worker · scheduler**：只跑队列、不周期扫 fs 的执行器，调 `runScheduler` 推进 thread thinkloop。
+- **scheduler yield**：thread 跑满 maxTicks 仍 running 时写 `scheduler_yielded` 留痕并自唤醒续跑（长任务跨 job 公平推进）。
+- **pause · resume**：pause 是进程内调度开关；resume 是半轮粒度恢复（不重跑模型、重放上次未消费的 LLM 输出，避免重复扣费）。
+- **notifyThreadActivated**：事件源写完 inbox/翻状态后调用的薄通知，转成 `createRunThreadJob`——「状态翻转 → enqueue」的唯一通道。
+- **AppShell**：client 顶层布局组件，URL 即单向真相（从 react-router URL 派生导航字段，导航走 `navigate(toPath(...))` 回流）。
+- **ui_methods vs window.methods**：ui_methods 是 Object 给人类（UI）调的方法集，**只有它经 HTTP `call_method` 暴露**；window.methods 给 LLM 调，不经 HTTP。
+- **--world 解析**：world 根解析顺序 flag → `OOC_WORLD_DIR` → `OOC_BASE_DIR` → cwd；启动必须显式 `--world`（否则把源码目录当 world 污染源码树），并归一为绝对路径。
+- **user object**：web session 中人类驱动的被动 flow object（`objectId="user"`），worker 显式跳过调度（`worker.ts:40,46`）。
 
 ## 协作
 

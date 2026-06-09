@@ -2,7 +2,7 @@
 title: ooc:// 寻址由 visible 解析
 description: ooc://client/... 是 Agent 知识侧的稳定寻址 URI，由 visible 渲染层 1:1 映射 SPA route
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_content"
 ---
 
 # ooc:// 寻址由 visible 解析
@@ -24,4 +24,4 @@ ooc:// 是原生寻址 URI，visible 是把它落到"人类看得见的页面"�
 
 ## agent-native parity 缺口（待设计）
 
-ooc:// 让 Agent 能**寻址**自己的 UI 页面，但 `ui_methods` 目前仅经 HTTP `/call_method` 暴露给前端——agent 端**无等价 tool 路径去调用**这些 UI 方法。这是 parity 公理下 visible 维度的显式技术债，需与 programmable 商定 ui_methods 的 agent 面调用契约。
+ooc:// 让 Agent 能**寻址**自己的 UI 页面，但调用侧仍有 agent-native parity 缺口（`ui_methods` 仅经 HTTP `/call_method` 暴露给前端、agent 端无等价 tool 路径）——权威叙述与技术债定性见 self.md「已知问题」。

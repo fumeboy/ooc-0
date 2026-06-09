@@ -2,7 +2,7 @@
 title: 如何建/写一个 OOC 对象（建对象 → 五件套 → 演化合入）
 description: 想新建一个 OOC 对象（Agent）、写它的身份/方法/UI、或让它自我演化时看这篇；权威路径 = create_object 建骨架 + write_file 改文件 + evolve_self 合入
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_content"
 ---
 
 # 如何建/写一个 OOC 对象

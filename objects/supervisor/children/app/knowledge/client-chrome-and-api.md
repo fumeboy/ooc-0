@@ -1,7 +1,7 @@
 ---
 title: app.client — 控制面外壳（layout / header / logo / file-viewer / 消费的 API 子集）
 description: AppShell chat 模型之外的控制面框架块：布局切换、RightPanel header、全局状态 logo、任意路径文件预览、与 app server API 的实际消费边界
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_content"}
 ---
 
 # app.client — 控制面外壳

@@ -2,12 +2,12 @@
 title: reflectable 测试规格 —— 我的自我演化怎么被验收
 description: 自观察/自修改五件套 + super flow 沉淀的 Tier A 用例与 Tier B rubric；问「reflectable 怎么测、什么算 Good」时看这篇
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_content"
 ---
 
 # reflectable 测试规格
 
-这是我 reflectable 维度的验收标准：经受保护的 super session 改写自身身份文件与 sediment knowledge、下一轮自动生效的自我演化，怎么被判定为「真的成立」。规格单一来源在 `packages/@ooc/storybook/specs/capability_reflectable.md`，story 代码在 `packages/@ooc/storybook/stories/`。
+这是我 reflectable 维度的验收标准：经受保护的 super session 改写自身身份文件与 sediment knowledge、下一轮自动生效的自我演化，怎么被判定为「真的成立」。规格已就地收编进本 tests.md；story 代码在 `packages/@ooc/storybook/stories/`。
 
 两层验收：Tier A 是零真 LLM、可进 CI 的控制面确定性核验（我经 HTTP 行使能力、断言确定性产物）；Tier B 是真 LLM、env-gated 的 agent-native——我在 thinkloop 里亲手反思，再抽过程轨迹 + 确定性产物核验。
 
@@ -28,7 +28,7 @@ activates_on:
 
 派我「把项目约定沉淀为长期记忆」走 super flow（evolve_self）；以 `waitForSuperFlow` + `listMemoryFiles` + `hasValidFrontmatter` 核验 memory 真落 pools/ 且 frontmatter 合法（≈ e2e S5）。super flow 是独立 job，须单独等。
 
-**rubric（原样保留，收编 playbooks/reflectable.playbook.md S5 Good 7 条）：**
+**rubric（S5 Good 7 条，已就地收编进本篇）：**
 
 - **Good**：memory 落 pools/、frontmatter 合法、内容真提约定、agent 向 user 汇报、下轮自动激活。
 - **OK**：沉淀了但 frontmatter 缺失/内容空泛。

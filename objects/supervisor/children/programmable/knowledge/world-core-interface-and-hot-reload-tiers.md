@@ -1,5 +1,5 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_content"}
 ---
 
 # World / Core 接口契约与热更三档
@@ -59,7 +59,7 @@ my-ooc-world/                    ← 用户工作目录，一个 World = 一个 
 │       └── knowledge/*.md
 │
 ├── node_modules/
-│   ├── @ooc/{core,web,cli,tsconfig,meta}   ← 来自 npm 的 Core 套件
+│   ├── @ooc/{core,web,cli,tsconfig}   ← 来自 npm 的 Core 套件
 │   ├── @ooc/builtins/{supervisor,file,plan…} ← 一组独立包，按需引入
 │   └── @<world>/                ← workspace 软链，指向 stones/*
 │

@@ -8,7 +8,7 @@
 
 ## 名词解释
 
-- **LlmObservation**：内存里最近一次 LLM 调用的 input/output/provider/model 快照。单例（模块顶层变量），同进程只反映最近一次；并发多 thread 谁后写谁覆盖——要按 thread 区分历史用 loop-level debug 文件。
+- **LlmObservation**：内存里最近一次 LLM 调用的 input/output/provider/model 快照。单例约束（同进程只反映最近一次、并发多 thread 互覆盖）见下「已知问题」+ `knowledge/loop-debug.md`。
 - **debug 快照**：thinkloop 周围落盘的产物，分两类。① **始终落盘**（只要 thread 有 persistence，与 debug 开关无关）：`llm.input.json` / `llm.output.json`，随最近一次写覆盖。② **loop-level**（enableDebug 开启后才写）：每轮一组 `loop_NNNN.{input,output,meta}.json`，`NNNN` 是 4 位 0 padding 的轮次号。`loop_N.input.json`=本轮 inputItems + contextSnapshot；`.output.json`=normalized outputItems + provider/model；`.meta.json`=provider/model/latencyMs/messageCount/toolCount/toolCallCount/contextBytes/status/error + windowsSnapshot。
 - **loop_N / loopIndex**：thread 内的轮次编号，由 `loopKey(thread)` 定位计数器分配——有 persistence 时 key=`{baseDir}:{sessionId}:{objectId}:{threadId}`（跨进程同一 thread 共享计数），无 persistence 时 key=`ephemeral:{thread.id}`（避免不同测试线程 id 偶然相同互踩）。
 - **pause / PauseChecker**：runtime 注入的 `(thread)=>boolean|Promise<boolean>` 暂停判定器，thinkloop 在 tool call 执行**前**调用 `isPausing`；返回 true 则记完 LLM 输出（可被人查看/修改）、thread.status=paused、不分派 tool call。默认 `()=>false`，必须 runtime 显式 `setPauseChecker` 才激活。
@@ -52,7 +52,7 @@
 
 - **agent 面入口**：给 super flow 一个成熟的「读自观测落盘产物」入口，闭合人类面/agent 面 parity。
 - **csv health 诊断**（AgentOfExperience 2026-05-24 反馈）：csv-pool 不校验 row.keys 与 header 一致性；建议加启动期 / reflectable 主动扫一遍的 csv 健康诊断（csv schema drift 可观测性）。
-- log-aggregator 限流阈值（首 3 / 每 100）为经验常量，未做按 level / 场景可配。
+- log-aggregator 限流阈值可配化（现为经验常量，详见 `knowledge/observability-trio.md` §边界）。
 
 ## 协作
 

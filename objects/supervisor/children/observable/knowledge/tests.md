@@ -41,7 +41,7 @@ activates_on: {"object::root": "show_content"}
 | L5-DEBUG-TOGGLE | debug enable 后 `/api/runtime/debug/status` 返回 `enabled=true` | Tier A |
 | L5-ACTIVITY | `/api/runtime/activity` 返回 `now` / `runningCount` / `jobs` 结构 | Tier A |
 | L5-GLOBAL-PAUSE | global-pause enable→status enabled，disable→status disabled | Tier A，对应 pause 协议 |
-| L5-JOB-STATUS | 发起 session 产生的 job 经 `/api/runtime/jobs/:id` 可查 status | **跨 app/runtime**：job 语义偏 app-server 控制面，借观测面验证 |
+| L5-JOB-STATUS | 发起 session 产生的 job 经 `/api/runtime/jobs/:id` 可查 status | 归我（observable）测清单的理由：job 调度语义本属 app-server 控制面，但此 TC 验的是**借观测面把 job 状态暴露成可见**（status 可查 = 运行态可观测），故收在我这片 |
 | L5-DEBUG-SNAPSHOT | 跑一轮 thread 后 `llm.input.json` + `llm.output.json` 落盘 | skip→Tier B：LLM 快照需 worker 真跑 thinkloop |
 | L5-LOOP-DEBUG | 多轮 loop 各自落 `loop_<N>.{input,output,meta}.json` | skip→Tier B：loop 快照需 worker 多轮 thinkloop |
 
