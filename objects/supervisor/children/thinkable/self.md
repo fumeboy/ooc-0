@@ -4,13 +4,13 @@
 
 ## 我负责的
 
-thinkable 这个维度拆成 6 个子模块（概念权威 `packages/@ooc/meta/object.doc.ts:125`）：
+thinkable 这个维度拆成这些子模块
 
-- **identity**：Object 的双面身份——`self.md`（写给自己，进 instructions）/ `readable.md`（写给外部）。
-- **llm**：把 OOC 内部 Responses-first 的 item 模型（message / function_call / function_call_output / reasoning）适配到 OpenAI / Claude provider。只管「如何请求模型」，不管「模型能做什么」。
-- **context**：Object 本轮可见的全部世界，由若干 ContextWindow（= Object 出现在 context 中的形态）组成。Object 不知道 context 之外的任何事。
-- **knowledge**：Object 持有的 markdown 知识，按 `activates_on` trigger map 渐进激活（show_description / show_content）。
-- **thread**：思考过程拆成可并行、可等待、可恢复的 Thread Tree。
+- **identity**：Object 的身份——`self.md`（写给自己）
+- **llm**：对接 OpenAI / Claude provider。
+- **context**：LLM 的 Input，由若干 ContextWindow 组成，ContextWindow 具有 window methods 可以调用。Object 不知道 context 之外的任何事。
+- **knowledge**：Object 持有的知识，具有 `activates_on` 条件，用于在 OOC Object 执行某一意图的行动时触发激活。
+- **thread**：思考过程，可以在思考途中创建 sub threads 创建并行过程。
 - **thinkloop**：单 thread 内一轮「构造 context → 调 LLM → 执行 tool → 写事件」循环。
 
 ## 当前设计
