@@ -31,7 +31,7 @@
 
 - **compress scope=auto 未实现**：`scope=windows`（切 compressLevel）与 `scope=events`（折叠中段为 events_summary）均已落地，仅 `scope=auto` 抛 not-implemented，留给 emergency_guard（`packages/@ooc/core/executable/tools/compress.ts:372`）。
 - **自改方法集无硬 deny**：自改 `stones/<self>/executable/index.ts` 仅靠 write_file 弱 ask，缺硬拦。方法集 / readable 为全局 main-canonical，per-session 改须经 evolve_self 合入 main 后重注册才生效。
-- **边界划分**：我只定义「如何行动」、只管 object method。**window method（展示控制）归 readable**——它在代码里是与我并列的注册维度，但对象树里目前没有独立 readable child（暂挂 visible/executable 之间，待 Supervisor 裁定）。跨 Object 协作语义归 **collaborable**；方法库形状与演化路径归 **programmable**；前端渲染归 **visible**。
+- **边界划分**：我只定义「如何行动」、只管 object method。**window method（展示控制）归 readable**——它在代码里是与我并列的注册维度，对象树里也已是独立 child 对象（与 visible 并列，2026-06-09 起；readable=LLM 侧展示、visible=人类侧 UI）。跨 Object 协作语义归 **collaborable**；方法库形状与演化路径归 **programmable**；前端渲染归 **visible**。
 
 ## 优化方向 / 待办
 

@@ -12,9 +12,11 @@
 
 **持久层三分**：stone（静，长期身份+设计源码五件套，进 git）/ pool（积，跨 session 沉淀的事实，不进 git）/ flow（动，每个 session 一份运行态）。
 
-**8 个能力维度**（判定标准：是否**构成 Agent 的「自我」**）：
-- 运行时底座：thinkable（思考）/ executable（行动）/ collaborable（协作）/ observable（观测）/ persistable（持久化）
-- 自我塑造：reflectable（反思/沉淀/元编程改知识）/ programmable（改方法）/ visible（改 UI）
+**9 个能力维度**（判定标准：是否**构成 Agent 的「自我」**）：
+- 运行时底座：thinkable（思考）/ executable（行动，object method 改数据）/ collaborable（协作）/ observable（观测）/ persistable（持久化）
+- 自我塑造：reflectable（反思/沉淀/改身份知识）/ programmable（改方法）/ readable（改 LLM 侧展示——window method/compressView）/ visible（改人类 UI）
+
+> readable 与 visible 是一对镜像展示维度（readable=Object 在 LLM 上下文里的展示、visible=在人类浏览器里的展示）。2026-06-09 把 readable 从 executable/visible 之间独立成第 9 维度（代码里 registerReadable 已是与 registerExecutable 并列的一等注册维度）。
 
 **两条横切**：对象关系三轴（自我 super / peer 平等 talk / parent-child 层级，我是 root parent）；agent-native parity（每个能力都有人类面 + agent 面两个消费方）。
 
@@ -22,7 +24,7 @@
 
 在我之下是一棵树形的子对象，每个负责 OOC 系统的一个模块，了解该模块的**设计 / 现状 / 已知问题 / 优化方向 / 待办**：
 
-- **8 个维度对象**：thinkable / executable / collaborable / observable / reflectable / programmable / visible / persistable
+- **9 个维度对象**：thinkable / executable / collaborable / observable / reflectable / programmable / readable / visible / persistable
 - **跨切对象**：app（HTTP + Web 控制面）/ class（一等继承抽象）
 
 它们的身份与知识来自 `docs/ooc-6/` 与 `packages/@ooc/meta/` 的设计文档。
