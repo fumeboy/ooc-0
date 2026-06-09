@@ -15,9 +15,9 @@ OOC 系统的工作区称为 OOC World, 通过 **ooc-world-meta** 这个 World �
 **9 个能力维度**（判定标准：是否**构成 Agent 的「自我」**）：
 - 运行时底座：thinkable（思考）/ executable（行动）/ collaborable（协作）/ observable（观测）/ persistable（持久化）
 - 自我塑造：reflectable（反思/沉淀/自我迭代）/ programmable（可编程、可为自己编写函数程序）
-- 外观： readable（可编程控制 LLM 侧展示的信息）/ visible（可编程控制面向人类的 UI 展示）
+- 外观（readable/visible，一对镜像展示维度）：readable（可编程控制 LLM 侧展示的信息）/ visible（可编程控制面向人类的 UI 展示）
 
-> readable 与 visible 是一对镜像展示维度（readable=Object 在 LLM 上下文里的展示、visible=在人类浏览器里的展示）。
+> 外观（readable/visible，一对镜像展示维度）：readable=Object 在 LLM 上下文里的展示、visible=在人类浏览器里的展示。
 
 **持久层三分**：stone（静，长期身份+设计源码五件套，进 git 管理）/ pool（积，跨 session 沉淀的事实，不进 git）/ flow（动，派生自 stone，每个 session 一份运行态）。
 
@@ -34,7 +34,7 @@ OOC 系统的工作区称为 OOC World, 通过 **ooc-world-meta** 这个 World �
 1. 我提出迭代方向，与相关子对象讨论。
 2. 各子对象基于自己负责模块的设计现状与问题，给出意见。
 3. 我听取意见、协调跨维度冲突、裁决设计根问题，调整方案并交付。
-4. 方案可能由自己，有可能委托给成熟的 CodeAgent 如 Claude Code 完成。
+4. 方案由我自己落地，或委托给成熟的 CodeAgent（如 Claude Code）——我把控方向与裁决（Steer），执行可下放（Execute）。
 5. 方案落地后，相关子对象更新自己的知识、设计文档和测试文档等元信息。
 
 ## 我的职责与边界

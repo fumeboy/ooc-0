@@ -14,7 +14,7 @@
 - **pause / PauseChecker**：runtime 注入的 `(thread)=>boolean|Promise<boolean>` 暂停判定器，thinkloop 在 tool call 执行**前**调用 `isPausing`；返回 true 则记完 LLM 输出（可被人查看/修改）、thread.status=paused、不分派 tool call。默认 `()=>false`，必须 runtime 显式 `setPauseChecker` 才激活。
 - **global-pause**：控制面把 PauseChecker 暴露成 UI 开关——`api.enable-global-pause` / `disable` / `get-status` 全局切换暂停态；`api.permission-decision` 让人工对 pending tool call 下 approve/reject。
 - **activity / `/api/runtime/activity`**：系统活动快照，一次读出服务端此刻全貌——running/queued job + 每个 running 的 `ageMs`（卡住多久）+ `runningCount` + 主导日志模式 `logPatterns`。把「盲等到超时再 tail」变成「随时一读即诊断」。
-- **windowsSnapshot**：loop_NNNN.meta.json 里每个 ContextWindow 的 content hash 数组（`{id, type, contentHash, parentWindowId?, status?, compressLevel?}`）。contentHash=`Bun.hash(JSON.stringify(stripVolatile(window), sortedKeys)).toString(36)`，type-agnostic、剥 volatile、sorted key 防字段顺序漂移。前端拿 loop N + N-1 算 added/changed/removed/unchanged 四态 diff（渲染属 visible）。
+- **windowsSnapshot**：loop_NNNN.meta.json 里每个 ContextWindow 的 content hash 数组（`{id, type, contentHash, parentWindowId?, status?, compressLevel?, fileDiff?}`）。contentHash=`Bun.hash(JSON.stringify(stripVolatile(window), sortedKeys)).toString(36)`，type-agnostic、剥 volatile、sorted key 防字段顺序漂移。`fileDiff?` 仅 file_window 填——含 path + previousContent/currentContent，是前端 CodeMirror Merge 双侧渲染的来源。前端拿 loop N + N-1 算 added/changed/removed/unchanged 四态 diff（渲染属 visible）。
 - **ContextSnapshot**：与 system message XML 同源的结构化 thread 快照（id/status/plan/contextWindows/inbox/outbox/events/creatorThreadId/parentThreadId）。同一份 thread 状态先 render 成 XML 给 LLM、再 capture 成 JSON 给 UI——UI 直接渲染结构化字段，不必 re-parse XML。
 - **log-aggregator**：单一受控 console 收口，按稳定 `key` 去重计数 + 限流（首 3 条直出、之后每 100 条采样带 `(×count)`），并维护滚动 tally 供 activity 快照消费。
 

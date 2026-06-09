@@ -15,10 +15,11 @@ OOC 的协作不是「调用对方的函数」，而是「**消息 + 持续会�
 我的子能力：
 - **ThreadMessage** — 跨 thread 的最小消息单元（from/to、object、windowId、source）。
 - **talk_window** — 跨 object 的持续会话窗口；`say` 发消息，可 `wait`。
-- **do_window** — 同 object 内 fork 子线程的对话窗口；`continue` 追加（父→子下达 / 子→父回报双向，子→父 reply 走自身 creator do_window，是子→父唯一合法通道，不夹带在 `end({result})` 里）（`packages/@ooc/core/executable/windows/do/method.continue.ts:21`）。
-- **relation_window** — self 对某 peer 的关系窗口，按 thread 中 `target=peerId` 的 talk_window **自动派生**（id=`w_rel_<peerId>`），`edit` 整文件替换 relation 文件，scope=`session`（写 `flows/<sid>/<self>/knowledge/relations/<peer>.md`）或 `long_term`（派 talk 给 super flow，由 super 写 `pools/<self>/knowledge/relations/<peer>.md`）（`packages/@ooc/core/executable/windows/relation/index.ts:117`）。
-  - **default visibility**：除 talk 派生的 peer 外，每轮还默认派生「同级 Agent（同父其它 OOC Agent）」+「一级 children Agent」的 relation_window，让 Agent 一上场就看见身边有谁、不必先 talk 才能写 relation。判定：含 `self.md` 的 stone 目录视为 Agent，`user` 永远过滤，自身排除（`discoverStoneHierarchicalPeers`）。peer 的 `readme.md` 作只读字段挂回窗口，免再 file_window open。
-  - **新旧两套并存**：旧 `relation_window`（type=`relation`）标 `@deprecated`（2026-05-28，已被 **peer Object 自动注入机制**替代），派生不持久化进 thread.contextWindows、Phase 9 才移除；**新 peer Object window**（type=objectId、id=objectId）是 sibling + 一级 children 的 first-class contextWindow，thread 初始化即注入、每轮 reconcile 补齐、跨轮持久化可直接 exec。relation 文件机制（含 `edit` 双 scope）现行仍在用。
+- **do_window** — 同 object 内 fork 子线程的对话窗口；`continue` 父→子 / 子→父双向追加（子→父 reply 的协议细节见下「当前设计」条目）（`packages/@ooc/core/executable/windows/do/method.continue.ts:21`）。
+- **peer 感知三态**（务必分清现行 / 过渡 / 废弃）：
+  - **现行 = peer Object window**（type=objectId、id=objectId）：sibling（同父其它 OOC Agent）+ 一级 children Agent 的 **first-class contextWindow**——thread 初始化即注入、每轮 reconcile 补齐、跨轮持久化、可直接 exec。让 Agent 一上场就看见身边有谁，不必先 talk。判定：含 `self.md` 的 stone 目录视为 Agent，`user` 永远过滤，自身排除（`discoverStoneHierarchicalPeers`）。peer 的 `readme.md` 作只读字段挂回窗口，免再 file_window open。
+  - **过渡（仍在用）= relation 文件 + `edit` 双 scope**：self 对某 peer 的关系仍以 relation 文件沉淀，`edit` 整文件替换，scope=`session`（写 `flows/<sid>/<self>/knowledge/relations/<peer>.md`）或 `long_term`（派 talk 给 super flow，由 super 写 `pools/<self>/knowledge/relations/<peer>.md`）。
+  - **废弃 = relation_window**（type=`relation`，id=`w_rel_<peerId>`）：旧的「按 talk 自动派生关系窗口」机制，2026-05-28 标 `@deprecated`、已被 peer Object window 替代，派生不持久化进 thread.contextWindows，**Phase 9 移除**（`packages/@ooc/core/executable/windows/relation/index.ts:117`）。
 - **talk-delivery** — 跨 object 派送的唯一入口（双写 inbox/outbox、事件驱动入队）。
 - **creator window** — 每个 thread 启动时指向创建方的恒在通道，不可 close。子→父回报的唯一合法通道。
 - **inbox 存储** — per-message 落盘，并发回报互不覆盖。
@@ -42,6 +43,7 @@ OOC 的协作不是「调用对方的函数」，而是「**消息 + 持续会�
 
 - **talk_window** — 跨 object 的持续会话窗口，承载 peer 平等轴。`root.talk` 创建、target=对端 flow object id（`"user"` 也是一个 flow object），注册 `say`/`wait`/`close`/`set_transcript_window`。同一对端复用同一窗口，不要每发一条就关再开。
 - **do_window** — 同 object 内 `root.do` fork 子线程的对话窗口，承载父-子算力分身。注册 `continue`/`wait`/`close`/`move`/`set_transcript_window`，消息 source=`do`。判定 creator window 是 do 还是 talk 由 `isCreatorSelf`（creatorObjectId 是否=自身且同 session）决定。
+- **peer Object window** — self 感知身边 Agent 的现行机制（取代已废弃的 relation_window）。type=objectId、id=objectId，把 sibling（同父其它 OOC Agent）+ 一级 children Agent 作为 first-class contextWindow：thread 初始化即注入、每轮 reconcile 补齐、跨轮持久化、可直接 exec。让 Agent 不必先 talk 就看见身边有谁（`discoverStoneHierarchicalPeers` 发现，含 `self.md` 的 stone 目录视为 Agent，`user`/自身排除）。
 - **inbox / outbox** — thread 接收 / 发出消息的列表，是**跨 thread 影响的唯一通道**（do_window.move 是唯一例外）。inbox 落 `<threadDir>/inbox/<msgId>.json` per-message 文件，append-only 幂等，消费靠 `consumedMessageIds` 派生过滤而非物理移除。
 - **ThreadMessage** — 跨 thread 最小消息单元：id（caller/callee 共享）、fromThreadId/toThreadId、fromObjectId、content、source（do/talk/user/system）、windowId（发件方视角）、replyToWindowId（收件方视角）。
 - **creator window** — thread 启动时指向创建方的恒在通道，`isCreatorWindow=true` 拒 close，是子→父回报的唯一合法通道。

@@ -15,7 +15,7 @@ super flow 自己**直写**的只有 pool 侧 sediment（不进 git、写就生�
 - `pools/objects/<self>/knowledge/memory/<slug>.md` —— 长期记忆，一条一个文件，slug 用 kebab-case。
 - `pools/objects/<self>/knowledge/relations/<peer>.md` —— long_term relation 文件。
 
-身份/身体（stone 侧 `self.md` / `readable.md` / `executable/` / `visible/`）**不在 super flow 直写**——去 metaprog（2026-06-09）后这些改动发生在**业务 session**（`write_file` 落该 session 的 worktree 副本），super flow 的角色是用 `evolve_self` 把它们合回 main（self-scope ff-merge / cross-scope PR-Issue）。
+身份/身体（stone 侧 `self.md` / `readable.md` / `executable/` / `visible/`）**不在 super flow 直写**——super flow 只直写 sediment、用 `evolve_self` 合入业务 session 的身体改动（职责切分详见 `knowledge/super-flow.md`）。
 
 super flow 禁止动：业务 thread.json / pool 的 data/ 与 files/（运行时业务态，不是反思沉淀）。
 

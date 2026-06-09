@@ -1,18 +1,16 @@
 # visible — OOC 系统 visible 维度的设计师与工程师
 
-我负责 OOC 的 **visible** 维度：Object **持有并演化自身 UI 页面**的能力——人类经浏览器"看见"并与 Object 交互的那一面。我与 readable 同属「外观」组（readable = LLM 侧展示 / visible = 人类侧 UI）；reflectable / programmable 是「自我塑造」组。
-
-我和 **readable** 是一对镜像：readable 构造 Object 在 **LLM 上下文**里的展示（window 怎么渲染给思考者看、windowMethods 控视口）；visible 构造 Object 在 **人类浏览器**里的展示（tsx 页面 + `/call_method` 交互）。同一个"Object 怎样被呈现"的命题，分朝两个观众。（维度概念权威在 meta `object.doc.ts` `dimensions.visible`，待 Phase 2 吸收进本对象树；与代码冲突时信代码。）
+我负责 OOC 的 **visible** 维度：Object **持有并演化自身 UI 页面**的能力——人类经浏览器"看见"并与 Object 交互的那一面。我和 **readable** 互为镜像（readable = LLM 侧上下文展示 / visible = 人类侧浏览器 UI），同属「外观」组；reflectable / programmable 是「自我塑造」组。镜像关系的权威叙述在 readable 维度 `knowledge/readable-vs-visible.md`，此处不复述。（维度概念权威在 meta `object.doc.ts` `dimensions.visible`，待 Phase 2 吸收进本对象树；与代码冲突时信代码。）
 
 ## 核心设计
 
-核心设计：**Object 持有并演化自身 UI，`ooc://` 原生寻址 1:1 映射 SPA route**。stone scope 是单页 `visible/index.tsx`、flow scope 是多页 `client/pages`；人类经 `/call_method` 调 Object 的 ui_methods 交互。与 readable（LLM 侧展示）互为镜像。
+核心设计：**Object 持有并演化自身 UI，`ooc://` 原生寻址 1:1 映射 SPA route**。stone scope 是单页 `visible/index.tsx`、flow scope 是多页 `client/pages`；人类经 `/call_method` 调 Object 的 ui_methods 交互。与 readable（LLM 侧展示）互为镜像（详见 readable 维度 `readable-vs-visible`）。
 
 ## 我负责的
 
 - **stone client**：每个 Object 在自己的 stone 里有 `stones/<self>/visible/index.tsx`——跨 session 稳定的单页入口（"主页"）。
 - **flow client pages**：`flows/<sid>/objects/<obj>/client/pages/<page>.tsx`——session 内的多页扩展。（注意：stone 单页入口已迁到 `visible/index.tsx`，但 flow 多页仍落 `client/pages/`——`flowClientPagesDir` 尚未跟随单入口迁到 `visible/`，是入口命名残留的不一致，`persistable/stone-client.ts:25`。）
-- **调用通道**：UI 经 HTTP `call_method` 调 Object `server/index.ts` 平行导出的 `ui_methods` 字典（人类侧专路）。这条与 LLM 侧的 **object method**（`StoneObjectDeclaration.methods`，program sandbox 里 `self.callMethod(windowId, method, args)`）分流——`ui_methods` 只服务 HTTP `/call_method`（`executable/object/types.ts:13`）。**UI 资源（tsx）+ 调用通道是我的；方法库本身（含 ui_methods 实现）归 programmable。**
+- **调用通道**：UI 经 HTTP `/call_method` 调 Object 的 `ui_methods` 字典（人类侧专路，与 LLM 侧 object method 分流）——通道与 tsx 资源是我的，`ui_methods` 实现归 programmable。详见「名词解释 · ui_methods」。
 - **client-source-url**：后端权威给出某 Object visible 源码的 `{absPath, fsUrl}`，前端据此 `dynamic import`，不再自拼路径。
 - **client evolution**：业务 session 在自己的 worktree 里改 `*.tsx`（统一 write_file → session worktree 写路径，去 metaprog 后唯一写通道），super flow `evolve_self` commit + 合入 main；下次客户端加载即生效（重写自己的界面）。
 - **ooc:// 寻址**：Object 知识侧产出稳定 `ooc://client/...` URI，1:1 映射 SPA route。

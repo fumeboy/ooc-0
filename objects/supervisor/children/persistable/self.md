@@ -18,7 +18,7 @@
 
 ## 当前设计
 
-**stone identity = session-worktree 统一模型**（设计权威 `docs/2026-06-09-remove-metaprog-unify-session-worktree-design.md`，在 `docs/2026-06-05-stone-flow-overlay-versioning-design.md` 基础上完成；取代旧 plain overlay/shadow）：
+**stone identity = session-worktree 统一模型**（agent-facing 权威单一来源 `knowledge/session-worktree-model.md`；设计权威 `docs/2026-06-09-remove-metaprog-unify-session-worktree-design.md`，在 `docs/2026-06-05-stone-flow-overlay-versioning-design.md` 基础上完成；取代旧 plain overlay/shadow）：
 
 - **main = canonical**：Object 已提交的权威自我，唯一默认读源（`stones/main/objects/<id>/`）。
 - **session worktree = 会话内试验层**：业务 session 对任意 stone 文件的写，落该 session 从 main HEAD **eager** 派生的 git 分支，物理路径 **`flows/<sid>/`**（session 创建即 `git worktree add flows/<sid>` checkout main 全量；plain write 不 commit）。本 session 即时生效，main 不变，别 session 读旧版。worktree 是完整副本——读写收敛同一目录，无 shadow，裸读看得到完整 identity。
@@ -26,7 +26,7 @@
 
 两条进入 canonical 的合法通道（互不经过对方）：① **LLM 演化** = 业务 session worktree → super flow `evolve_self`；② **HTTP 控制面写入** = `httpDirectMainWrite`（`versioning.ts:811`）直 commit main、立即生效、不开 worktree（人类已决策的编辑不走 session 隔离）。
 
-**建新对象 vs 改已存在对象**（口诀，2f4456f9）：建新对象骨架 = `create_object` root method → `createObjectInSession`（`stone-create-object.ts:93`）；改已存在对象文件 = `write_file` / `file_window.edit`。metaprog 去除（0ab98a93）一度把建对象路径删过头（write_file 靠 package.json 判 owner，新对象无 package.json → 拒写），故恢复为独立原语：仅 business session 可调（super / 无 session fail-loud 提示走 HTTP），`resolveStoneIdentityRef(write)` 拿 session worktree ref → `createStoneObject`+`writeSelf`+`writeReadable` 建骨架（package.json+self+readable+knowledge）**不 commit**，`enqueueSessionWrite` 锁内做 main+worktree 双重 ALREADY_EXISTS 校验。落 `flows/<sid>/objects/<newId>/`，main 不变，合入仍走 evolve_self cross-scope。
+**建新对象 vs 改已存在对象**（口诀，2f4456f9）：建新对象骨架 = `create_object` root method（`createObjectInSession`，`stone-create-object.ts:93`）；改已存在对象文件 = `write_file` / `file_window.edit`。口诀与落点细节（落 `flows/<sid>/objects/<newId>/` 不 commit、双重 ALREADY_EXISTS 校验、合入走 evolve_self cross-scope）权威在 `knowledge/stone-pool-flow-three-trees.md`。
 
 锚点：
 - 统一访问原语：`packages/@ooc/core/persistable/stone-worktree.ts:127` `resolveStoneIdentityDir` / `:143` `resolveStoneIdentityRef` / `:89` `ensureSessionWorktree` / `:30` `sessionStoneBranch` / `:54` `sessionUsesWorktree` / `:47` `sessionWorktreePath`。
@@ -60,8 +60,7 @@ worktree 统一模型五通道全接入并落地（write_file / loadSelfInstruct
 - **stone**：设计层子树 `stones/<branch>/objects/<id>/`。持久 + git 版本化，持有 Object 长期身份与设计源码五件套（self.md / readable.* / executable / visible / seed knowledge）。低频、走 review。stone = 设计（code）不是数据。
 - **pool**：事实层子树 `pools/objects/<id>/`（per-Object）+ `pools/repos/<name>/`（World 级共享 repo）。持久但**不进 git**：csv 数据 / sediment knowledge（memory+relations）/ blob 文件，写就生效、单向积累，不走 worktree 模型。
 - **flow**：运行层 `flows/<sid>/`，单次业务 session 的运行产物（thread / debug / session-scoped data），ephemeral。flow 目录本身即该 session 的 git worktree 根。
-- **worktree**：git 工作树。一个 bare/main 仓库可 checkout 出多个独立工作目录。OOC 让每个业务 session = 一个从 stones/main 派生的 worktree，物理落 `flows/<sid>`，使「session 内身份试验」是完整副本而非部分 shadow。
-- **session-<sid> 分支**：业务 session 在 stone 仓库里对应的 git 分支名（从 main HEAD eager 派生）。名与路径解耦——分支叫 `session-<sid>`，工作目录在 `flows/<sid>`。它是身份演化的最小单元（evolve_self 提交/合入的就是它）。
+- **worktree / session-<sid> 分支**：每个业务 session = 一个从 stones/main eager 派生的 git worktree（分支 `session-<sid>`，工作目录 `flows/<sid>`，名路径解耦），是「session 内身份试验」的完整副本与身份演化的最小单元。三态机制详见 `knowledge/session-worktree-model.md`。
 - **thread.json**：thread 的元数据（线程身份、状态、inbox 指针等），写盘前剥 in-process 内存字段。§10 后**不再**携带 contextWindows。
 - **thread-context.json**：`flows/<sid>/objects/<id>/threads/<tid>/thread-context.json`，该 thread contextWindows 数组的**唯一完整权威**落盘（含 builtin inline + flow ref）。由 writeThread 单点刷。
 - **canonical**：Object 已提交的权威自我，即 `stones/main/objects/<id>/`（main worktree）。唯一默认读源。

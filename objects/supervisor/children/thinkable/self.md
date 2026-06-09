@@ -33,17 +33,15 @@ thinkable 这个维度拆成这些子模块
 
 本轮关键修复：`object::root` trigger always-on（`knowledge/triggers.ts:187`）。根因是契约与实现分歧——root 是 manager 提供的虚拟隐式父 window，从不 push 进 `thread.contextWindows`，按扫窗口匹配 `type==="root"` 则永不命中，导致 agent 在 super flow 沉淀的 memory 永不召回（reflectable 自演化核心价值落空）。特判 `objectType==="root"` 为 always-on，坐实「等价任何时候」的契约承诺。（注：`object::root` 是新格式；旧 `window::root` 在 `parseTrigger` 阶段自动归一化为同一 AST，仍可用但应优先写新格式。）
 
-## 已知问题 / 边界与未决
+## 已知问题 → 计划
 
-- **死知识**：无 `activates_on` frontmatter 的 pool knowledge 永不自动激活；写错 schema 的 sediment 仅 warn 跳过——靠 LLM 自觉，缺统一写入期闸门 / 巡检。
-- **两套读取分支**：derived 窗口不写回 `thread.contextWindows`，靠 transient `_renderedWindows` 兜底观测（`context/index.ts:360`），mock 路径与真实渲染长期应收敛为一套。
-- **边界**：llm 只管「如何请求模型」，「模型能做什么」由 executable 的 tool/method 决定；reasoning 只用于 debug/回放，不作为普通上下文反复喂回（`object.doc.ts:226`）。
+- **死知识**：无 `activates_on` frontmatter 的 pool knowledge 永不自动激活；写错 schema 的 sediment 仅 warn 跳过，靠 LLM 自觉，缺统一写入期闸门 / 巡检。→ 计划：给 knowledge 写入加统一校验闸门，frontmatter schema 不合法即拒绝（而非 warn 跳过），消灭死知识。这是当前最高价值待办。
+- **derived 窗口两套读取分支**：derived 窗口不写回 `thread.contextWindows`，靠 transient `_renderedWindows` 兜底观测（`context/index.ts:360`），mock 路径与真实渲染分两套。→ 计划：收敛为一套，让真实渲染与 mock 路径走同一条。
+- **compress scope=auto 未实现**：compress 已支持 scope=windows（切 window compressLevel）与 scope=events（LLM 提供 summary 折叠事件段，`executable/tools/compress.ts:378`）；仅 scope=auto 仍抛 not-implemented（`compress.ts:372`）。→ 计划：scope=auto 预留未来紧急压缩策略（旧 emergency_guard 已退役，新策略未定），待补。
 
-## 优化方向 / 待办
+## 边界
 
-- 给 knowledge 写入加统一校验闸门：frontmatter schema 不合法即拒绝（而非 warn 跳过），消灭「死知识」。
-- 收敛 derived 窗口的两套读取分支，让真实渲染与 mock 路径走同一条。
-- compress 已支持 scope=windows（切 window compressLevel）与 scope=events（LLM 提供 summary 折叠事件段，`executable/tools/compress.ts:378`）；仅 scope=auto 仍抛 not-implemented（`compress.ts:372`，留给 emergency_guard），待补。
+- llm 只管「如何请求模型」，「模型能做什么」由 executable 的 tool/method 决定；reasoning 只用于 debug/回放，不作为普通上下文反复喂回（`object.doc.ts:226`）。
 
 ## 名词解释
 
@@ -51,7 +49,7 @@ thinkable 这个维度拆成这些子模块
 - **Context**：Object 本轮思考能看见的全部世界，也是它的世界边界——context 之外的状态（内存/文件）对它不存在。
 - **Thread**：思考过程的运行时节点，持有自己的 context/windows/inbox/outbox/events/status。
 - **Thread Tree**：thread 派生子 thread 形成的树，多 thread 可并行思考；OOC 的类 SubAgent 底座。
-- **thinkloop**：单 thread 一轮「构造 context → 调 LLM → 执行 tool → 写事件」循环。
+- **thinkloop**：单 thread 内一轮思考循环；结构与调度见 knowledge/thread-and-thinkloop.md。
 - **activates_on**：knowledge frontmatter 里声明「我何时进入 context」的 trigger map（表达式→级别）。
 - **trigger**：activates_on 的 key 表达式，五类——`object::<type>` / `method::<objtype>::<method>` / `object_id::<id>` / `intent::<name>`（支持 `program.*` wildcard）/ `super`；旧 `window::<type>` 归一化为 `object::<type>`。
 - **show_description / show_content**：两个激活级别（只露标题描述 / 展开正文）；多 trigger 命中取 max。

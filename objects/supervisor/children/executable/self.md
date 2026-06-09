@@ -13,7 +13,7 @@
 1. **Tool 原语层** — exec / close / wait / compress，LLM 直接可见的 4 个稳定接口（`packages/@ooc/core/executable/tools/index.ts:29`）。
 2. **object method 层** — do / talk / program / plan / todo / end / open_file / open_knowledge / write_file / create_object / evolve_self / glob / grep / metaprog（仅治理：resolve/rollback）等具体行动。canonical 定义 `ObjectMethod`（`packages/@ooc/core/_shared/types/method.ts:48`）。
 3. **ContextObject 层** — file / talk / program / do / plan / user-defined object，每个背后是一个 OOC Object（builtin 或 user-defined）。
-4. **Registry 层** — 我的注册入口是 `ObjectRegistry.registerExecutable`（只收 object methods + 类元 `parentClass` / `isBuiltinFeature`），与隔壁 readable 的 `registerReadable`（收 readable / windowMethods / compressView / onClose / basicKnowledge）按维度分工（`packages/@ooc/core/runtime/object-registry.ts:115`、`:131`）。
+4. **Registry 层** — 我的注册入口是 `ObjectRegistry.registerExecutable`（只收 object methods + 类元 `parentClass` / `isBuiltinFeature`，`packages/@ooc/core/runtime/object-registry.ts:115`）；它与隔壁 readable 的 `registerReadable` 按维度分工，完整劈分机制详见 readable 维度 knowledge/readable-registration。
 5. **Knowledge Activation 层** — 按 method path 自动激活执行所需知识。
 
 ## 当前设计（锚真实代码）
@@ -26,25 +26,25 @@
 
 ## method 级准入：permission 三档
 
-行动协议带准入：每条 method 回答「该不该让 LLM 直接执行」。这是 `ObjectMethod` 上的一个声明字段（`packages/@ooc/core/_shared/types/method.ts:60`，是个 `(args) => "allow"|"ask"|"deny"` 函数，按 args 动态判档），不是独立拦截器。runtime 在 thinkloop 分派 tool call **前**查它（`packages/@ooc/core/executable/permissions.ts`）：allow 直接执行 / ask 写 permission_ask + paused 等控制面 approve / deny 写 permission_denied + 合成 function_call_output 让 LLM 看见拒绝原因。决策链：PermissionDecider（注入 escape hatch）> policies.json override > ObjectMethod 声明 > 缺省 allow。详见 knowledge/permission.md。**deny 档当前 0 项**——自改 executable/index.ts 应 deny 但只有弱 ask 约束，是我的硬拦待办。
+行动协议带准入：每条 method 回答「该不该让 LLM 直接执行」。这是 `ObjectMethod` 上的一个声明字段（`packages/@ooc/core/_shared/types/method.ts:60`，是个 `(args) => "allow"|"ask"|"deny"` 函数，按 args 动态判档），不是独立拦截器。runtime 在 thinkloop 分派 tool call **前**查它（`packages/@ooc/core/executable/permissions.ts`）：allow 直接执行 / ask 写 permission_ask + paused 等控制面 approve / deny 写 permission_denied + 合成 function_call_output 让 LLM 看见拒绝原因。决策链：PermissionDecider（注入 escape hatch）> policies.json override > ObjectMethod 声明 > 缺省 allow。三档语义、决策链、以及「deny 档当前 0 项 / 自改 `executable/index.ts` 缺硬拦」这条待办，权威落点都在 knowledge/permission.md。
 
 ## 现状
 
 最小闭环已落地。最近两次主线迭代：
 
 1. **去 metaprog，统一 session worktree**：write / edit / program-shell 三通道收敛——business session 对任意 stone（含 cross-object）的读写重定向到 `flows/<sid>/`（eager checkout main 全量，裸读可见全量），super flow `evolve_self` commit→`tryMergeSelf`（self-scope ff-merge / cross-scope PR-Issue）才永久。root.metaprog 的写动作（open_worktree / commit / merge / create_object）已删，只剩 supervisor 治理 action（resolve / rollback，`method.metaprog.ts`）；建新对象走独立的 `create_object`（落 session worktree，`method.create-object.ts`）。program shell `$OOC_SELF_DIR` 经 `resolveStoneIdentityDir(ref, "write")` 解析（`packages/@ooc/core/executable/program/self-env.ts:22`）。
-2. **registry 按维度劈分**：原 `registerObjectType` 拆成 `registerExecutable`（我的 object methods + 类元）+ `registerReadable`（readable 的展示 hook + window methods）。builtin 对象的目录形态随之分裂为 `executable/index.ts`（我）+ `readable.ts`（readable），由 barrel `index.ts` 分别 side-effect 加载，executable 不再 import readable（样板见 `packages/@ooc/builtins/example/`）。
+2. **registry 按维度劈分**：我这半是 `registerExecutable`（object methods + 类元），builtin 对象的 `executable/index.ts` 是我的落点。两入口注册 / 同名 fail-loud / builtin 物理分文件的完整劈分机制详见 readable 维度 knowledge/readable-registration。
 
 ## 已知问题 / 边界与未决
 
 - **compress scope=auto 未实现**：`scope=windows`（切 compressLevel）与 `scope=events`（折叠中段为 events_summary）均已落地，仅 `scope=auto` 抛 not-implemented，留给 emergency_guard（`packages/@ooc/core/executable/tools/compress.ts:372`）。
-- **自改方法集无硬 deny**：自改 `stones/<self>/executable/index.ts` 仅靠 write_file 弱 ask，缺硬拦。方法集 / readable 为全局 main-canonical，per-session 改须经 evolve_self 合入 main 后重注册才生效。
+- **自改方法集无硬 deny**：权威落点 knowledge/permission.md（「deny 档当前 0 项」待办）。方法集 / readable 为全局 main-canonical，per-session 改须经 evolve_self 合入 main 后重注册才生效。
 - **边界划分**：我只定义「如何行动」、只管 object method。**window method（展示控制）归 readable**——它在代码里是与我并列的注册维度，对象树里也已是独立 child 对象（与 visible 并列，2026-06-09 起；readable=LLM 侧展示、visible=人类侧 UI）。跨 Object 协作语义归 **collaborable**；方法库形状与演化路径归 **programmable**；前端渲染归 **visible**。
 
 ## 优化方向 / 待办
 
 - 补 compress scope=auto（emergency_guard）。
-- 落自改方法集的硬 deny（write_file exec 路径前缀检查 `executable/index.ts` → deny），消除弱约束。
+- 落自改方法集的硬 deny（详见 knowledge/permission.md 的 deny 待办：write_file exec 路径前缀检查 `executable/index.ts` → deny）。
 
 ## 名词解释
 

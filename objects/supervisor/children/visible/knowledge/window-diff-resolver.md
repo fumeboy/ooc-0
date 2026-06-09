@@ -7,7 +7,7 @@ activates_on:
 
 # window diff 渲染解析层
 
-Object 完整掌控自己作为 window 的呈现，分三条对称的线：
+Object 完整掌控自己作为 window 的呈现，分三条对称的线（readable↔visible 镜像权威见 readable 维度 `readable-vs-visible`）：
 
 - **visible/index.tsx**（visible）：当前的*展示* —— `resolveWindowVisible`。
 - **windowMethods + window.state**（readable）：变化的*控制* —— `set_viewport` 等。

@@ -29,7 +29,7 @@ Object 的 UI 页面有两类入口：
 
 ## ui_methods 调用通道
 
-UI 经 HTTP `POST /call_method` 调 Object `server/index.ts` 平行导出的 `ui_methods` 字典——这是**人类侧专路**，与 LLM 侧的 **object method**（program sandbox 里 `self.callMethod`）分流（`executable/object/types.ts:13`）。
+UI 经 HTTP `POST /call_method` 调 Object `executable/index.ts` 平行导出的 `ui_methods` 字典（legacy `server/index.ts` 仅作回退，canonical = `executable/index.ts`，`packages/@ooc/core/runtime/server-loader.ts:28`/`:35`）——这是**人类侧专路**，与 LLM 侧的 **object method**（program sandbox 里 `self.callMethod`）分流（`executable/object/types.ts:13`）。
 
 - 服务端：callMethod 服务在 `packages/@ooc/core/app/server/modules/stones/service.ts:387`（+ `modules/flows/service.ts` 对端），经 `loadUiServerMethods(ref)`（`runtime/server-loader.ts`）取 `uiMethods[method]`；错误码 `METHOD_LOAD_FAILED`（`stones/service.ts:394`）/ `METHOD_NOT_FOUND`（`:402`）。HTTP 入口 `modules/stones/api.call-method.ts:6`（`POST /api/stones/:id/call_method`）。
 - 前端入口：`packages/@ooc/web/src/transport/endpoints.ts` `stoneCallMethod`（`:67`）/ `flowCallMethod`（`:70`）；`ObjectClientRenderer.tsx:84` `callMethodFor` 合成 callMethod prop。

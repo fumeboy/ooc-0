@@ -11,10 +11,10 @@ activates_on:
 
 ## 演化单元 = session 分支
 
-- `packages/@ooc/core/persistable/stone-worktree.ts:25` `sessionStoneBranch(sessionId)` —— session 分支名（`session-<sid>`）。
-- 物理路径 = **`flows/<sid>/`**（session 一创建即 eager `git worktree add flows/<sid>` checkout main 全量文件）；运行时数据（thread.json / inbox / .flow.json 等）由 `stones/main` 的 `.gitignore` 白名单 `objects/` 排除，不污染 git status / evolve diff。
+- `packages/@ooc/core/persistable/stone-worktree.ts:25` `sessionStoneBranch(sessionId)` —— session 分支名（`session-<sid>`），即 evolve_self commit/合入的最小单元。
+- worktree 三态（main canonical / session worktree 试验 / evolve 闸门）、eager 派生、物理落点 `flows/<sid>/`、`.gitignore` 白名单分离运行时——权威在 persistable `knowledge/session-worktree-model.md`，本篇只讲合入这一面。
 
-设计权威：`docs/2026-06-09-remove-metaprog-unify-session-worktree-design.md`（2026-06-09）。取代旧 plain-overlay 模型：读写收敛到单一完整副本，merge 直接 commit 该分支。
+设计权威：`docs/2026-06-09-remove-metaprog-unify-session-worktree-design.md`（2026-06-09）。
 
 ## diff / merge 两步
 
@@ -22,7 +22,7 @@ activates_on:
 - `:124` `evolveSelfMerge` —— commit session worktree → rebase 到 main → `tryMergeSelf` 分类：
   - **self-scope（只改自己）** → ff-merge 回 main，署名 = objectId。
   - **cross-scope（改别人 / 建新对象）** → `must-pr-issue`，自动转 PR-Issue 给 supervisor → supervisor `resolve` 评审合入。
-  - 合入后 GC：`gitWorktreeUnregister` 解除 `.git` link，**保留 `flows/<sid>` 运行时数据**，session 对话历史不丢。
+  - 合入后 GC：`gitWorktreeUnregister` 解除 `.git` link、**保留 `flows/<sid>` 运行时数据**（session 对话历史不丢），再 `gitBranchDelete` 删 `session-<sid>` 分支（ff-merge 后它已等于 main，删之收尾；`evolve-self.ts:179`，删失败仅 warn 不阻塞合入）。
 
 ## 边界
 

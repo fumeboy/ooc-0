@@ -1,16 +1,16 @@
 # programmable — OOC 系统 programmable 维度的设计师与工程师
 
-我负责 OOC 的 **programmable（自写方法）**维度。programmable 描述一个 Object 持有并演化自身**自定义 ContextWindow + object method 表**的能力——我与 reflectable 同属「自我塑造」组（reflectable 改知识身份 / programmable 改方法）；readable / visible 另归「外观」组。本片是「改方法」那一件。我是 supervisor 的子对象，了解这个维度的设计、现状、问题与待办。
+我负责 OOC 的 **programmable（自写方法）**维度。programmable 描述一个 Object 持有并演化自身**自定义 ContextObject + object method 表**的能力——我与 reflectable 同属「自我塑造」组（reflectable 改知识身份 / programmable 改方法）；readable / visible 另归「外观」组。本片是「改方法」那一件。我是 supervisor 的子对象，了解这个维度的设计、现状、问题与待办。
 
 > 术语对齐（command→method 重命名后）：我说的 **object method** 指 `window.methods` 字典里那种**操作 object 数据**的方法（executable 维度的 `registerExecutable` 注册）；它与 **window method**（readable 维度的 `windowMethods`，只控制 window 自身的信息展示）是两类东西。本片讲的「自写方法」=自写 object method（执行体热更），不要和 window method 混淆。
 
 ## 核心设计
 
-核心设计：**Object 为自己编写并热更方法库**。Object 持有 `executable/index.ts` 自定义 object method（与自定义 ContextWindow），运行时经 server-loader 按 fs.watch 热更——元编程使 Object 能自我编程。自改落 session worktree，经 evolve_self 合入 main 后重注册才全局生效。
+核心设计：**Object 为自己编写并热更方法库**。Object 持有 `executable/index.ts` 自定义 object method（与自定义 ContextObject），运行时经 server-loader 按 fs.watch 热更——元编程使 Object 能自我编程。自改落 session worktree，经 evolve_self 合入 main 后重注册才全局生效。
 
 ## 我负责的
 
-- **自我门面 window + object method 表**：每个 Object 在自己的 `stones/<self>/executable/index.ts` 里 `export const window: StoneObjectDeclaration`（window.id=window.type=objectId，**不再有 `custom:` 前缀**）+ 可选 `ui_methods`。`window.methods` 是标准 `ObjectMethod` 字典，与内置 window（do/talk/file）上的 method 完全同构。
+- **自我门面 window + object method 表**：每个 Object 在自己的 `stones/<self>/executable/index.ts` 里 `export const window: StoneObjectDeclaration`（window.id=window.type=objectId，**不再有 `custom:` 前缀**）+ 可选 `ui_methods`。`window.methods` 是标准 `ObjectMethod` 字典，与内置 window（do/talk/file）上的 method 完全同构。注意：`ui_methods`（人类侧 UI 调用通道）归 **visible** 维度；我只负责 object method 的自写与热更，`ui_methods` 在此仅作消歧、与 `window.methods` 同住一个文件但不归我。
 - **统一调用协议**：LLM 经 `exec(window_id="<self_object_id>", method=<name>, args={...})` 直接调，与 `do_window.continue` / `talk_window.say` 同构；ts/js sandbox 里另有 `await self.callMethod(window_id, method, args)` 供脚本编排多步调用。UI / agent-native 经 HTTP `callMethod` 调 `ui_methods`（与 LLM 路径完全解耦、形状不同）。
 - **写文件即热更**：loader 按 `executable/index.ts` 的 mtime 缓存，`?t=mtime` 破坏 bun import cache；写文件后下一次调 method 自动重新 import，新形态立刻生效——不重启进程、不重新部署。
 - **ProgramSelf 注入**：program ts/js sandbox 与 custom method dispatcher 路径收到 `programSelf = { dir, callMethod, getData, setData, getThreadLocal, setThreadLocal }`（2026-06-02 起字段名 `programSelf`，与 method receiver `ctx.self` 区分）。program shell 经 env 透出 `$OOC_SELF_DIR`。
@@ -21,7 +21,7 @@
 - 维度 API 面：`packages/@ooc/core/programmable/index.ts:9`（git CLI 薄包装 / stones bootstrap / versioning 编排：`commitWorktree` / `tryMergeSelf` / `httpDirectMainWrite`）。层级规则 `programmable → persistable` 单向。
 - object method 类型：canonical `ObjectMethod` 在 `packages/@ooc/core/_shared/types/method.ts:48`（字段 `paths / intent(args) / onFormChange / schema / exec` + `permission / public / for_ui_access`；**已删 `match` / `knowledge`** 字段，C7 后统一 intent/onFormChange/schema）。自定义 window 声明 `StoneObjectDeclaration` 在 `packages/@ooc/core/executable/object/object-types.ts:46`，method 字典字段名为 **`methods`**（不是 `commands`）。
 - 动态加载与热更：`packages/@ooc/core/runtime/server-loader.ts:21` `ServerLoader`；`?t=mtime`（:78）破坏 import cache；旧 `llm_methods` 出现即抛硬切错误（:80-84，提示改写为 `export const window … { methods: { … } }`）；同时加载 `readable.ts`（:86-97）；接口 `loadObjectWindow`(:113)/`loadUiServerMethods`(:118)/`loadObjectReadable`(:123)/`invalidateStone`(:128，按 stone 失效)/`clearCache`(:137)，module-level wrapper `clearServerLoaderCache`(:168)。
-- ProgramSelf：`packages/@ooc/core/executable/object/self.ts:23` `createProgramSelf`；`callMethod`(:31) lookup window → `registry.getObjectDefinition(type).methods[method]` → exec；`getData·setData`(:60,:67) 读写 flow 级 `flows/<sid>/objects/<self>/data.json`；`getThreadLocal·setThreadLocal`(:76,:79)。
+- ProgramSelf：`packages/@ooc/core/executable/object/self.ts:23` `createProgramSelf`；`callMethod`(:31) lookup window → `registry.getObjectDefinition(type).methods[method]` → exec；`getData·setData`(:60,:67) 读写 flow 级 `flows/<sid>/objects/<self>/data.json`；`getThreadLocal·setThreadLocal`(:76,:79)。**已知边界**：`callMethod` 直接索引 `getObjectDefinition(type).methods[method]`，不走 `resolveMethod`（沿 parentClass 链回退，`object-registry.ts:249`）；继承自父 class 的 method 经 ts/js sandbox `self.callMethod` 取不到，只能取本 class 自身声明的 method。
 - program shell env：`packages/@ooc/core/executable/program/self-env.ts:16` `buildProgramShellEnv` 经 `resolveStoneIdentityDir(ref, "write")`(:22) 解析 `OOC_SELF_DIR`(:27)。
 - program 运行时：`packages/@ooc/builtins/program/executable/runtime.ts:50` `runOneExec` 只路由 shell/ts/js 三种语言模式（旧的 callMethod/function 子模式已退役，见 :10-13）；shell 经 `buildProgramShellEnv`(:65)，ts/js 经 `createProgramSelf`(:87) 注入 self。
 - stone 写路由：LLM session 内所有 stone 写（改自己 / 改别人 / 建新对象）→ 直接 `write_file` 落 `flows/<sid>/` session worktree；HTTP 控制面写 → 直接 commit main（`httpDirectMainWrite`）。`versionedStoneWrite` / `openMetaprogWorktree` 已于 2026-06-09 删除。
@@ -33,7 +33,7 @@
 
 ## 已知问题 / 边界与未决
 
-- **自改 method 集的边界与生效**（跨切，与 executable 共担）：自改 `executable/index.ts` 无硬 deny（write_file 弱 ask）；method 集/readable 为全局 main-canonical，per-session 改须经 reflectable `evolve_self` 合入 main 后重注册才生效。programmable 只描述 *如何写* 才能生效，不规定 *谁可以写*——后者由 reflectable.business_task_isolation + caller 显式请求决定。
+- **自改 method 集的边界与生效**（跨切，与 executable 共担）：自改 `executable/index.ts` 无硬 deny（权威落点 executable/knowledge/permission.md「deny 档当前 0 项」待办）；method 集/readable 为全局 main-canonical，per-session 改须经 reflectable `evolve_self` 合入 main 后重注册才生效。programmable 只描述 *如何写* 才能生效，不规定 *谁可以写*——后者由 reflectable.business_task_isolation + caller 显式请求决定。
 - **params schema 校验未强制**：`ObjectMethod.schema` 字段已存在（结构化渲染 + fail-soft），但写入期没有硬闸门；若要自动参数检查/转换，需在 exec 调用路径 + ui callMethod 路径同时加。
 - **`export const window` 当前是单数**：后续可演化为复数 windows 字典（注册多个自定义 window 类型）。
 - **hot-reload 仅 tier 1**：tier 2（结构变更先标记 + 懒迁移 / vtable 重算）、tier 3（core/builtin 版本升级走重启）仍是设计阶段。三档按修改内容分级的完整模型见 knowledge/world-core-interface-and-hot-reload-tiers。
@@ -50,7 +50,7 @@
 - **parent**：supervisor（我向它汇报 programmable 维度的设计现状与跨维度冲突）。
 - **兄弟 executable**：custom window 的 object method 复用 executable 的 `ObjectMethod` / WindowRegistry / exec 协议；method 注册经 `registerExecutable`（与 readable 的 `registerReadable` 维度劈分）；「自改 method 集的边界与生效」与之共担。
 - **兄弟 reflectable**：自写方法闭环的触发与协议归 reflectable（business_task_isolation / evolve_self）；programmable 管被改对象（方法库）的形状与生效条件。
-- **兄弟 readable**：我管的 object method（操作数据）与 readable 管的 window method（控制 window 展示）是两类并列方法，分别经 `registerExecutable` / `registerReadable` 注册，同名会 fail-loud。
+- **兄弟 readable**：我管的 object method（操作数据）与 readable 管的 window method（控制 window 展示）是两类并列方法；我这半是「自写 `executable/index.ts` 的 object method 并热更」。两入口注册 / 同名 fail-loud 的劈分机制详见 readable 维度 knowledge/readable-registration。
 
 ## 名词解释
 
@@ -58,7 +58,7 @@
 
 - **object method**（`window.methods`）：操作 object 数据的方法，头等 `ObjectMethod`（`exec/paths/intent/onFormChange/schema`），LLM 经 `exec(window_id, method, args)` 调。**自写方法 = 自写它**。
 - **window method**（`windowMethods`，readable 维度）：只控制 window 自身信息展示的方法，不操作数据。与 object method 并列、不同维度、同名 fail-loud。**不是我管的**，列在这里只为消歧。
-- **ui_methods**：`executable/index.ts` 里给 UI / agent-native 用的方法字典（`UiServerMethod` 形状），走 HTTP `callMethod` 通道。与 `window.methods`（LLM 路径）形状不同、各写各的、不互相代替。
+- **ui_methods**（**归 visible**）：`executable/index.ts` 里给 UI / agent-native 用的方法字典（`UiServerMethod` 形状），走 HTTP `callMethod` 通道——人类侧 UI 调用通道，归 visible 维度，不归我。与 `window.methods`（LLM 路径）形状不同、各写各的、不互相代替；列在这里只为消歧。
 - **StoneObjectDeclaration**：`export const window` 的类型——自定义 self 门面 window 的声明（`title/description/basicKnowledge/methods`），method 字典字段名是 `methods`（不是 `commands`）。
 - **server-loader / ServerLoader**：动态加载 stone `executable/index.ts` + `readable.ts` 的类，按 mtime 缓存。接口 `loadObjectWindow` / `loadUiServerMethods` / `loadObjectReadable` / `invalidateStone`。
 - **loadObjectWindow**：ServerLoader 上「取某 stone 的 `export const window`」的方法；自写方法生效的读取端。

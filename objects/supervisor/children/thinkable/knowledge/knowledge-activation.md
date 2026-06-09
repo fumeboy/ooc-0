@@ -22,7 +22,7 @@ Object 持有的 markdown 知识不是一次全喂——按 `activates_on` trigg
 
 knowledge 激活实际是二维的：
 - **横轴 = 任务进度**（method path / form refinement）—— 由 `activates_on` trigger 表达，执行推进到哪激活到哪。
-- **纵轴 = 领域层级**（B-tree 父子继承）—— 由物理嵌套 + frontmatter `inheritable` 表达。
+- **纵轴 = 领域层级**（children 层级的父子嵌套继承）—— 由物理嵌套 + frontmatter `inheritable` 表达。
 
 纵轴解决的问题：一组同领域子 Agent（如 sentry/*）的公共知识无处放——放全局没人加载、放每个子 Agent 又重复 N 份。方案是子 Agent 物理嵌套在 parent 的 `children/` 下（objectId 用 `/` 编码层级，如 `sentry/sentry_event`），parent 的 knowledge 只有显式标 `inheritable: true` 才下传。
 

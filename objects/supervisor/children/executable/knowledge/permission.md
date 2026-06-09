@@ -10,7 +10,7 @@ activates_on: {"window::root": "show_content"}
 
 ## 三档语义
 
-- **allow**（默认）—— 无人工介入直接执行。纯读 / 控制流：open_file / glob / grep / open_knowledge / compress / close / wait / end / plan / todo / do / talk。
+- **allow**（默认）—— 无人工介入直接执行。判据：**不触达持久层 / 外部世界、仅在本 thread 内可逆 mount 的副作用**。归这档：open_file / glob / grep / open_knowledge / compress / close / wait / end / plan / todo / do / talk。注意 do/talk/plan/todo 是有副作用的 constructor（派生 thread / mount 子对象），但它们只在本 thread 内 mount 对象 / 子线程、不写持久层、可逆，故仍归 allow。
 - **ask** —— 触发 HITL：写一条 `permission_ask` ProcessEvent，thread 进 `paused`，等控制面 approve / reject。写副作用归这档：write_file / program(shell|ts|js) / relation_update / super flow 改 self.md / 任何 delete_*。
 - **deny** —— 系统直接拒绝：写 `permission_denied` ProcessEvent + 合成一条 `function_call_output("denied: <reason>")` 让 LLM 看见原因（绝不让它「以为成功」），跳过本次分派。
 

@@ -46,4 +46,4 @@ Elysia app 在 `packages/@ooc/core/app/server/index.ts` 装配：`:212` 是 `onE
 
 ## 本地联调原则
 
-"部分 404、部分正常"多半是**旧 server 进程残留**占端口，收到请求的是旧实例。先 `lsof -nP -iTCP:3000 -sTCP:LISTEN` 清理旧进程，别只看 /health。
+启动约束（`--world` 解析、端口、旧 server 进程残留 / `lsof` 排查、runtime 单例测试卫生）权威在 [[startup-constraints]]，此处不复述。

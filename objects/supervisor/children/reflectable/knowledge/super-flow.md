@@ -29,4 +29,14 @@ talk_window.target 一般指向另一个 flow object id；特殊地 `target === 
 
 `:158` —— 业务 thread 打开 `method="end"` 的 method_exec form（`form.method === "end"`）且非 super session 时，注入 `END_REFLECTION_REMINDER_KNOWLEDGE`：一段非阻塞 hint，提醒「你刚工作了一段，考虑反思」。super flow 内的 end 不重提，避免无限套娃。
 
-边界：super 是 **self-scoped**，只观察 / 修改 Object 自己；super 本身从不跨 object。super flow 是反思通道而非执行通道——不跑 program shell、不 edit 业务代码、不开 do 子任务。
+## 去 metaprog 后的职责切分（权威）
+
+去 metaprog（2026-06-09）后 super flow 与业务 session 的分工：
+
+- **改身体/身份的 write_file 发生在业务 session**：`self.md` / `readable.md` / `executable/` / `visible/` 的改动在业务 session 里 `write_file` 落该 session 的 worktree 副本——即时生效、main 不变。
+- **super flow 本身不 write_file 改 stone**：它的角色是闸门 + 沉淀 + 治理——只直写 pool sediment（memory / relations）、用 `evolve_self` 把业务 session 试验合回 main、做 cross-scope 治理。
+- **最短闭环**：业务线程 write_file 试验 → end 进 super → `evolve_self` 合入 → 下轮新 thread 生效。
+
+## 边界
+
+super 是 **self-scoped**，只观察 / 修改 Object 自己；super 本身从不跨 object。super flow 是反思通道而非执行通道——不跑 program shell、不 edit 业务代码、不开 do 子任务。

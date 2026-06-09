@@ -32,7 +32,7 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 
 ## 两条进入 canonical 的合法通道（互不经过对方）
 
-- **LLM 演化**：业务 session worktree → super-flow `evolve_self` 合入 main（self-scope ff-merge / cross-scope PR-Issue）。改已存在对象文件用 `write_file`/`edit`；**建新对象骨架**用 `create_object` root method（`createObjectInSession` 落 `flows/<sid>/objects/<newId>/` 不 commit，合入仍走 evolve_self cross-scope；2f4456f9 恢复——metaprog 去除曾把建对象路径删过头）。
+- **LLM 演化**：业务 session worktree → super-flow `evolve_self` 合入 main（self-scope ff-merge / cross-scope PR-Issue）。改已存在对象文件用 `write_file`/`edit`，建新对象骨架用 `create_object`（口诀与落点见 `knowledge/stone-pool-flow-three-trees.md`）。
 - **HTTP 控制面写入**：`putSelf` / `putServerSource` / `createStone` 经 `httpDirectMainWrite`（`versioning.ts:811`）直 commit main，立即生效，不开 worktree。
 
 ## 例外与边界

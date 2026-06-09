@@ -4,14 +4,14 @@
 
 ## 核心设计
 
-核心设计：**控制面是显式的 runtime orchestration，不是「请求即完成」的同步接口**。建线程 / 入队 job / 轮询 / pause-resume / 恢复都经 server 的 job 语义串起；进程内状态（pause / debug）也经 HTTP 暴露成可查询、可切换的控制面能力。只有 ui_methods 经 HTTP 暴露，window.methods 不暴露。
+核心设计：**控制面是显式的 runtime orchestration，不是「请求即完成」的同步接口**。建线程 / 入队 job / 轮询 / pause-resume / 恢复都经 server 的 job 语义串起；进程内状态（pause / debug）也经 HTTP 暴露成可查询、可切换的控制面能力。
 
 ## 我负责的
 
 **app.server（HTTP 控制面，Elysia）**
 - 把 stone / pool / flow / runtime 等内核能力暴露为稳定 HTTP API，给 Web 前端、工程工具、人工调试消费。
 - 不是"请求即完成"的同步层，而是一层显式 **runtime orchestration**：建线程、入队 job、轮询、恢复、pause/resume 都通过 server 的 job 语义串起来。
-- 组成：bootstrap（启动 + config + 错误模型）/ modules（feature-based 路由：health / runtime / stones / pools / flows / ui / world-config）/ runtime（进程内 job-manager / worker / pause-store / resume / thread-query）。
+- 组成：bootstrap（启动 + config + 错误模型）/ modules（feature-based 路由：health / runtime / stones / pools / ui / flows / world-config）/ runtime（进程内 job-manager / worker / pause-store / resume / thread-query）。
 - 关键契约：所有写 stone 的 HTTP 操作必经 stone-versioning（worktree → commit → merge），不存在 uncommitted 半成品；service 层错误一律 `throw AppServerError`，由 onError 统一包成 `{error:{code,message,details}}`。
 
 **app.client（Web 控制面，Vite + React）**

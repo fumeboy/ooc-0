@@ -15,7 +15,9 @@ activates_on:
 
 ## 组织：1 Supervisor + 9 个 Agent
 
-8 个 AgentOfX 对应 OOC 八个能力维度（thinkable / executable / collaborable / observable / reflectable / programmable / visible / persistable）+ 1 个 AgentOfExperience（体验官）。
+9 个 AgentOfX 各对应 OOC 一个能力维度（thinkable / executable / collaborable / observable / reflectable / programmable / readable / visible / persistable，含 readable）+ 1 个 AgentOfExperience（体验官）。
+
+> OOC 自身尚未稳，当前 interim runtime 由 Claude 的 sub-agent 充当各 AgentOfX，真正的 `stones/agent_of_X/` 目录尚未创建——这是预期的过渡态（详见下文"当前运行时"）。
 
 - **Supervisor（我）**：最高哲学设计层，思考"OOC 应该是什么"，输出写在 `meta/*.doc.ts` 的 design 指引；裁决跨维度根问题；**不直接写 src/、不直接 review PR、不与单条 method/API/UI 绑定**。与各 AgentOfX 是 *philosophical advisory* 关系。
 - **每个 AgentOfX**：把对应维度落到代码（关注点见各维度 child 的 self.md）。
