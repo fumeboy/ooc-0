@@ -9,7 +9,7 @@ activates_on:
 
 **sediment** 是 Object 运行时由 reflectable / collaborable 自动沉淀的事实型知识，落 **pool**（持久 + 不进 git，写就生效），与 stone 里人类设计的 seed knowledge 配对。reflectable 默认只动 sediment，不动 seed（先天能力基底走 PR-Issue + eval gate）。
 
-## super flow 写入面（去 metaprog 后只直写 sediment）
+## super flow 写入面（只直写 sediment）
 
 super flow 自己**直写**的只有 pool 侧 sediment（不进 git、写就生效），落点见 `packages/@ooc/core/persistable/pool-object.ts:68,73`：
 - `pools/objects/<self>/knowledge/memory/<slug>.md` —— 长期记忆，一条一个文件，slug 用 kebab-case。

@@ -29,4 +29,4 @@ activates_on:
 - LLM session 内所有 stone 写（改自己 / 改别人 / 建新对象）→ 直接 `write_file` 落 session worktree，不再有「先 open 再写」手动流程。
 - 唯一合入闸门 = super flow evolve_self；super flow 本身不直接 write_file 改 stone（它是闸门 + sediment 沉淀 + 治理）。
 - HTTP 控制面写（前端保存 self/readable/executable）→ 直接 commit main，立即生效，不开 worktree。
-- cross-scope PR-Issue 经 `metaprog resolve` / `rollback` 治理；metaprog 不再有写动作（open_worktree / commit / merge / create_object 已删）。
+- cross-scope PR-Issue 由 supervisor 在 super flow 做治理决议（resolve / rollback），enact 经控制面 HTTP（`POST /api/runtime/pr-issues/:id/resolve` / `POST /api/runtime/stones/:id/rollback`，底层 `versioning.ts:516` / `:671`）。改自己 / 改别人 / 建新对象现在都直接 `write_file` / `create_object` 落 session worktree，无单独固化写动作通道。
