@@ -25,8 +25,8 @@ talk_window.target 一般指向另一个 flow object id；特殊地 `target === 
 
 ## 协议知识注入
 
-`packages/@ooc/core/thinkable/context/protocol.ts:119-121` —— 当 `thread.persistence?.sessionId === SUPER_SESSION_ID` 时，注入两条 knowledge：`REFLECTABLE_KNOWLEDGE`（反思基础协议）+ `REFLECTABLE_METAPROG_KNOWLEDGE`（元编程协议，教 LLM 何时走 worktree 改身体）。这条协议只在 super flow 注入，普通业务线程看不见。
+`packages/@ooc/core/thinkable/context/protocol.ts:119-121` —— 当 `thread.persistence?.sessionId === SUPER_SESSION_ID` 时，注入两条 knowledge：`REFLECTABLE_KNOWLEDGE`（反思基础协议 + sediment write contract）+ `REFLECTABLE_METAPROG_KNOWLEDGE`（改身体协议）。后者去 metaprog 后已重写（`packages/@ooc/core/thinkable/reflectable/reflectable-knowledge.ts:126`）：教 LLM 改身体在**业务 session** `write_file` 试验、回 super flow 用 `evolve_self` 合入，而**不是**手动开 worktree / commit / merge 四步。这两条协议只在 super flow 注入，普通业务线程看不见。
 
-`:158` —— 业务 thread 打开 `command="end"` 的 form 且非 super session 时，注入 `END_REFLECTION_REMINDER_KNOWLEDGE`：一段非阻塞 hint，提醒「你刚工作了一段，考虑反思」。super flow 内的 end 不重提，避免无限套娃。
+`:158` —— 业务 thread 打开 `method="end"` 的 method_exec form（`form.method === "end"`）且非 super session 时，注入 `END_REFLECTION_REMINDER_KNOWLEDGE`：一段非阻塞 hint，提醒「你刚工作了一段，考虑反思」。super flow 内的 end 不重提，避免无限套娃。
 
 边界：super 是 **self-scoped**，只观察 / 修改 Object 自己；super 本身从不跨 object。super flow 是反思通道而非执行通道——不跑 program shell、不 edit 业务代码、不开 do 子任务。

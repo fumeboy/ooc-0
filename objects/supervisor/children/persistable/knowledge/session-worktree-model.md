@@ -28,7 +28,7 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 4. program shell `$OOC_SELF_DIR` — `packages/@ooc/core/executable/program/self-env.ts`。
 5. 控制面 visible endpoint — `packages/@ooc/core/app/server/modules/ui/api.client-source-url.ts`。
 
-锚点：`packages/@ooc/core/persistable/stone-worktree.ts:89` resolveStoneIdentityDir / `:105` resolveStoneIdentityRef / `:61` ensureSessionWorktree / `:25` sessionStoneBranch / `:42` sessionUsesWorktree；合入在 `packages/@ooc/core/programmable/evolve-self.ts:124` evolveSelfMerge / `:98` evolveSelfDiff。
+锚点：`packages/@ooc/core/persistable/stone-worktree.ts:127` resolveStoneIdentityDir / `:143` resolveStoneIdentityRef / `:89` ensureSessionWorktree / `:30` sessionStoneBranch / `:54` sessionUsesWorktree / `:47` sessionWorktreePath；合入在 `packages/@ooc/core/programmable/evolve-self.ts:133` evolveSelfMerge / `:108` evolveSelfDiff。
 
 ## 两条进入 canonical 的合法通道（互不经过对方）
 
@@ -40,5 +40,5 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 - **executable 命令集 / 注册的 readable** 全局 main-canonical（类型系统全局共享），loader 通道不 per-session 路由（per-session 改命令集本就走 evolve_self → main → 重注册）。
 - **pool sediment**（`pools/<id>/knowledge/**`）不在 worktree 模型内：独立、直写、不进 git；super flow 反思写 memory 直接落 pool。
 - 硬约束：identity 必须已 git-commit 到 main 才被新 worktree 看到（低层 writeSelf 只写文件不 commit）。
-- 生命周期：worktree 随 session 存在，evolve_self 合入后 GC（`evolve-self.ts:169`，`gitWorktreeUnregister` 保留 `flows/<sid>` 运行时数据）、session 清理即消亡；未合入的改动不进 canonical——「试验不污染身份」。
+- 生命周期：worktree 随 session 存在，evolve_self 合入后 GC（`evolve-self.ts:178`；底层 `versioning.ts:406` `gitWorktreeUnregister` 只解除 `.git` link、保留 `flows/<sid>` 运行时数据）、session 清理即消亡；未合入的改动不进 canonical——「试验不污染身份」。
 - **未决**：业务 session 的 abandoned worktree（异常未清理）缺独立 orphan 回收器（GC 当前只在 evolve_self 成功路径内）。

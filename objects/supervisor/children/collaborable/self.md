@@ -11,20 +11,22 @@ OOC 的协作不是「调用对方的函数」，而是「**消息 + 持续会�
 我的子能力：
 - **ThreadMessage** — 跨 thread 的最小消息单元（from/to、object、windowId、source）。
 - **talk_window** — 跨 object 的持续会话窗口；`say` 发消息，可 `wait`。
-- **do_window** — 同 object 内 fork 子线程的对话窗口；`continue` 追加。
+- **do_window** — 同 object 内 fork 子线程的对话窗口；`continue` 追加（父→子下达 / 子→父回报双向，子→父 reply 走自身 creator do_window，是子→父唯一合法通道，不夹带在 `end({result})` 里）（`packages/@ooc/core/executable/windows/do/method.continue.ts:21`）。
+- **relation_window** — self 对某 peer 的关系窗口，按 thread 中 `target=peerId` 的 talk_window **自动派生**（id=`w_rel_<peerId>`），`edit` 整文件替换 relation 文件，scope=`session`（写 `flows/<sid>/<self>/knowledge/relations/<peer>.md`）或 `long_term`（派 talk 给 super flow，由 super 写 `pools/<self>/knowledge/relations/<peer>.md`）（`packages/@ooc/core/executable/windows/relation/index.ts:147`）。注：window type 本身标 `@deprecated`（2026-05-28，已被 peer Object 自动注入机制覆盖），但 `edit` 与 relation 文件机制现行仍在用，Phase 9 cleanup 才移除。
 - **talk-delivery** — 跨 object 派送的唯一入口（双写 inbox/outbox、事件驱动入队）。
 - **creator window** — 每个 thread 启动时指向创建方的恒在通道，不可 close。
 - **inbox 存储** — per-message 落盘，并发回报互不覆盖。
 
 ## 当前设计（锚真实代码）
 
-- `say` command：`talk_window` 上发一条消息，`wait=true` 让父线程进 `waiting` 等回报唤醒（`packages/@ooc/core/executable/windows/talk/command.say.ts:100`）。
-- `deliverTalkMessage`：跨 object 派送唯一入口——解析 caller/target、解析或创建 callee thread、`caller.outbox` + `callee.inbox` 双写同一 messageId、callee 状态翻 running、双写 thread.json、`notifyThreadActivated` 事件驱动入队（`packages/@ooc/core/executable/windows/talk/delivery.ts:76`，双写见 `:190`）。
-- `resolveCalleeReplyToWindowId`：入站消息按 targetThreadId → objectId → creator window 三级归属窗口（`delivery.ts:242`）。
+- `say` window method：`talk_window` 上发一条消息，`wait=true` 让父线程进 `waiting` 等回报唤醒（`packages/@ooc/core/executable/windows/talk/method.say.ts:99`）。注意 `say` 是挂在 talk_window 上的 method（`ObjectMethod`，由 manager dispatch），不再叫 "command"。
+- `deliverTalkMessage`：跨 object 派送唯一入口——解析 caller/target、解析或创建 callee thread、`caller.outbox` + `callee.inbox` 双写同一 messageId、callee 状态翻 running、双写 thread.json、`notifyThreadActivated` 事件驱动入队（`packages/@ooc/core/executable/windows/talk/delivery.ts:76`，双写见 `:191`-`:192`）。
+- `resolveCalleeReplyToWindowId`：入站消息按 targetThreadId → objectId → creator window 三级归属窗口（`delivery.ts:243`）。
 - `target="super"` 自指别名：翻译为派往自己的 super 分身，跨 session 自我协作（`delivery.ts:11` 注释、`_shared/super-constants.ts`）。
-- `isCreatorSelf`：按 creatorObjectId 是否=自身判定 creator window 是 do 还是 talk（`packages/@ooc/core/executable/windows/_shared/init.ts:50`）。
-- inbox per-message 存储：`persistInboxMessages` 幂等 append、`readInboxMessages` 扫目录合并（`packages/@ooc/core/persistable/inbox-store.ts:34` / `:58`）；`writeThread` 先落目录再从 thread.json strip（`packages/@ooc/core/persistable/thread-json.ts:69` / `stripVolatileForPersist:42`）。
-- PR-Issue：stone-versioning 跨自治区改动的评审 token，**不在我的运行时通道内**，落 `flows/super/issues/`、仅 supervisor 决议（`packages/@ooc/core/persistable/pr-issue.ts:230`）。
+- `isCreatorSelf`：按 creatorObjectId 是否=自身（且同 session）判定 creator window 是 do 还是 talk（`packages/@ooc/core/executable/windows/_shared/init.ts:55`）。
+- inbox per-message 存储：`persistInboxMessages` 幂等 append、`readInboxMessages` 扫目录合并（`packages/@ooc/core/persistable/inbox-store.ts:34` / `:58`）；`writeThread` 先落目录再从 thread.json strip（`packages/@ooc/core/persistable/thread-json.ts:68` / `stripVolatileForPersist:45`）。
+- PR-Issue：stone-versioning 跨自治区改动的评审 token，**不在我的运行时通道内**，落 `flows/super/issues/`、仅 supervisor 决议（`createPrIssue`，`packages/@ooc/core/persistable/pr-issue.ts:230`）。这是 Issue 在系统里**仅存的**承担形态。
+- **「Issue 看板」已废弃**（2026-05-26 移除）：曾设想用 session 级共享 Issue（含订阅 / @mention / comment 流）承载多个对象就同一 topic 会话——这条路已被否，**不是我现行的协作机制**。多对象会话现在一律走 talk_window + inbox/outbox，不再有共享议题对象（见 `pr-issue.ts:1`-`:17` 头注对二者的区分）。
 
 ## 现状
 

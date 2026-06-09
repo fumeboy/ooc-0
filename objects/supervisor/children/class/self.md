@@ -15,13 +15,13 @@
 - instance 是普通 `objects/<id>` stone：bare id 解析回 `objects/`，`resolveBuiltinReadDir` 收窄为 `_builtin/` 前缀专用——避免 class 遮蔽同名 instance 磁盘（`builtin-dir.ts:39`）。
 - registry：`_builtin/<id>` 直接作 class 键注册（空 methods 隐式继承 root，`ensureBuiltinClassRegistered`，`packages/@ooc/core/thinkable/knowledge/synthesizer.ts:44`）。instance 经 `ooc.class="_builtin/<id>"` 得链 `instance → _builtin/<id> → root`，键不同名，无自引用 break。
 
-**instantiate_with_new_world（自动实例化）**：class 的 `package.json` 声明此 flag 为 true 时，world bootstrap **幂等**实例化出 `objects/<id>` object——拷贝 class self.md（own 身份）、写 `ooc.class="_builtin/<id>"`、commit on main；`objects/<id>/` 已存在则跳过（保用户改动）（`packages/@ooc/core/app/server/bootstrap/instantiate-classes.ts:43`、`:49`）。
+**instantiate_with_new_world（自动实例化）**：class 的 `package.json` 声明此 flag 为 true 时（`instantiate-classes.ts:49`），world bootstrap **幂等**实例化出 `objects/<id>` object——`objects/<id>/` 已存在则跳过（保用户改动，`:52`），否则拷贝 class self.md（own 身份）、写 `ooc.class="_builtin/<id>"`、commit on main（`:58`、`:59`）（`packages/@ooc/core/app/server/bootstrap/instantiate-classes.ts`）。
 
 **own 身份 / 共享行为**：仅 self.md 在实例化时拷快照（own 身份、不跟框架升级）；方法经 parentClass 链活继承 class（→root）。
 
 **knowledge 经 class 链继承**：`stoneKnowledgeDir` 对 `_builtin/<id>` 走框架包 knowledge/；loader 的 Step 1b（parentClass 链 seed）**无条件继承**、不门控 `inheritable`——class 存在即为被继承（`packages/@ooc/core/thinkable/knowledge/loader.ts:129`）。这区别于 children 嵌套 / 领域层级祖先继承的 opt-in（Step 1，需 `inheritable:true`，`loader.ts:111`）。
 
-**class 不可作 talk 目标**：seedSession 拒绝 `_builtin/` 前缀目标（`packages/@ooc/core/app/server/modules/flows/service.ts:396`）。
+**class 不可作 talk 目标**：seedSession 拒绝 `_builtin/` 前缀目标（`packages/@ooc/core/app/server/modules/flows/service.ts:415`）。
 
 ## 当前设计（概念权威）
 

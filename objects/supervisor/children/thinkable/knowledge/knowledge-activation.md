@@ -1,8 +1,8 @@
 ---
 title: knowledge 激活协议（双源加载 + activates_on trigger）
-description: thinkable 如何双源加载知识并按 activates_on trigger 渐进激活，含 window::root always-on 修复
+description: thinkable 如何双源加载知识并按 activates_on trigger 渐进激活，含 object::root always-on 修复
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_content"
 ---
 
 # knowledge：双源加载 + trigger 渐进激活
@@ -13,10 +13,10 @@ Object 持有的 markdown 知识不是一次全喂——按 `activates_on` trigg
 
 `loadKnowledgeIndex()` 从两个源加载，并沿祖先 / parentClass 继承链合并：
 
-- **stone seed**：`stones/<branch>/objects/<self>/knowledge/`（设计期写定、进 git）
-- **pool sediment**：跨 session 沉淀的事实（不进 git）
+- **stone seed**：本 Object 的 stone `knowledge/` 目录（设计期写定、进 git；OOC objects 现统一落 `.ooc-world-meta/stones/main`，路径由 persistable 提供，我只读 ref）。
+- **pool sediment**：跨 session 沉淀的事实（不进 git）。
 
-同 idPath 冲突时 sediment 胜出 + console.warn。
+继承链合并规则：祖先 seed + parentClass 链 seed + self stone + self pool，子级永远 override 父级（CSS-cascade 语义），运行时 sediment override 设计层 seed。同相对路径冲突时后 set 胜出；仅 sediment↔seed 冲突 console.warn，继承覆盖不 warn（设计正常路径）。祖先的 sediment 默认私有、**不下传**。
 
 ## 激活级别（`knowledge/activator.ts:26`）
 
@@ -27,15 +27,25 @@ Object 持有的 markdown 知识不是一次全喂——按 `activates_on` trigg
 
 多 trigger 命中取 max。
 
-## trigger 求值（`knowledge/triggers.ts:201`）
+## trigger 语法与求值（`knowledge/triggers.ts`）
 
-`evaluateTrigger()` 是纯函数，求值 `activates_on` 的五类 trigger：**object / method / objectId / super / intent**。
+`activates_on` 是 **trigger map**（2026-05-28 起，取代旧的 path-list 双桶）。`parseTrigger()`（`triggers.ts:57`）解析五类表达式为 AST kind：
 
-### window::root always-on（关键修复）
+- `object::<type>` —— 任意 open 的该类 object 出现时命中
+- `method::<object_type>::<method>` —— thread 中存在 open 的 method_exec form 且其 parentObject.type 与 method 匹配
+- `object_id::<id>` —— 特定 objectId 的 object 出现在 context 中
+- `intent::<name>` —— 任一活跃 form 的 intent 集合匹配（支持 `program.*` wildcard 后缀）
+- `super` —— `thread.persistence?.sessionId === SUPER_SESSION_ID`
 
-`window::root` 被文档化为「root window 每个 thread 都有，等价任何时候」。但 root 是 manager 提供的**虚拟隐式父 window**，从不 push 进 `thread.contextWindows`——若按扫窗口匹配 `type==="root"` 的 open window 则**永不命中**，导致沉淀的 memory 永不激活、召回闭环静默断（reflectable harness 发现）。
+旧格式 `window::<type>` 在 parse 阶段自动归一化为 `object::<type>`（向后兼容，但应优先写新格式）；任何其它形态（`command::`、裸 path 如 `root`/`talk`）一律 throw（fail-loud）。
 
-修复：object case 特判 `trigger.objectType === "root"` → 直接 `return true`（`knowledge/triggers.ts:211`，链路注释 :206-:210）。一处特判，不动 parse 路径，坐实文档承诺。
+`evaluateTrigger()`（`triggers.ts:177`）是纯函数，输入 trigger + thread 输出 boolean，对应 AST kind 求值。
+
+### object::root always-on（关键修复）
+
+`object::root`（旧写 `window::root`）被文档化为「root window 每个 thread 都有，等价任何时候」。但 root 是 manager 提供的**虚拟隐式父 window**，从不 push 进 `thread.contextWindows`——若按扫窗口匹配 `type==="root"` 的 open window 则**永不命中**，导致沉淀的 memory 永不激活、召回闭环静默断（reflectable harness 发现）。
+
+修复：object case 特判 `trigger.objectType === "root"` → 直接 `return true`（`knowledge/triggers.ts:187`，链路注释 :183-:186）。一处特判，不动 parse 路径，坐实契约承诺。
 
 ## 出厂身份作废
 

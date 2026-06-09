@@ -2,29 +2,32 @@
 activates_on: {"window::root": "show_content"}
 ---
 
-# root 的 14 个全局 method 与 form 推进
+# root 的全局 object method 与 form 推进
 
-## root 上注册的全局 method
+## root 上注册的全局 object method
 
-root 注册一组顶层 method（与 `packages/@ooc/builtins/root/executable/index.ts` 一致，每条一个 `method.*.ts`），共 14 个（`object.doc.ts:882`）：
+root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins/root/executable/index.ts:58`，每条一个 `method.*.ts`，经 `registerExecutable("root", { methods })` 注入），共 17 个：
 
 - **do** — 派生子 thread，创建 do_object。
 - **talk** — 与 user 或其他 Object 对话，创建 talk_object。
 - **program** — 执行 shell / js / ts，创建 program_object（沙箱见 `packages/@ooc/core/executable/program/sandbox/executor.ts` + `program/shell.ts`）。
 - **plan** / **todo** — 更新 plan / 创建可见待办。
-- **end** — 标记当前 thread 完成。传 `result` 时自动调 creator window 的 continue/say 把内容写进 transcript 并 auto-archive 父侧 do_window；不传则只标记本轮结束（`object.doc.ts:888`）。result 是便捷糖，不是回报通道。
+- **end** — 标记当前 thread 完成。传 `result` 时自动调 creator window 的 continue/say 把内容写进 transcript 并 auto-archive 父侧 do_window；不传则只标记本轮结束。result 是便捷糖，不是回报通道。
 - **open_file** / **open_knowledge** — 把文件 / 知识载入 context。
-- **write_file** — 创建或覆盖文件（落盘与版本化重定向在 file builtin，`packages/@ooc/builtins/file/executable/index.ts`）。
+- **write_file** — 创建或覆盖**已存在对象**的文件（落盘与版本化重定向在 file builtin，`packages/@ooc/builtins/file/executable/index.ts`）。
+- **create_object** — 建一个**全新对象**的骨架（仅业务 session）：落 session worktree `objects/<newId>/{package.json,self.md,readable.md[,knowledge]}`，end→super flow evolve_self 合入（`method.create-object.ts`）。
+- **evolve_self** — 在 super flow 里把 session worktree 的改动 commit + 尝试合入 main（self-scope ff-merge / cross-scope 开 PR-Issue，`method.evolve-self.ts`）。
 - **glob** / **grep** — 按文件名 / 内容搜索，创建 search_object。
-- **metaprog** — supervisor 治理动作（`resolve` / `rollback`）：评审 cross-scope PR-Issue / 回滚合入。写动作（open_worktree / commit / merge / create_object）已删；LLM 改 stone 直接 write_file 落 session worktree，走 super flow evolve_self 合入。
+- **metaprog** — supervisor **治理** action（`resolve` 标 PR-Issue 决议 / `rollback` 回滚某 Object 的 stone）。写动作（open_worktree / commit / merge / create_object）已删——改自己 / 建别人 / 改别人现在直接 write_file / create_object 落 session worktree，走 super flow evolve_self 合入（`method.metaprog.ts`）。
+- **example** — 构造 example_window（标准对象定义样板，`method.example.ts`）。
 - **open_feishu_chat** / **open_feishu_doc** — 飞书外接（经 extendable 注册，寄生于 executable）。
 
-其它 object 也注册命令：do_object（continue/wait/close/move）、talk_object（say/wait/close）、file_object（edit/reload/set_range/close）、method_exec（refine/submit）。
+其它 object 也注册自己的 object method：do_object（continue/wait/close/move）、talk_object（say/wait/close）、file_object（edit/reload/set_range/close）、method_exec（refine/submit，`packages/@ooc/core/executable/windows/method_exec/index.ts:53`）。
 
-## method 与 knowledge 经 trigger 协作
+## method 与 knowledge 经 intent trigger 协作
 
-每个 method_exec form 在 thread 中 open 时，对应 `"command::<parent_type>::<command>"` trigger 进入命中态；knowledge frontmatter 的 `activates_on` 声明同样表达式即按需激活（`object.doc.ts:909`）。这是渐进式语义披露——LLM 只有真正进入某条行动路径时，才看到该路径的完整操作说明（command_path_activation patch，`object.doc.ts:936`）。
+每个 method_exec form 在 thread 中 open 时，对应的 intent 进入命中态；knowledge frontmatter 的 `activates_on` 声明同样表达式即按需激活（如本文件顶部的 `{"window::root": "show_content"}`）。这是渐进式语义披露——LLM 只有真正进入某条行动路径时，才看到该路径的完整操作说明。
 
 ## form 推进流程
 
-`exec(command="program")` args 不齐 → 系统创建 `method_exec` form（旧名 command_exec）→ `exec(form_id, "refine", args={...})` 补参 → `exec(form_id, "submit")` 提交执行（`object.doc.ts:877`）。
+`exec(method="program")` args 不齐 → 系统创建 `method_exec` form → `exec(form_id, "refine", args={...})` 补参 → `exec(form_id, "submit")` 提交执行。refine / submit 是 method_exec object 上注册的两条 object method，与 do.continue / talk.say 同构。

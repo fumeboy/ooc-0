@@ -14,10 +14,10 @@ activates_on: {"window::root": "show_content"}
 
 ## instantiate_with_new_world
 
-class 的 `package.json` 声明 `ooc.instantiate_with_new_world=true` 时，world bootstrap **幂等**实例化（`packages/@ooc/core/app/server/bootstrap/instantiate-classes.ts:49`）：
+class 的 `package.json` 声明 `ooc.instantiate_with_new_world=true` 时（`packages/@ooc/core/app/server/bootstrap/instantiate-classes.ts:49`），world bootstrap **幂等**实例化：
 
-- 若 `objects/<id>/` 已存在 → 跳过（保住用户对实例 self.md 的改动）。
-- 否则建 object：拷贝 class self.md 为 own 身份、写 `ooc.class="_builtin/<id>"`、commit on main（走 stone-versioning worktree → ff merge）。
+- 若 `objects/<id>/` 已存在 → 跳过（保住用户对实例 self.md 的改动，`:52`）。
+- 否则建 object：拷贝 class self.md 为 own 身份、写 `ooc.class="_builtin/<id>"`、commit on main（走 stone-versioning worktree → ff merge）（`:58`、`:59`）。
 
 `supervisor` 即此类 class（`packages/@ooc/builtins/supervisor/package.json`：`ooc.kind=class`、`instantiate_with_new_world=true`）——每个新 world 自动拥有一个 supervisor object，不再需要 listStones 特殊逻辑。
 

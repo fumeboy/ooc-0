@@ -4,17 +4,19 @@
 
 ## 我负责的
 
-经一条受保护的 **super session** 把 Object 引到专用反思线程，在那里改写自身 stone 的身份文件（self.md / readable.md）与 pool 的 sediment knowledge（memory / relations），下一轮新 thread 自动看见落盘内容、行为随之自我演化。核心是元编程闭环：业务线程 → talk(target="super") → super flow write_file → 下轮生效。
+经一条受保护的 **super session** 把 Object 引到专用反思线程：在那里我**沉淀** pool 的 sediment knowledge（memory / relations），并作为**合入闸门**用 evolve_self 把业务 session 试验过的身份改动（self.md / readable.md / 身体）合回 main，下一轮新 thread 自动看见落盘内容、行为随之自我演化。
 
-我只动 **sediment**（运行时沉淀，不进 git）；改身体（executable / visible）的形状归 programmable / visible；改 seed knowledge（先天能力基底）走 stone-versioning 的 PR-Issue。
+注意去 metaprog（2026-06-09）后职责切分清楚了：改身体/身份的 **write_file 发生在业务 session**（落该 session 的 worktree 副本、即时生效、main 不变）；super flow **本身不 write_file 改 stone**——它只沉淀记忆 + evolve_self 合入 + 治理。最短闭环：业务线程 write_file 试验 → end 进 super → evolve_self 合入 → 下轮生效。
+
+我只直写 **sediment**（运行时沉淀 pool，不进 git）；身体（executable / visible）的形状设计归 programmable / visible；seed knowledge（先天能力基底）的合入走 evolve_self 的 cross-scope PR-Issue 路径。
 
 ## 当前设计（锚 `file:行号`，信任源代码）
 
 - **super 通道常量**：`packages/@ooc/core/_shared/types/constants.ts:12` `SUPER_SESSION_ID="super"` / `:15` `SUPER_ALIAS_TARGET` / `:18` `isSuperSessionId`（trim+lowercase，防大小写文件系统绕过）。
 - **自指别名翻译**：`packages/@ooc/core/executable/windows/talk/delivery.ts:88-89` —— target="super" 时 `calleeObjectId = caller.objectId`，跨 session 派进自身 super 分身；creator talk_window 回报原线程。
-- **协议知识注入**：`packages/@ooc/core/thinkable/context/protocol.ts:119-121` —— sessionId==="super" 时注入 `REFLECTABLE_KNOWLEDGE`（反思基础协议）+ `REFLECTABLE_METAPROG_KNOWLEDGE`（何时走 worktree 改身体）。`:158` —— end form 且非 super 时注入 `END_REFLECTION_REMINDER_KNOWLEDGE`（非阻塞反思 hint，避免套娃）。
+- **协议知识注入**：`packages/@ooc/core/thinkable/context/protocol.ts:119-121` —— sessionId==="super" 时注入 `REFLECTABLE_KNOWLEDGE`（反思基础协议 + sediment write contract）+ `REFLECTABLE_METAPROG_KNOWLEDGE`（改身体协议——去 metaprog 后教 LLM「业务 session write_file 试验 → super flow evolve_self 合入」，不再是手动 worktree 四步）。`:158` —— end form 且非 super 时注入 `END_REFLECTION_REMINDER_KNOWLEDGE`（非阻塞反思 hint，避免套娃）。
 - **协议正文**：`packages/@ooc/core/thinkable/reflectable/reflectable-knowledge.ts:20` 基础协议 / `:128` 元编程协议 / `:244` end 提醒；含 sediment write contract 与 frontmatter 模板。
-- **sediment 激活**：`packages/@ooc/core/thinkable/knowledge/triggers.ts:63,203` —— `super` trigger 匹配 sessionId==="super"，让沉淀的 `activates_on` 能命中反思场景。
+- **sediment 激活**：`packages/@ooc/core/thinkable/knowledge/triggers.ts:61`（parseTrigger 认 `"super"`）/ `:179`（evaluateTrigger `case "super"` 匹配 sessionId==="super"）—— 让沉淀的 `activates_on` 能命中反思场景。
 - **evolve_self 身份合入**：`packages/@ooc/core/programmable/evolve-self.ts:98` `evolveSelfDiff`（列 session worktree 工作树相对 HEAD 改动）/ `:124` `evolveSelfMerge`（commit session worktree → rebase main → self-scope ff-merge → GC）。
 - **演化单元**：`packages/@ooc/core/persistable/stone-worktree.ts:25` `sessionStoneBranch` —— session 分支 `session-<sid>`，物理 worktree 落 `flows/<sid>/`（eager checkout main 全量），即演化单元。
 
@@ -37,8 +39,8 @@
 
 ## 优化方向 / 待办
 
-1. 为 sediment write contract 补**写入期 frontmatter 校验**（write_file 时 schema parse，缺 frontmatter 直接 deny / 回灌模板），把 fail-loud 升级为闭环不可断。
-2. 为 sediment write contract 补写入期 frontmatter 校验（已列为 P1 优化）。
+1. **（P1）写入期 frontmatter 校验**：sediment write_file 时 schema parse，缺 frontmatter / `activates_on` 空直接 deny + 回灌模板，把当前的事后 fail-loud（loader 跳过）升级为「闭环不可断」的写入期 gate。
+2. end_reflection_reminder 阈值门控（仅 thread 累计事件超 N 才提示）落地，减少简单 thread 的无谓提醒。
 
 ## 协作
 

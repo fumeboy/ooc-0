@@ -2,7 +2,7 @@
 title: thread 调度与 thinkloop（思考过程的运行时）
 description: thinkable 如何把思考拆成 Thread Tree 并逐 tick 调度，单 thread 一轮 thinkloop 的循环结构
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_content"
 ---
 
 # thread + thinkloop：思考过程怎么运行
@@ -20,20 +20,20 @@ activates_on:
 
 把 tool call / tool result 当一等结构（而非拼回 transcript 文本），让 debug / resume / provider 适配更稳定。入口 `createLlmClient()`（`packages/@ooc/core/thinkable/llm/client.ts:8`）统一 provider；llm 只管「如何请求模型」，「模型能做什么」由 executable 的 tool/method 决定。
 
-## LLM 的 4 个基础 tool
+## LLM 的 4 个基础 tool（`thinkable/llm/types.ts:5`）
 
-- `exec(object_id?, method, args?)`：唯一的「调 method」原语，object_id 缺省为 root（全局 method）
+- `exec(window_id?, method, args?)`：唯一的「调 method」原语；`window_id` 缺省为 root（root 上的全局 method）。Object Unification 后 window.id = objectId，故 `window_id` 即目标 object。args 齐全立即执行，不齐则系统创建 method_exec form 供后续补齐。
 - `close`：关 window / 从 context 移除 object 引用
 - `wait`：等 IO
-- `compress`：压上下文（当前仅 scope=windows，events/auto 抛 not-implemented）
+- `compress`：压上下文。已实现 `scope=windows`（按 target_ids 切 window compressLevel）与 `scope=events`（LLM 提供 summary 折叠事件段，`executable/tools/compress.ts:378`）；仅 `scope=auto` 抛 not-implemented（`compress.ts:372`，留给 emergency_guard）。
 
 ## 调度器（`packages/@ooc/core/thinkable/scheduler.ts:131`）
 
 `runScheduler()` 逐 tick 推进 Thread Tree 中可运行的 thread。
 
-## 单轮 thinkloop（`packages/@ooc/core/thinkable/thinkloop.ts:402`）
+## 单轮 thinkloop（`packages/@ooc/core/thinkable/thinkloop.ts:410`）
 
-`think(thread, llmClient)` 跑单 thread 一轮：
+`think(thread, llmClient)` 跑单 thread 一轮（只接受 `status==="running"`，否则抛错视为调用方错误）：
 
 1. **build**：`buildInputItems()` 合成 LLM 输入（窗口快照 + instructions + knowledge + paths）
 2. **LLM**：调模型拿输出

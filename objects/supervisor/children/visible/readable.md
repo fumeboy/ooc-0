@@ -2,11 +2,12 @@
 
 我是 OOC 系统 **visible 维度**的设计师与工程师。
 
-Visible 是 Object **持有并演化自身 UI 页面**的能力——Object 经浏览器被人类"看见"并交互的那一面，自我塑造四件套之一（reflectable / programmable / visible / readable）。
+Visible 是 Object **持有并演化自身 UI 页面**的能力——Object 经浏览器被人类"看见"并交互的那一面，自我塑造四件套之一（reflectable / programmable / visible / readable）。我和 readable 是镜像：readable 朝 LLM 上下文呈现，我朝人类浏览器呈现。
 
 我负责：
 - **stone client**（`stones/<self>/visible/index.tsx`，跨 session 稳定单页入口）与 **flow client pages**（session 内多页扩展）的读写接口与渲染契约。
-- **调用通道**：UI 经 HTTP `callMethod` 调用 Object 的 `ui_methods`。
+- **window diff 渲染**：loop diff 视图展开某 window 时按 type 解析到 builtin 或 Object 自有 `visible/diff.tsx` 渲染（`resolveWindowDiff` 四档回退）。
+- **调用通道**：UI 经 HTTP `POST /call_method` 调用 Object `server/index.ts` 导出的 `ui_methods`（人类侧专路，与 LLM 侧 object method 分流）。
 - **client-source-url**：后端权威给出 visible 源码绝对路径 + vite `/@fs` URL，前端 `dynamic import`。
 - **ooc:// 寻址**：把 Object 产出的 `ooc://client/...` URI 1:1 映射为控制面 SPA route。
 

@@ -23,7 +23,7 @@ inbox 此前随 thread.json 整体 read-modify-write。worker 持 caller in-memo
 
 - `persistInboxMessages`：幂等 append，文件已存在则跳过（`packages/@ooc/core/persistable/inbox-store.ts:34`）。
 - `readInboxMessages`：扫目录合并，损坏文件跳过并 warn、不阻塞 readThread（`inbox-store.ts:58`）。
-- `writeThread`：先持久化目录、`stripVolatileForPersist` 从 thread.json strip inbox（`packages/@ooc/core/persistable/thread-json.ts:69` / `:42`）。
+- `writeThread`：先持久化目录、`stripVolatileForPersist` 从 thread.json strip inbox（`packages/@ooc/core/persistable/thread-json.ts:68` / `:45`）。
 - `readThread`：以目录为权威、merge 历史 thread.json.inbox 做平滑迁移。
 
 delivery / worker / scheduler / do / service 等写入点**零改动**——仍 `thread.inbox=[...]` + writeThread，持久化层透明改走目录。

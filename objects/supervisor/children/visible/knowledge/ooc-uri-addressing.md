@@ -13,15 +13,15 @@ activates_on:
 
 解析器：`packages/@ooc/web/src/shared/ui/oocUri.ts`（`:29` `parseOocUri` / `:68` `isOocUri`）。前缀 `ooc://client/`（`:19` `CLIENT_PREFIX`）。
 
-- `ooc://client/stones/<self>[/]` ↔ `/stones/<self>`（`oocUri.ts:10`）
-- `ooc://client/flows/<sid>/<self>/pages/<name>` ↔ `/flows/<sid>/<self>/pages/<name>`（`oocUri.ts:9`）
+- `ooc://client/stones/<self>[/]` ↔ `/stones/<self>`（`oocUri.ts:56-58`）
+- `ooc://client/flows/<sid>/<self>/pages/<name>` ↔ `/flows/<sid>/<self>/pages/<name>`（`oocUri.ts:46-52`）
 
-**只处理 `ooc://client/...`**；其它任何形态返回 `null`——调用方降级为纯文本，不抛错不吞错（`oocUri.ts:12`）。
+**只处理 `ooc://client/...`**；其它任何形态返回 `null`——调用方降级为纯文本，不抛错不吞错（前缀不匹配 `:30`、非法 percent-encoding `:39`、空段 `:43`、不匹配两种形态 `:60`）。
 
 ## 为什么归 visible
 
-ooc:// 是原生寻址 URI，visible 是把它落到"人类看得见的页面"的渲染层；二者 1:1 对应。stone 短链导航见 `packages/@ooc/web/src/app/routing.ts` `parseRoute` 的 `/stones/:id` 分支（meta `object.doc.ts:4678`）。
+ooc:// 是原生寻址 URI，visible 是把它落到"人类看得见的页面"的渲染层；二者 1:1 对应。stone 短链导航见 `packages/@ooc/web/src/app/routing.ts` `parseRoute` 的 `/stones/:objectId` 分支（`routing.ts:15`/`:94`）。
 
 ## agent-native parity 缺口（待设计）
 
-ooc:// 让 Agent 能**寻址**自己的 UI 页面，但 `ui_methods` 目前仅经 HTTP 暴露给前端——agent 端**无等价 tool 路径去调用**这些 UI 方法。这是 parity 公理（`object.doc.ts:97` `patches.agent_native_parity`）下 visible 维度的显式技术债，需与 programmable 商定 ui_methods 的 agent 面调用契约。
+ooc:// 让 Agent 能**寻址**自己的 UI 页面，但 `ui_methods` 目前仅经 HTTP `/call_method` 暴露给前端——agent 端**无等价 tool 路径去调用**这些 UI 方法。这是 parity 公理下 visible 维度的显式技术债，需与 programmable 商定 ui_methods 的 agent 面调用契约。

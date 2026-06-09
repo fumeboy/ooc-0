@@ -41,7 +41,7 @@ pool **不进 git / 不走 worktree 模型**：事实单向积累，写就生效
 `flows/<sessionId>/`（`flow-object.ts`）：
 
 - **session worktree 根**：`flows/<sid>/` 本身是从 `stones/main` 派生的 git worktree（分支 `session-<sid>`），session 创建即 eager checkout main 全量 stone 文件；运行时产物由 `.gitignore` 白名单 `objects/` 排除，不污染 git 状态。LLM 在 session 内的所有 stone 写直接落此目录，合入经 super flow evolve_self。
-- `objects/<objectId>/`：`.flow.json` / `threads/<tid>/thread.json`（+ `debug/`）/ `data.json`（session-scoped 结构化数据，ProgramSelf.getData/setData 载体）/ `knowledge/relations/<peer>.md`（session 层关系）。
+- `objects/<objectId>/`：`.flow.json` / `threads/<tid>/thread.json`（线程元数据；+ `thread-context.json` —— §10 后 contextWindows 唯一权威，thread.json 不再携带；`flow-thread-context.ts` / `thread-json.ts:writeThread` 单点刷）/ `debug/` / `data.json`（session-scoped 结构化数据，ProgramSelf.getData/setData 载体）/ `knowledge/relations/<peer>.md`（session 层关系）。
 
 ## 边界
 

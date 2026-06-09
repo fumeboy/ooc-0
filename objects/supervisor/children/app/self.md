@@ -16,10 +16,10 @@
 
 ## 当前设计（锚真实代码）
 
-- server 装配 + onError 全覆盖：`packages/@ooc/core/app/server/index.ts:214`（onError）/ `:220-226`（7 个 module use）/ `:354`（listen 0.0.0.0）。
+- server 装配 + onError 全覆盖：`packages/@ooc/core/app/server/index.ts:212`（onError）/ `:218-224`（7 个 module use：health / runtime / stones / pools / ui / flows / world-config）/ `:342`（listen 0.0.0.0）。
 - world 根解析 + 端口：`packages/@ooc/core/app/server/bootstrap/config.ts:48`（`--world → OOC_WORLD_DIR → OOC_BASE_DIR → cwd`）/ `:52`（端口 `OOC_APP_PORT ?? 3000`）。
-- AppShell 导航派生：`packages/@ooc/web/src/app/shell.tsx:57`（activeSessionId）/ `:76`（activeObjectId）/ `:192`（4s thread 轮询）。
-- 路由真相：`packages/@ooc/web/src/app/routing.ts:42`（RouteState 6 kind）/ `:79`（toPath）/ `:160`（parseRoute）/ `:140`（useRouteState）。
+- AppShell 导航派生：`packages/@ooc/web/src/app/shell.tsx:64`（activeSessionId）/ `:83`（activeObjectId）/ `:252`（4s thread 轮询，`setInterval(..., 4000)`）。
+- 路由真相：`packages/@ooc/web/src/app/routing.ts:42`（RouteState 6 kind：welcome / scope / file / stoneClient / flowPage / flowsView）/ `:79`（toPath）/ `:160`（parseRoute）/ `:140`（useRouteState）。
 
 ## 现状
 
@@ -27,7 +27,7 @@
 
 ## 已知问题 / 边界与未决
 
-- `api.list-flows.ts` 定义了 `GET /api/flows` 但 index.ts 未 `use`、service 无实现 —— 孤儿文件，调用会 runtime TypeError，待清理或补齐。
+- `modules/ui/api.list-flows.ts` 定义了 `GET /api/flows`（`listFlowsApi(service)`），service 侧 `ui/service.ts:183` 已有 `listFlows()` 实现，但 `modules/ui/index.ts` 未 `.use(listFlowsApi(...))` —— 路由从未挂载的半孤儿，要么补挂、要么删掉这个 api 文件。（注意 flows module 另有自己更重的 `listFlows()`，`flows/service.ts:344`，带 pause/status；ui 这份只回目录名。）
 - `/api/tree` 是整树递归返回（非懒加载），超大 world 需重设计。
 - `/api/file/read` 有意绕过 baseDir 隔离，**无策略层/鉴权**，仅限本地可信 dev；公开部署必须先加白名单。
 - 模块级 `default*` 单例（pauseStore / jobManager）是未注入时的 fallback，多次 buildServer 不显式注入会串状态——测试须显式注入。
@@ -36,7 +36,7 @@
 
 ## 优化方向 / 待办
 
-- 清理 `api.list-flows.ts` 孤儿，或补齐挂载与 service 实现。
+- 决断 `ui/api.list-flows.ts`：补挂到 ui module，或删除这个未接线的 api 文件（service 实现已在，不缺）。
 - 为 `/api/file/read` 加 path 白名单 / 鉴权层，再考虑非本地暴露。
 - 若 world 规模增长，把 `/api/tree` 改节点级懒加载或分页。
 - 把 stone self/readme/data 编辑、loop debug 等纳入 client 前，先在 `web/src/transport/endpoints.ts` 登记对应 endpoint。
