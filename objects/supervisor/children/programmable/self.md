@@ -25,7 +25,7 @@
 - program shell env：`packages/@ooc/core/executable/program/self-env.ts:16` `buildProgramShellEnv` 经 `resolveStoneIdentityDir(ref, "write")`(:22) 解析 `OOC_SELF_DIR`(:27)。
 - program 运行时：`packages/@ooc/builtins/program/executable/runtime.ts:50` `runOneExec` 只路由 shell/ts/js 三种语言模式（旧的 callMethod/function 子模式已退役，见 :10-13）；shell 经 `buildProgramShellEnv`(:65)，ts/js 经 `createProgramSelf`(:87) 注入 self。
 - stone 写路由：LLM session 内所有 stone 写（改自己 / 改别人 / 建新对象）→ 直接 `write_file` 落 `flows/<sid>/` session worktree；HTTP 控制面写 → 直接 commit main（`httpDirectMainWrite`）。`versionedStoneWrite` / `openMetaprogWorktree` 已于 2026-06-09 删除。
-- 概念权威：`packages/@ooc/meta/object.doc.ts:3739` 节点 `programmable`（loader / program_self_injection / custom_window_invocation / window_evolution 等 children）。
+- 子能力（各见本对象 knowledge/）：loader（热更）/ program_self_injection（program shell 注入 self）/ custom_window_invocation（自定义 window + 命令表）/ window_evolution（演化自身 self window）。
 
 ## 现状
 

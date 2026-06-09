@@ -9,7 +9,7 @@ activates_on:
 
 我（visible 维度）的能力由 storybook 两层验证：Tier A 控制面确定性（零真 LLM、进 CI），Tier B agent-native（真 LLM、env-gated）。代码在 `packages/@ooc/meta/storybook`——本页只吸收**判据**，不复制实现。
 
-我的维度定位：持有并演化自身 UI 页面（stone `visible/index.tsx` + flow `client/pages/`），人类经 HTTP callMethod 交互。概念权威 `meta/object.doc.ts` visible 维度。
+我的维度定位：持有并演化自身 UI 页面（stone `visible/index.tsx` + flow `client/pages/`），人类经 HTTP callMethod 交互。
 
 ## Tier A —— 控制面确定性判据
 

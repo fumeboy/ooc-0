@@ -34,7 +34,7 @@ thread 状态语义：running（可被调度跑下一轮）/ waiting（等 talk/
 - `message`：普通 system / user / assistant 文本
 - `function_call`：LLM 发起的 tool 调用
 - `function_call_output`：tool 调用结果
-- `reasoning`：模型 thinking 记录（只用于 debug/回放，**不作为普通上下文反复喂回**，见 `object.doc.ts:226`）
+- `reasoning`：模型 thinking 记录（只用于 debug/回放，**不作为普通上下文反复喂回**——否则 LLM 会 meta-thinking、transcript 膨胀、旧推理干扰当前判断）
 
 把 tool call / tool result 当一等结构（而非拼回 transcript 文本），让 debug / resume / provider 适配更稳定。入口 `createLlmClient()`（`packages/@ooc/core/thinkable/llm/client.ts:8`）统一 provider；llm 只管「如何请求模型」，「模型能做什么」由 executable 的 tool/method 决定。
 

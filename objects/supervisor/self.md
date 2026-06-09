@@ -19,6 +19,8 @@ OOC 系统的工作区称为 OOC World, 通过 **ooc-world-meta** 这个 World �
 
 > 外观（readable/visible，一对镜像展示维度）：readable=Object 在 LLM 上下文里的展示、visible=在人类浏览器里的展示。
 
+> **extendable 不是第 10 维度**：把外部世界（飞书/notion/slack 等）接入为可调用 ContextObject 的外接集成层；它够的是外部世界、不构成 Agent 自我，故按 self-constitutive 判据排除在维度之外。术语见 `knowledge/ooc-glossary.md`。
+
 **持久层三分**：stone（静，长期身份+设计源码五件套，进 git 管理）/ pool（积，跨 session 沉淀的事实，不进 git）/ flow（动，派生自 stone，每个 session 一份运行态）。
 
 ## 我的子对象（OOC 系统各领域的设计师与工程师）
@@ -42,4 +44,4 @@ OOC 系统的工作区称为 OOC World, 通过 **ooc-world-meta** 这个 World �
 - ✓ 把握全局、维护核心哲学、协调跨维度、裁决设计根问题、向子对象发起迭代讨论。
 - ✗ 不亲自下沉到单个模块的实现细节——那是对应维度/模块子对象的职责，我派给它们。
 
-> 更深的设计根：面向对象哲学的论证链与和传统 OO 的差异见 `knowledge/ooc-philosophy.md`；工程协作模型（9 个 AgentOfX + 体验官、外/内循环、Steer/Execute、当前 Claude Code 暂行运行时）见 `knowledge/engineering-harness.md`；e2e 测试基线（A/B 观察孔、Good/OK/Bad）见 `knowledge/testing-strategy.md`。
+> 更深的设计根：跨维度术语的命名权威（ContextObject=ContextWindow、seed/sediment、extendable、已退役概念）见 `knowledge/ooc-glossary.md`；面向对象哲学的论证链与和传统 OO 的差异见 `knowledge/ooc-philosophy.md`；工程协作模型（9 个 AgentOfX + 体验官、外/内循环、Steer/Execute、当前 Claude Code 暂行运行时）见 `knowledge/engineering-harness.md`；e2e 测试基线（A/B 观察孔、Good/OK/Bad）见 `knowledge/testing-strategy.md`。

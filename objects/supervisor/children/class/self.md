@@ -31,10 +31,10 @@
 
 **class 不可作 talk 目标**：seedSession 拒绝 `_builtin/` 前缀目标（`packages/@ooc/core/app/server/modules/flows/service.ts:415`）。
 
-## 当前设计（概念权威）
+## 当前设计（代码锚）
 
-- `packages/@ooc/meta/object.doc.ts:1645`（`...parent_class_inheritance.children.class_object`）——class 一等概念节点。
-- `packages/@ooc/meta/object.doc.ts:1596`（`parent_class_inheritance`）——parentClass 三态语义、`resolveMethod` 链解析、`.flow.json:class`。
+- `packages/@ooc/core/runtime/object-type-registrar.ts:144-151`——parentClass 解析：executable `window.parentClass` 覆盖优先，否则取 `package.json` 的 `ooc.class`。
+- `packages/@ooc/core/runtime/object-registry.ts:209-214`——`resolveParentClassChain` 沿链解析 + 环检测（`seen` Set + MAX_DEPTH=64）。
 
 ## 现状
 

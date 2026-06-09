@@ -20,7 +20,7 @@ observable 提供 runtime 可注入的**暂停判定器**，在 tool call 执行
 
 `packages/@ooc/core/runtime/observable-store.ts:91,129-134`：
 - `setPermissionDecider(decider | null)` / `getPermissionDecider()`：注入 tool call 的权限决策器。
-- **silent-swallow ban**：permission 决策不允许静默吞——与 observable 整体的 silent-swallow ban 一致（permission 模型条款 object.doc.ts:1058；observable silent_swallow_ban 节点 object.doc.ts:2400）。
+- **silent-swallow ban**：permission 决策不允许静默吞——与 observable 整体的 silent-swallow ban 一致（permission 模型见 executable child；silent-swallow ban 是本 observable 维度的核心条款）。
 
 ## 控制面端点
 

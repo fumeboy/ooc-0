@@ -66,4 +66,4 @@ harness 循环不止"发现 bug → 修 bug"；**每一轮都必须把发现固�
 - **进程卫生**：sub agent 启动的 vite / backend / 任何 long-running 进程，退出前必须 kill（`trap 'kill ${PIDS[@]}' EXIT`）——macOS bun/node 不传 SIGHUP 给孙子进程，不主动 kill 会带着临时 env/world 一直跑，让用户前端永远 proxy 到死端口。
 - **commit 卫生**：派出去的 sub agent **不要自己 commit**——缺 co-author footer、用错 git author、且让我失去整合机会；改动回到主会话由我整合提交。
 
-> 概念权威：`packages/@ooc/meta/engineering.harness.doc.ts`（含各 AgentOfX 维度关注点 child + commit/数据边界/跨层修复等 patches）；`harness.md` 是原始 narrative 史料。各维度的具体设计在我的对应 child 对象里。
+> 各维度的具体设计（含 AgentOfX 维度关注点、commit/数据边界/跨层修复等工程规约）在我的对应 child 对象的 self.md / knowledge 里。

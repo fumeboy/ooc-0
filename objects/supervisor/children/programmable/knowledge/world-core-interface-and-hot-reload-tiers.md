@@ -47,5 +47,3 @@ Core 对外工厂 `createWorldRuntime({ worldPath, config })` → `WorldRuntime`
 1. **禁止 stone 互相 import 源码**：强制经 `exec` 协作；bun import resolver 拦截跨 stone import 抛 `StoneCrossImportError`。
 2. **stone 的 `@ooc/core` 用 peerDependencies**：否则 workspace 解析出多副本、类型不兼容；`ooc dev` 启动做版本校验。
 3. **前端 bundle 不得泄露 executable**：Vite `server.fs.allow` 只放 `visible/`，`executable/` 一律解析失败；`self.md`/`knowledge/` 按需白名单。
-
-概念权威：`packages/@ooc/meta/object.doc.ts:3739` 节点 `programmable`（loader.patches.watcher_driven_invalidation 等）。

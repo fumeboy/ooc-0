@@ -28,11 +28,9 @@ await self.callMethod("<window_id>", "<method>", { ... })
 
 UI / agent-native 客户端走第三条独立通道：HTTP `callMethod` → `loadUiServerMethods` 拿 `ui_methods` 字典执行（`ui_methods` 归 **visible** 维度，不归我）。`window.methods`（LLM 路径，`ObjectMethod` 形状）与 `ui_methods`（HTTP 路径，`UiServerMethod` 形状）形状不同、各写各的，不互相代替；都需要则写两份。
 
-概念权威：`packages/@ooc/meta/object.doc.ts:3915` 节点 `programmable.custom_window_invocation`。
-
 ## 演化与生效
 
-演化自身 self window 的标准路径（`programmable.window_evolution`，`object.doc.ts:3948`）：
+演化自身 self window 的标准路径：
 
 1. 触发点（典型：reflectable 的反思请求，或显式 write_file 指令）。
 2. super flow 经 `exec(method="write_file", path="stones/<self>/executable/index.ts", content="...")` 重写源码。

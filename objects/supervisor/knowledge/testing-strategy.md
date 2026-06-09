@@ -7,7 +7,7 @@ activates_on:
 
 # e2e 测试策略
 
-体验官的发现要落成 e2e 场景才不漂回去；裁决"某行为算通过还是不算"要回到这套基线。这篇沉淀策略骨架（具体场景表 S1-S6 / F1-F7 在 `engineering.testing.doc.ts`）。
+体验官的发现要落成 e2e 场景才不漂回去；裁决"某行为算通过还是不算"要回到这套基线。这篇沉淀策略骨架；具体场景表 S1-S6 / F1-F7 的可执行实现在 `tests/e2e/`，能力级 rubric 已归属各维度对象 `children/<dim>/knowledge/tests.md`。
 
 本维度回答的不是"单元正确"，而是"**OOC 作为 CodeAgent 是不是真的能用**"——端到端同时验用户体验与 OOC 机制。单元测试不归这套管（各模块 `__tests__/` 下 bun:test）。
 
@@ -49,4 +49,4 @@ activates_on:
 
 性能/压测、多用户并发/多 session 隔离、跨浏览器兼容、thread.json schema 迁移——都不在本策略范围。
 
-> 概念权威：`packages/@ooc/meta/engineering.testing.doc.ts`（含 S1-S4 backend / F1-F5 frontend 完整场景表与各自 Good/OK/Bad 条件、fixture、scoreScenario 裁判）。三层测试边界（storybook 能力目录 / tests/e2e 用户场景 / tests/harness 体验官深评）见 CLAUDE.md 与 storybook framework-design。
+> 落地实现：backend / frontend 完整场景表与各自 Good/OK/Bad 条件、fixture、scoreScenario 裁判在 `tests/e2e/`；能力级 rubric 已归属各维度对象 `children/<dim>/knowledge/tests.md`（体验官 orchestrate 读它）。三层测试边界（storybook 能力目录 / tests/e2e 用户场景 / tests/harness 体验官深评）见 storybook framework-design。

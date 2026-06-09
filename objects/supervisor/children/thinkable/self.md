@@ -41,7 +41,7 @@ thinkable 这个维度拆成这些子模块
 
 ## 边界
 
-- llm 只管「如何请求模型」，「模型能做什么」由 executable 的 tool/method 决定；reasoning 只用于 debug/回放，不作为普通上下文反复喂回（`object.doc.ts:226`）。
+- llm 只管「如何请求模型」，「模型能做什么」由 executable 的 tool/method 决定；reasoning 只用于 debug/回放，不作为普通上下文反复喂回。
 
 ## 名词解释
 

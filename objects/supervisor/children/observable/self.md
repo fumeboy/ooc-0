@@ -36,7 +36,7 @@
 - 活动快照：`packages/@ooc/core/app/server/modules/runtime/service.ts:178-186`（`getActivity`，汇总 running job + ageMs + logPatterns）；端点 `packages/@ooc/core/app/server/modules/runtime/api.activity.ts`。
 - 控制面其它端点（同目录）：`api.enable-debug` / `api.get-loop-debug` / `api.enable-global-pause` / `api.permission-decision`，把内存/落盘观测暴露给 UI。
 
-概念权威锚 `packages/@ooc/meta/object.doc.ts:2207`（节点 `observable`，子节点 llm_observation:2245 / debug_files:2265 / pause:2333 / context_snapshot:2359）。
+子能力：LlmObservation（最近一次 LLM 调用快照）/ debug files（落盘观测）/ pause（PauseChecker）/ context snapshot（每轮 context 快照）。
 
 ## 现状
 
@@ -44,14 +44,14 @@
 
 ## 已知问题 / 边界与未决
 
-- **agent 面 parity 缺口**：Agent 自读历史并据此调整仍是演化方向。自观测**不在业务 thread 内做**（会撞 thinkable.context_budget），而在 **super flow**（sessionId="super" 反思通道）读「另一个自己」的落盘产物——从属 reflectable.super 通道（object.doc.ts:2453 起 reflectable 节点；super alias target 见 object.doc.ts:2472）。目前主要靠 super flow 读落盘，缺独立成熟入口。
+- **agent 面 parity 缺口**：Agent 自读历史并据此调整仍是演化方向。自观测**不在业务 thread 内做**（会撞 thinkable.context_budget），而在 **super flow**（sessionId="super" 反思通道）读「另一个自己」的落盘产物——从属 reflectable 的 super 通道（详见 reflectable child）。目前主要靠 super flow 读落盘，缺独立成熟入口。
 - **LlmObservation 是单例**：模块顶层变量，同进程只反映最近一次调用；并发多 thread 谁后写谁覆盖，要按 thread 区分历史须用 loop-level debug 文件。
 - **职责边界**：我不持有调度或业务逻辑（写盘委托 persistable）；不画 UI（loop_timeline / LoopDiffView 属 visible，我只产数据）；debug 派生字段（contentHash 等）不进 thread.json。
 
 ## 优化方向 / 待办
 
 - **agent 面入口**：给 super flow 一个成熟的「读自观测落盘产物」入口，闭合人类面/agent 面 parity。
-- **csv health 诊断**（AgentOfExperience 2026-05-24 反馈）：csv-pool 不校验 row.keys 与 header 一致性；建议加启动期 / reflectable 主动扫一遍的 csv 健康诊断（object.doc.ts:3513，csv schema drift 可观测性）。
+- **csv health 诊断**（AgentOfExperience 2026-05-24 反馈）：csv-pool 不校验 row.keys 与 header 一致性；建议加启动期 / reflectable 主动扫一遍的 csv 健康诊断（csv schema drift 可观测性）。
 - log-aggregator 限流阈值（首 3 / 每 100）为经验常量，未做按 level / 场景可配。
 
 ## 协作

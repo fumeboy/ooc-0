@@ -44,4 +44,4 @@ self.md（声明）/ readable（序列化）/ executable（行为）/ visible（
 
 Object 定义自己 → 展示自己（readable）→ LLM 阅读 → LLM 操作（method）→ Object 被改后重新展示。这个闭环能跑通、能演化，OOC 的设计目标就达成。
 
-> 概念权威：`packages/@ooc/meta/object.doc.ts`；本篇浓缩自 `packages/@ooc/meta/ooc-object-oriented-philosophy.md`（含 readable/visible 耦合、parentClass vs mixin、引用计数正确性、可见性两轴是否够等若干 open question，需要深挖某个具体取舍时回该文档 §5）。
+> 仍未收口的 open question（裁决具体取舍时挖深）：readable/visible 耦合、parentClass vs mixin、运行时对象图的引用计数正确性、method 可见性两轴（public / for_ui_access）是否够用。

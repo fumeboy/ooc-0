@@ -8,7 +8,7 @@ activates_on:
 
 历史上 readable 这个词在文档里有过两种读法，曾让人怀疑是"同名两义"：
 
-1. **静态自我介绍面**（`object.doc.ts:91`、identity 节点 `:171/:178`）：readable = "可被其他 Agent 阅读的（能够进行自我介绍）"，实现为 `readable.md`（原 readme.md），与 self.md 构成 Object 的双面身份。
+1. **静态自我介绍面**：readable = "可被其他 Agent 阅读的（能够进行自我介绍）"，实现为 `readable.md`（原 readme.md），与 self.md 构成 Object 的双面身份。
 2. **动态展示控制面**（我的对象 + 代码：`registerReadable` / window method / compressView）：readable = "Object 控制自己在 Context 中如何以 XML 形式展示给 LLM"。
 
 ## 结论：同一维度的两个面（不是两个东西）
@@ -23,7 +23,7 @@ activates_on:
 4. `readReadable(stoneRef)` —— **静态 readable.md，内部再 fallback 到 legacy readme.md**（`stone-readme.ts:26`）
 5. 默认渲染（title + status + methods 列表）
 
-即优先级链 `readable.ts > readable.md > readme.md(deprecated) > 默认`（`object.doc.ts:2893` / `:4827`）。**静态自我介绍是这条链的最低优先级兜底，动态 ReadableFn 是高优先级覆盖——它们写进同一个槽位，是一个维度的两个面。**
+即优先级链 `readable.ts > readable.md > readme.md(deprecated) > 默认`（实现见上引 `xml.ts:139-172` + `stone-readme.ts:26`）。**静态自我介绍是这条链的最低优先级兜底，动态 ReadableFn 是高优先级覆盖——它们写进同一个槽位，是一个维度的两个面。**
 
 ## 因此 readable 维度的完整定义
 
@@ -31,4 +31,4 @@ activates_on:
 > - 静态面：readable.md（自我介绍名片，与 self.md 双面身份）。
 > - 动态面：readable.ts/renderXml（按状态算 XML）+ windowMethods（控展示状态）+ compressView（压缩态）。
 
-`object.doc.ts:110` 的 `named.readable` 已是统一表述；`object.doc.ts:91` 的窄表述（"可被其他 Agent 阅读的（能够进行自我介绍）"）只覆盖静态面，是历史遗留的不完整定义，**待 Supervisor 裁决是否补齐为统一表述**。
+上面这条统一表述（readable = Object 怎样被思考者读到，含静态 + 动态两面）即本维度的权威定义。早期有过只覆盖静态面的窄表述（"可被其他 Agent 阅读的（能够进行自我介绍）"），现已收口为本节的统一表述，不再保留窄版。

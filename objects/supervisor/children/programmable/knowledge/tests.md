@@ -8,7 +8,7 @@ activates_on: {"window::root": "show_content"}
 
 ## 维度定位
 
-我持有并演化自身的自定义 ContextWindow + 命令表，写 `executable/index.ts` 即热更。概念权威：`meta/object.doc.ts` programmable 维度。
+我持有并演化自身的自定义 ContextWindow + 命令表，写 `executable/index.ts` 即热更。
 
 ## Tier A —— 控制面确定性
 
