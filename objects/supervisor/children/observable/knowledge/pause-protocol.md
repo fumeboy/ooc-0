@@ -1,7 +1,7 @@
 ---
 title: pause 协议 —— tool call 前的人工介入点
 description: PauseChecker + permission decider，在不改 Object 行为前提下允许暂停/介入
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # pause 协议

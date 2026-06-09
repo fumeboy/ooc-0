@@ -2,7 +2,7 @@
 title: ooc:// 寻址由 visible 解析
 description: ooc://client/... 是 Agent 知识侧的稳定寻址 URI，由 visible 渲染层 1:1 映射 SPA route
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # ooc:// 寻址由 visible 解析

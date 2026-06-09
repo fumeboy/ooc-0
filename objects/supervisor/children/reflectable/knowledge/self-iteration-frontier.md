@@ -2,7 +2,7 @@
 title: 自我迭代前沿 —— 层次 A 已闭 / 层次 B 三缺口
 description: OOC 「用 OOC 迭代 OOC」分两个层次；问自我迭代到哪一步、dogfooding 在哪断、最小探针怎么设计时看这篇
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # 自我迭代前沿

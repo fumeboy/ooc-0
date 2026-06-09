@@ -1,5 +1,5 @@
 ---
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # app.client — AppShell 与 chat 模型

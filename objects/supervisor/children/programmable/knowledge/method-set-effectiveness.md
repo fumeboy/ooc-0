@@ -1,5 +1,5 @@
 ---
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # method 集生效路径与自改边界

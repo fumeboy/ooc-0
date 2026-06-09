@@ -2,7 +2,7 @@
 title: Vite serve visible 文件 + 安全边界
 description: Vite /@fs 暴露本地 tsx、worktree 预览路由、fs.allow 边界与穿越防护
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # Vite serve visible 文件 + 安全边界

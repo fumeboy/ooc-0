@@ -2,7 +2,7 @@
 title: sediment knowledge —— 运行时沉淀的记忆与关系
 description: super flow 写哪些路径、frontmatter write contract、写错为何 silently 断裂；问沉淀协议时看这篇
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # sediment knowledge

@@ -2,7 +2,7 @@
 title: thread 调度与 thinkloop（思考过程的运行时）
 description: thinkable 如何把思考拆成 Thread Tree 并逐 tick 调度，单 thread 一轮 thinkloop 的循环结构
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # thread + thinkloop：思考过程怎么运行

@@ -1,5 +1,5 @@
 ---
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # inbox per-message 存储 —— 根治并发回报丢正文竞态

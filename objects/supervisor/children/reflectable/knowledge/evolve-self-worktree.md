@@ -2,7 +2,8 @@
 title: evolve_self —— session worktree 即演化单元
 description: 一次 session 的身份改动怎么 commit + 合回 main；问 self-scope 合入 / worktree 演化时看这篇
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
+  "method::root::evolve_self": "show_content"
 ---
 
 # evolve_self = session worktree 演化单元

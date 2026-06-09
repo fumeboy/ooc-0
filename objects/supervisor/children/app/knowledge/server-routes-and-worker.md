@@ -1,5 +1,5 @@
 ---
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # app.server — 路由表与 worker 调度

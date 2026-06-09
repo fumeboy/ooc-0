@@ -1,7 +1,7 @@
 ---
 title: 版本化布局 stones/main/objects 与 StoneRegistry 发现
 description: flat / versioning 两种 stone 布局、objectId 嵌套展开、stone 发现优先级
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # 版本化布局与 stone 发现

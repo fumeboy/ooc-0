@@ -1,5 +1,5 @@
 ---
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # ProgramSelf 注入与 program shell `$OOC_SELF_DIR`

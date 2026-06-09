@@ -2,7 +2,7 @@
 title: context 构造协议（buildInputItems 每轮合成什么）
 description: thinkable 如何把 ThreadContext 合成为 LLM 输入 items，及稳定层/事件层的分界与预算现状
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # context 构造：每轮 LLM 输入怎么来

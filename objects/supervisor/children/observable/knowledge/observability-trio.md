@@ -1,7 +1,7 @@
 ---
 title: 可观测三件套 —— 日志去重限流 + activity 快照 + 超时快照
 description: 把「盲等到超时再 tail」变成「随时一读即诊断」的系统级运行时观测
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # 可观测三件套

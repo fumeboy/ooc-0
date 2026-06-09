@@ -1,7 +1,7 @@
 ---
 title: loop-level debug 落盘 —— 每轮思考的可回放产物
 description: LlmObservation + loop_NNNN.{input,output,meta}.json + windowsSnapshot
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # loop-level debug 落盘

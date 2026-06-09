@@ -1,7 +1,7 @@
 ---
 title: stone / pool / flow 三分
 description: OOC world 持久层的设计 / 事实 / 运行三棵子树及其边界
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # stone / pool / flow 三分

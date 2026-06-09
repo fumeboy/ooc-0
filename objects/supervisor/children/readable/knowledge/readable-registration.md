@@ -1,7 +1,7 @@
 ---
 title: readable 维度注册与 builtin 文件形态
 activates_on:
-  "object::readable": show_content
+  "object::root": "show_description"
 ---
 
 # registerReadable 与 builtin 物理分文件

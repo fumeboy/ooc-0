@@ -1,5 +1,5 @@
 ---
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # root 的全局 object method 与 form 推进
@@ -27,7 +27,7 @@ root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins
 
 ## method 与 knowledge 经 intent trigger 协作
 
-每个 method_exec form 在 thread 中 open 时，对应的 intent 进入命中态；knowledge frontmatter 的 `activates_on` 声明同样表达式即按需激活（如本文件顶部的 `{"object::root": "show_content"}`）。这是渐进式语义披露——LLM 只有真正进入某条行动路径时，才看到该路径的完整操作说明。
+每个 method_exec form 在 thread 中 open 时，对应的 intent 进入命中态；knowledge frontmatter 的 `activates_on` 声明同样表达式即按需激活（如本文件顶部的 `{"object::root": "show_description"}` 让 summary 常驻、按需 `open_knowledge` 拉全文；若要在某 method form open 时全文激活则写 `{"method::root::<method>": "show_content"}`）。这是渐进式语义披露——LLM 只有真正进入某条行动路径时，才看到该路径的完整操作说明。
 
 ## form 推进流程
 

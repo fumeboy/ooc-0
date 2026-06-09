@@ -1,7 +1,7 @@
 ---
 title: readable 的两个面 —— 静态自我介绍 vs 动态展示控制（同维同义）
 activates_on:
-  "object::readable": show_content
+  "object::root": "show_description"
 ---
 
 # readable 是同一维度的两个面，不是两个维度

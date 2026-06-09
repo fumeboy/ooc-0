@@ -2,7 +2,7 @@
 title: inline UI tokens — Object 在消息文本里嵌可交互组件
 description: [[ui{...}ui]] token 语法、注册组件、失败回退与渲染入口；Object 只产 token 文本，前端集中 dispatch（零 dangerouslySetInnerHTML）
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # inline UI tokens

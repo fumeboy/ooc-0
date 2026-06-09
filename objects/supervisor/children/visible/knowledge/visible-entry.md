@@ -2,7 +2,7 @@
 title: visible 入口 — stone client / flow pages / ui_methods 调用通道
 description: Object 自身 UI 页面的两类入口、HTTP callMethod 通道与 client-source-url 契约
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # visible 入口
