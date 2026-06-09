@@ -1,7 +1,7 @@
 ---
 title: readable 测试规格与归属
 description: 验证「Object 在 LLM 上下文里的展示由自己控制」的判据 + 索引验证它的 storybook stories；readable 是 2026-06-09 新维度，暂无独立 Tier B agent-native rubric
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # 我（readable）这一维怎么被验证

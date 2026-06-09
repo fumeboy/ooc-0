@@ -2,7 +2,7 @@
 title: 工程协作模型（harness 组织：1 Supervisor + 9 AgentOfX + 体验官）
 description: OOC 自己作为 harness 怎么组织工程协作、外/内循环、Steer/Execute 分工、当前 Claude Code 暂行运行时；问"我和各 Agent 怎么协作""为什么用 sub agent"时看这篇
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # 工程协作模型（harness）

@@ -1,7 +1,7 @@
 ---
 title: app 测试规格与归属
 description: 控制面（HTTP runtime orchestration）的测试归属——无独立 capability spec（横向模块）；由单元 catalog 的 runtime/ui/world 端点条目 + core/app/server 单测覆盖
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # 我（app 控制面）怎么被验证

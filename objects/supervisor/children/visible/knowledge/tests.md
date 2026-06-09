@@ -2,7 +2,7 @@
 title: visible 测试规格 — Tier A 控制面判据 + Tier B agent-native rubric
 description: 验证我可见性维度的测试契约：client-source-url / Vite serve 安全边界 / stone:changed kind=view / UI↔行为闭环，外加 agent-native 产出 rubric 与 story 索引
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # visible 测试规格

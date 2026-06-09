@@ -1,7 +1,7 @@
 ---
 title: persistable 测试规格
 description: 验证「身份/事实/产物落 stone/pool/flow 三子树且离内存可恢复」的两层判据——Tier A 控制面 TC + Tier B agent-native rubric + stories 索引
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # persistable 测试规格

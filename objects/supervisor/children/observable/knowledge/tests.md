@@ -1,7 +1,7 @@
 ---
 title: observable 测试规格 —— 验证我可观测性的 stories 与判据
 description: Tier A 控制面确定性 TC + Tier B agent-native rubric + 验证我能力的 story 索引
-activates_on: {"object::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # observable 测试规格

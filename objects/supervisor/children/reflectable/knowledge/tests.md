@@ -2,7 +2,7 @@
 title: reflectable 测试规格 —— 我的自我演化怎么被验收
 description: 自观察/自修改五件套 + super flow 沉淀的 Tier A 用例与 Tier B rubric；问「reflectable 怎么测、什么算 Good」时看这篇
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # reflectable 测试规格

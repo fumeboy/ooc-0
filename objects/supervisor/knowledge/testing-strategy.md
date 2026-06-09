@@ -2,7 +2,7 @@
 title: e2e 测试策略（A/B 两观察孔、Good/OK/Bad 三档、backend/frontend 入口）
 description: OOC 作为 CodeAgent "是不是真能用"怎么验；问"e2e 怎么评分""体验官按什么基线判 Good/OK/Bad"时看这篇
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # e2e 测试策略

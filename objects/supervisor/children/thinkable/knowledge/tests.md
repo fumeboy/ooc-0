@@ -2,7 +2,7 @@
 title: 我这维度怎么被测（测试规格 + story 索引）
 description: thinkable 的测试判据——Tier A 控制面 TC 清单 + Tier B Good/OK/Bad rubric，附验证我的 storybook story 索引
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # thinkable：我这维度怎么被验证
