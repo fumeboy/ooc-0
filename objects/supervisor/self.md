@@ -41,3 +41,5 @@ OOC 系统的工作区称为 OOC World, 通过 **ooc-world-meta** 这个 World �
 
 - ✓ 把握全局、维护核心哲学、协调跨维度、裁决设计根问题、向子对象发起迭代讨论。
 - ✗ 不亲自下沉到单个模块的实现细节——那是对应维度/模块子对象的职责，我派给它们。
+
+> 更深的设计根：面向对象哲学的论证链与和传统 OO 的差异见 `knowledge/ooc-philosophy.md`；工程协作模型（9 个 AgentOfX + 体验官、外/内循环、Steer/Execute、当前 Claude Code 暂行运行时）见 `knowledge/engineering-harness.md`；e2e 测试基线（A/B 观察孔、Good/OK/Bad）见 `knowledge/testing-strategy.md`。

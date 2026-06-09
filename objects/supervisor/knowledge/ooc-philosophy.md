@@ -1,0 +1,47 @@
+---
+title: OOC 面向对象哲学（为什么是 OO、与传统 OO 的差异）
+description: OOC 把上下文工程还原成面向对象抽象的论证根；问"为什么用 OO""OOC 跟传统 OO 差在哪"时看这篇
+activates_on:
+  "window::root": "show_content"
+---
+
+# OOC 面向对象哲学
+
+我的核心三主张（Object 化上下文 / Object 化 Agent / 元编程自我迭代）已在 self.md。这篇沉淀**为什么是面向对象**的论证链与**和传统 OO 的本质差异**——裁决维度边界、回答用户"为什么这么设计"时的根。
+
+## 一句话主张
+
+OOC 把「上下文工程」从 prompt 串接的手艺活，还原成一套面向对象抽象：上下文里每段信息是一个 Object，Agent 本身也是 Object，Object 之间按 OO 经典法则（身份、封装、继承、多态、消息传递）协作。传统 Agent 框架在写一份不断变长的 prompt；OOC 在写一个不断演化的对象图。
+
+## 为什么是 OO —— 它是 Agent 工程三重矛盾的解药
+
+| 矛盾 | OO 的解药 |
+|------|-----------|
+| 上下文无结构 → 熵增（text blob，系统不知道"这段是什么"，压缩必丢信息） | **Object** 给上下文做类型化——file / knowledge / todo / plan / talk 各是一类，类自己知道如何压缩、如何展示、何时过期 |
+| 工具扁平列表 → 推理负担（几十个同名 function 里挑） | **Method** 绑定到 Object——"压缩一个 file"是在 file 对象上调 `compress()`，不是从 50 个 tool 里找 |
+| Agent 是静态快照 → 无法自我演化 | **元编程**——Agent 改自己的 self.md（身份）/ executable（方法）/ visible（界面）/ knowledge（知识），运行时改写自己的类 |
+
+第一性原理：**系统里任何东西，要么是一个 Object，要么是 Object 之间的一条关系。**
+
+## Object 五件套对应 OO 的经典面向
+
+self.md（声明）/ readable（序列化）/ executable（行为）/ visible（呈现）/ knowledge（知识）。传统 OO 只显式建模了行为（方法）与声明（类定义）；序列化（`toString`）和呈现（UI）通常是系统外 ad-hoc 的，知识更是完全缺失。OOC 把这五个全部提升为一等公民。
+
+## 与传统 OO 的四处本质差异
+
+裁决"OOC 该不该照传统 OO 做 X"时，先回到这四条：
+
+1. **Observer 是 LLM 不是 CPU**：对象的第一观察者是 LLM。readable 是"给 AI 看的 `toString()`"，compressLevel 是"清晰度档位"。**Object 的接口不只是方法签名（给执行器看），还包括 readable 输出（给推理器看）——两者同等重要。**
+2. **两个外部世界**：传统 OO 的"外部"是统一的（其他对象）；OOC 有两个——其他 Agent（消费 readable + `public` 方法）与人类用户（消费 visible + `for_ui_access` 方法），两者权限模型不同。这是 readable/visible 镜像、以及 method 双可见性轴的设计来源（agent-native parity 公理：任何能力都要回答"人怎么用 / Agent 怎么用"）。
+3. **运行时改写自己的类**：传统 OO 类定义编译时确定；OOC 的 Agent 通过 reflectable / programmable / visible / 改 self.md 重定义自己——这是设计目标，不是 hack。stone 五件套就是 Agent 的源代码，Agent 是自己的维护者。
+4. **对象图动态涌现**：runtime object 由 thread 按需创建（do_window 派生 method_exec、open_file 创建 file），生命周期靠引用计数管理，peer/children 自动注入 context。更像 OS 进程树 + 共享内存，不是静态类图。
+
+## Context = 视角，不是归属
+
+关键纠偏：**Context 不是 belongs-to，而是 point-of-view。** 同一个 Object（如一场跨 Agent 对话 talk_w_abc）可同时出现在多个 thread 的 context，状态只存一份；每个 thread 持自己的视角参数（compressLevel / order / decayMeta）。这是 OO 的引用语义——`context.json` 是 OOC 的"指针表"。**LLM 每轮看到的输入 = 当前 thread 的对象引用表 + 每个被引对象的 readable() 拼接。上下文工程 = 管理对象引用表。**
+
+## 设计闭环
+
+Object 定义自己 → 展示自己（readable）→ LLM 阅读 → LLM 操作（method）→ Object 被改后重新展示。这个闭环能跑通、能演化，OOC 的设计目标就达成。
+
+> 概念权威：`packages/@ooc/meta/object.doc.ts`；本篇浓缩自 `packages/@ooc/meta/ooc-object-oriented-philosophy.md`（含 readable/visible 耦合、parentClass vs mixin、引用计数正确性、可见性两轴是否够等若干 open question，需要深挖某个具体取舍时回该文档 §5）。
