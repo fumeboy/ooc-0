@@ -15,14 +15,13 @@ activates_on:
 
 **统一判据 = "Object 怎样被读"**。两面都回答这个问题——静态名片是"被读到的固定自述"，动态渲染是"被读到的随状态变化的展示"。
 
-**铁证（同一渲染槽位的优先级回退）**：`resolveReadableForType` 在**同一个解析链**里依次 try **4 个块**，命中谁就渲染成**同一个 `<readable>` XML 节点**（`packages/@ooc/core/thinkable/context/renderers/xml.ts:139-172`）：
+**铁证（同一渲染槽位的优先级回退）**：`resolveReadableForType` 在**同一个解析链**里依次 try **3 个块**，命中谁就渲染成**同一个 `<readable>` XML 节点**（`packages/@ooc/core/thinkable/context/renderers/xml.ts`）：
 
-1. `registry.readable` —— builtin type 注册的动态 ReadableFn（`xml.ts:139`）。
-2. `loadObjectWindow(stoneRef).readable` —— 加载的 window 上的 readable（`xml.ts:153`）。
-3. `loadObjectReadable(stoneRef)` —— 磁盘 readable.ts 动态函数（`xml.ts:161`）。
-4. `readReadable(stoneRef)` —— **静态 readable.md，内部再 fallback 到 legacy readme.md**（`xml.ts:169` / `stone-readme.ts:26`）。
+1. `registry.readable` —— builtin type 注册的动态 ReadableFn。
+2. `loadObjectWindow(stoneRef).readable` —— 加载的 window 上的 readable（loader 已把独立 `readable.ts` 合并进此字段，不再有单独的 `loadObjectReadable` 出口）。
+3. `readReadable(stoneRef)` —— **静态 readable.md，内部再 fallback 到 legacy readme.md**（`stone-readme.ts:26`）。
 
-四块全 miss 则函数返回 `undefined`，调用方再走默认渲染（title + status + methods 列表，不在本函数内）。即优先级链 `readable.ts(动态) > readable.md > readme.md(deprecated) > 默认`。**静态自我介绍是这条链的最低优先级兜底，动态 ReadableFn 是高优先级覆盖——它们写进同一个槽位，是一个维度的两个面。**
+三块全 miss 则函数返回 `undefined`，调用方再走默认渲染（title + status + methods 列表，不在本函数内）。即优先级链 `readable.ts(动态，合并进 window.readable) > readable.md > readme.md(deprecated) > 默认`。**静态自我介绍是这条链的最低优先级兜底，动态 ReadableFn 是高优先级覆盖——它们写进同一个槽位，是一个维度的两个面。**
 
 ## 因此 readable 维度的完整定义
 

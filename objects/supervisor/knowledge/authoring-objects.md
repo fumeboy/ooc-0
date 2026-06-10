@@ -69,9 +69,7 @@ stone 持有的逻辑契约是**五件套**（object 与 class 同形态，区�
 object method 操作我自身的业务数据，写在 `executable/index.ts` 的 `export const window`，运行时经 `registerNewObjectType` 动态注册：
 
 ```ts
-export const window: StoneObjectDeclaration = {
-  title: "<id>",
-  description: "...",
+export const window = {
   basicKnowledge: ({ programSelf }) => "...",   // 该对象出现时每轮注入的协议知识
   methods: {
     <name>: {

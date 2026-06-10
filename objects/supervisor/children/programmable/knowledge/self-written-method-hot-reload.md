@@ -7,9 +7,7 @@ activates_on: {"object::root": "show_description"}
 一个 Object 的自定义 object method 表写在 `stones/<self>/executable/index.ts`：
 
 ```ts
-export const window: StoneObjectDeclaration = {
-  title: "<self>",
-  description: "...",
+export const window = {
   basicKnowledge: ({ programSelf }) => "...",
   methods: {
     <name>: {
@@ -36,7 +34,7 @@ export const ui_methods = { /* visible 维度，HTTP callMethod 路径 */ };
 - 同时加载同目录 `readable.ts`（:86-97，readable 维度的渲染函数）。
 - 文件 ENOENT → 返回 undefined。
 - 旧 `llm_methods` 导出出现 → 抛清晰硬切错误（:80-84，提示改写为 `export const window … { methods: { … } }`），不再静默吃掉。
-- 接口：`loadObjectWindow`(:113) / `loadUiServerMethods`(:118) / `loadObjectReadable`(:123) / `invalidateStone`(:128，按 stone 失效缓存) / `clearCache`(:137)；module-level wrapper `clearServerLoaderCache`(:168，测试清缓存)。
+- 接口：`loadObjectWindow`(:117) / `loadUiMethods`(:122) / `invalidateStone`(:127，按 stone 失效缓存) / `clearCache`(:136)；module-level wrapper `clearServerLoaderCache`(:162，测试清缓存)。readable.ts 合并进 `loadObjectWindow` 的 `window.readable`，不再有独立 `loadObjectReadable` 出口。
 
 **生效路径**：super flow 经 `exec(method="write_file", path="stones/<self>/executable/index.ts", ...)` 重写源码 → 下一次 `exec(window_id="<self_object_id>", method=<new>)` 或 ts/js sandbox 里 `self.callMethod(...)` 触发时，loader 看到 mtime 变化 → 重新 import → 新形态立刻生效。不重启进程、不重新部署。
 

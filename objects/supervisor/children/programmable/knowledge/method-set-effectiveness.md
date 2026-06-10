@@ -26,7 +26,7 @@ await self.callMethod("<window_id>", "<method>", { ... })
 
 > 已退役：旧的 `program.callMethod / function 子模式`（`exec(method="program", args={window_id, method, ...})` 当 meta-call 通道）已删；program 现在只剩 shell/ts/js 三种语言模式（`runtime.ts:10-13`）。元调用统一收敛到上面两条。
 
-UI / agent-native 客户端走第三条独立通道：HTTP `callMethod` → `loadUiServerMethods` 拿 `ui_methods` 字典执行（`ui_methods` 归 **visible** 维度，不归我）。`window.methods`（LLM 路径，`ObjectMethod` 形状）与 `ui_methods`（HTTP 路径，`UiServerMethod` 形状）形状不同、各写各的，不互相代替；都需要则写两份。
+UI / agent-native 客户端走第三条独立通道：HTTP `callMethod` → `loadUiMethods` 拿 `ui_methods` 字典执行（`ui_methods` 归 **visible** 维度，不归我）。`window.methods`（LLM 路径）与 `ui_methods`（HTTP 路径）entry 现在都是标准 `ObjectMethod`（2026-06-10 删 `UiServerMethod` 后统一），区别仅在导出位置/调用通道，各写各的、不互相代替；都需要则写两份。
 
 ## 演化与生效
 
