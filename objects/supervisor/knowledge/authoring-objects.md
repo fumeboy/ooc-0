@@ -75,14 +75,16 @@ export const window: StoneObjectDeclaration = {
   basicKnowledge: ({ programSelf }) => "...",   // 该对象出现时每轮注入的协议知识
   methods: {
     <name>: {
-      paths: ["<name>"],                 // 本命令可能产出的 path 集合（knowledge 反向激活索引）
-      intent: (args) => [],
-      onFormChange(change, { form }) { return []; },
+      description: "...",                // 必填：LLM 面向的方法描述
+      intents: ["<name>.<sub>"],         // 可选：静态 sub-intent 目录（反向索引/文档用）
+      onFormChange(change, { args }) {   // 可选：省略则免表单直接 exec
+        return { tip: "...", intents: [{ name: "<name>" }], quick_exec_submit: true };
+      },
       schema: { /* 可选：结构化参数渲染 + fail-soft 校验 */ },
       exec: async (ctx) => {
         // ctx.programSelf（dir / callMethod / getData / setData / getThreadLocal / setThreadLocal）
         // ctx.thread（contextWindows / events / inbox / outbox）/ ctx.args
-        return { ok: true, result: "..." };   // 或 { ok: false, error } 或 { ok: true, object }（constructor）
+        return { ok: true, result: "..." };   // 或 { ok: false, error } 或 { ok: true, window }（constructor）
       },
     },
   },
@@ -92,8 +94,8 @@ export const ui_methods = { /* visible 维度：给前端/agent-native 客户端
 
 要点（深术语见 executable `method-and-constructor.md`、`self-written-method-hot-reload.md`）：
 
-- 字段名是 **`methods`**（不是 `commands`）；每条 entry 是头等 `ObjectMethod`，与内置 window 上的 method 同构（`paths / intent / onFormChange / schema / exec`）。旧 `match` / `knowledge` 字段已删，旧 `export const llm_methods` 会被 loader 硬切报错。
-- 返回 `MethodOutcome` 三态：`{ ok:true, result? }` | `{ ok:true, object }`（`kind:"constructor"`，manager 自动 mount 到 thread context）| `{ ok:false, error }`。method **不抛异常**，错误走结构化结果让上游 LLM 自己判断。
+- 字段名是 **`methods`**（不是 `commands`）；每条 entry 是头等 `ObjectMethod`，与内置 window 上的 method 同构（`description / intents? / onFormChange? / schema? / exec`）。旧 `match` / `knowledge` 字段已删，旧 `export const llm_methods` 会被 loader 硬切报错。
+- 返回 `MethodOutcome` 三态：`{ ok:true, result? }` | `{ ok:true, window }`（`kind:"constructor"`，manager 自动 mount 到 thread context）| `{ ok:false, error }`。method **不抛异常**，错误走结构化结果让上游 LLM 自己判断。
 - **window method**（只控展示，如 `set_viewport`）归 readable 维度，写在 `readable.ts` 的 `registerReadable({ windowMethods })`，不写在 executable。同一 type 上同名方法不能既是 object 又是 window method，registry 注册期 fail-loud。
 - **继承靠 class**：`package.json` 的 `ooc.class` 声明父类；缺省 `parentClass` 隐式继承 `"root"`，自动拿到 `talk / do / todo / plan / program / open_file / open_knowledge / glob / grep` 等通用方法，不必重复声明。prototype chain 已彻底剔除（2026-06-07）。
 - **纪律**：列表/搜索类 method 必须有默认分页；`exec` 返回大 JSON 必须包大小截断（防把下轮 LLM 请求打 413）。不要把 RPC helper / 业务逻辑对外导出，全部 module-private，只通过 `methods` + `ui_methods` 暴露；stone 内不建独立 `src/` 子目录（私有 sibling 用 `executable/_*.ts`）——`src/` 会被 LLM 当成可裸 import 的脚本，绕过 method 契约。

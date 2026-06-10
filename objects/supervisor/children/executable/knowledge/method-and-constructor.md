@@ -13,17 +13,18 @@ activates_on: {"object::root": "show_description"}
 
 两者经同一个 `exec(window_id, method_name)` 入口分派；registry 在注册期校验同名冲突——同一 type 上同名方法不能既是 object method 又是 window method，否则 fail-loud（`object-registry.ts:52` `assertNoMethodNameCollision`）。
 
-`ObjectMethod` 的 canonical 定义（`packages/@ooc/core/_shared/types/method.ts:48`）：
+`ObjectMethod` 的 canonical 定义（`packages/@ooc/core/_shared/types/method.ts:66`）：
 
-- `kind`（constructor/method，`:51`）。
-- 两个可见性标记：`public`（对其他 Object 可见可调，`:94`）/ `for_ui_access`（前端 HTTP API 可调，`:100`）。
-- 返回类型 `MethodOutcome` 三态联合（`:35`）：`{ ok: true, result? }` | `{ ok: true, object }` | `{ ok: false, error }`。
+- `description` 必填（LLM 面向的方法描述）；`kind`（constructor/method，`:69`）。
+- `onFormChange(change, { args })` 可选：返回 `MethodExecuteForm`（`tip / intents / quick_exec_submit`）；省略它的方法免表单直接 exec。`ctx.args` 即 form 累积参数，与 exec 的 `ctx.args` 对齐。
+- 两个可见性标记：`public`（对其他 Object 可见可调，`:119`）/ `for_ui_access`（前端 HTTP API 可调，`:125`）。
+- 返回类型 `MethodOutcome` 三态联合（`:49`）：`{ ok: true, result? }` | `{ ok: true, window }` | `{ ok: false, error }`。
 
 ## constructor 委托模式
 
-带 `kind: "constructor"` 的 method 必须返回 `{ ok: true, object: ContextWindow }`；manager 看到后把 object 插进 thread 的 contextWindows、按 isBuiltinFeature 写盘、把 window 作为 form.result 反馈给 LLM。
+带 `kind: "constructor"` 的 method 必须返回 `{ ok: true, window: ContextWindow }`；manager 看到后把 window 插进 thread 的 contextWindows、按 isBuiltinFeature 写盘、把 window 作为 form.result 反馈给 LLM。
 
-root 上的 `talk` / `do` / `todo` / `plan` / `program` / `open_file` / `open_knowledge` / `glob` / `grep` 已退化为**薄分发器**——只保留 paths / knowledge / match 这些 LLM 视野所需字段，`exec` 体内调 `lookupConstructor("<type>").exec(ctx)` 把构造委托给 type 自身注册的 constructor method。`lookupConstructor` 按 `kind === "constructor"` 标记索引、而非按名字（`object-registry.ts:280`）。
+root 上的 `talk` / `do` / `todo` / `plan` / `program` / `open_file` / `open_knowledge` / `glob` / `grep` 已退化为**薄分发器**——只保留 description / schema / onFormChange 这些 LLM 视野所需字段，`exec` 体内调 `lookupConstructor("<type>").exec(ctx)` 把构造委托给 type 自身注册的 constructor method。`lookupConstructor` 按 `kind === "constructor"` 标记索引、而非按名字（`object-registry.ts:280`）。
 
 好处：创建 object 与调普通 method 在 ObjectMethod 这一层统一——不再需要 root 为每个 type 单写一份构造逻辑。自定义 Agent 想加 "open <agent>" 入口，只需在 methods 表挂一个 `kind: "constructor"` 的 ObjectMethod。
 

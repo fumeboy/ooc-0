@@ -13,9 +13,10 @@ export const window: StoneObjectDeclaration = {
   basicKnowledge: ({ programSelf }) => "...",
   methods: {
     <name>: {
-      paths: ["<name>"],
-      intent: (args) => [],
-      onFormChange(change, { form }) { return []; },
+      description: "...",                // 必填：LLM 面向的方法描述
+      onFormChange(change, { args }) {   // 可选：省略则免表单直接 exec
+        return { tip: "...", intents: [{ name: "<name>" }], quick_exec_submit: true };
+      },
       schema: { /* 可选：结构化参数渲染 + fail-soft 校验 */ },
       exec: async (ctx) => { /* ctx.programSelf / ctx.thread / ctx.args */ },
     },
@@ -24,7 +25,7 @@ export const window: StoneObjectDeclaration = {
 export const ui_methods = { /* visible 维度，HTTP callMethod 路径 */ };
 ```
 
-字段名是 **`methods`**（不是 `commands`——command→method 重命名后统一）。每条 entry 是头等的 `ObjectMethod`，与内置 window（do/talk/file）上的 method 完全同构：`paths / intent(args) / onFormChange / schema / exec(ctx)`（+ `permission / public / for_ui_access`）。注意旧的 `match` / `knowledge` 字段已删（C7 后用 intent/onFormChange/schema 取代）。canonical 类型 `ObjectMethod` 在 `packages/@ooc/core/_shared/types/method.ts:48`。
+字段名是 **`methods`**（不是 `commands`——command→method 重命名后统一）。每条 entry 是头等的 `ObjectMethod`，与内置 window（do/talk/file）上的 method 完全同构：`description / intents? / onFormChange? / schema? / exec(ctx)`（+ `permission / public / for_ui_access`）。`description` 必填；`onFormChange(change, { args })` 返回 `MethodExecuteForm`（`tip / intents / quick_exec_submit`），省略它的方法免表单直接 exec。旧 `paths` / `intent(args)` / `match` / `knowledge` 字段已删。canonical 类型 `ObjectMethod` 在 `packages/@ooc/core/_shared/types/method.ts:66`。
 
 ## 热更机制
 

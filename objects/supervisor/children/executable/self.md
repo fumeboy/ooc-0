@@ -20,7 +20,7 @@
 
 - **4 个 tool 固定**：`OOC_TOOLS = [EXEC, CLOSE, WAIT, COMPRESS]`，`buildAvailableTools` 恒返回固定四件套；新能力走 method / object type、不增顶层 tool（stable_tool_surface）。详见 knowledge/tool-primitives.md。
 - **method 分两类、按维度分注册**：object method（操作数据，`registerExecutable`）vs window method（控展示，归 readable 的 `registerReadable`），同一 type 同名 fail-loud；`ObjectMethod` canonical 含 kind / public / for_ui_access / `MethodOutcome` 三态。详见 knowledge/method-and-constructor.md。
-- **constructor 委托**：root 上 talk / do / todo / plan / program / open_file 退化为薄分发器，`exec` 体内 `lookupConstructor("<type>").exec(ctx)` 委托给 type 自身 constructor；`kind:"constructor"` 的 method 返回 `{ ok: true, object }`。详见 knowledge/method-and-constructor.md。
+- **constructor 委托**：root 上 talk / do / todo / plan / program / open_file 退化为薄分发器，`exec` 体内 `lookupConstructor("<type>").exec(ctx)` 委托给 type 自身 constructor；`kind:"constructor"` 的 method 返回 `{ ok: true, window }`。详见 knowledge/method-and-constructor.md。
 - **root 16 个全局 object method + form 推进**：`ROOT_METHODS`（do / talk / program / plan / todo / end / open_file / open_knowledge / write_file / create_object / evolve_self / glob / grep / example …）；args 不齐 → 系统创建 `method_exec` form，LLM 经 `exec(form_id, "refine"/"submit")` 推进。详见 knowledge/root-methods-and-forms.md。
 
 ## method 级准入：permission 三档
@@ -51,7 +51,7 @@
 - **object method** —— 操作 object 自身业务数据的方法，归我，经 `registerExecutable` 注册。canonical 类型 `ObjectMethod`（`packages/@ooc/core/_shared/types/method.ts:48`）。
 - **window method** —— 只控制 object 在 context 里展示状态（如 `set_viewport` 写 `state.viewport`）的方法，`kind:"window"`，归 readable，经 `registerReadable` 注册。与 object method 经同一 `exec` 入口分派，同名 fail-loud（`object-registry.ts:52`）。
 - **tool 原语** —— LLM 直接可见可调的 4 个稳定接口（`OOC_TOOLS`）：**exec**（在某 object 上调一条 method）/ **close**（关一个 context window）/ **wait**（声明 thread 等某 IO）/ **compress**（操纵 thread 自身 windows[]+events[] 控上下文体积）。
-- **constructor** —— `kind:"constructor"` 的 object method，必须返回 `{ ok:true, object }`；manager 看到后把 object mount 进 thread 并写盘。root 上 talk/do/program/… 退化为薄分发器，`exec` 体内 `lookupConstructor("<type>").exec(ctx)` 委托给 type 自身的 constructor（按 kind 索引，非按名字，`object-registry.ts:280`）。
+- **constructor** —— `kind:"constructor"` 的 object method，必须返回 `{ ok:true, window }`；manager 看到后把 window mount 进 thread 并写盘。root 上 talk/do/program/… 退化为薄分发器，`exec` 体内 `lookupConstructor("<type>").exec(ctx)` 委托给 type 自身的 constructor（按 kind 索引，非按名字，`object-registry.ts:280`）。
 - **registerExecutable** —— 我的维度注册入口（`object-registry.ts:115`），只收 object methods + 类元（parentClass / isBuiltinFeature）；类型层即拒绝 readable 字段越界。与 `registerReadable` 配对，同一 type 两维度分注册、互不覆盖。
 - **form（open→refine→submit）** —— exec 时 args 不齐或引入新 path/knowledge，系统创建一个 `method_exec` object（form），LLM 经 `exec(form_id, "refine", args)` 多次补参（每次可触发更细知识激活）、`exec(form_id, "submit")` 提交执行。refine/submit 是 method_exec 上注册的两条 object method，与 do.continue / talk.say 同构。
 - **permission** —— ObjectMethod 上的三档（allow/ask/deny）准入声明，thinkloop 分派前查；见 knowledge/permission.md。

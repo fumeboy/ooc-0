@@ -56,7 +56,7 @@
 
 我这条维度反复出现的术语，一次说清（按「方法面 / 加载面 / 注入面 / world 面」分组）：
 
-- **object method**（`window.methods`）：操作 object 数据的方法，头等 `ObjectMethod`（`exec/paths/intent/onFormChange/schema`），LLM 经 `exec(window_id, method, args)` 调。**自写方法 = 自写它**。
+- **object method**（`window.methods`）：操作 object 数据的方法，头等 `ObjectMethod`（`description/exec` + 可选 `intents/onFormChange/schema`），LLM 经 `exec(window_id, method, args)` 调。**自写方法 = 自写它**。
 - **window method**（`windowMethods`，readable 维度）：只控制 window 自身信息展示的方法，不操作数据。与 object method 并列、不同维度、同名 fail-loud。**不是我管的**，列在这里只为消歧。
 - **ui_methods**（**归 visible**）：`executable/index.ts` 里给 UI / agent-native 用的方法字典（`UiServerMethod` 形状），走 HTTP `callMethod` 通道——人类侧 UI 调用通道，归 visible 维度，不归我。与 `window.methods`（LLM 路径）形状不同、各写各的、不互相代替；列在这里只为消歧。
 - **StoneObjectDeclaration**：`export const window` 的类型——自定义 self 门面 window 的声明（`title/description/basicKnowledge/methods`）。method 字典字段名、已删字段的权威见 knowledge/self-written-method-hot-reload。
