@@ -7,7 +7,7 @@ activates_on: {"object::root": "show_description"}
 program ts/js sandbox 与 custom method dispatcher 路径执行用户代码时，注入一个 `programSelf`（ProgramSelf；2026-06-02 起此字段名，与 method receiver `ctx.self` 区分），承载几组能力。构造工厂：`createProgramSelf(stoneRef, thread, registry?)`（`packages/@ooc/builtins/program/executable/self.ts:51`）。
 
 - **dir**：stone 目录绝对路径，用于在 sandbox 里拼相对路径。
-- **callMethod(windowId, method, args?)**（:59）：在 `thread.contextWindows` lookup window → 经 `registry.getObjectDefinition(window.type).methods[method]` 取 object method → `exec(ctx)`。type=custom 时 dispatcher 自带 programSelf 注入。把「调任意 window 上任意 method」统一成 `(window_id, method, args)` 一个签名；找不到时抛带可见 window/method 列表的清晰错误。
+- **callMethod(windowId, method, args?)**（:59）：在 `thread.contextWindows` lookup window → 经 `registry.getObjectDefinition(window.class).methods[method]` 取 object method → `exec(ctx)`。type=custom 时 dispatcher 自带 programSelf 注入。把「调任意 window 上任意 method」统一成 `(window_id, method, args)` 一个签名；找不到时抛带可见 window/method 列表的清晰错误。
 - **getData(key) / setData(key, value)**（:88,:95）：读写 flow 级 `flows/<sid>/objects/<self>/data.json`（2026-05-23 起从 stone 迁到 flow）。setData 顶层 spread merge 非整体覆盖。**语义**：是当前 session 的数据，不是跨 session 长期数据；要跨 session 共享走 stone server method 写 pool/sql。无 `thread.persistence` 时 getData 返回 undefined / setData 静默 no-op。
 - **getThreadLocal / setThreadLocal**（:104,:107）：读写 `thread.threadLocalData`，同一线程内 ts/js exec 之间共享，但不持久化（重启即丢）。
 

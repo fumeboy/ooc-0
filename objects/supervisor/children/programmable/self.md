@@ -10,7 +10,7 @@
 
 ## 我负责的
 
-- **自我门面 window + object method 表**：每个 Object 在自己的 `stones/<self>/executable/index.ts` 里 `export const window: Partial<ObjectDefinition>`（window.id=window.type=objectId，**不再有 `custom:` 前缀**）+ 可选 `ui_methods`。`window.methods` 是标准 `ObjectMethod` 字典，与内置 window（do/talk/file）上的 method 完全同构。注意：`ui_methods`（人类侧 UI 调用通道）归 **visible** 维度；我只负责 object method 的自写与热更，`ui_methods` 在此仅作消歧、与 `window.methods` 同住一个文件但不归我。
+- **自我门面 window + object method 表**：每个 Object 在自己的 `stones/<self>/executable/index.ts` 里 `export const window: Partial<ObjectDefinition>`（window.id=window.class=objectId，**不再有 `custom:` 前缀**）+ 可选 `ui_methods`。`window.methods` 是标准 `ObjectMethod` 字典，与内置 window（do/talk/file）上的 method 完全同构。注意：`ui_methods`（人类侧 UI 调用通道）归 **visible** 维度；我只负责 object method 的自写与热更，`ui_methods` 在此仅作消歧、与 `window.methods` 同住一个文件但不归我。
 - **统一调用协议**：LLM 经 `exec(window_id="<self_object_id>", method=<name>, args={...})` 直接调，与 `do_window.continue` / `talk_window.say` 同构；ts/js sandbox 里另有 `await self.callMethod(window_id, method, args)` 供脚本编排多步调用。UI / agent-native 经 HTTP `callMethod` 调 `ui_methods`（与 LLM 路径完全解耦、形状不同）。
 - **写文件即热更**：loader 按 `executable/index.ts` 的 mtime 缓存，`?t=mtime` 破坏 bun import cache；写文件后下一次调 method 自动重新 import，新形态立刻生效——不重启进程、不重新部署。
 - **ProgramSelf 注入**：program ts/js sandbox 与 custom method dispatcher 路径收到 `programSelf = { dir, callMethod, getData, setData, getThreadLocal, setThreadLocal }`（2026-06-02 起字段名 `programSelf`，与 method receiver `ctx.self` 区分）。program shell 经 env 透出 `$OOC_SELF_DIR`。

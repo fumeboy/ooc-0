@@ -42,7 +42,7 @@ Object 不知道 context 之外的任何事——内存/文件系统里再多状
 2. **protocol knowledge**（source=`protocol`）：每轮按条件注入的框架常量窗口——`internal/basic`（机制说明）、`internal/root/basic`（root method 清单）、`internal/windows/<type>/basic`（该 type 出现时）、`internal/reflectable/*`（super session）、creator-reply（含 isCreatorWindow do/talk 时）、end-reflection-reminder（业务 thread 开 end form 时）。
 3. **activator knowledge**（source=`activator`）：seed+sediment 双源按 `activates_on` trigger 激活，上限 20 篇，与显式 open_knowledge 同 path 时 activator 让位。
 4. **skill_index**：扫 external/branch/object 三层 skills 目录，合并去重非空则注入一个 window（object > branch > external 覆盖同名）。
-5. **peer / children object 自动注入**（Phase 6 取代 relation_window）：peer Object **本身**作为 window 进 context，`id=peerId`、`type=peerId`（故渲染走 peer 自己的 readable）。来源=已交互过的 talk peer + stone 层级自动发现的 sibling/一级 children。渲染前 `derivePeerObjectWindows` 从 stone 动态加载 def 并 idempotent 注册到 registry，避免 "type not registered"。
+5. **peer / children object 自动注入**（Phase 6 取代 relation_window）：peer Object **本身**作为 window 进 context，`id=peerId`、`class=peerId`（故渲染走 peer 自己的 readable）。来源=已交互过的 talk peer + stone 层级自动发现的 sibling/一级 children。渲染前 `derivePeerObjectWindows` 从 stone 动态加载 def 并 idempotent 注册到 registry，避免 "type not registered"。
 6. **enrichment 字段**（运行时派生、不持久化）：`effectiveVisibleType`（沿 parentClass 继承链回退到前端能渲染的首个 type）、method_exec 的 `methodKnowledgePaths`；落盘前由 `stripVolatileForPersist` 剥离。
 
 ## LLM 输入的最终顺序（buildInputItems 产物）
@@ -88,7 +88,7 @@ Object 不知道 context 之外的任何事——内存/文件系统里再多状
 </thread></context>
 ```
 
-window 关键属性：`id`（稳定唯一，root 固定 `"root"`）/ `type`（ObjectType）/ `status`（open/running/active/archived/done/closed/executing/success/failed）/ 可选 `sharing`·`read_only`（跨 thread 共享态：`ref` 只读引用 / `lent_out` 已借出）。`<methods>` 把 object method（控 object）与 window method（控展示）合并呈现——exec 入口相同，LLM 不需区分（`renderers/xml.ts:79`）；未注册 type fail-soft 无 methods 节点。
+window 关键属性：`id`（稳定唯一，root 固定 `"root"`）/ `class`/ `status`（open/running/active/archived/done/closed/executing/success/failed）/ 可选 `sharing`·`read_only`（跨 thread 共享态：`ref` 只读引用 / `lent_out` 已借出）。`<methods>` 把 object method（控 object）与 window method（控展示）合并呈现——exec 入口相同，LLM 不需区分（`renderers/xml.ts:79`）；未注册 type fail-soft 无 methods 节点。
 
 ## 单 window 内容的渲染优先级链
 
