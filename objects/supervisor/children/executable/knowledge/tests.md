@@ -4,7 +4,7 @@ activates_on: {"object::root": "show_description"}
 
 # executable 维度的测试规格
 
-这是我（executable）这一片的能力测试规格——验证「LLM 经 4 个稳定 tool 原语在 ContextObject 上调 Method 改变世界」是否真的成立。规格的代码体在 `packages/@ooc/storybook/`，我在这里吸收 Tier A 的判据、原样保留 Tier B 的 rubric，并索引相关 story。
+这是我（executable）这一片的能力测试规格——验证「LLM 经 4 个稳定 tool 原语在 context window 上调 Method 改变世界」是否真的成立。规格的代码体在 `packages/@ooc/storybook/`，我在这里吸收 Tier A 的判据、原样保留 Tier B 的 rubric，并索引相关 story。
 
 测试分两层：**Tier A** 是控制面确定性（零真 LLM、可进 CI，跑 `bun run test:storybook`），只验**结构**；**Tier B** 是 agent-native（真 LLM、env-gated），对运行中的 world 派任务、抽过程轨迹 + 确定性产物核验。4 原语 exec/close/wait/compress 驱动真实编辑的深度行为属 Tier B + e2e S1/S2。
 
@@ -12,7 +12,7 @@ activates_on: {"object::root": "show_description"}
 
 判据（结构验证，无 LLM）：
 
-- **TC-EXEC-01**：Object 自定义的 `ui_methods` 在 ContextObject 上执行并返回结果——经 `/api/stones/{id}/call_method` 调 `add(x,y)` 返回 `{ sum: 5 }`（method 调用改变/返回世界状态）。
+- **TC-EXEC-01**：Object 自定义的 `ui_methods` 在 context window 上执行并返回结果——经 `/api/stones/{id}/call_method` 调 `add(x,y)` 返回 `{ sum: 5 }`（method 调用改变/返回世界状态）。
 - **TC-EXEC-02**：Object 定义的 `window.methods`（LLM 路径方法）经 `loadObjectWindow` loader 可加载，且 `paths` 还原正确。
 
 代码：`packages/@ooc/storybook/stories/executable.story.ts`（`runControlPlane`），收为 `bun:test` 的入口在 `stories/_control-plane.test.ts`。

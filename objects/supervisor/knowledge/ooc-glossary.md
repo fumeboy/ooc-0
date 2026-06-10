@@ -15,11 +15,11 @@ activates_on:
 - **OOC Agent** — OOC 中 Object 模式的 Agent，持有数据字段 + 程序方法。一个 Agent 就是一个 Object。
 - **Object** — OOC 系统中唯一的一等实体。系统里任何东西，要么是一个 Object，要么是 Object 之间的一条关系。
 
-## ContextObject = ContextWindow（命名归一化，2026-05-28 ooc-6）
+## ContextWindow —— Object 出现在 context 中的形态
 
-- **ContextWindow** 与 **ContextObject** 是**同义词**，指同一件东西：**Object 出现在 context 中的形态**。`ContextWindow` 是 2026-05-28 归一化前的旧称，新代码/新文档统称 **ContextObject**；遇到 `ContextWindow` 字面量视作 ContextObject 的历史别名，不要当成两个概念。
-- 归一化主张：window 不再是独立于 Object 的临时数据结构——每个 window 背后都对应一个 Object（builtin 或 user-defined），window 上挂的 method 就是 Object 的 method，window method 与 object method 合并统称 **Method**。
-- **Context 是视角不是归属**：同一个 ContextObject 可同时出现在多个 thread 的 context（状态只存一份），每个 thread 持自己的视角参数。详见 ooc-philosophy.md「Context = 视角」。
+- **ContextWindow** 指 **Object 出现在 context 中的形态**：既是信息展示单元、又是行动挂载点。它不是独立于 Object 的临时数据结构——每个 window 背后都对应一个 Object（builtin 或 user-defined），window 上挂的 method 就是 Object 的 method，window method 与 object method 合并统称 **Method**。thread 持有一组 `contextWindows`。
+- **不要用 ContextObject 这个词**：它把「Object（实体本身）」和「ContextWindow（实体在 context 中的形态）」揉成一个名，反而把两者搅浑。按语境拆开说——指实体时写 **ooc object / Object**，指它在 context 里的窗口形态时写 **ContextWindow**。（代码里 `ContextObject` 仍作 `ContextWindow` 的历史别名残留，以代码为准；但文档表意一律不用它。）
+- **Context 是视角不是归属**：同一个 ooc object 可同时出现在多个 thread 的 context（状态只存一份），每个 thread 持自己的视角参数。详见 ooc-philosophy.md「Context = 视角」。
 
 ## 知识两源：seed vs sediment
 
@@ -30,7 +30,7 @@ activates_on:
 
 ## extendable —— 非维度的外接集成层
 
-- **extendable** **不是**第 10 个能力维度。它是把外部世界（飞书 / notion / slack / github 等）按统一模板接入为可调用的 ContextObject 与 method 的扩展层。
+- **extendable** **不是**第 10 个能力维度。它是把外部世界（飞书 / notion / slack / github 等）按统一模板接入为可调用的 ooc object 与 method 的扩展层。
 - 排除理由（按 self-constitutive 判据）：它够的是**外部世界**，外部系统不构成 Agent 的「自我」，所以是外接集成层而非维度。注意「寄生于 executable」**不是**真正的排除理由（reflectable 也寄生于多个维度），真正判据是「是否构成自我」。
 - 物理上隔离在 `packages/@ooc/core/extendable/`，避免外部 OAPI 细节污染 executable 核心。
 

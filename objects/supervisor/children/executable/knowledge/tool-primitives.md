@@ -7,7 +7,7 @@ activates_on: {"object::root": "show_description"}
 LLM 直接看见和调用的稳定接口只有 4 个：`OOC_TOOLS = [EXEC, CLOSE, WAIT, COMPRESS]`（`packages/@ooc/core/executable/tools/index.ts:29`）。`buildAvailableTools` 当前恒返回固定四件套（`:36`）。
 
 - **exec** — 在某 object 上调一条 method（object method 改数据 / window method 控展示，统一经 exec 分派）。args 齐全且不引入新 path/knowledge 时立即执行；否则系统创建一个 `method_exec` form，LLM 经 `exec(form_id, "refine"/"submit")` 推进。
-- **close** — 关闭一个 ContextObject（form / do / todo 等）。
+- **close** — 关闭一个 context window（form / do / todo 等）。
 - **wait** — 声明当前 thread 等待某 talk / do 的未来 IO。没有未来输入就 end，有才 wait。
 - **compress** — 控制 thread 上下文体积的**元 tool**：它操纵 thread 自身（windows[] + events[]）而非某个 object 的行动。签名 `compress({ scope, targetIds?, level?, summary? })`。`scope=windows`（切 ContextWindow.compressLevel）与 `scope=events`（把 events 中段折叠为一条 events_summary、summary 由 LLM 提供）均已落地；仅 `scope=auto` 抛 not-implemented，留给 emergency_guard（`packages/@ooc/core/executable/tools/compress.ts:372`）。
 

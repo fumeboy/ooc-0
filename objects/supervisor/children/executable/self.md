@@ -4,25 +4,24 @@
 
 ## 核心设计
 
-核心设计：**以 Object 为中心的稳定行动协议**。LLM 不调任意函数、不读写任意状态，只经一组稳定 tool 原语（exec / close / wait / compress）在 ContextObject 上调一条 **object method** 改变世界；method 沿 parentClass 链解析。object method（操作 object 数据，registerExecutable）与 window method（只控展示，归 readable 的 registerReadable）严格分维、同名 fail-loud。
+核心设计：**以 Object 为中心的稳定行动协议**。LLM 不调任意函数、不读写任意状态，只经一组稳定 tool 原语（exec / close / wait / compress）在 context window 上调一条 **object method** 改变世界；method 沿 parentClass 链解析。object method（操作 object 数据，registerExecutable）与 window method（只控展示，归 readable 的 registerReadable）严格分维、同名 fail-loud。
 
 ## 我负责的
 
-在 OOC 里 LLM 不直接调任意函数、不直接读写任意状态。它只能经一组**稳定的 tool 原语**，在 **ContextObject**（= Object 出现在 context 中的形态）上调一条**方法**来行动。这里的"方法"分两类——**object method**（操作 object 自身的业务数据，归我）与 **window method**（只控制 object 在 context 里的展示，如 viewport，归 readable）。我定义这套以 Object 为中心的行动协议，分层如下：
+在 OOC 里 LLM 不直接调任意函数、不直接读写任意状态。它只能经一组**稳定的 tool 原语**，在 **ContextWindow**（= Object 出现在 context 中的形态）上调一条**方法**来行动。这里的"方法"分两类——**object method**（操作 object 自身的业务数据，归我）与 **window method**（只控制 object 在 context 里的展示，如 viewport，归 readable）。我定义这套以 Object 为中心的行动协议，分层如下：
 
 1. **Tool 原语层** — exec / close / wait / compress，LLM 直接可见的 4 个稳定接口（`packages/@ooc/core/executable/tools/index.ts:29`）。
 2. **object method 层** — do / talk / program / plan / todo / end / open_file / open_knowledge / write_file / create_object / evolve_self / glob / grep 等具体行动。canonical 定义 `ObjectMethod`（`packages/@ooc/core/_shared/types/method.ts:48`）。治理动作（resolve PR-Issue / rollback stone）不再是 object method，已转控制面 governance 端点（详见下文「现状」）。
-3. **ContextObject 层** — file / talk / program / do / plan / user-defined object，每个背后是一个 OOC Object（builtin 或 user-defined）。
+3. **ContextWindow 层** — file / talk / program / do / plan / user-defined object，每个背后是一个 OOC Object（builtin 或 user-defined）。
 4. **Registry 层** — 我的注册入口是 `ObjectRegistry.registerExecutable`（只收 object methods + 类元 `parentClass` / `isBuiltinFeature`，`packages/@ooc/core/runtime/object-registry.ts:115`）；它与隔壁 readable 的 `registerReadable` 按维度分工，完整劈分机制详见 readable 维度 knowledge/readable-registration。
 5. **Knowledge Activation 层** — 按 method path 自动激活执行所需知识。
 
-## 当前设计（锚真实代码）
+## 当前设计（一句话锚，详见 knowledge/）
 
-- **4 个 tool 固定**：`OOC_TOOLS = [EXEC, CLOSE, WAIT, COMPRESS]`，`buildAvailableTools` 恒返回固定四件套（`tools/index.ts:29`、`:36`）。stable_tool_surface 约束：新能力走 method / object type，不增顶层 tool。
-- **object method canonical 定义**：`ObjectMethod` 含 `kind`（constructor/method，`packages/@ooc/core/_shared/types/method.ts:51`）+ 两个可见性标记 `public`（对其他 Object，`:94`）/ `for_ui_access`（对前端 API，`:100`）；`MethodOutcome` 三态联合含 `{ ok: true, object }`（`:35`）。**window method** 是另一套（`kind: "window"`，`packages/@ooc/core/_shared/types/window-method.ts`），由 readable 经 registerReadable 注册、只动 `state.viewport` 这类展示状态。registry 在注册期校验同名冲突——同一 type 上同名方法不能既是 object method 又是 window method（`object-registry.ts:52`）。
-- **constructor 委托**：root 上 talk / do / todo / plan / program / open_file 等退化为薄分发器，`exec` 体内调 `lookupConstructor("<type>").exec(ctx)` 把构造委托给 type 自身的 constructor method（`object-registry.ts:280`）。带 `kind: "constructor"` 的 method 必须返回 `{ ok: true, object }`。
-- **root 注册 16 个全局 object method**（`packages/@ooc/builtins/root/executable/index.ts:57` 的 `ROOT_METHODS`，每条一个 `method.*.ts`，经 `registerExecutable("root", { methods })` 注入 `:188`）。其它 object 也注册自己的 method：file（edit/reload/set_range/close）、method_exec（refine/submit，是 object method `windows/method_exec/index.ts:53`）。
-- **args 不齐 → form**：args 齐立即执行；不齐时系统创建 `method_exec` form，LLM 经 `exec(form_id, "refine"/"submit")` 推进。
+- **4 个 tool 固定**：`OOC_TOOLS = [EXEC, CLOSE, WAIT, COMPRESS]`，`buildAvailableTools` 恒返回固定四件套；新能力走 method / object type、不增顶层 tool（stable_tool_surface）。详见 knowledge/tool-primitives.md。
+- **method 分两类、按维度分注册**：object method（操作数据，`registerExecutable`）vs window method（控展示，归 readable 的 `registerReadable`），同一 type 同名 fail-loud；`ObjectMethod` canonical 含 kind / public / for_ui_access / `MethodOutcome` 三态。详见 knowledge/method-and-constructor.md。
+- **constructor 委托**：root 上 talk / do / todo / plan / program / open_file 退化为薄分发器，`exec` 体内 `lookupConstructor("<type>").exec(ctx)` 委托给 type 自身 constructor；`kind:"constructor"` 的 method 返回 `{ ok: true, object }`。详见 knowledge/method-and-constructor.md。
+- **root 16 个全局 object method + form 推进**：`ROOT_METHODS`（do / talk / program / plan / todo / end / open_file / open_knowledge / write_file / create_object / evolve_self / glob / grep / example …）；args 不齐 → 系统创建 `method_exec` form，LLM 经 `exec(form_id, "refine"/"submit")` 推进。详见 knowledge/root-methods-and-forms.md。
 
 ## method 级准入：permission 三档
 
@@ -48,10 +47,10 @@
 
 ## 名词解释
 
-- **ContextObject** —— Object 出现在 context 里的形态（既是信息展示单元、又是行动挂载点）；详见 supervisor `knowledge/ooc-glossary.md`。
+- **ContextWindow** —— Object 出现在 context 里的形态（既是信息展示单元、又是行动挂载点）；详见 supervisor `knowledge/ooc-glossary.md`。
 - **object method** —— 操作 object 自身业务数据的方法，归我，经 `registerExecutable` 注册。canonical 类型 `ObjectMethod`（`packages/@ooc/core/_shared/types/method.ts:48`）。
 - **window method** —— 只控制 object 在 context 里展示状态（如 `set_viewport` 写 `state.viewport`）的方法，`kind:"window"`，归 readable，经 `registerReadable` 注册。与 object method 经同一 `exec` 入口分派，同名 fail-loud（`object-registry.ts:52`）。
-- **tool 原语** —— LLM 直接可见可调的 4 个稳定接口（`OOC_TOOLS`）：**exec**（在某 object 上调一条 method）/ **close**（关一个 ContextObject）/ **wait**（声明 thread 等某 IO）/ **compress**（操纵 thread 自身 windows[]+events[] 控上下文体积）。
+- **tool 原语** —— LLM 直接可见可调的 4 个稳定接口（`OOC_TOOLS`）：**exec**（在某 object 上调一条 method）/ **close**（关一个 context window）/ **wait**（声明 thread 等某 IO）/ **compress**（操纵 thread 自身 windows[]+events[] 控上下文体积）。
 - **constructor** —— `kind:"constructor"` 的 object method，必须返回 `{ ok:true, object }`；manager 看到后把 object mount 进 thread 并写盘。root 上 talk/do/program/… 退化为薄分发器，`exec` 体内 `lookupConstructor("<type>").exec(ctx)` 委托给 type 自身的 constructor（按 kind 索引，非按名字，`object-registry.ts:280`）。
 - **registerExecutable** —— 我的维度注册入口（`object-registry.ts:115`），只收 object methods + 类元（parentClass / isBuiltinFeature）；类型层即拒绝 readable 字段越界。与 `registerReadable` 配对，同一 type 两维度分注册、互不覆盖。
 - **form（open→refine→submit）** —— exec 时 args 不齐或引入新 path/knowledge，系统创建一个 `method_exec` object（form），LLM 经 `exec(form_id, "refine", args)` 多次补参（每次可触发更细知识激活）、`exec(form_id, "submit")` 提交执行。refine/submit 是 method_exec 上注册的两条 object method，与 do.continue / talk.say 同构。

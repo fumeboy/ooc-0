@@ -21,7 +21,7 @@ activates_on: {"object::root": "show_description"}
 
 ## constructor 委托模式
 
-带 `kind: "constructor"` 的 method 必须返回 `{ ok: true, object: ContextObject }`；manager 看到后把 object 插进 thread 的 contextWindows、按 isBuiltinFeature 写盘、把 window 作为 form.result 反馈给 LLM。
+带 `kind: "constructor"` 的 method 必须返回 `{ ok: true, object: ContextWindow }`；manager 看到后把 object 插进 thread 的 contextWindows、按 isBuiltinFeature 写盘、把 window 作为 form.result 反馈给 LLM。
 
 root 上的 `talk` / `do` / `todo` / `plan` / `program` / `open_file` / `open_knowledge` / `glob` / `grep` 已退化为**薄分发器**——只保留 paths / knowledge / match 这些 LLM 视野所需字段，`exec` 体内调 `lookupConstructor("<type>").exec(ctx)` 把构造委托给 type 自身注册的 constructor method。`lookupConstructor` 按 `kind === "constructor"` 标记索引、而非按名字（`object-registry.ts:280`）。
 

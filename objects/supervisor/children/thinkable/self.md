@@ -29,7 +29,7 @@ thinkable 这个维度拆成这些子模块
 
 ## 现状
 
-最小闭环已落地：LLM 交互、context 构造、knowledge 双源加载与 trigger 激活、Thread Tree 调度、单轮 thinkloop 全部可跑（core 单测 823 全绿）。
+最小闭环已落地：LLM 交互、context 构造、knowledge 双源加载与 trigger 激活、Thread Tree 调度、单轮 thinkloop 全部可跑（core 单测全绿）。
 
 本轮关键修复：`object::root` trigger always-on（`knowledge/triggers.ts:187`）。根因是契约与实现分歧——root 是 manager 提供的虚拟隐式父 window，从不 push 进 `thread.contextWindows`，按扫窗口匹配 `type==="root"` 则永不命中，导致 agent 在 super flow 沉淀的 memory 永不召回（reflectable 自演化核心价值落空）。特判 `objectType==="root"` 为 always-on，坐实「等价任何时候」的契约承诺。（注：`object::root` 是新格式；旧 `window::root` 在 `parseTrigger` 阶段自动归一化为同一 AST，仍可用但应优先写新格式。）
 
