@@ -10,7 +10,7 @@ root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins
 
 - **do** — 派生子 thread，创建 do_object。
 - **talk** — 与 user 或其他 Object 对话，创建 talk_object。
-- **program** — 执行 shell / js / ts，创建 program_object（沙箱见 `packages/@ooc/core/executable/program/sandbox/executor.ts` + `program/shell.ts`）。
+- **program** — 执行 shell / js / ts，创建 program_object（沙箱见 `packages/@ooc/builtins/program/executable/sandbox/executor.ts` + `executable/shell.ts`）。
 - **plan** / **todo** — 更新 plan / 创建可见待办。
 - **end** — 标记当前 thread 完成。传 `result` 时自动调 creator window 的 continue/say 把内容写进 transcript 并 auto-archive 父侧 do_window；不传则只标记本轮结束。result 是便捷糖，不是回报通道。
 - **open_file** / **open_knowledge** — 把文件 / 知识载入 context。

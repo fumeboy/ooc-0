@@ -25,7 +25,7 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 1. `write_file` / `file_window.edit` 写 — `@ooc/builtins/file/executable/index.ts`。
 2. `loadSelfInstructions` 读 — `packages/@ooc/core/thinkable/context/index.ts`。
 3. executable/visible/readable loader 读。
-4. program shell `$OOC_SELF_DIR` — `packages/@ooc/core/executable/program/self-env.ts`。
+4. program shell `$OOC_SELF_DIR` — `packages/@ooc/builtins/program/executable/self-env.ts`。
 5. 控制面 visible endpoint — `packages/@ooc/core/app/server/modules/ui/api.client-source-url.ts`。
 
 锚点：`packages/@ooc/core/persistable/stone-worktree.ts:127` resolveStoneIdentityDir / `:143` resolveStoneIdentityRef / `:89` ensureSessionWorktree / `:30` sessionStoneBranch / `:54` sessionUsesWorktree / `:47` sessionWorktreePath；合入在 `packages/@ooc/core/programmable/evolve-self.ts:133` evolveSelfMerge / `:108` evolveSelfDiff。

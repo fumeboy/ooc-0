@@ -20,7 +20,7 @@ program ts/js sandbox 与 custom method dispatcher 路径执行用户代码时�
 
 ## program shell `$OOC_SELF_DIR`（worktree 统一模型）
 
-`buildProgramShellEnv(thread)`（`packages/@ooc/core/executable/program/self-env.ts:16`）目前只透出 `OOC_SELF_DIR`。它经 `resolveStoneIdentityDir(ref, "write")`(:22) 解析（不是硬拼旧扁平路径）：
+`buildProgramShellEnv(thread)`（`packages/@ooc/builtins/program/executable/self-env.ts:16`）目前只透出 `OOC_SELF_DIR`。它经 `resolveStoneIdentityDir(ref, "write")`(:22) 解析（不是硬拼旧扁平路径）：
 
 - **business session** → 该 session worktree 的 object 目录 `flows/<sid>/objects/<id>/`（main HEAD 完整副本，裸读裸写都看得到完整 identity，改动落 worktree 不污染 main，经 super flow `evolve_self` 合入才永久）。
 - **super / 控制面** → main canonical。
