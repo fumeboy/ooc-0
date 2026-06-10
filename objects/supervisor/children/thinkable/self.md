@@ -45,7 +45,7 @@ thinkable 这个维度拆成这些子模块
 
 ## 名词解释
 
-- **ContextWindow / ContextObject**：同一个东西的两个名字——**Object 出现在当前 thread context 中的形态**（window 上挂的 method 就是 Object 的 method，context 是一组可 open/close/update/exec 的 Object 集合）；详见 supervisor `knowledge/ooc-glossary.md`。
+- **ContextWindow**：context 的组成、扩展单元，也是 **Object 出现在thread context 中的形态**。
 - **Context**：Object 本轮思考能看见的全部世界，也是它的世界边界——context 之外的状态（内存/文件）对它不存在。
 - **Thread**：思考过程的运行时节点，持有自己的 context/windows/inbox/outbox/events/status。
 - **Thread Tree**：thread 派生子 thread 形成的树，多 thread 可并行思考；OOC 的类 SubAgent 底座。

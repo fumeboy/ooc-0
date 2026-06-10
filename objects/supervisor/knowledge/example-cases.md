@@ -24,7 +24,7 @@ activates_on:
 
 ## Case 2 — 飞书集成（外部 SaaS → ContextWindow，而非 Agent）
 
-把飞书群聊 / 文档作为一等 ContextObject 引入，让 LLM 在 thread 里直接打开、刷新、搜索、发送、追加：
+把飞书群聊 / 文档作为 OOC Object 引入，让 LLM 在 thread 里直接打开、刷新、搜索、发送、追加：
 
 - `feishu_chat` Window（refresh / search / send / reply / subscribe / close）+ `feishu_doc` Window（read / search_in_doc / append / patch_block / share_link / attach_to_chat / close）；root 入口 `open_feishu_chat` / `open_feishu_doc`。
 - OAPI 调用收口到 `extendable/lark/` 经子进程调官方 lark-cli（凭证由 cli 用 OS keychain 管，OOC 不存 secret）。
