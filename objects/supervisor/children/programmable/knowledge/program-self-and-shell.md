@@ -1,5 +1,5 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # ProgramSelf 注入与 program shell `$OOC_SELF_DIR`
@@ -26,5 +26,3 @@ program ts/js sandbox 与 custom method dispatcher 路径执行用户代码时�
 - **super / 控制面** → main canonical。
 
 由此 program shell 与 `write_file` / `edit` 收敛到同一 session 目录（session-worktree 统一模型五通道之通道一，commit `726ab0e1`，2026-06-06）。修复前 `OOC_SELF_DIR` 硬拼旧路径，agent 用 shell 写 method 落孤儿路径 → runtime 不加载 → 调 method 恒 METHOD_NOT_FOUND。
-
-概念权威：`packages/@ooc/meta/object.doc.ts:3886` 节点 `programmable.program_self_injection`。

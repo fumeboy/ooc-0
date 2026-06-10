@@ -19,13 +19,13 @@
 ## 当前设计（锚真实代码）
 
 - 维度 API 面：`packages/@ooc/core/programmable/index.ts:9`（git CLI 薄包装 / stones bootstrap / versioning 编排：`commitWorktree` / `tryMergeSelf` / `httpDirectMainWrite`）。层级规则 `programmable → persistable` 单向。
-- object method 类型：canonical `ObjectMethod` 在 `packages/@ooc/core/_shared/types/method.ts:48`（字段 `paths / intent(args) / onFormChange / schema / exec` + `permission / public / for_ui_access`；**已删 `match` / `knowledge`** 字段，C7 后统一 intent/onFormChange/schema）。自定义 window 声明 `StoneObjectDeclaration` 在 `packages/@ooc/core/executable/object/object-types.ts:46`，method 字典字段名为 **`methods`**（不是 `commands`）。
+- object method 类型：canonical `ObjectMethod` 在 `packages/@ooc/core/_shared/types/method.ts:48`（字段构成 + 已删 `match`/`knowledge` 的权威叙述见 knowledge/self-written-method-hot-reload）。自定义 window 声明 `StoneObjectDeclaration` 在 `packages/@ooc/core/executable/object/object-types.ts:46`，method 字典字段名为 **`methods`**。
 - 动态加载与热更：`packages/@ooc/core/runtime/server-loader.ts:21` `ServerLoader`；`?t=mtime`（:78）破坏 import cache；旧 `llm_methods` 出现即抛硬切错误（:80-84，提示改写为 `export const window … { methods: { … } }`）；同时加载 `readable.ts`（:86-97）；接口 `loadObjectWindow`(:113)/`loadUiServerMethods`(:118)/`loadObjectReadable`(:123)/`invalidateStone`(:128，按 stone 失效)/`clearCache`(:137)，module-level wrapper `clearServerLoaderCache`(:168)。
 - ProgramSelf：`packages/@ooc/core/executable/object/self.ts:23` `createProgramSelf`；`callMethod`(:31) lookup window → `registry.getObjectDefinition(type).methods[method]` → exec；`getData·setData`(:60,:67) 读写 flow 级 `flows/<sid>/objects/<self>/data.json`；`getThreadLocal·setThreadLocal`(:76,:79)。**已知边界**：`callMethod` 直接索引 `getObjectDefinition(type).methods[method]`，不走 `resolveMethod`（沿 parentClass 链回退，`object-registry.ts:249`）；继承自父 class 的 method 经 ts/js sandbox `self.callMethod` 取不到，只能取本 class 自身声明的 method。
 - program shell env：`packages/@ooc/core/executable/program/self-env.ts:16` `buildProgramShellEnv` 经 `resolveStoneIdentityDir(ref, "write")`(:22) 解析 `OOC_SELF_DIR`(:27)。
 - program 运行时：`packages/@ooc/builtins/program/executable/runtime.ts:50` `runOneExec` 只路由 shell/ts/js 三种语言模式（旧的 callMethod/function 子模式已退役，见 :10-13）；shell 经 `buildProgramShellEnv`(:65)，ts/js 经 `createProgramSelf`(:87) 注入 self。
 - stone 写路由：LLM session 内所有 stone 写（改自己 / 改别人 / 建新对象）→ 直接 `write_file` 落 `flows/<sid>/` session worktree；HTTP 控制面写 → 直接 commit main（`httpDirectMainWrite`）。`versionedStoneWrite` / `openMetaprogWorktree` 已于 2026-06-09 删除。
-- 概念权威：`packages/@ooc/meta/object.doc.ts:3739` 节点 `programmable`（loader / program_self_injection / custom_window_invocation / window_evolution 等 children）。
+- 子能力（各见本对象 knowledge/）：loader（热更）/ program_self_injection（program shell 注入 self）/ custom_window_invocation（自定义 window + 方法表）/ window_evolution（演化自身 self window）。
 
 ## 现状
 
@@ -59,11 +59,11 @@
 - **object method**（`window.methods`）：操作 object 数据的方法，头等 `ObjectMethod`（`exec/paths/intent/onFormChange/schema`），LLM 经 `exec(window_id, method, args)` 调。**自写方法 = 自写它**。
 - **window method**（`windowMethods`，readable 维度）：只控制 window 自身信息展示的方法，不操作数据。与 object method 并列、不同维度、同名 fail-loud。**不是我管的**，列在这里只为消歧。
 - **ui_methods**（**归 visible**）：`executable/index.ts` 里给 UI / agent-native 用的方法字典（`UiServerMethod` 形状），走 HTTP `callMethod` 通道——人类侧 UI 调用通道，归 visible 维度，不归我。与 `window.methods`（LLM 路径）形状不同、各写各的、不互相代替；列在这里只为消歧。
-- **StoneObjectDeclaration**：`export const window` 的类型——自定义 self 门面 window 的声明（`title/description/basicKnowledge/methods`），method 字典字段名是 `methods`（不是 `commands`）。
+- **StoneObjectDeclaration**：`export const window` 的类型——自定义 self 门面 window 的声明（`title/description/basicKnowledge/methods`）。method 字典字段名、已删字段的权威见 knowledge/self-written-method-hot-reload。
 - **server-loader / ServerLoader**：动态加载 stone `executable/index.ts` + `readable.ts` 的类，按 mtime 缓存。接口 `loadObjectWindow` / `loadUiServerMethods` / `loadObjectReadable` / `invalidateStone`。
 - **loadObjectWindow**：ServerLoader 上「取某 stone 的 `export const window`」的方法；自写方法生效的读取端。
 - **fs.watch 热更**：`HotReloadWatcher` 递归 watch `stones/`（debounce）→ 分类 → emit `stone:changed` → `invalidateStone` 失效该 stone 缓存。不在 callback 里直接 reimport，留给下次懒加载（错误栈更准）。
-- **mtime 失效**：loader 缓存键含文件 mtime，`import(...?t=mtime)` 破坏 bun import cache；写文件改了 mtime → 下次 import 拿新模块。假设 FS 毫秒精度。
+- **mtime 失效**：loader 缓存键含文件 mtime，写文件改 mtime → 下次 import 拿新模块（`?t=mtime` 破坏 import cache 的机制、FS 精度 caveat 权威见 knowledge/self-written-method-hot-reload）。
 - **ProgramSelf**（`programSelf`）：注入进 program ts/js sandbox 与 custom method dispatcher 的能力对象——`{ dir, callMethod, getData, setData, getThreadLocal, setThreadLocal }`。与 method receiver `ctx.self` 是两个东西。
 - **`$OOC_SELF_DIR`**：program shell 经 env 透出的 stone 目录路径，由 `resolveStoneIdentityDir(ref,"write")` 解析（business session → session worktree object 目录；super/控制面 → main canonical）。
 - **session worktree**：business session 的 stone 写落点 `flows/<sid>/objects/<id>/`（main HEAD 完整副本），改动不污染 main，经 super flow `evolve_self` 合入才永久。

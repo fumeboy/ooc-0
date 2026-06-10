@@ -2,7 +2,7 @@
 title: thread 调度与 thinkloop（思考过程的运行时）
 description: thinkable 如何把思考拆成 Thread Tree 并逐 tick 调度，单 thread 一轮 thinkloop 的循环结构
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # thread + thinkloop：思考过程怎么运行
@@ -34,7 +34,7 @@ thread 状态语义：running（可被调度跑下一轮）/ waiting（等 talk/
 - `message`：普通 system / user / assistant 文本
 - `function_call`：LLM 发起的 tool 调用
 - `function_call_output`：tool 调用结果
-- `reasoning`：模型 thinking 记录（只用于 debug/回放，**不作为普通上下文反复喂回**，见 `object.doc.ts:226`）
+- `reasoning`：模型 thinking 记录（只用于 debug/回放，**不作为普通上下文反复喂回**——否则 LLM 会 meta-thinking、transcript 膨胀、旧推理干扰当前判断）
 
 把 tool call / tool result 当一等结构（而非拼回 transcript 文本），让 debug / resume / provider 适配更稳定。入口 `createLlmClient()`（`packages/@ooc/core/thinkable/llm/client.ts:8`）统一 provider；llm 只管「如何请求模型」，「模型能做什么」由 executable 的 tool/method 决定。
 
@@ -43,7 +43,7 @@ thread 状态语义：running（可被调度跑下一轮）/ waiting（等 talk/
 - `exec(window_id?, method, args?)`：唯一的「调 method」原语；`window_id` 缺省为 root（root 上的全局 method）。Object Unification 后 window.id = objectId，故 `window_id` 即目标 object。args 齐全立即执行，不齐则系统创建 method_exec form 供后续补齐。
 - `close`：关 window / 从 context 移除 object 引用
 - `wait`：等 IO
-- `compress`：压上下文。已实现 `scope=windows`（按 target_ids 切 window compressLevel）与 `scope=events`（LLM 提供 summary 折叠事件段，`executable/tools/compress.ts:378`）；仅 `scope=auto` 抛 not-implemented（`compress.ts:372`，预留未来紧急压缩策略；旧 emergency_guard 已退役，新策略未定）。
+- `compress`：压上下文。已实现 `scope=windows`（按 target_ids 切 window compressLevel）与 `scope=events`（LLM 提供 summary 折叠事件段，`executable/tools/compress.ts:378`）；仅 `scope=auto` 抛 not-implemented（`compress.ts:372`）：旧 `applyEmergencyGuard` 自动降级已删；scope=auto 预留紧急压缩、策略未定（≠复活旧 guard）。
 
 ## 调度器（`packages/@ooc/core/thinkable/scheduler.ts:131`）
 

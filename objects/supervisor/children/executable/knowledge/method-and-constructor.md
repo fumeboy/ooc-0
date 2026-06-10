@@ -1,5 +1,5 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # object method 与 constructor 委托
@@ -8,7 +8,7 @@ activates_on: {"window::root": "show_content"}
 
 在我（executable）这一片，Object 上挂的方法分两类，按维度分注册：
 
-- **object method** —— 操作 object 自身的业务数据，归我。由 `registerExecutable(type, { methods })` 注册（`packages/@ooc/core/runtime/object-registry.ts:115`）。原先 root window 上注册的"命令"、原先 stone object `executable/index.ts` 里定义的方法，现在都是 object method。
+- **object method** —— 操作 object 自身的业务数据，归我。由 `registerExecutable(type, { methods })` 注册（`packages/@ooc/core/runtime/object-registry.ts:115`）。原先 root window 上注册的"方法"、原先 stone object `executable/index.ts` 里定义的方法，现在都是 object method。
 - **window method** —— 只控制 object 在 context 里的展示（如 `set_viewport` 写 `state.viewport`），归 readable。由 `registerReadable(type, { windowMethods })` 注册（`object-registry.ts:131`），`kind: "window"`（`packages/@ooc/core/_shared/types/window-method.ts`）。
 
 两者经同一个 `exec(window_id, method_name)` 入口分派；registry 在注册期校验同名冲突——同一 type 上同名方法不能既是 object method 又是 window method，否则 fail-loud（`object-registry.ts:52` `assertNoMethodNameCollision`）。

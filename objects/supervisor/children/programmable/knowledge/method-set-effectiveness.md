@@ -1,10 +1,10 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # method 集生效路径与自改边界
 
-custom window 上的 object method 有两条调用入口，共享同一份 `window.methods` 字典（注意是 `methods`，不是 `commands`——command→method 重命名后统一）；只是入口形态不同。
+custom window 上的 object method 有两条调用入口，共享同一份 `window.methods` 字典（字段名与 `ObjectMethod` 形状权威见 self-written-method-hot-reload）；只是入口形态不同。
 
 ## 调用路径
 
@@ -28,17 +28,15 @@ await self.callMethod("<window_id>", "<method>", { ... })
 
 UI / agent-native 客户端走第三条独立通道：HTTP `callMethod` → `loadUiServerMethods` 拿 `ui_methods` 字典执行（`ui_methods` 归 **visible** 维度，不归我）。`window.methods`（LLM 路径，`ObjectMethod` 形状）与 `ui_methods`（HTTP 路径，`UiServerMethod` 形状）形状不同、各写各的，不互相代替；都需要则写两份。
 
-概念权威：`packages/@ooc/meta/object.doc.ts:3915` 节点 `programmable.custom_window_invocation`。
-
 ## 演化与生效
 
-演化自身 self window 的标准路径（`programmable.window_evolution`，`object.doc.ts:3948`）：
+演化自身 self window 的标准路径：
 
 1. 触发点（典型：reflectable 的反思请求，或显式 write_file 指令）。
 2. super flow 经 `exec(method="write_file", path="stones/<self>/executable/index.ts", content="...")` 重写源码。
 3. 下一次调 method 时 loader 看到 mtime 变化 → 重新 import → 新形态生效（详见 self-written-method-hot-reload）。
 
-写新 method 须遵守 `ObjectMethod` 形状（`exec` / `paths` / `intent` 必填）；`schema` / `onFormChange` / `permission` 可选但建议补全（旧的 `match` / `knowledge` 字段已删）——清晰的 schema 与 intent 直接影响 LLM 的调用质量。
+写新 method 须遵守 `ObjectMethod` 形状（字段构成、已删字段权威见 self-written-method-hot-reload）——清晰的 schema 与 intent 直接影响 LLM 的调用质量。
 
 ## 自改 method 集的边界（跨切未决）
 

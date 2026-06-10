@@ -1,5 +1,5 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # app.client — AppShell 与 chat 模型
@@ -22,7 +22,7 @@ user 在 `user.root` 上持有一个 talk_window 指向 target object 的 callee
 - **continue**：`POST /api/flows/:sid/continue`，body `{ text, targetWindowId? }`，固定走 user.root.talk_window。
 - **polling-job 协议**：发起动作拿 `jobId` → 轮询 job 状态（`domains/chat/policy.ts` 的 `waitForJob`，约 10s 上限）→ job 终态后刷新 thread。**无 SSE**。额外有 4s thread 静默轮询（`shell.tsx:252`，`setInterval(..., 4000)`）做 hash diff 后只在变化时更新，让 callee 在用户不动时也渐进显示新事件。
 - **timeline 三元模型**：`domains/chat/formatter.ts` 把异构 thread 事件归一为 `ChatLine`（message | tool | notice），TuiBlock 渲染；连续 tool 卡合并、assistant→user 回信穿插、inbox 按 fromObjectId 显示真实标签。
-- **inline UI token**：消息文本里 `[[ui{"comp":"file-link",...}ui]]` 由 `InlineUiContent` 解析渲染成 React 组件，零 `dangerouslySetInnerHTML`；协议来自 user 的 readme。
+- **inline UI token**：消息文本里 `[[ui{"comp":"file-link",...}ui]]` 由 `InlineUiContent` 解析渲染成 React 组件，零 `dangerouslySetInnerHTML`；协议来自 user 对象的 `readable.md`。
 
 ## 其余控制面块
 

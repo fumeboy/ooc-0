@@ -1,5 +1,5 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # 自写方法的热更（write 即生效）
@@ -44,5 +44,3 @@ export const ui_methods = { /* visible 维度，HTTP callMethod 路径 */ };
 lazy mtime 检查只在「下次 import」时生效。tier 1 引入主动失效（`packages/@ooc/core/runtime/hot-reload.ts`）：`HotReloadWatcher` 递归 `fs.watch` `stones/`（50ms debounce）→ 按 objectId 聚类、`classifyChange` 分类（code / view / knowledge / identity）→ emit `stone:changed` → WorldRuntime 订阅后调 `ServerLoader.invalidateStone` 失效该 stone 缓存。不在 watcher callback 里直接 reimport——executable 可能有 syntax error，留给真正的消费者下次懒加载，错误栈更准确。tier 2（knowledge 增量 re-synthesis）/ tier 3（visible 浏览器 HMR）仍 TODO。
 
 **caveat**：按 mtime 失效假设 FS 至少毫秒精度；秒级精度 FS 有「写完立刻读旧版」极短窗口，目前无 etag/hash 兜底。
-
-概念权威：`packages/@ooc/meta/object.doc.ts:3814` 节点 `programmable.loader`。

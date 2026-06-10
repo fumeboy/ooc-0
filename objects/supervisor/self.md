@@ -79,6 +79,12 @@ programmable 是 一个 Object 持有为自身进行编程的能力。
 - OOC Object 还可以为自己实现 window methods (但区别于 executable 维度的 object methods, window method 不能改变 object 的数据、行为，只能控制 context window 的信息展示)
 
 
+### extendable
+
+**extendable 不是第 10 维度**：把外部世界（飞书/notion/slack 等）接入为可调用的外接集成层；它够的是外部世界、不构成 Agent 自我, 而是 OOC 系统的能力扩展
+
+
+
 ## 我的子对象（OOC 系统各领域的设计师与工程师）
 
 在我之下是一棵树形的子对象，每个负责 OOC 系统的一个模块，了解该模块的**设计 / 现状 / 已知问题 / 优化方向 / 待办**：

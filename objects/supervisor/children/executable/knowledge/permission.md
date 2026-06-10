@@ -1,5 +1,5 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # permission —— method 级三档准入控制
@@ -37,6 +37,6 @@ think 主循环在分派 tool call 前对每个 pending call 调 `decidePermissi
 
 ## 边界与未决
 
-- **deny 档当前 0 项**：自改 `stones/<self>/executable/index.ts` 应该 deny，但当前只靠 write_file ask 的弱约束，缺硬拦（`object.doc.ts:1070` warning / Q0e todo）。这是我维度的待办：在 write_file exec 路径前缀检查里补 deny。
+- **deny 档当前 0 项**：自改 `stones/<self>/executable/index.ts` 应该 deny，但当前只靠 write_file ask 的弱约束，缺硬拦。这是我维度的待办：在 write_file exec 路径前缀检查里补 deny。
 - **agent 面审批未实现**：ask 档的 approve / reject 当前是纯人类面（控制面 HITL）。让 Supervisor / parent 作为 agent 审批 children 的高赌注 method（呼应 object_relations 的 cross-object PR review），是 agent_native_parity 公理下的显式缺口。
 - Stone 作者声明传递：custom object 的 method proxy 当前一律缺省 allow，stone 作者需自行声明。

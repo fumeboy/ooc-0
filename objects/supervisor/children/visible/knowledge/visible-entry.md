@@ -2,7 +2,7 @@
 title: visible 入口 — stone client / flow pages / ui_methods 调用通道
 description: Object 自身 UI 页面的两类入口、HTTP callMethod 通道与 client-source-url 契约
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # visible 入口
@@ -10,7 +10,7 @@ activates_on:
 Object 的 UI 页面有两类入口：
 
 1. **stone client** — `stones/<self>/visible/index.tsx`，跨 session 稳定的单页入口（"主页"）。
-2. **flow client pages** — `flows/<sid>/objects/<obj>/client/pages/<page>.tsx`，session 内的多页扩展。（flow 多页仍落 `client/pages/`——单入口迁 `visible/` 只覆盖了 stone 单页，`flowClientPagesDir` 未跟随，`persistable/stone-client.ts:25`。）
+2. **flow client pages** — `flows/<sid>/objects/<obj>/client/pages/<page>.tsx`，session 内的多页扩展（单入口迁 `visible/` 只覆盖了 stone 单页，flow 多页仍落 `client/pages/`，详见 self.md 名词解释 · client/pages）。
 
 ## canonical 单入口契约
 

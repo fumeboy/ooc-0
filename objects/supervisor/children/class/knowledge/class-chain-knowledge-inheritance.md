@@ -1,5 +1,5 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # class 链 knowledge 继承
@@ -20,4 +20,4 @@ object 的 knowledge 加载有**两条不同的继承轴**，loader 分两步扫
 
 parentClass 链由 `registry.resolveParentClassChain(objectId)` 求得（`loader.ts:71`），每个 class id 经 `stoneKnowledgeDir` 求 knowledge 目录（`loader.ts:73`）。对 `_builtin/<id>` 前缀，`stoneKnowledgeDir`（`packages/@ooc/core/persistable/stone-object.ts:35`）经 `resolveBuiltinReadDir` 走框架包 `@ooc/builtins/<id>/knowledge/`，于是框架 class 的 seed knowledge 经 class 链无条件继承给 instance。
 
-实证：supervisor instance 经 `ooc.class="_builtin/supervisor"` 继承框架 supervisor class 的全部 5 篇 seed knowledge（8 维度 / world-vocabulary / 治理操作等），加上 root 命令，在全新 world 的首次对话即全部加载。
+实证：supervisor instance 经 `ooc.class="_builtin/supervisor"` 继承框架 supervisor class 的全部 5 篇 seed knowledge（9 维度 / world-vocabulary / 治理操作等），加上 root 命令，在全新 world 的首次对话即全部加载。

@@ -2,7 +2,7 @@
 title: 自我迭代前沿 —— 层次 A 已闭 / 层次 B 三缺口
 description: OOC 「用 OOC 迭代 OOC」分两个层次；问自我迭代到哪一步、dogfooding 在哪断、最小探针怎么设计时看这篇
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # 自我迭代前沿
@@ -59,4 +59,4 @@ closing B 的路径：**把越来越多框架行为推进 Object 拥有的、热
 
 三个 ✗（阶段 1/4/5）精确对应三缺口；逃生舱能勉强走完 1-3，但 4（生效）和 5（治理）即使有逃生舱也断。**一次失败的 dogfooding 实证三缺口**，比十页哲学更能定位下一个该建的能力。探针为 design（未执行），要点：用唯一 token 检测残留、改 repo 工作树后 `git checkout --` 务必复原、最好在隔离 worktree 副本里跑。
 
-设计权威：`docs/ooc-6/self-iteration-frontier.md` + `docs/ooc-6/dogfooding-probe-design.md`。
+早期设计稿：`docs/ooc-6/self-iteration-frontier.md` + `docs/ooc-6/dogfooding-probe-design.md`（仍在，正被本知识吸收；内容以本篇为准）。

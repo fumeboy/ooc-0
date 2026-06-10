@@ -37,15 +37,15 @@ thinkable 这个维度拆成这些子模块
 
 - **死知识**：无 `activates_on` frontmatter 的 pool knowledge 永不自动激活；写错 schema 的 sediment 仅 warn 跳过，靠 LLM 自觉，缺统一写入期闸门 / 巡检。→ 计划：给 knowledge 写入加统一校验闸门，frontmatter schema 不合法即拒绝（而非 warn 跳过），消灭死知识。这是当前最高价值待办。
 - **derived 窗口两套读取分支**：derived 窗口不写回 `thread.contextWindows`，靠 transient `_renderedWindows` 兜底观测（`context/index.ts:360`），mock 路径与真实渲染分两套。→ 计划：收敛为一套，让真实渲染与 mock 路径走同一条。
-- **compress scope=auto 未实现**：compress 已支持 scope=windows（切 window compressLevel）与 scope=events（LLM 提供 summary 折叠事件段，`executable/tools/compress.ts:378`）；仅 scope=auto 仍抛 not-implemented（`compress.ts:372`）。→ 计划：scope=auto 预留未来紧急压缩策略（旧 emergency_guard 已退役，新策略未定），待补。
+- **compress scope=auto 未实现**：落地状态权威见 knowledge/thread-and-thinkloop.md（scope=windows/events 已落地、scope=auto 抛 not-implemented）。→ 计划：scope=auto 留作紧急压缩占位——旧 `applyEmergencyGuard` 自动降级已删；scope=auto 预留紧急压缩、策略未定（≠复活旧 guard），待补。
 
 ## 边界
 
-- llm 只管「如何请求模型」，「模型能做什么」由 executable 的 tool/method 决定；reasoning 只用于 debug/回放，不作为普通上下文反复喂回（`object.doc.ts:226`）。
+- llm 只管「如何请求模型」，「模型能做什么」由 executable 的 tool/method 决定；reasoning 只用于 debug/回放，不作为普通上下文反复喂回。
 
 ## 名词解释
 
-- **ContextWindow / ContextObject**：同一个东西的两个名字。它不是独立于 Object 的数据结构，而是 **Object 出现在当前 thread context 中的形态**——window 上挂的 method 就是 Object 的 method。Context 因此不是一段字符串，而是一组可 open/close/update/exec 的 Object 集合。
+- **ContextWindow**：context 的组成、扩展单元，也是 **Object 出现在thread context 中的形态**。
 - **Context**：Object 本轮思考能看见的全部世界，也是它的世界边界——context 之外的状态（内存/文件）对它不存在。
 - **Thread**：思考过程的运行时节点，持有自己的 context/windows/inbox/outbox/events/status。
 - **Thread Tree**：thread 派生子 thread 形成的树，多 thread 可并行思考；OOC 的类 SubAgent 底座。
@@ -54,7 +54,7 @@ thinkable 这个维度拆成这些子模块
 - **trigger**：activates_on 的 key 表达式，五类——`object::<type>` / `method::<objtype>::<method>` / `object_id::<id>` / `intent::<name>`（支持 `program.*` wildcard）/ `super`；旧 `window::<type>` 归一化为 `object::<type>`。
 - **show_description / show_content**：两个激活级别（只露标题描述 / 展开正文）；多 trigger 命中取 max。
 - **渐进式知识激活**：执行经 open→refine→submit 渐进暴露窗口与方法，knowledge 随之按 trigger 渐进激活——执行到哪、知识激活到哪，控制每轮 context 体积。
-- **seed / sediment**：knowledge 双源。seed=设计期写定的 stone `knowledge/`（进 git）；sediment=运行时沉淀的 pool `knowledge/{memory,relations}/`（不进 git）。同名 sediment 覆盖 seed。
+- **seed / sediment**：knowledge 双源（seed=设计期 stone `knowledge/` 进 git；sediment=运行时沉淀 pool `knowledge/{memory,relations}/` 不进 git，同名覆盖 seed）；详见 supervisor `knowledge/ooc-glossary.md`。
 - **inheritable**：knowledge frontmatter 字段，唯有显式 `true` 才下传给嵌套子 Agent（领域层级轴）。
 - **exec / close / wait / compress**：LLM 操作世界的 4 个基础 tool。
 - **ProcessEvent**：thread 运行产生的过程事件流（LLM 输出 / tool 调用 / context 变化），构成 transcript 过程事件层。

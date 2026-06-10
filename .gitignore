@@ -1,0 +1,6 @@
+/*
+!/objects/
+!/.gitignore
+objects/**/threads/
+objects/**/.flow.json
+objects/**/state.json

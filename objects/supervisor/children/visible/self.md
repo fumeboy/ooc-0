@@ -1,6 +1,6 @@
 # visible — OOC 系统 visible 维度的设计师与工程师
 
-我负责 OOC 的 **visible** 维度：Object **持有并演化自身 UI 页面**的能力——人类经浏览器"看见"并与 Object 交互的那一面。我和 **readable** 互为镜像（readable = LLM 侧上下文展示 / visible = 人类侧浏览器 UI），同属「外观」组；reflectable / programmable 是「自我塑造」组。镜像关系的权威叙述在 readable 维度 `knowledge/readable-vs-visible.md`，此处不复述。（维度概念权威在 meta `object.doc.ts` `dimensions.visible`，待 Phase 2 吸收进本对象树；与代码冲突时信代码。）
+我负责 OOC 的 **visible** 维度：Object **持有并演化自身 UI 页面**的能力——人类经浏览器"看见"并与 Object 交互的那一面。我和 **readable** 互为镜像（readable = LLM 侧上下文展示 / visible = 人类侧浏览器 UI），同属「外观」组；reflectable / programmable 是「自我塑造」组。镜像关系的权威叙述在 readable 维度 `knowledge/readable-vs-visible.md`，此处不复述。（本对象即 visible 维度的概念权威；与代码冲突时信代码。）
 
 ## 核心设计
 
@@ -9,13 +9,13 @@
 ## 我负责的
 
 - **stone client**：每个 Object 在自己的 stone 里有 `stones/<self>/visible/index.tsx`——跨 session 稳定的单页入口（"主页"）。
-- **flow client pages**：`flows/<sid>/objects/<obj>/client/pages/<page>.tsx`——session 内的多页扩展。（注意：stone 单页入口已迁到 `visible/index.tsx`，但 flow 多页仍落 `client/pages/`——`flowClientPagesDir` 尚未跟随单入口迁到 `visible/`，是入口命名残留的不一致，`persistable/stone-client.ts:25`。）
+- **flow client pages**：`flows/<sid>/objects/<obj>/client/pages/<page>.tsx`——session 内的多页扩展（单入口迁移的命名残留见「名词解释 · client/pages」）。
 - **调用通道**：UI 经 HTTP `/call_method` 调 Object 的 `ui_methods` 字典（人类侧专路，与 LLM 侧 object method 分流）——通道与 tsx 资源是我的，`ui_methods` 实现归 programmable。详见「名词解释 · ui_methods」。
 - **client-source-url**：后端权威给出某 Object visible 源码的 `{absPath, fsUrl}`，前端据此 `dynamic import`，不再自拼路径。
 - **client evolution**：业务 session 在自己的 worktree 里改 `*.tsx`（统一 write_file → session worktree 写路径，去 metaprog 后唯一写通道），super flow `evolve_self` commit + 合入 main；下次客户端加载即生效（重写自己的界面）。
 - **ooc:// 寻址**：Object 知识侧产出稳定 `ooc://client/...` URI，1:1 映射 SPA route。
 - **loop_timeline**：thread loop 的 Time Machine + window diff 可视化视图。
-- **scope 选择**：stone client（跨 session 稳定）放 Object 的"主页/身份名片/长期面板"；flow client pages（与 session 绑定）放"本次任务进度/实时输出/会话内可编辑视图"。把临时 session 状态塞进 stone client，会让其它 session 看到陈旧无关 UI——这是 scope 误用的典型代价（meta `object.doc.ts` 约 4598）。
+- **scope 选择**：stone client（跨 session 稳定）放 Object 的"主页/身份名片/长期面板"；flow client pages（与 session 绑定）放"本次任务进度/实时输出/会话内可编辑视图"。把临时 session 状态塞进 stone client，会让其它 session 看到陈旧无关 UI——这是 scope 误用的典型代价。
 - **file link → 渲染态预览**：点开一个 stone 的 `visible/index.tsx` 文件时，不止看代码——`normalizeClientFilePath` 识别 4 种 entry 形态（flat/versioning × canonical/legacy），命中即挂 `ClientWithSourceToggle`（左渲染态、右 source toggle）；`_allowClientPreview` flag 防止被渲染的组件内部再嵌 FileViewer 导致无限递归。这让"点文件→看见它渲染出来"成为 visible 的默认交互（`web/.../files/components/FileViewer.tsx:116`、`clients/ClientWithSourceToggle.tsx`、`client-path.ts:80`）。
 - **displayName 派生**：UI 表层展示 objectId 时不引新数据字段，而是从 self.md 第一行 `# Title` 派生语义化标题（`web/.../objects/model.ts`，spec meta `visible.display_name_from_self_md`）。
 
@@ -45,7 +45,7 @@
 
 ## 已知问题 / 边界与未决
 
-- **agent-native parity 缺口（最大债）**：`ui_methods` 仅经 HTTP `/call_method` 暴露给前端（人类侧），**agent 端无等价 tool 路径**——agent 看不到/调不动自己的 UI 入口。这是 parity 公理下的显式技术债（概念权威见 meta `object.doc.ts` patches.agent_native_parity，待 Phase 2 吸收进对象树）。loop_timeline 的 server-method 等价同列后续 phase。
+- **agent-native parity 缺口（最大债）**：`ui_methods` 仅经 HTTP `/call_method` 暴露给前端（人类侧），**agent 端无等价 tool 路径**——agent 看不到/调不动自己的 UI 入口。这是 agent-native parity 公理下的显式技术债（公理见 supervisor `knowledge/ooc-glossary.md` / `ooc-philosophy.md`）。loop_timeline 的 server-method 等价同列后续 phase。
 - **不做**：不内建渲染 host；不扫 stone 根具名 tsx（杜绝入口歧义）；不实现 ui_methods 本身（归 programmable）。
 - **增量项**：flow client pages 在控制面的导航入口、Tier 3 visible HMR（浏览器端不刷新即看 UI 变更）。
 

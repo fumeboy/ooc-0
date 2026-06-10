@@ -1,7 +1,7 @@
 ---
 title: readable（LLM 侧展示）vs visible（人类侧展示）
 activates_on:
-  "object::readable": show_content
+  "object::root": "show_description"
 ---
 
 # 两个展示维度，两个观众

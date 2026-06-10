@@ -1,12 +1,12 @@
 ---
-activates_on: {"window::root": "show_content"}
+activates_on: {"object::root": "show_description"}
 ---
 
 # root 的全局 object method 与 form 推进
 
 ## root 上注册的全局 object method
 
-root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins/root/executable/index.ts:58`，每条一个 `method.*.ts`，经 `registerExecutable("root", { methods })` 注入），共 17 个：
+root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins/root/executable/index.ts:57`，每条一个 `method.*.ts`，经 `registerExecutable("root", { methods })` 注入），共 16 个：
 
 - **do** — 派生子 thread，创建 do_object。
 - **talk** — 与 user 或其他 Object 对话，创建 talk_object。
@@ -18,15 +18,16 @@ root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins
 - **create_object** — 建一个**全新对象**的骨架（仅业务 session）：落 session worktree `objects/<newId>/{package.json,self.md,readable.md[,knowledge]}`，end→super flow evolve_self 合入（`method.create-object.ts`）。
 - **evolve_self** — 在 super flow 里把 session worktree 的改动 commit + 尝试合入 main（self-scope ff-merge / cross-scope 开 PR-Issue，`method.evolve-self.ts`）。
 - **glob** / **grep** — 按文件名 / 内容搜索，创建 search_object。
-- **metaprog** — supervisor **治理** action（`resolve` 标 PR-Issue 决议 / `rollback` 回滚某 Object 的 stone）。写动作（open_worktree / commit / merge / create_object）已删——改自己 / 建别人 / 改别人现在直接 write_file / create_object 落 session worktree，走 super flow evolve_self 合入（`method.metaprog.ts`）。
 - **example** — 构造 example_window（标准对象定义样板，`method.example.ts`）。
 - **open_feishu_chat** / **open_feishu_doc** — 飞书外接（经 extendable 注册，寄生于 executable）。
+
+> 注：原 `metaprog` method 已删。它承载的 supervisor 治理动作（resolve PR-Issue / rollback stone）已转控制面 governance 端点 `POST /api/runtime/pr-issues/:issueId/resolve` / `POST /api/runtime/stones/:objectId/rollback`（底层 `packages/@ooc/core/programmable/versioning.ts` 的 `resolvePrIssue` / `rollback`），治理语义权威在 reflectable 维度；它的写动作（改自己 / 建别人 / 改别人）下放给 write_file / create_object 落 session worktree、走 super flow evolve_self 合入。
 
 其它 object 也注册自己的 object method：do_object（continue/wait/close/move）、talk_object（say/wait/close）、file_object（edit/reload/set_range/close）、method_exec（refine/submit，`packages/@ooc/core/executable/windows/method_exec/index.ts:53`）。
 
 ## method 与 knowledge 经 intent trigger 协作
 
-每个 method_exec form 在 thread 中 open 时，对应的 intent 进入命中态；knowledge frontmatter 的 `activates_on` 声明同样表达式即按需激活（如本文件顶部的 `{"window::root": "show_content"}`）。这是渐进式语义披露——LLM 只有真正进入某条行动路径时，才看到该路径的完整操作说明。
+每个 method_exec form 在 thread 中 open 时，对应的 intent 进入命中态；knowledge frontmatter 的 `activates_on` 声明同样表达式即按需激活（如本文件顶部的 `{"object::root": "show_description"}` 让 summary 常驻、按需 `open_knowledge` 拉全文；若要在某 method form open 时全文激活则写 `{"method::root::<method>": "show_content"}`）。这是渐进式语义披露——LLM 只有真正进入某条行动路径时，才看到该路径的完整操作说明。
 
 ## form 推进流程
 

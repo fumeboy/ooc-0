@@ -2,7 +2,7 @@
 title: knowledge 激活协议（双源加载 + activates_on trigger）
 description: thinkable 如何双源加载知识并按 activates_on trigger 渐进激活，含 object::root always-on 修复
 activates_on:
-  "object::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # knowledge：双源加载 + trigger 渐进激活

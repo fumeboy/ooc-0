@@ -1,7 +1,7 @@
 ---
 title: window method 与 window 展示状态
 activates_on:
-  "object::readable": show_content
+  "object::root": "show_description"
 ---
 
 # window method 与 WindowDisplayState

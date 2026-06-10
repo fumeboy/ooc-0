@@ -2,7 +2,7 @@
 title: window diff 渲染 — object 经 visible/diff.tsx 掌控「变化的展示」
 description: loop diff 视图按 window 解析到所属 object 自有 diff 组件，resolveWindowDiff 四档回退
 activates_on:
-  "window::root": "show_content"
+  "object::root": "show_description"
 ---
 
 # window diff 渲染解析层
