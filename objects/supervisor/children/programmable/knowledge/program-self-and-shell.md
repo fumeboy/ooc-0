@@ -4,7 +4,7 @@ activates_on: {"object::root": "show_description"}
 
 # ProgramSelf 注入与 program shell `$OOC_SELF_DIR`
 
-program ts/js sandbox 与 custom method dispatcher 路径执行用户代码时，注入一个 `programSelf`（ProgramSelf；2026-06-02 起此字段名，与 method receiver `ctx.self` 区分），承载几组能力。构造工厂：`createProgramSelf(stoneRef, thread, registry?)`（`packages/@ooc/core/executable/object/self.ts:23`）。
+program ts/js sandbox 与 custom method dispatcher 路径执行用户代码时，注入一个 `programSelf`（ProgramSelf；2026-06-02 起此字段名，与 method receiver `ctx.self` 区分），承载几组能力。构造工厂：`createProgramSelf(stoneRef, thread, registry?)`（`packages/@ooc/builtins/program/executable/self.ts:51`）。
 
 - **dir**：stone 目录绝对路径，用于在 sandbox 里拼相对路径。
 - **callMethod(windowId, method, args?)**（:31）：在 `thread.contextWindows` lookup window → 经 `registry.getObjectDefinition(window.type).methods[method]` 取 object method → `exec(ctx)`。type=custom 时 dispatcher 自带 programSelf 注入。把「调任意 window 上任意 method」统一成 `(window_id, method, args)` 一个签名；找不到时抛带可见 window/method 列表的清晰错误。
