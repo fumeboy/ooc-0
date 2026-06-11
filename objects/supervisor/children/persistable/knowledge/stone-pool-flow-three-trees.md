@@ -42,7 +42,7 @@ pool **不进 git / 不走 worktree 模型**：事实单向积累，写就生效
 
 `flows/<sessionId>/`（`flow-object.ts`）：
 
-- **session worktree 根**：`flows/<sid>/` 本身是从 `stones/main` 派生的 git worktree（分支 `session-<sid>`，物理路径 `flows/<sid>`、名路径解耦），session 创建即 eager checkout main 全量 stone 文件。LLM 在 session 内的所有 stone 写直接落此目录、当场可用，但**该分支永不合入 main**；要沉淀进 canonical 经 super flow 的 feat-branch PR（机制权威 reflectable `knowledge/evolve-self-worktree.md`）。
+- **session worktree 根**：`flows/<sid>/` 本身是从 `stones/main` 派生的 git worktree（分支 `session-<sid>`，物理路径 `flows/<sid>`、名路径解耦），session 创建即 eager checkout main 全量 stone 文件。LLM 在 session 内的所有 stone 写直接落此目录、当场可用，但**该分支永不合入 main**；要沉淀进 canonical 经 super flow 的 feat-branch PR（机制权威 reflectable `knowledge/feat-branch-pr.md`）。
 - **身份与运行时同落 `objects/<objectId>/`**（a4d11bf1）：一个 `objects/<id>/` 目录同时容纳该对象 tracked stone 身份（worktree checkout）+ untracked 运行时轨迹，物理不分离、靠 `.gitignore` 分离语义。main 根 gitignore（`persistable/stone-bootstrap.ts:72` `STONE_MAIN_GITIGNORE`）= 白名单 + 黑名单：`/*` 排除顶层运行时 → `!/objects/` `!/.gitignore` 放行 → `objects/**/threads/` + `objects/**/.flow.json` + `objects/**/state.json` 再黑掉任意深度（含 nested children/）的运行时产物。`ensureMainGitignore` 内容不一致即覆盖更新（旧 world 升级）。
 - 运行时轨迹：`.flow.json` / `threads/<tid>/thread.json`（线程元数据）/ `threads/<tid>/thread-context.json`（**§10 已完整退役 thread.json.contextWindows[]**，b24ba0ef——thread-context.json 是 contextWindows 唯一权威，`thread-json.ts:69 writeThread` 是唯一持久化入口、单点刷、自动覆盖所有绕过 WindowManager 的写路径；entries 由 `flow-thread-context.ts:51 buildThreadContextEntries` 唯一规则产出）/ `debug/` / `data.json`（session-scoped，ProgramSelf.getData/setData 载体）/ `knowledge/relations/<peer>.md`（session 层关系）。
 

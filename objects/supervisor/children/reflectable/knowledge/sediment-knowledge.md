@@ -16,7 +16,7 @@ super flow 有两条**互斥**的沉淀通道，选错会静默失败：
 - **pool sediment（直写）**：仅运行时事实记忆（memory / relations）。write-through、**不分支/不 PR**、立即生效。落点见 `packages/@ooc/core/persistable/pool-object.ts:68,73`：
   - `pools/<self>/knowledge/memory/<slug>.md` —— 长期记忆，一条一个文件，slug 用 kebab-case。
   - `pools/<self>/knowledge/relations/<peer>.md` —— long_term relation 文件。
-- **feat-branch PR**：任何 stone 变更（身份 `self.md` / `readable.md` / 身体 `executable/` / `visible/` / seed knowledge）。**必须** `new_feat_branch` 开分支 → 在 feat worktree 直接编辑 → `evolve_self` 开 PR（机制详见 `knowledge/evolve-self-worktree.md`）。
+- **feat-branch PR**：任何 stone 变更（身份 `self.md` / `readable.md` / 身体 `executable/` / `visible/` / seed knowledge）。**必须** `new_feat_branch` 开分支 → 在 feat worktree 直接编辑 → `evolve_self` 开 PR（机制详见 `knowledge/feat-branch-pr.md`）。
 
 **陷阱（体验官 #2 实证）**：feat 分支绑定生效时 `write_file pools/...` 仍静默落 pool（feat 绑定覆盖路由只管 stone 路径，pool 不在 worktree 模型内）→ `evolve_self` NO_CHANGES、PR 开不出。要沉淀身份/身体务必写 stone 路径（`self.md` 等），不要误写进 pool。
 
@@ -26,7 +26,7 @@ super flow 禁止动：业务 thread.json / pool 的 data/ 与 files/（运行�
 
 ## sediment write contract（自演化闭环关键）
 
-所有 super flow 写入的 memory / relations markdown **必须含 frontmatter**：`title` / `description` / `activates_on`（trigger map）。其中 `super` trigger 匹配反思场景（`packages/@ooc/core/thinkable/knowledge/triggers.ts:61` parse / `:179` evaluate，sessionId==="super"）。
+所有 super flow 写入的 memory / relations markdown **必须含 frontmatter**：`title` / `description` / `activates_on`（trigger map）。其中 `super` trigger 匹配反思场景（`packages/@ooc/core/thinkable/knowledge/activator.expr.ts:60` parseTrigger super 特判 / `:179` evaluateTrigger case "super"，sessionId==="super"）。
 
 - 没有 frontmatter / 写错 schema 的 sediment 会被 synthesizer 加载，但**永远无法被 activator 激活**——下轮新 thread 完全看不见这篇，自演化闭环 silently 断裂（协议级缺口）。
 - loader parse error → console.warn 含路径 → 跳过该篇（fail-loud，不静默吞错）；但**无写入期 deny gate**，仍依赖 LLM 自觉。这是当前主要待办：把校验前移到 write_file 期。

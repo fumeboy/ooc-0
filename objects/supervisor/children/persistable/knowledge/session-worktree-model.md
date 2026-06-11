@@ -37,7 +37,7 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 
 **仍 main-anchored 的边界（残留，跟踪）**：`derivePeerObjectWindows` 的 hierarchical peer 发现（`discoverStoneHierarchicalPeers`）+ 全局 `object-type-registrar`（startup 只扫 `stones/`）——session 内新建 **child** 对象不会自动作为 hierarchical peer 出现（talk 过的 peer 走 talk_window 收集路径已 session-aware，不受影响）。
 
-锚点：`packages/@ooc/core/persistable/stone-worktree.ts:153` resolveStoneIdentityDir / `:169` resolveStoneIdentityRef（feat 绑定覆盖 `:178-182`）/ `:131` ensureFeatBranchWorktreeReady / `:89` ensureSessionWorktree / `:30` sessionStoneBranch / `:54` sessionUsesWorktree / `:47` sessionWorktreePath；feat 分支 + PR 在 `packages/@ooc/core/persistable/stone-feat-branch.ts:163` createFeatBranchWorktree / `:238` commitAndOpenPr。
+锚点：`packages/@ooc/core/persistable/stone-worktree.ts:153` resolveStoneIdentityDir / `:169` resolveStoneIdentityRef（feat 绑定覆盖 `:178-182`）/ `:131` ensureFeatBranchWorktreeReady / `:89` ensureSessionWorktree / `:30` sessionStoneBranch / `:54` sessionUsesWorktree / `:47` sessionWorktreePath；feat 分支 + PR 在 `packages/@ooc/core/persistable/stone-feat-branch.ts:165` createFeatBranchWorktree / `:240` commitAndOpenPr。
 
 ## 两条进入 canonical 的合法通道（互不经过对方）
 
@@ -49,5 +49,5 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 - **executable 命令集 / 注册的 readable** 全局 main-canonical（类型系统全局共享），loader 通道不 per-session 路由（per-session 改命令集本就走 feat-branch PR → main → 重注册）。
 - **pool sediment**（`pools/<id>/knowledge/**`）不在 worktree 模型内：独立、直写、不进 git；super flow 反思写 memory 直接落 pool（write-through，不分支/不 PR）。注意：feat 绑定生效时 `write_file pools/...` 仍落 pool 不进 feat worktree，两通道须选对（见 reflectable `knowledge/sediment-knowledge.md`）。
 - 硬约束：identity 必须已 git-commit 到 main 才被新 worktree（session 或 feat）看到（低层 writeSelf 只写文件不 commit）。
-- 生命周期：session worktree 随 session 存在、清理即消亡，**永不合入**；feat 分支 worktree 在 PR 决议后 GC（`stone-feat-branch.ts:342` `unregisterFeatWorktree`，底层 `gitWorktreeUnregister` 只解 `.git` link、保留运行时数据）。
+- 生命周期：session worktree 随 session 存在、清理即消亡，**永不合入**；feat 分支 worktree 在 PR 决议后由 `resolvePrIssue`（`stone-versioning.ts:291`，merge / reject 两路皆走）GC——`cleanupWorktreeAfterMerge`（`:112`）→ `gitWorktreeUnregister`（`:119` 处调用，只解 `.git` link、保留运行时数据），`worktreePath`（`:146`）按 branch 名定位真 worktree。（`stone-feat-branch.ts:344` `unregisterFeatWorktree` 是同义底层原语、当前合入路径未走它。）
 - **未决**：abandoned worktree（session 异常未清理 / PR 半途弃置）缺独立 orphan 回收器（`stone-versioning.ts:505` `pruneStaleWorktrees` 仅启动 hygiene）。

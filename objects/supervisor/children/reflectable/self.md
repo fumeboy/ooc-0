@@ -14,19 +14,13 @@
 
 两条沉淀通道（互斥，须选对，见 `knowledge/sediment-knowledge.md`）：仅运行时事实记忆 → **pool sediment**（直写）；任何 stone 变更（self/readable/身体/seed knowledge）→ **feat-branch PR**。super flow 本身不在 feat 分支外直改 stone——它是沉淀发起点 + finalizer + 治理（resolve / rollback）。
 
-## 当前设计（锚 `file:行号`，信任源代码）
+## 当前设计（以**符号名**锚定为主、抗漂移；feat-branch 全链路行号锚集中在 `knowledge/feat-branch-pr.md`，信任源代码）
 
 - **super 通道常量**：`packages/@ooc/core/_shared/types/constants.ts:12` `SUPER_SESSION_ID="super"` / `:15` `SUPER_ALIAS_TARGET` / `:18` `isSuperSessionId`（trim+lowercase，防大小写文件系统绕过）。
 - **协议正文 = agent-facing knowledge md**（不是 TS const；旧 `thinkable/reflectable/reflectable-knowledge.ts` 已不存在）：`packages/@ooc/builtins/root/knowledge/` 三篇——`self-evolution.md`（自我演化总则）/ `super-flow.md`（super flow 沉淀·合入·治理协议）/ `pr-review.md`（reviewer 评审协议）。正文教 LLM 走 feat-branch PR（`new_feat_branch`→直接 `write_file` 编辑→`evolve_self` finalizer 开 PR），非手动 worktree；含 sediment write contract + frontmatter 模板。
-- **协议激活机制**：经 knowledge `activates_on` 命中下发（非 protocol.ts 硬注入）——`super-flow.md: {"super":"show_content"}`（sessionId==="super" 命中）/ `self-evolution.md: {"object::root":"show_description","method::root::write_file":"show_content"}` / `pr-review.md: {"object::pr":"show_content"}`（pr_window 在场）。匹配引擎 `packages/@ooc/core/thinkable/knowledge/triggers.ts:61` parseTrigger（认 `"super"`）/ `:179` evaluateTrigger（`case "super"` 匹配 sessionId）。
-- **sediment 激活**：`packages/@ooc/core/thinkable/knowledge/triggers.ts:61`（parseTrigger 认 `"super"`）/ `:179`（evaluateTrigger `case "super"` 匹配 sessionId==="super"）—— 让沉淀的 `activates_on` 能命中反思场景。
-- **super-actor 冒泡**：`packages/@ooc/core/persistable/super-actor.ts:51` `resolveSuperActor`（caller canonical → 自身透明返回；否则沿 parent 链找最近 canonical 祖先；无则落 `:22` `SUPER_ACTOR_FALLBACK="supervisor"`）/ `:29` `isCanonicalObject`（`stoneDir(main)` 存在性判定）。接入两处严格同 helper：`packages/@ooc/core/app/server/runtime/worker.ts:282`（syncCrossObjectCalleeEnds 的 super-alias 解析）+ `packages/@ooc/core/executable/windows/talk/delivery.ts:94`（deliverTalkMessage 的 super-alias 解析）。
-- **开 feat 分支 + 绑定 thread**：`packages/@ooc/builtins/root/executable/method.new-feat-branch.ts` `newFeatBranchMethod`（intents `["new_feat_branch"]`，super flow 内调；`createFeatBranchWorktree` 从 main 派生 feat 分支 worktree、把 `stonesBranch`+`sedimentIntent` 绑进 `thread.persistence`、随 thread.json 持久化）；同 intent 重调幂等重绑（WORKTREE_EXISTS 视成功），承接 reject/request-changes 回修 resume。
-- **feat 绑定覆盖路由**：`packages/@ooc/core/persistable/stone-worktree.ts:169` `resolveStoneIdentityRef` —— `stonesBranch` 绑定**放在 sessionId 路由最前面、覆盖优先**（`:178-182`，经 `ensureFeatBranchWorktreeReady` 确保 worktree 就绪），绑定缺省时下方 session 解析逐字节不变（回归不变量）。绑定生效后 super(foo) 普通 `write_file`/`file_window.edit` 自然落 feat worktree。
-- **evolve_self finalizer**：`packages/@ooc/builtins/root/executable/method.evolve-self.ts` `evolveSelfMethod`（无 edits 参数；读绑定 → `commitAndOpenPr` → `deliverPrWindowToReviewers`）；底层 `packages/@ooc/core/persistable/stone-feat-branch.ts:238` `commitAndOpenPr`（commit 署名 actor → `:90` `computeReviewerSet`（冒泡 rule A：变更触及路径的顶层领地 owner ∪ supervisor，`ownerObjectIdOfPath`）→ `createPrIssue`），`:163` `createFeatBranchWorktree` / `:109` `slugFromIntent` / `:120` `featBranchName` / `:125` `featWorktreePath`。
-- **PR 投递 + 评审 method**：`packages/@ooc/core/executable/windows/pr/delivery.ts:81` `deliverPrWindowToReviewers`（每 reviewer 的 super-session pr-review thread inline `pr_window` + inbox 事件，threadId=`:39` `prReviewThreadId`，幂等）；`packages/@ooc/core/executable/windows/pr/index.ts` 注册 `pr` window（readable 渲染 getPrIssue DetailView + 3 method `approve`/`reject`/`request_changes`）；协议 `packages/@ooc/builtins/root/knowledge/pr-review.md`（`activates_on: {"object::pr":"show_content"}`）。
-- **审批聚合 + 合入闸**：`packages/@ooc/core/executable/windows/pr/approval-flow.ts:103` `applyPrApproval`（聚合 + prAutoMerge 闸 + 回修单一编排点；HTTP `service.approvePrIssue` 与 pr_window method 同源委托它）；`packages/@ooc/core/persistable/pr-issue.ts:119` `aggregatePrApproval`（全 approved→ready-to-merge / 任一 reject→rejected 一票否决 / 否则 changes-requested|pending）/ `:451` `approvePrIssue`（校验 reviewer∈reviewers）。`.world.json prAutoMerge`（`packages/@ooc/core/persistable/world-config.ts:83`，缺省 false=人工）：true 立即 `resolvePrIssue(merge)`，false 留 open 待人工 `/resolve{merge}`。合入复用 `packages/@ooc/core/persistable/stone-versioning.ts:291` `resolvePrIssue`。
-- **失败回修 loop**：`packages/@ooc/core/executable/windows/pr/delivery.ts:166` `routePrRepairMessage`（按 PR record `authorThreadId` 找 super(foo) thread → inbox 追 verdict+反馈 → 翻 running；找不到 fail-loud `NO_AUTHOR_THREAD`）。super(foo) 收 message 后 `new_feat_branch(同 intent)` 幂等重绑续修。
+- **协议激活机制**：协议正文经各自 `activates_on` 命中下发（非硬注入）——`super-flow.md:{"super":"show_content"}` / `self-evolution.md:{"object::root","method::root::write_file"}` / `pr-review.md:{"object::pr"}` / `end-reflection.md:{"method::root::end"}`。匹配引擎 `thinkable/knowledge/activator.expr.ts` 的 `parseTrigger`（认 `"super"`）/ `evaluateTrigger`（`case "super"` 匹配 `sessionId==="super"`，让 sediment 的 `activates_on` 也命中反思场景）；激活语法权威见 thinkable `knowledge/knowledge-activation.md`。
+- **super-actor 冒泡**：`persistable/super-actor.ts` `resolveSuperActor`（caller canonical → 自身透明返回；否则沿 parent 链找最近 canonical 祖先；无则落 `SUPER_ACTOR_FALLBACK="supervisor"`）/ `isCanonicalObject`（`stoneDir(main)` 存在性判定）。接入两处**严格同 helper**：`app/server/runtime/worker.ts` + `executable/windows/talk/delivery.ts` 的 super-alias 解析（改一处须同改另一处）。
+- **feat-branch PR 沉淀机制**——三步 + reviewer 冒泡 + 审批闸 + 回修，**全链路行号锚点集中在 `knowledge/feat-branch-pr.md`**（此处只命名符号、不重复行号，避免一次改名喷多处漂移）：两入口 `method.new-feat-branch.ts`（开 `feat/<slug>` 分支、绑 `thread.persistence.stonesBranch`/`sedimentIntent`，同 intent 幂等重绑承接回修 resume）+ `method.evolve-self.ts`（finalizer，无 edits 参数）；`stone-worktree.ts` `resolveStoneIdentityRef` 把 feat 绑定置于 sessionId 路由最前、覆盖优先（绑定缺省时下方 session 解析逐字节不变）；`stone-feat-branch.ts` `commitAndOpenPr`→`computeReviewerSet`（rule A：变更触及路径的顶层领地 owner ∪ supervisor，author 子树含 children 自治）→`createPrIssue`；`pr/delivery.ts` `deliverPrWindowToReviewers`（每 reviewer 的 pr-review thread inline `pr_window`）；`pr/approval-flow.ts` `applyPrApproval` 单点编排（`pr-issue.ts` `aggregatePrApproval` 全 approve→ready-to-merge / reject 一票否决 + `.world.json prAutoMerge` 闸，合入复用 `stone-versioning.ts` `resolvePrIssue`）；`pr/delivery.ts` `routePrRepairMessage`（reject/changes/合入失败回投 super(foo) author thread 续修）。
 
 ## 现状
 
@@ -34,10 +28,6 @@
 - **feat-branch PR 自我演化闭环全链路已落、真 LLM 端到端验通**（2026-06-11，体验官；P1-P6 / #3 全落，权威 `docs/2026-06-11-reflectable-feat-branch-pr-flow-design.md` §5）：`create_object(bar)`（仅 session）→ `talk(super)`（新对象冒泡到 canonical 祖先作 actor）→ super(foo) `new_feat_branch` → feat 分支 `write_file`（绑定覆盖路由）→ `evolve_self()`（无参 finalizer，LLM 照新协议正确走）→ PR（reviewers 冒泡 [bar,supervisor]、diff、branch=feat/…、**main 未变**）→ reviewer 经 pr_window method approve → ready-to-merge → prAutoMerge 缺省 false 留 open → 人工 `/resolve{merge}` → main 推进、bar canonical。
 - 旧「session worktree 合入 main」模型已退役（commit 2735241c：删 `stone-evolve-self.ts` / `evolveSelfMerge` / `evolveSelfDiff` / `tryMergeSelf` / `requestPrIssueReview` / `classifyDiffAgainstMain` / `classifyWorktreeBranch`）。
 - 后端 e2e gate：sediment 沉淀闭环 + end 提醒（`packages/@ooc/tests/e2e/backend/backend-reflectable-sediment.e2e.test.ts` / `end-reflection-reminder.e2e.test.ts`）。
-
-## 自我迭代前沿（层次 A / 层次 B）
-
-「用 OOC 迭代 OOC」分两个范畴不同的层次：**层次 A**=Object 改自己的 stone（上面那条 feat-branch PR 闭环，2026-06-11 真 LLM 端到端验通 **Good**）；**层次 B**=Object 改 OOC 运行时核心源码（框架改框架），**尚未闭过一次**——卡在边界 / 重载 / 治理三个结构性缺口。详见 `knowledge/self-iteration-frontier.md`（含三缺口锚点、B 归约为 A、元循环地板、最小 dogfooding 探针设计）。
 
 ## 已知问题 / 边界与未决
 
@@ -68,7 +58,7 @@
 - **sediment（沉淀）**：运行时自动产生的事实型知识（memory / relations），落 **pool**（持久、不进 git、写就生效，write-through 不分支/不 PR），与 stone 里人类设计的 **seed knowledge**（先天能力基底，改动走 feat-branch PR + eval gate）配对。reflectable 默认只动 sediment；改 stone 必走 feat-branch PR。
 - **PR-Issue**：feat 分支变更转交 reviewer 集评审的请求记录（`pr-issue.ts:62` `PrIssueRecord`，持 reviewers/approvals/branch）。审批聚合 `aggregatePrApproval`，合入复用 `resolvePrIssue`。supervisor 恒在 reviewer 集，治理端点详见 `knowledge/super-flow.md` 治理节。
 - **super-actor 冒泡**：`talk(super)` 的 actor 不裸取 caller——caller canonical 则透明返回自身（自我演化逐字节不变）；新对象（仅 session、未 canonical）沿 parent 链找最近 canonical 祖先，无则落 supervisor。由该祖先以 super flow 身份代发沉淀（author=祖先，PR 校验自然通过）。
-- **层次 A / 层次 B**：A=Object 改自己 stone（feat-branch PR，已闭环）；B=Object 改框架核心源码（dogfooding，尚未闭环，三缺口见上节）。
+- **层次 A / 层次 B**：A=Object 改自己 stone（feat-branch PR，已闭环）；B=Object 改框架核心源码（dogfooding，尚未闭环，三缺口见 `knowledge/self-iteration-frontier.md`）。
 - **元循环地板**：无法被推成 stone 的硬内核（加载 stone/跑 thinkloop/连 LLM），使「完全自我迭代」成渐近线而非布尔可达——反射系统的本性。
 
 ## 协作

@@ -10,7 +10,7 @@ activates_on:
 
 一个 OOC 对象（可交互的就是一个 Agent）= `stones/<branch>/objects/<id>/` 下持久的**五件套** + 它在 session 里被运行起来的 thinkloop。这篇讲从空到能跑的全流程：建骨架、写五件套、自我演化合入。
 
-建/改对象进 canonical 都收敛到 feat-branch PR 沉淀模型，权威机制见 reflectable `evolve-self-worktree.md`、persistable `stone-pool-flow-three-trees.md`、class `class-vs-object.md`。
+建/改对象进 canonical 都收敛到 feat-branch PR 沉淀模型，权威机制见 reflectable `feat-branch-pr.md`、persistable `stone-pool-flow-three-trees.md`、class `class-vs-object.md`。
 
 ## 先判定：该不该建一个新对象
 

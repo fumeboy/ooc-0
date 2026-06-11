@@ -25,13 +25,13 @@ talk_window.target 一般指向另一个 flow object id；特殊地 `target === 
 
 ## 协议知识注入
 
-协议正文是 **agent-facing knowledge md**（不是 TS const；旧 `thinkable/reflectable/reflectable-knowledge.ts` 已不存在）：`packages/@ooc/builtins/root/knowledge/super-flow.md`（本篇，`activates_on: {"super":"show_content"}`，sessionId==="super" 命中）+ `self-evolution.md`（`object::root` / `method::root::write_file`）+ `pr-review.md`（`object::pr`，pr_window 在场）。教 LLM 沉淀身份/身体走 feat-branch PR——`new_feat_branch` 开分支 → 直接 `write_file` 编辑 → `evolve_self` finalizer 开 PR，而**不是**手动开 worktree / commit / merge。激活引擎 `packages/@ooc/core/thinkable/knowledge/triggers.ts:179`（`case "super"`）。
+协议正文是 **agent-facing knowledge md**（不是 TS const；旧 `thinkable/reflectable/reflectable-knowledge.ts` 已不存在）：`packages/@ooc/builtins/root/knowledge/super-flow.md`（本篇，`activates_on: {"super":"show_content"}`，sessionId==="super" 命中）+ `self-evolution.md`（`object::root` / `method::root::write_file`）+ `pr-review.md`（`object::pr`，pr_window 在场）。教 LLM 沉淀身份/身体走 feat-branch PR——`new_feat_branch` 开分支 → 直接 `write_file` 编辑 → `evolve_self` finalizer 开 PR，而**不是**手动开 worktree / commit / merge。激活引擎 `packages/@ooc/core/thinkable/knowledge/activator.expr.ts:176` `evaluateTrigger` 的 `case "super"`（:178-179）：`thread.persistence?.sessionId === SUPER_SESSION_ID`（`_shared/types/constants.ts:12` `SUPER_SESSION_ID = "super"`）。
 
-`:158` —— 业务 thread 打开 `method="end"` 的 method_exec form（`form.method === "end"`）且非 super session 时，注入 `END_REFLECTION_REMINDER_KNOWLEDGE`：一段非阻塞 hint，提醒「你刚工作了一段，考虑反思」。super flow 内的 end 不重提，避免无限套娃。
+end 反思提醒同样是 **agent-facing knowledge md**（不是 TS const）：`packages/@ooc/builtins/root/knowledge/end-reflection.md`，frontmatter `activates_on: {"method::root::end":"show_content"}`。业务 thread 打开 `method="end"` 的 method_exec form 时，由激活引擎的 `case "method"`（`activator.expr.ts:205`，`form.method === trigger.method` 匹配）命中，展开一段非阻塞 hint，提醒「你刚工作了一段，考虑反思」。它是 hint 不是 gate——判断不需要就直接 submit end。
 
-## super flow 与业务 session 的职责切分（权威）
+## super flow 与业务 session 的职责切分
 
-改身体/身份的沉淀发生在 super flow 的 **feat 分支**上：super(foo) `new_feat_branch` 开分支 → 普通 `write_file` 直接编辑 `self.md` / `readable.md` / `executable/` / `visible/`（feat 绑定覆盖路由落 feat worktree、main 不变）→ `evolve_self` finalizer 开 PR。super flow 的角色是**沉淀发起点 + finalizer + 治理**——直写 pool sediment（memory / relations，write-through）、发起并 finalize feat-branch PR、做 PR 治理。最短闭环：业务线程 `talk(super)` → super(foo) `new_feat_branch` → 编辑 → `evolve_self` 开 PR → review approve → 合入 main → 下轮新 thread 生效。（业务 session worktree 的随手改动是纯运行时态，永不合入，要沉淀须经 feat 分支。）
+super flow 的角色是**沉淀发起点 + finalizer + 治理**：直写 pool sediment（memory / relations，write-through 立即生效）、发起并 finalize feat-branch PR、做 PR 治理。改身体/身份的沉淀一律在 super flow 开的 **feat 分支**上做（三步机制 + reviewer 冒泡 + 审批闸 + 回修的完整锚点见 `knowledge/feat-branch-pr.md`，不在此重复）。最短闭环：业务线程 `talk(super)` → super(foo) `new_feat_branch` → 编辑 → `evolve_self` 开 PR → review approve → 合入 main → 下轮新 thread 生效。（业务 session worktree 的随手改动是纯运行时态、永不合入，要沉淀须经 feat 分支。）
 
 ## super flow 治理：resolve / rollback
 

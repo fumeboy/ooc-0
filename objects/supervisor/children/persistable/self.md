@@ -32,12 +32,12 @@
 
 锚点：
 - 统一访问原语：`packages/@ooc/core/persistable/stone-worktree.ts:153` `resolveStoneIdentityDir` / `:169` `resolveStoneIdentityRef`（feat 绑定覆盖优先，`:178-182`；session 解析在 `:186` 起）/ `:89` `ensureSessionWorktree` / `:30` `sessionStoneBranch` / `:54` `sessionUsesWorktree` / `:47` `sessionWorktreePath`；feat worktree 就绪 `:131` `ensureFeatBranchWorktreeReady`（local helper）。
-- feat 分支 + PR 编排：`packages/@ooc/core/persistable/stone-feat-branch.ts:163` `createFeatBranchWorktree` / `:238` `commitAndOpenPr` / `:90` `computeReviewerSet`（冒泡 rule A，`ownerObjectIdOfPath`）/ `:109` `slugFromIntent` / `:120` `featBranchName` / `:125` `featWorktreePath`；super-actor 冒泡 `super-actor.ts:51` `resolveSuperActor` / `:29` `isCanonicalObject` / `:22` `SUPER_ACTOR_FALLBACK`。
+- feat 分支 + PR 编排：`packages/@ooc/core/persistable/stone-feat-branch.ts:165` `createFeatBranchWorktree` / `:240` `commitAndOpenPr` / `:92` `computeReviewerSet`（冒泡 rule A，`ownerObjectIdOfPath`）/ `:111` `slugFromIntent` / `:122` `featBranchName` / `:127` `featWorktreePath`；super-actor 冒泡 `super-actor.ts:51` `resolveSuperActor` / `:29` `isCanonicalObject` / `:22` `SUPER_ACTOR_FALLBACK`。
 - PR-Issue 存储与决议：`packages/@ooc/core/persistable/pr-issue.ts:62` `PrIssueRecord`（reviewers/approvals）/ `:301` `createPrIssue` / `:119` `aggregatePrApproval` / `:451` `approvePrIssue` / `:390` `closePrIssue`；合入复用 `stone-versioning.ts:291` `resolvePrIssue`；HTTP 直写 `stone-versioning.ts:561` `httpDirectMainWrite`；建对象 `persistable/stone-create-object.ts:93` `createObjectInSession`。
-- 合入闸 / 绑定持久化：`world-config.ts:83` `prAutoMerge`（缺省 false=人工）；`thread.ts`〔`_shared/types/thread.ts:52`〕`ThreadPersistenceRef.stonesBranch` / `:54` `sedimentIntent`（随 `thread-json.ts:93` 恢复）。
-- thread-context 落盘（§10 单点刷，b24ba0ef）：`packages/@ooc/core/persistable/thread-json.ts:69` `writeThread` 是**唯一**持久化入口，单点刷 `thread-context.json`，自动覆盖所有绕过 WindowManager 直改 `thread.contextWindows` 的写路径（delivery / thinkloop reconcilePeerWindows / scheduler / worker）；entries 由 `flow-thread-context.ts:51` `buildThreadContextEntries`（唯一生成规则）产出。thread.json.contextWindows[] 字段已完整退役，旧数据若仍含一律忽略。
+- 合入闸 / 绑定持久化：`world-config.ts:84` `prAutoMerge`（缺省 false=人工）；`thread.ts`〔`_shared/types/thread.ts:52`〕`ThreadPersistenceRef.stonesBranch` / `:54` `sedimentIntent`（随 `thread-json.ts:93` 恢复）。
+- thread-context 落盘（§10 单点刷，b24ba0ef）：`packages/@ooc/core/persistable/thread-json.ts:68` `writeThread` 是**唯一**持久化入口，单点刷 `thread-context.json`，自动覆盖所有绕过 WindowManager 直改 `thread.contextWindows` 的写路径（delivery / thinkloop reconcilePeerWindows / scheduler / worker）；entries 由 `flow-thread-context.ts:67` `buildThreadContextEntries`（唯一生成规则）产出。thread.json.contextWindows[] 字段已完整退役，旧数据若仍含一律忽略。
 - 路径计算：`packages/@ooc/core/persistable/common.ts:61` objectDir / `:72` threadDir / `:87` stoneDir / `:144` resolveStoneDir（2-path：canonical `stones/main/objects/<id>/` → versioning `stones/<branch>/objects/<id>/`；deprecated packages/ 兼容层已于 2026-06-07 移除）；pool 在 `pool-object.ts:54` poolDir。
-- 布局拆 objectId：`packages/@ooc/core/_shared/types/thread.ts:85` nestedObjectPath（split("/") 间插 `children/` marker，`:70` STONE_CHILDREN_SUBDIR；二者经 common.ts re-export），故我自己住在 `stones/main/objects/supervisor/children/persistable/`。
+- 布局拆 objectId：`packages/@ooc/core/_shared/types/thread.ts:97` nestedObjectPath（split("/") 间插 `children/` marker，`:82` STONE_CHILDREN_SUBDIR；二者经 common.ts re-export），故我自己住在 `stones/main/objects/supervisor/children/persistable/`。
 - stone 发现：`packages/@ooc/core/runtime/stone-registry.ts`（不在我这片——发现/扫描归 runtime；我只管路径计算与 IO）。flat layout 最高优先级，用户可覆盖 builtin。
 
 ## 现状
@@ -48,7 +48,7 @@ session-aware 读统一访问原语全接入并落地（write_file / loadSelfIns
 
 ## 已知问题 / 边界与未决
 
-- **abandoned worktree GC**：session worktree 永不合入、随 session 清理消亡，但若 session 异常未清理，`.git` link + `session-<sid>` 分支会残留；feat 分支 worktree（`stone-feat-branch.ts:342` `unregisterFeatWorktree`）在 PR 决议后清理，PR 半途弃置同样可能残留。`stone-versioning.ts:505` `pruneStaleWorktrees` 存在但仅启动 hygiene——长跑期间无周期性 orphan 回收器，`.git` link 可能堆积。
+- **abandoned worktree GC**：session worktree 永不合入、随 session 清理消亡，但若 session 异常未清理，`.git` link + `session-<sid>` 分支会残留；feat 分支 worktree（`stone-feat-branch.ts:344` `unregisterFeatWorktree`）在 PR 决议后清理，PR 半途弃置同样可能残留。`stone-versioning.ts:505` `pruneStaleWorktrees` 存在但仅启动 hygiene——长跑期间无周期性 orphan 回收器，`.git` link 可能堆积。
 - **嵌套 child 自写**：`isValidObjectId` regex 不允许 `/`，含 `/` 的 objectId（如我 `supervisor/persistable`）在 worktree 的 write_file 路径计算须确认对 nested 用 nestedObjectPath。
 - **跨 object 改 child seed 授权**：parent 改 child seed 的显式写入期授权校验未实现（design-ahead-of-code）；现靠 feat-branch PR 的 reviewer 冒泡（`computeReviewerSet`：改 Y 领地 → Y ∪ supervisor 评审）事后把关，而非写入期 deny。
 - worktree 多出的硬约束：identity 必须已 git-commit 到 main 才被新 worktree 看到（低层 writeSelf 只写文件不 commit）。
