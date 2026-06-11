@@ -13,7 +13,7 @@ activates_on:
 
 ## Tier A —— 控制面确定性（已实现，stories/reflectable.story.ts）
 
-六个用例，全程经 HTTP worktree（版本化入口），我不直写磁盘——直写未提交会和 ff-merge 冲突。
+六个用例，全程经 HTTP（版本化写入口），我不直写磁盘——直写未提交会和 PR ff-merge 冲突。
 
 - **TC-REFL-01**：经 executable 读自己的 `self.md`（自观察）。我经 `ctx.self.dir` 读回 self 内容，断言等于写入值。
 - **TC-REFL-02**：经 HTTP `PUT /self` 改 `self.md`（自修改身份）。断言写 ok + 读回一致 + 磁盘落盘一致。
@@ -26,7 +26,7 @@ activates_on:
 
 ## Tier B —— agent-native（真 LLM，env-gated）
 
-派我「把项目约定沉淀为长期记忆」走 super flow（evolve_self）；以 `waitForSuperFlow` + `listMemoryFiles` + `hasValidFrontmatter` 核验 memory 真落 pools/ 且 frontmatter 合法（≈ e2e S5）。super flow 是独立 job，须单独等。
+派我「把项目约定沉淀为长期记忆」走 super flow（pool sediment write-through）；以 `waitForSuperFlow` + `listMemoryFiles` + `hasValidFrontmatter` 核验 memory 真落 pools/ 且 frontmatter 合法（≈ e2e S5）。super flow 是独立 job，须单独等。feat-branch PR 沉淀（new_feat_branch → 编辑 → evolve_self → PR → approve → merge）的 agent-native 端到端归 e2e（S1c/S2/S3，2026-06-11 真 LLM 验通）。
 
 **rubric（S5 Good 7 条，已就地收编进本篇）：**
 
@@ -36,13 +36,13 @@ activates_on:
 
 ## 单元 catalog —— stories/L6_reflectable.stories.ts
 
-业务 session worktree 隔离可确定性单测；evolve 合入 / PR-Issue / memory 由 super flow 编排、需 worker，故归 Tier B/e2e（skip）。
+业务 session worktree 隔离可确定性单测；feat-branch PR 沉淀 / reviewer 冒泡 / memory 由 super flow 编排、需 worker，故归 Tier B/e2e（skip）。reviewer 集冒泡纯函数可单测（无需 worker）。
 
-- `L6-WORKTREE-WRITE` —— 业务 session 内改自身 self 落 worktree，stones/main canonical 不变。（可跑：ensureSessionWorktree）
-- `L6-EVOLVE-FFMERGE` —— evolve_self self-scope → ff-merge 回 main，留署名 commit。（skip：需 worker）
-- `L6-EVOLVE-CROSS-PR` —— evolve_self cross-scope（改/建别人对象）→ 开 PR-Issue 待评审。（skip：需 super flow 编排）
-- `L6-MEMORY-POOL` —— long memory 落 `pools/<id>/knowledge/memory/<slug>.md`。（skip：需 worker）
-- `L6-CREATE-OBJECT-WORKTREE` —— create_object 在业务 session 落 session worktree `objects/<newId>/`（未即合入 main）。（skip：root method，需 agent 在 worker thinkloop 调）
+- `L6-WORKTREE-WRITE` —— 业务 session 内改自身 self 落 worktree，stones/main canonical 不变（且永不合入）。（可跑：ensureSessionWorktree）
+- `L6-REVIEWER-SET` —— `computeReviewerSet`：foo 改自己子树 → {supervisor}；越界改 Y 领地 → {Y, supervisor}；author 不自审。（可跑：纯函数）
+- `L6-FEAT-PR` —— new_feat_branch → feat 分支编辑 → evolve_self 开 PR（reviewers 冒泡、main 未变）。（skip：需 worker + super flow 编排）
+- `L6-MEMORY-POOL` —— long memory 落 `pools/<id>/knowledge/memory/<slug>.md`（write-through，不 PR）。（skip：需 worker）
+- `L6-CREATE-OBJECT-WORKTREE` —— create_object 在业务 session 落 session worktree `objects/<newId>/`（当场可用、永不合入；进 canonical 走 feat-branch PR）。（skip：root method，需 agent 在 worker thinkloop 调）
 
 ## 与 persistable 共享的 worktree 条目 —— stories/L1_session.stories.ts
 

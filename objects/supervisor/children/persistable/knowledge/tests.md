@@ -18,12 +18,12 @@ activates_on: {"object::root": "show_description"}
 
 ## Tier B —— agent-native rubric（真 LLM，env-gated）
 
-业务 session 内 agent 改 self → 落 `flows/<sid>/` session worktree（`stones/main` canonical 不变）；evolve_self 合入 main 有非 bootstrap 署名 commit；重读 HTTP 证明可恢复。
+业务 session 内 agent 改 self → 落 `flows/<sid>/` session worktree（`stones/main` canonical 不变、session 永不合入）；要沉淀经 feat-branch PR：`new_feat_branch` → feat worktree 编辑 → `evolve_self` 开 PR → approve → merge 后 main 有非 bootstrap 署名 commit；重读 HTTP 证明可恢复。
 
 rubric（规格已就地收编进本 tests.md；story 代码在 `packages/@ooc/storybook/stories/`）：
 
-- **Good**：worktree 试验层落对（`flows/<sid>/`）、main canonical 不变、evolve_self 署名 commit。
-- **OK**：落对但 evolve 未合入 / 残留 uncommitted。
+- **Good**：session worktree 落对（`flows/<sid>/`）、main canonical 不变；feat-branch PR 合入后 main 有署名 commit、可恢复。
+- **OK**：落对但 PR 未合入 / 残留 uncommitted。
 - **Bad**：落错层 / 离开内存丢失。
 
 ## Stories 索引
@@ -33,7 +33,7 @@ rubric（规格已就地收编进本 tests.md；story 代码在 `packages/@ooc/s
 ### `stories/persistable.story.ts` —— 维度 story
 
 - `runControlPlane()` —— Tier A：覆盖 TC-PERS-01 / 02 / 03（createStone 落点进 git、HTTP 改 self 新 commit、三子树落点）。
-- `runAgentNative()` —— Tier B：supervisor 建对象写 self.md 身份；create_object 落 session worktree，evolve 合入 main 后经 HTTP 重读 self.md 证明可恢复。
+- `runAgentNative()` —— Tier B：supervisor 建对象写 self.md 身份；create_object 落 session worktree（永不合入），经 feat-branch PR 合入 main 后经 HTTP 重读 self.md 证明可恢复。
 
 ### `stories/L0_world.stories.ts` —— World 子树落点单元 catalog
 

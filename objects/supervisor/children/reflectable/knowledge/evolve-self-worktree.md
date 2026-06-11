@@ -1,33 +1,45 @@
 ---
-title: evolve_self —— session worktree 即演化单元
-description: 一次 session 的身份改动怎么 commit + 合回 main；问 self-scope 合入 / worktree 演化时看这篇
+title: evolve_self —— feat-branch PR 沉淀 finalizer
+description: 怎么把一次身份/知识/身体改动经 feat 分支开成 PR 合进 main；问沉淀怎么落 canonical / feat 分支 / PR 审批时看这篇
 activates_on:
   "object::root": "show_description"
+  "method::root::new_feat_branch": "show_content"
   "method::root::evolve_self": "show_content"
 ---
 
-# evolve_self = session worktree 演化单元
+# 沉淀进 canonical = feat-branch PR
 
-每个业务 session 在 stone 侧有一份**完整副本** worktree，对自身 / 他人 identity 的读写都收敛到这一个目录；evolve_self 把这份 session 副本的改动**整体合回 main**，让下一轮 thread 看见演化后的身份。
+要把 Object 的身份/知识/身体改动**沉淀进 canonical（main）**，走一条三步的 feat-branch PR 流程（设计权威 `docs/2026-06-11-reflectable-feat-branch-pr-flow-design.md`）。session worktree 是纯运行时派生物、**永不合入 main**，所以沉淀必须另起 feat 分支。
 
-## 演化单元 = session 分支
+## 三步
 
-- `packages/@ooc/core/persistable/stone-worktree.ts:25` `sessionStoneBranch(sessionId)` —— session 分支名（`session-<sid>`），即 evolve_self commit/合入的最小单元。
-- worktree 三态（main canonical / session worktree 试验 / evolve 闸门）、eager 派生、物理落点 `flows/<sid>/`、`.gitignore` 白名单分离运行时——权威在 persistable `knowledge/session-worktree-model.md`，本篇只讲合入这一面。
+1. **new_feat_branch(intent)** —— 沉淀第一步。在 super flow 内从 main 派生一条 `feat/<slug>` 分支 worktree（落 `stones/<branch>/`），把分支名 + intent 绑进 `thread.persistence.stonesBranch`/`sedimentIntent`（随 thread.json 持久化、跨 exec tick 存活）。锚点：`packages/@ooc/builtins/root/executable/method.new-feat-branch.ts` `newFeatBranchMethod`；底层 `packages/@ooc/core/persistable/stone-feat-branch.ts:163` `createFeatBranchWorktree` / `:109` `slugFromIntent` / `:120` `featBranchName` / `:125` `featWorktreePath`。同 intent 重调幂等重绑（git WORKTREE_EXISTS 视成功）——这是 reject/request-changes 回修的 resume 入口。
 
-设计权威：`docs/2026-06-09-remove-metaprog-unify-session-worktree-design.md`（2026-06-09）。
+2. **直接编辑** —— 绑定生效后用普通 `write_file` / `file_window.edit` 编辑 feat worktree 下文件，**不**把文件内容作方法参数传。`packages/@ooc/core/persistable/stone-worktree.ts:169` `resolveStoneIdentityRef` 把 feat 绑定放在 sessionId 路由**最前面、覆盖优先**（`:178-182`，经 `ensureFeatBranchWorktreeReady` 确保就绪），读写自然落 feat worktree。
 
-## diff / merge 两步
+3. **evolve_self()** —— finalizer（**无 edits 参数**）。锚点 `packages/@ooc/builtins/root/executable/method.evolve-self.ts` `evolveSelfMethod`：读绑定 → `commitAndOpenPr`（commit 署名 actor → 算 reviewer 集 → `createPrIssue`）→ `deliverPrWindowToReviewers` 把 pr_window 投给每个 reviewer。底层 `stone-feat-branch.ts:238` `commitAndOpenPr` / `:90` `computeReviewerSet`。
 
-- `packages/@ooc/core/programmable/evolve-self.ts:98` `evolveSelfDiff` —— 用 git porcelain 列 session worktree **全部**改动（含 cross-object），让 super flow 看见要评审什么。
-- `:124` `evolveSelfMerge` —— commit session worktree → rebase 到 main → `tryMergeSelf` 分类：
-  - **self-scope（只改自己）** → ff-merge 回 main，署名 = objectId。
-  - **cross-scope（改别人 / 建新对象）** → `must-pr-issue`，自动转 PR-Issue 给 supervisor → supervisor `resolve` 评审合入。
-  - 合入后 GC：`gitWorktreeUnregister` 解除 `.git` link、**保留 `flows/<sid>` 运行时数据**（session 对话历史不丢），再 `gitBranchDelete` 删 `session-<sid>` 分支（ff-merge 后它已等于 main，删之收尾；`evolve-self.ts:179`，删失败仅 warn 不阻塞合入）。
+## reviewer 集冒泡（rule A）
+
+`computeReviewerSet(diffPaths, authorObjectId)`（`stone-feat-branch.ts:90`）：对变更触及的每条路径取其**顶层领地 owner**（`ownerObjectIdOfPath`），并集 supervisor，去掉 author 自身。
+
+- foo 只改自己子树（`objects/foo/**` 含 `children/**`）→ reviewer = {supervisor}。
+- 越界改 Y 领地 → reviewer = {Y, supervisor}。
+- author（foo）不作 reviewer（避免自审自批）；supervisor 恒在 reviewer 集。
+
+## 审批 + 合入闸
+
+每个 reviewer 的 super-session pr-review thread 收到 `pr_window`（`packages/@ooc/core/executable/windows/pr/delivery.ts:81` `deliverPrWindowToReviewers`，threadId=`:39` `prReviewThreadId`）+ 激活 `packages/@ooc/builtins/root/knowledge/pr-review.md` 协议，经 window 的 `approve`/`reject`/`request_changes` method（`executable/windows/pr/index.ts`）行使评审。
+
+聚合 `packages/@ooc/core/persistable/pr-issue.ts:119` `aggregatePrApproval`：全 approve→ready-to-merge / 任一 reject→rejected（一票否决）/ 否则 changes-requested|pending。`.world.json prAutoMerge`（`world-config.ts:83`，缺省 false=人工）：true 立即 `resolvePrIssue(merge)`；false 留 open 待人工 `POST /pr-issues/:id/resolve {merge}`。单一编排点 `executable/windows/pr/approval-flow.ts:103` `applyPrApproval`（HTTP `approvePrIssue` 与 pr_window method 同源委托它）。合入复用 `stone-versioning.ts:291` `resolvePrIssue`。
+
+## 失败回修 loop
+
+reject / request-changes / 合入失败 → `executable/windows/pr/delivery.ts:166` `routePrRepairMessage` 按 PR record `authorThreadId` 找 super(foo) thread → inbox 追 verdict+反馈 → 翻 running（找不到 fail-loud `NO_AUTHOR_THREAD`）。super(foo) 收 message 后 `new_feat_branch(同 intent)` 幂等重绑续修：request-changes 时旧 worktree+编辑仍在可续改，reject 后旧 worktree 已归档、从 main 重派重做。re-edit → 再 `evolve_self` 重开 PR。
 
 ## 边界
 
-- LLM session 内所有 stone 写（改自己 / 改别人 / 建新对象）→ 直接 `write_file` 落 session worktree，不再有「先 open 再写」手动流程。
-- 唯一合入闸门 = super flow evolve_self；super flow 本身不直接 write_file 改 stone（它是闸门 + sediment 沉淀 + 治理）。
-- HTTP 控制面写（前端保存 self/readable/executable）→ 直接 commit main，立即生效，不开 worktree。
-- cross-scope PR-Issue 由 supervisor 在 super flow 做治理决议（resolve / rollback，端点与底层函数详见 `knowledge/super-flow.md` 治理节）。改自己 / 改别人 / 建新对象现在都直接 `write_file` / `create_object` 落 session worktree，无单独固化写动作通道。
+- 沉淀第一步是 super flow 内的 `new_feat_branch`，不是手动开 worktree / commit / merge。
+- super flow 本身不在 feat 分支外直改 stone——它是沉淀发起点 + finalizer + 治理（resolve / rollback，详见 `knowledge/super-flow.md`）。
+- HTTP 控制面写（前端保存 self/readable/executable）→ `httpDirectMainWrite` 直 commit main，立即生效，不开 worktree。
+- session worktree 改动永不进 canonical——要沉淀必走 feat-branch PR（或 HTTP 直写）。

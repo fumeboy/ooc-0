@@ -7,15 +7,18 @@ activates_on:
 
 # sediment knowledge
 
-**sediment** 是 Object 运行时由 reflectable / collaborable 自动沉淀的事实型知识，落 **pool**（持久 + 不进 git，写就生效），与 stone 里人类设计的 seed knowledge 配对。reflectable 默认只动 sediment，不动 seed（先天能力基底走 PR-Issue + eval gate）。
+**sediment** 是 Object 运行时由 reflectable / collaborable 自动沉淀的事实型知识，落 **pool**（持久 + 不进 git，写就生效），与 stone 里人类设计的 seed knowledge 配对。reflectable 默认只动 sediment，不动 seed（先天能力基底走 feat-branch PR + eval gate）。
 
-## super flow 写入面（只直写 sediment）
+## 两条沉淀通道必须选对（互斥）
 
-super flow 自己**直写**的只有 pool 侧 sediment（不进 git、写就生效），落点见 `packages/@ooc/core/persistable/pool-object.ts:68,73`：
-- `pools/<self>/knowledge/memory/<slug>.md` —— 长期记忆，一条一个文件，slug 用 kebab-case。
-- `pools/<self>/knowledge/relations/<peer>.md` —— long_term relation 文件。
+super flow 有两条**互斥**的沉淀通道，选错会静默失败：
 
-身份/身体（stone 侧 `self.md` / `readable.md` / `executable/` / `visible/`）**不在 super flow 直写**——super flow 只直写 sediment、用 `evolve_self` 合入业务 session 的身体改动（职责切分详见 `knowledge/super-flow.md`）。
+- **pool sediment（直写）**：仅运行时事实记忆（memory / relations）。write-through、**不分支/不 PR**、立即生效。落点见 `packages/@ooc/core/persistable/pool-object.ts:68,73`：
+  - `pools/<self>/knowledge/memory/<slug>.md` —— 长期记忆，一条一个文件，slug 用 kebab-case。
+  - `pools/<self>/knowledge/relations/<peer>.md` —— long_term relation 文件。
+- **feat-branch PR**：任何 stone 变更（身份 `self.md` / `readable.md` / 身体 `executable/` / `visible/` / seed knowledge）。**必须** `new_feat_branch` 开分支 → 在 feat worktree 直接编辑 → `evolve_self` 开 PR（机制详见 `knowledge/evolve-self-worktree.md`）。
+
+**陷阱（体验官 #2 实证）**：feat 分支绑定生效时 `write_file pools/...` 仍静默落 pool（feat 绑定覆盖路由只管 stone 路径，pool 不在 worktree 模型内）→ `evolve_self` NO_CHANGES、PR 开不出。要沉淀身份/身体务必写 stone 路径（`self.md` 等），不要误写进 pool。
 
 super flow 禁止动：业务 thread.json / pool 的 data/ 与 files/（运行时业务态，不是反思沉淀）。
 
