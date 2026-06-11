@@ -30,6 +30,6 @@ root 上的 `talk` / `do` / `todo` / `plan` / `program` / `open_file` / `open_kn
 
 ## 自定义 method 注册
 
-Object 自定义 object method 通过 `executable/index.ts` 的 `export const window`（loader 读 `mod.window`，`packages/@ooc/core/runtime/server-loader.ts:95`；`export const llm_methods` 命中即抛错 `:89`）声明。startup 由 ObjectTypeRegistrar 加载该 window，对**新 type** 经 `registerNewObjectType` 一次注册（`object-registry.ts:167`），对**已 seed 的 type** 经 `registerExecutable` 维度合入（`object-type-registrar.ts:82`）。method 解析沿 `parentClass` class 链回退（缺省隐式继承 `root`），class 是唯一继承机制（prototype 已于 2026-06-07 剔除）。
+Object 自定义 object method 通过 `executable/index.ts` 的 `export const window`（loader 读 `mod.window`，`packages/@ooc/core/runtime/server-loader.ts:95`；`export const llm_methods` 命中即抛错 `:89`）声明。world stone 的对象类型在**渲染期 lazy ensure**（首次进入某 thread context 时）由 `thinkable/context/object-windows.ts` 的 `registerStoneObjectType` 经 `resolveStoneIdentityRef(read)` 从磁盘（session worktree 或 main）加载该 window，经 `registerNewObjectType` 注册（`object-registry.ts:167`）进全局 builtinRegistry；已注册则跳过（幂等）。method 解析沿 `parentClass` class 链回退（缺省隐式继承 `root`），class 是唯一继承机制（prototype 已于 2026-06-07 剔除）。
 
 builtin 对象的目录形态已按维度劈分：`executable/index.ts`（object method + constructor，调 registerExecutable）+ `readable.ts`（readable hook + window method + compressView，调 registerReadable），由 barrel `index.ts` 分别 side-effect 加载（executable 不 import readable）。标准样板见 `packages/@ooc/builtins/example/`。

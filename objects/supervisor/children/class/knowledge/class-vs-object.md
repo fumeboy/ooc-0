@@ -15,7 +15,7 @@ OOC 把 `class` 提升为与 `object` **平级的一等概念**（2026-06-07）�
 
 ## class 是唯一继承机制
 
-原 `prototype`（self.md frontmatter 的 stone 侧实例链）已**彻底剔除**——代码 / 文档 / 注释无兼容层。继承统一收敛到 class：stone 用 `package.json` 的 `ooc.class` 声明父类，registrar 读它设 `parentClass`（`packages/@ooc/core/runtime/object-type-registrar.ts:144-151`：executable `window.parentClass` 覆盖优先，否则取 `package.json` 的 `ooc.class`）。
+原 `prototype`（self.md frontmatter 的 stone 侧实例链）已**彻底剔除**——代码 / 文档 / 注释无兼容层。继承统一收敛到 class：stone 用 `package.json` 的 `ooc.class` 声明父类，渲染期注册（`object-windows.ts` 的 `registerStoneObjectType` → `readStoneClass`）读它设 `parentClass`：executable `window.parentClass` 覆盖优先，否则取 `package.json` 的 `ooc.class`。
 
 `parentClass` 三态：
 - **undefined** → 隐式继承 `"root"`（拿到 talk / do / todo / plan / program 等通用方法）。

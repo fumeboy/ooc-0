@@ -35,7 +35,7 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 7. context self 方法注册 + peer readable/方法注册 — `packages/@ooc/core/thinkable/context/object-windows.ts`（漏接 → 新对象 executable/readable 加载不到、render 落 placeholder）。
 8. readable 渲染 — `packages/@ooc/core/thinkable/context/renderers/xml.ts`。
 
-**仍 main-anchored 的边界（残留，跟踪）**：`derivePeerObjectWindows` 的 hierarchical peer 发现（`discoverStoneHierarchicalPeers`）+ 全局 `object-type-registrar`（startup 只扫 `stones/`）——session 内新建 **child** 对象不会自动作为 hierarchical peer 出现（talk 过的 peer 走 talk_window 收集路径已 session-aware，不受影响）。
+**仍 main-anchored 的边界（残留，跟踪）**：`derivePeerObjectWindows` 的 hierarchical peer 发现（`discoverStoneHierarchicalPeers`）——session 内新建 **child** 对象不会自动作为 hierarchical peer 出现（talk 过的 peer 走 talk_window 收集路径已 session-aware，不受影响）。
 
 锚点：`packages/@ooc/core/persistable/stone-worktree.ts:153` resolveStoneIdentityDir / `:169` resolveStoneIdentityRef（feat 绑定覆盖 `:178-182`）/ `:131` ensureFeatBranchWorktreeReady / `:89` ensureSessionWorktree / `:30` sessionStoneBranch / `:54` sessionUsesWorktree / `:47` sessionWorktreePath；feat 分支 + PR 在 `packages/@ooc/core/persistable/stone-feat-branch.ts:165` createFeatBranchWorktree / `:240` commitAndOpenPr。
 

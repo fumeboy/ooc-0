@@ -33,7 +33,7 @@
 
 ## 当前设计（代码锚）
 
-- `packages/@ooc/core/runtime/object-type-registrar.ts:144-151`——parentClass 解析：executable `window.parentClass` 覆盖优先，否则取 `package.json` 的 `ooc.class`。
+- `packages/@ooc/core/thinkable/context/object-windows.ts` 的 `registerStoneObjectType`——parentClass 解析：executable `window.parentClass` 覆盖优先，否则取 `package.json` 的 `ooc.class`（`readStoneClass`）。
 - `packages/@ooc/core/runtime/object-registry.ts:209-214`——`resolveParentClassChain` 沿链解析 + 环检测（`seen` Set + MAX_DEPTH=64）。
 
 ## 现状
