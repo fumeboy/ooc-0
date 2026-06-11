@@ -10,7 +10,7 @@ activates_on:
 
 一个 OOC 对象（可交互的就是一个 Agent）= `stones/<branch>/objects/<id>/` 下持久的**五件套** + 它在 session 里被运行起来的 thinkloop。这篇讲从空到能跑的全流程：建骨架、写五件套、自我演化合入。
 
-建/改对象都收敛到 git 的 self-scope/cross-scope 模型，权威机制见 reflectable `evolve-self-worktree.md`、persistable `stone-pool-flow-three-trees.md`、class `class-vs-object.md`。
+建/改对象进 canonical 都收敛到 feat-branch PR 沉淀模型，权威机制见 reflectable `evolve-self-worktree.md`、persistable `stone-pool-flow-three-trees.md`、class `class-vs-object.md`。
 
 ## 先判定：该不该建一个新对象
 
@@ -110,14 +110,15 @@ export const ui_methods = { /* visible 维度：给前端/agent-native 客户端
 
 多步骤工作流 / 大块协议 / 需要辅助文件的复杂操作，封装成 `skills/<name>/SKILL.md`（+ references/scripts）。双层：branch 级 `stones/<branch>/skills/<name>/`（跨对象共享）/ object 级 `objects/<self>/skills/<name>/`（仅自己可见，同名时优先）。LLM 通过 `skill_index` window 看索引按需 `open_file` 进入。三选一准则：knowledge=被动激活（协议补全）、method=调用即执行（明确函数操作）、skill=主动选择（复杂工作流）。
 
-## Step 3 — 演化合入（evolve_self）
+## Step 3 — 沉淀进 canonical（feat-branch PR）
 
-session 内对自己/别人/新对象的所有 stone 写都直接 `write_file`/`edit` 落 session worktree，无「先 open 再写」。让它永久：
+业务 session 的 `session-<sid>` worktree 是纯运行时派生物，**永不合并回 main**——session 内 `write_file`/`edit` 当场可用（靠 session-aware 读），但与「进 canonical」是两件事。让改动永久进 main 走 feat-branch PR：
 
-- `end` → 进 super flow → `evolve_self`：`evolveSelfDiff` 列改动给 super flow 评审 → `evolveSelfMerge` 分类——
-  - **self-scope（只改自己子树）** → 自治 ff-merge 回 main，无需 review。
-  - **cross-scope（改别人 / 建新对象）** → 自动开 PR-Issue 给 supervisor `resolve` 合入。新对象 ≠ 作者自己 → 走 cross-scope。
-- 合入后 GC：解除 worktree、保留 `flows/<sid>` 运行时数据、删 `session-<sid>` 分支。
+- `talk(target="super")` → super flow → `new_feat_branch`：从 main 派生一条 feat 分支 worktree 并绑进 thread（绑定覆盖路由让后续 write_file 直接落 feat worktree）。
+- 在 feat 分支上直接 `write_file`/`edit` 编辑五件套。
+- `evolve_self`（finalizer，无 edits 参数）：commit（署名 actor）→ `computeReviewerSet` 冒泡算 reviewer 集（变更触及路径的顶层领地 owner ∪ supervisor，author 不自审）→ 开 PR → 投递 pr_window 给 reviewer。
+- reviewer 经 pr_window `approve`/`reject`/`request_changes` 审批；全 approve → ready-to-merge → `.world.json prAutoMerge`（缺省 false=人工 `/resolve{merge}`）闸合入 main。
+- 下一轮新 thread 自动看见 main 上的落盘内容。
 
 **热更**：`executable/index.ts` 写完后 loader 按 mtime 失效缓存，下一次调该方法自动 re-import，不重启进程（深机制见 `self-written-method-hot-reload.md`）。结构性改动（改 self.md 身份、重组模块、设计 UI 主页）建议先 `talk(target="super")` 想清楚再写。
 

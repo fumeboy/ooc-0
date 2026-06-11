@@ -15,13 +15,14 @@ root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins
 - **end** — 标记当前 thread 完成。传 `result` 时自动调 creator window 的 continue/say 把内容写进 transcript 并 auto-archive 父侧 do_window；不传则只标记本轮结束。result 是便捷糖，不是回报通道。
 - **open_file** / **open_knowledge** — 把文件 / 知识载入 context。
 - **write_file** — 创建或覆盖**已存在对象**的文件（落盘与版本化重定向在 file builtin，`packages/@ooc/builtins/file/executable/index.ts`）。
-- **create_object** — 建一个**全新对象**的骨架（仅业务 session）：落 session worktree `objects/<newId>/{package.json,self.md,readable.md[,knowledge]}`，end→super flow evolve_self 合入（`method.create-object.ts`）。
-- **evolve_self** — 在 super flow 里把 session worktree 的改动 commit + 尝试合入 main（self-scope ff-merge / cross-scope 开 PR-Issue，`method.evolve-self.ts`）。
+- **create_object** — 建一个**全新对象**的骨架（仅业务 session）：落 session worktree `objects/<newId>/{package.json,self.md,readable.md[,knowledge]}`（`method.create-object.ts`）；进 canonical 走后续 feat-branch PR 沉淀。
+- **new_feat_branch** — 沉淀第一步（super flow 内）：从 main 派生一条 feat 分支 worktree 并绑进 thread，让后续 write_file 直接落 feat worktree（`method.new-feat-branch.ts`）。同 intent 重调幂等重绑（回修 resume 入口）。
+- **evolve_self** — 沉淀 finalizer（super flow 内，无 edits 参数）：读 feat 分支绑定 → commit（署名 actor）→ 算 reviewer 集冒泡 → 开 PR → 投递 pr_window 给 reviewer（`method.evolve-self.ts`）。不再是 session 合入命令。
 - **glob** / **grep** — 按文件名 / 内容搜索，创建 search_object。
 - **example** — 构造 example_window（标准对象定义样板，`method.example.ts`）。
 - **open_feishu_chat** / **open_feishu_doc** — 飞书外接（经 extendable 注册，寄生于 executable）。
 
-> 注：原 `metaprog` method 已删。它承载的 supervisor 治理动作（resolve PR-Issue / rollback stone）已转控制面 governance 端点 `POST /api/runtime/pr-issues/:issueId/resolve` / `POST /api/runtime/stones/:objectId/rollback`（底层 `packages/@ooc/core/programmable/versioning.ts` 的 `resolvePrIssue` / `rollback`），治理语义权威在 reflectable 维度；它的写动作（改自己 / 建别人 / 改别人）下放给 write_file / create_object 落 session worktree、走 super flow evolve_self 合入。
+> 注：原 `metaprog` method 已删。它承载的 supervisor 治理动作（resolve PR-Issue / rollback stone）已转控制面 governance 端点 `POST /api/runtime/pr-issues/:issueId/resolve` / `POST /api/runtime/stones/:objectId/rollback`（底层 `packages/@ooc/core/persistable/stone-versioning.ts` 的 `resolvePrIssue` / `rollback`），治理语义权威在 reflectable 维度；它的写动作（改自己 / 建别人 / 改别人）下放给 write_file / create_object 落 session worktree、沉淀走 feat-branch PR（`new_feat_branch` → 编辑 → `evolve_self` 开 PR）。
 
 其它 object 也注册自己的 object method：do_object（continue/wait/close/move）、talk_object（say/wait/close）、file_object（edit/reload/set_range/close）、method_exec（refine/submit，`packages/@ooc/core/executable/windows/method_exec/index.ts:53`）。
 

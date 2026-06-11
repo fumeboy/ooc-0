@@ -6,7 +6,7 @@
 
 ## 核心设计
 
-核心设计：**Object 为自己编写并热更方法库**。Object 持有 `executable/index.ts` 自定义 object method（与自定义 context window），运行时经 server-loader 按 fs.watch 热更——元编程使 Object 能自我编程。自改落 session worktree，经 evolve_self 合入 main 后重注册才全局生效。
+核心设计：**Object 为自己编写并热更方法库**。Object 持有 `executable/index.ts` 自定义 object method（与自定义 context window），运行时经 server-loader 按 fs.watch 热更——元编程使 Object 能自我编程。自改在 session 内当场可用，进 canonical 经 feat-branch PR 合入 main 后重注册才全局生效。
 
 ## 我负责的
 
@@ -18,7 +18,7 @@
 
 ## 当前设计（锚真实代码）
 
-- 维度 API 面：`packages/@ooc/core/programmable/index.ts:9`（git CLI 薄包装 / stones bootstrap / versioning 编排：`commitWorktree` / `tryMergeSelf` / `httpDirectMainWrite`）。层级规则 `programmable → persistable` 单向。
+- 维度 API 面：programmable 的 git versioning / 演化机制物理寄居 persistable，经 `packages/@ooc/core/persistable/index.ts:183` barrel 对外（git CLI 薄包装 `stone-git.ts` / stones bootstrap `stone-bootstrap.ts` / versioning 编排 `stone-versioning.ts`：`commitWorktree` / `httpDirectMainWrite` / `resolvePrIssue` / `rollback` + feat 分支沉淀 `stone-feat-branch.ts`）。层级规则 `programmable → persistable` 单向。
 - object method 类型：canonical `ObjectMethod` 在 `packages/@ooc/core/_shared/types/method.ts:66`（字段构成 + 已删 `match`/`knowledge` 的权威叙述见 knowledge/self-written-method-hot-reload）。自定义 window 声明即 `Partial<ObjectDefinition>`（canonical `ObjectDefinition` 在 `packages/@ooc/core/_shared/types/registry.ts`，2026-06-10 删冗余 `StoneObjectDeclaration` 后统一），method 字典字段名为 **`methods`**。
 - 动态加载与热更：`packages/@ooc/core/runtime/server-loader.ts:29` `ServerLoader`；`?t=mtime`（:38/:91）破坏 import cache；旧 `llm_methods` 出现即抛硬切错误（:93-96，提示改写为 `export const window … { methods: { … } }`）；独立 `readable.ts` 加载后合并进 `window.readable`（`loadReadableTs`）；接口 `loadObjectWindow`(:117)/`loadUiMethods`(:122)/`invalidateStone`(:127，按 stone 失效)/`clearCache`(:136)，module-level wrapper `clearServerLoaderCache`(:162)。
 - ProgramSelf：`packages/@ooc/builtins/program/executable/self.ts:51` `createProgramSelf`（接口 `ProgramSelf` 同文件 `:9`）；`callMethod`(:59) lookup window → `registry.getObjectDefinition(type).methods[method]` → exec；`getData·setData`(:88,:95) 读写 flow 级 `flows/<sid>/objects/<self>/data.json`；`getThreadLocal·setThreadLocal`(:104,:107)。**已知边界**：`callMethod` 直接索引 `getObjectDefinition(type).methods[method]`，不走 `resolveMethod`（沿 parentClass 链回退，`object-registry.ts:249`）；继承自父 class 的 method 经 ts/js sandbox `self.callMethod` 取不到，只能取本 class 自身声明的 method。
@@ -33,7 +33,7 @@
 
 ## 已知问题 / 边界与未决
 
-- **自改 method 集的边界与生效**（跨切，与 executable 共担）：自改 `executable/index.ts` 无硬 deny（权威落点 executable/knowledge/permission.md「deny 档当前 0 项」待办）；method 集/readable 为全局 main-canonical，per-session 改须经 reflectable `evolve_self` 合入 main 后重注册才生效。programmable 只描述 *如何写* 才能生效，不规定 *谁可以写*——后者由 reflectable.business_task_isolation + caller 显式请求决定。
+- **自改 method 集的边界与生效**（跨切，与 executable 共担）：自改 `executable/index.ts` 无硬 deny（权威落点 executable/knowledge/permission.md「deny 档当前 0 项」待办）；method 集/readable 为全局 main-canonical，per-session 改须经 reflectable feat-branch PR（`new_feat_branch` → 编辑 → `evolve_self` finalizer 开 PR）合入 main 后重注册才生效。programmable 只描述 *如何写* 才能生效，不规定 *谁可以写*——后者由 reflectable.business_task_isolation + caller 显式请求决定。
 - **params schema 校验未强制**：`ObjectMethod.schema` 字段已存在（结构化渲染 + fail-soft），但写入期没有硬闸门；若要自动参数检查/转换，需在 exec 调用路径 + ui callMethod 路径同时加。
 - **`export const window` 当前是单数**：后续可演化为复数 windows 字典（注册多个自定义 window 类型）。
 - **hot-reload 仅 tier 1**：tier 2（结构变更先标记 + 懒迁移 / vtable 重算）、tier 3（core/builtin 版本升级走重启）仍是设计阶段。三档按修改内容分级的完整模型见 knowledge/world-core-interface-and-hot-reload-tiers。
@@ -65,5 +65,5 @@
 - **mtime 失效**：loader 缓存键含文件 mtime，写文件改 mtime → 下次 import 拿新模块（`?t=mtime` 破坏 import cache 的机制、FS 精度 caveat 权威见 knowledge/self-written-method-hot-reload）。
 - **ProgramSelf**（`programSelf`）：注入进 program ts/js sandbox 与 custom method dispatcher 的能力对象——`{ dir, callMethod, getData, setData, getThreadLocal, setThreadLocal }`。与 method receiver `ctx.self` 是两个东西。
 - **`$OOC_SELF_DIR`**：program shell 经 env 透出的 stone 目录路径，由 `resolveStoneIdentityDir(ref,"write")` 解析（business session → session worktree object 目录；super/控制面 → main canonical）。
-- **session worktree**：business session 的 stone 写落点 `flows/<sid>/objects/<id>/`（main HEAD 完整副本），改动不污染 main，经 super flow `evolve_self` 合入才永久。
+- **session worktree**：business session 的 stone 写落点 `flows/<sid>/objects/<id>/`（main HEAD 完整副本），是纯运行时派生物、永不合并回 main；进 canonical 另走 super flow feat-branch PR（`new_feat_branch` → 编辑 → `evolve_self` 开 PR）。
 - **World / Core**：Core = `@ooc/core` 运行时内核（类 JVM）；World = 用户工作目录（类项目目录，含 stones/pools/flows + node_modules）。builtin 与 stone 结构同构，定义所有权与发现方式不同。详见 knowledge/world-core-interface-and-hot-reload-tiers。

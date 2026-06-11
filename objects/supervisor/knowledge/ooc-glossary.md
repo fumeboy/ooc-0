@@ -39,9 +39,9 @@ activates_on:
 - **self-constitutive（自我构成性）** — 维度判定轴：一个能力是否构成 Agent 的「自我」；是则为维度，否则为外接层/协议。9 维度全过此判据，extendable 不过。
 - **agent-native parity** — 横切公理：用户（人类）能做的事 agent 也应能做；每个维度都有「人类面 / agent 面」两个消费方。对称的是「能不能做」，不是「看到的体量」；agent 全量自观测换场所到 super flow 做。
 - **对象关系三轴** — 自我(super) / peer 平等(talk/exec) / parent-child 层级，三种不同权力语义的关系。Supervisor 即这棵 object 树的 root parent。
-- **修改权 = self-scope 自治** — object 改自己子树（含自己 seed）自治 ff-merge 无需 review；cross-object（改别人子树）才走 PR-Issue review。user 闸门 = git 本身（history / review / rollback 兜底），非 OOC 内的 PR gate。
+- **修改权 = feat-branch PR + reviewer 冒泡** — 进 canonical 的 stone 变更一律走 feat 分支 PR，reviewer 集按变更触及路径冒泡（顶层领地 owner ∪ supervisor，rule A），全 approve 经 `prAutoMerge` 闸合入 main；author 不自审，supervisor 恒在 reviewer 集。session worktree 永不合入，是纯运行时派生物。
 
 ## 已退役概念（不要重新引入）
 
-- **issue 看板**（session 级共享议题 + issue_window + create_issue/open_issue/@mention 唤醒）：2026-05-26 整套移除，原因是协作语义未想清楚。**注意区分**：stone-versioning 内部的 **PR-Issue**（self-scope vs cross-scope merge 决策的命名）是另一回事，保留。
+- **issue 看板**（session 级共享议题 + issue_window + create_issue/open_issue/@mention 唤醒）：2026-05-26 整套移除，原因是协作语义未想清楚。**注意区分**：stone-versioning 内部的 **PR-Issue**（feat 分支变更转交 reviewer 集评审的请求记录）是另一回事，保留。
 - **prototype chain**（self.md frontmatter `prototype:`）：2026-06-07 彻底剔除，继承统一收敛到 **class**（`package.json` 的 `ooc.class`）。详见 class child。

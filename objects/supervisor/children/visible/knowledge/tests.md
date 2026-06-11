@@ -39,7 +39,7 @@ rubric（规格已就地收编进本 tests.md；story 代码在 `packages/@ooc/s
 
 ### `stories/visible.story.ts`
 - `runControlPlane()` — Tier A，承载 TC-VIS-01..05（上文判据）。
-- `runAgentNative()` — Tier B，派 supervisor 创建对象（`sb_ui_<tag>`）。expectation：对象已建（evolve 合入 main 或 create_object 落 session worktree），可见性前提就绪；visible 页面待 visible 维度 agent 产出。
+- `runAgentNative()` — Tier B，派 supervisor 创建对象（`sb_ui_<tag>`）。expectation：对象已建（feat-branch PR 合入 main 或 create_object 落 session worktree），可见性前提就绪；visible 页面待 visible 维度 agent 产出。
 
 ### `stories/L8_visible.stories.ts`（单元 catalog，`layer: "visible"`）
 - **L8-CLIENT-URL-STONE** — expectation：stone scope `client-source-url` 指向 `visible/index.tsx`（单页）。

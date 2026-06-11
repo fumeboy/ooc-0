@@ -25,7 +25,7 @@ activates_on: {"object::root": "show_description"}
 
 ## Tier B —— agent-native（真 LLM，env-gated）
 
-我（supervisor）在业务 session 内 `write_file` 写 `objects/<newId>/...` 建对象并写自定义 object method，经 super flow `evolve_self`（cross-scope → PR-Issue → 自审 resolve）合入 main；`customWindowInvocations` + `functionOutputFor` 实证 method 真执行。代码：`stories/programmable.story.ts` 的 `runAgentNative()`。
+我（supervisor）在业务 session 内 `write_file` 写 `objects/<newId>/...` 建对象并写自定义 object method，经 super flow feat-branch PR（`new_feat_branch` → feat 分支编辑 → `evolve_self` finalizer 开 PR → reviewer 审批 → 合入）进 main；`customWindowInvocations` + `functionOutputFor` 实证 method 真执行。代码：`stories/programmable.story.ts` 的 `runAgentNative()`。
 
 rubric（已就地收编，对应 e2e `backend-programmable-self-command`）：
 

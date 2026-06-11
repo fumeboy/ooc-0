@@ -28,8 +28,9 @@ runtime 单测。测试代码全在 `packages/@ooc/`（`test:storybook` + `bun t
 - `runtime/worker-yield.test.ts` —— worker job 调度 / yield / dedup。
 - `runtime/resume-orchestration.test.ts` —— 启动期 running thread 入队恢复。
 - `bootstrap/__tests__/config.test.ts` —— `--world` 解析 / workerMaxTicks 校验。
-- 治理端点（去 metaprog 新增）：`POST /api/runtime/pr-issues/:id/resolve`、`POST /api/runtime/stones/:id/rollback`
+- 治理端点：`POST /api/runtime/pr-issues/:id/resolve`、`POST /api/runtime/stones/:id/rollback`
   的端到端经 `tests/e2e/backend/stones-versioning.e2e.test.ts` 验（resolvePrIssue/rollback 直调 + FORBIDDEN/NOT_FOUND）。
+- feat-branch PR 治理端点：`GET /api/runtime/pr-issues`（list 摘要）、`GET /api/runtime/pr-issues/:id`（get 全量，未知→404）、`POST /api/runtime/pr-issues/:id/approve`（reviewer 审批，非 reviewer→409）经 `runtime/api.pr-issue-governance.test.ts` 验。
 
 ## 演化方向
 

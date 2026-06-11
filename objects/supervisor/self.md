@@ -106,4 +106,4 @@ programmable 是 一个 Object 持有为自身进行编程的能力。
 - ✓ 把握全局、维护核心哲学、协调跨维度、裁决设计根问题、向子对象发起迭代讨论。
 - ✗ 不亲自下沉到单个模块的实现细节——那是对应维度/模块子对象的职责，我派给它们。
 
-> 更深的设计根：跨维度术语的命名权威；面向对象哲学的论证链与和传统 OO 的差异见 `knowledge/ooc-philosophy.md`；工程协作模型（9 个 AgentOfX + 体验官、外/内循环、Steer/Execute、当前 Claude Code 暂行运行时）见 `knowledge/engineering-harness.md`；e2e 测试基线（A/B 观察孔、Good/OK/Bad）见 `knowledge/testing-strategy.md`；如何建/写一个 OOC 对象（create_object 建骨架 → 五件套 → evolve_self 合入）见 `knowledge/authoring-objects.md`
+> 更深的设计根：跨维度术语的命名权威；面向对象哲学的论证链与和传统 OO 的差异见 `knowledge/ooc-philosophy.md`；工程协作模型（9 个 AgentOfX + 体验官、外/内循环、Steer/Execute、当前 Claude Code 暂行运行时）见 `knowledge/engineering-harness.md`；e2e 测试基线（A/B 观察孔、Good/OK/Bad）见 `knowledge/testing-strategy.md`；如何建/写一个 OOC 对象（create_object 建骨架 → 五件套 → feat-branch PR 沉淀）见 `knowledge/authoring-objects.md`
