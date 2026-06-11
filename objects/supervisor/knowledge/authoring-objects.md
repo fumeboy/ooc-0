@@ -1,6 +1,6 @@
 ---
 title: 如何建/写一个 OOC 对象（建对象 → 五件套 → 演化合入）
-description: 想新建一个 OOC 对象（Agent）、写它的身份/方法/UI、或让它自我演化时看这篇；权威路径 = create_object 建骨架 + write_file 改文件 + evolve_self 合入
+description: 想新建一个 OOC 对象（Agent）、写它的身份/方法/UI、或让它自我演化时看这篇；权威路径 = create_object 建骨架 + write_file 改文件 + feat-branch PR 沉淀进 canonical
 activates_on:
   "object::root": "show_description"
   "method::root::create_object": "show_content"
@@ -24,7 +24,7 @@ activates_on:
 
 ## 一句话流程
 
-> **建新对象 = `create_object`（落 session worktree）；改已存在对象的文件 = `write_file`/`edit`；让改动永久 = `end` → super flow `evolve_self` 合入 main。**
+> **建新对象 = `create_object`（落 session worktree）；改已存在对象的文件 = `write_file`/`edit`；让改动进 canonical = `talk(super)` → `new_feat_branch` 开 feat 分支 → 在分支上编辑 → `evolve_self`（finalizer）开 PR → reviewer 审批合入 main（详见 Step 3）。**
 
 不要用 `mkdir` 手搓骨架，也不要裸 `write_file` 建新对象——新对象还没 `package.json`，`write_file` 靠它判 owner 边界会拒。
 
@@ -90,7 +90,7 @@ export const window = {
 export const ui_methods = { /* visible 维度：给前端/agent-native 客户端的 HTTP callMethod 字典 */ };
 ```
 
-要点（深术语见 executable `method-and-constructor.md`、`self-written-method-hot-reload.md`）：
+要点（深术语见 executable `method-and-constructor.md`、programmable `self-written-method-hot-reload.md`）：
 
 - 字段名是 **`methods`**（不是 `commands`）；每条 entry 是头等 `ObjectMethod`，与内置 window 上的 method 同构（`description / intents? / onFormChange? / schema? / exec`）。旧 `match` / `knowledge` 字段已删，旧 `export const llm_methods` 会被 loader 硬切报错。
 - 返回 `MethodOutcome` 三态：`{ ok:true, result? }` | `{ ok:true, window }`（`kind:"constructor"`，manager 自动 mount 到 thread context）| `{ ok:false, error }`。method **不抛异常**，错误走结构化结果让上游 LLM 自己判断。
@@ -120,7 +120,7 @@ export const ui_methods = { /* visible 维度：给前端/agent-native 客户端
 - reviewer 经 pr_window `approve`/`reject`/`request_changes` 审批；全 approve → ready-to-merge → `.world.json prAutoMerge`（缺省 false=人工 `/resolve{merge}`）闸合入 main。
 - 下一轮新 thread 自动看见 main 上的落盘内容。
 
-**热更**：`executable/index.ts` 写完后 loader 按 mtime 失效缓存，下一次调该方法自动 re-import，不重启进程（深机制见 `self-written-method-hot-reload.md`）。结构性改动（改 self.md 身份、重组模块、设计 UI 主页）建议先 `talk(target="super")` 想清楚再写。
+**热更**：`executable/index.ts` 写完后 loader 按 mtime 失效缓存，下一次调该方法自动 re-import，不重启进程（深机制见 programmable `self-written-method-hot-reload.md`）。结构性改动（改 self.md 身份、重组模块、设计 UI 主页）建议先 `talk(target="super")` 想清楚再写。
 
 ## 验证
 
