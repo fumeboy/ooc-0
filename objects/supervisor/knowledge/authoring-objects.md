@@ -79,28 +79,28 @@ export const window = {
         return { tip: "...", intents: [{ name: "<name>" }], quick_exec_submit: true };
       },
       schema: { /* 可选：结构化参数渲染 + fail-soft 校验 */ },
+      for_ui_access: true,               // 可选：标了它，该 method 才可经 HTTP call_method 被前端/client 调（visible UI 用）；不标只给 LLM
       exec: async (ctx) => {
         // ctx.programSelf（dir / callMethod / getData / setData / getThreadLocal / setThreadLocal）
         // ctx.thread（contextWindows / events / inbox / outbox）/ ctx.args
-        return { ok: true, result: "..." };   // 或 { ok: false, error } 或 { ok: true, window }（constructor）
+        return { ok: true, result: "...", data: {} };   // 或 { ok: false, error } 或 { ok: true, window }（constructor）；for_ui_access 方法前端从 data 取数渲染
       },
     },
   },
 };
-export const ui_methods = { /* visible 维度：给前端/agent-native 客户端的 HTTP callMethod 字典 */ };
 ```
 
 要点（深术语见 executable `method-and-constructor.md`、programmable `self-written-method-hot-reload.md`）：
 
-- 字段名是 **`methods`**（不是 `commands`）；每条 entry 是头等 `ObjectMethod`，与内置 window 上的 method 同构（`description / intents? / onFormChange? / schema? / exec`）。旧 `match` / `knowledge` 字段已删，旧 `export const llm_methods` 会被 loader 硬切报错。
+- 字段名是 **`methods`**（不是 `commands`）；每条 entry 是头等 `ObjectMethod`，与内置 window 上的 method 同构（`description / intents? / onFormChange? / schema? / for_ui_access? / exec`）。旧 `match` / `knowledge` 字段已删，旧 `export const llm_methods` 会被 loader 硬切报错。**UI 可调机制（2026-06-11 起）= 给方法标 `for_ui_access: true`，不再有独立 `export const ui_methods` 维度**——HTTP `call_method` 只暴露 `window.methods` 里标了它的方法（`stones/service.ts` / `flows/service.ts` call_method 校验 `entry.for_ui_access===true`）。
 - 返回 `MethodOutcome` 三态：`{ ok:true, result? }` | `{ ok:true, window }`（`kind:"constructor"`，manager 自动 mount 到 thread context）| `{ ok:false, error }`。method **不抛异常**，错误走结构化结果让上游 LLM 自己判断。
 - **window method**（只控展示，如 `set_viewport`）归 readable 维度，写在 `readable.ts` 的 `registerReadable({ windowMethods })`，不写在 executable。同一 type 上同名方法不能既是 object 又是 window method，registry 注册期 fail-loud。
 - **继承靠 class**：`package.json` 的 `ooc.class` 声明父类；缺省 `parentClass` 隐式继承 `"root"`，自动拿到 `talk / do / todo / plan / program / open_file / open_knowledge / glob / grep` 等通用方法，不必重复声明。prototype chain 已彻底剔除（2026-06-07）。
-- **纪律**：列表/搜索类 method 必须有默认分页；`exec` 返回大 JSON 必须包大小截断（防把下轮 LLM 请求打 413）。不要把 RPC helper / 业务逻辑对外导出，全部 module-private，只通过 `methods` + `ui_methods` 暴露；stone 内不建独立 `src/` 子目录（私有 sibling 用 `executable/_*.ts`）——`src/` 会被 LLM 当成可裸 import 的脚本，绕过 method 契约。
+- **纪律**：列表/搜索类 method 必须有默认分页；`exec` 返回大 JSON 必须包大小截断（防把下轮 LLM 请求打 413）。不要把 RPC helper / 业务逻辑对外导出，全部 module-private，只通过 `methods` 暴露（要给前端/client 调的标 `for_ui_access`）；stone 内不建独立 `src/` 子目录（私有 sibling 用 `executable/_*.ts`）——`src/` 会被 LLM 当成可裸 import 的脚本，绕过 method 契约。
 
 ### visible/index.tsx —— 我的 UI（可选）
 
-要被人类直接看见才写；props 至少接 `{ sessionId?, objectName?, callMethod? }`，`callMethod(name, args)` 调 `ui_methods[name]`（不是 `window.methods`，后者是给 LLM 的）。不写则走 Stone fallback。深术语见 visible child。
+要被人类直接看见才写；props 至少接 `{ sessionId?, objectName?, callMethod? }`，`callMethod(name, args)` 经 HTTP `call_method` 调 `window.methods` 里标了 `for_ui_access` 的方法（未标的只给 LLM）。不写则走 Stone fallback。深术语见 visible child。
 
 ### knowledge —— seed 知识（可选但推荐）
 
