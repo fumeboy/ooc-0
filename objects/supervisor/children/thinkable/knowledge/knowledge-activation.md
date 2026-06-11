@@ -37,9 +37,9 @@ knowledge 激活实际是二维的：
 
 多 trigger 命中取 max。
 
-## trigger 语法与求值（`knowledge/triggers.ts`）
+## trigger 语法与求值（`knowledge/activator.expr.ts`）
 
-`activates_on` 是 **trigger map**（2026-05-28 起，取代旧的 path-list 双桶）。`parseTrigger()`（`triggers.ts:57`）解析五类表达式为 AST kind：
+`activates_on` 是 **trigger map**（2026-05-28 起，取代旧的 path-list 双桶）。`parseTrigger()`（`activator.expr.ts:56`）解析五类表达式为 AST kind：
 
 - `object::<type>` —— 任意 open 的该类 object 出现时命中
 - `method::<object_type>::<method>` —— thread 中存在 open 的 method_exec form 且其 parentObject.type 与 method 匹配
@@ -49,13 +49,13 @@ knowledge 激活实际是二维的：
 
 旧格式 `window::<type>` 在 parse 阶段自动归一化为 `object::<type>`（向后兼容，但应优先写新格式）；任何其它形态（`command::`、裸 path 如 `root`/`talk`）一律 throw（fail-loud）。
 
-`evaluateTrigger()`（`triggers.ts:177`）是纯函数，输入 trigger + thread 输出 boolean，对应 AST kind 求值。
+`evaluateTrigger()`（`activator.expr.ts:176`）是纯函数，输入 trigger + thread 输出 boolean，对应 AST kind 求值。
 
 ### object::root always-on（关键修复）
 
 `object::root`（旧写 `window::root`）被文档化为「root window 每个 thread 都有，等价任何时候」。但 root 是 manager 提供的**虚拟隐式父 window**，从不 push 进 `thread.contextWindows`——若按扫窗口匹配 `type==="root"` 的 open window 则**永不命中**，导致沉淀的 memory 永不激活、召回闭环静默断（reflectable harness 发现）。
 
-修复：object case 特判 `trigger.objectType === "root"` → 直接 `return true`（`knowledge/triggers.ts:187`，链路注释 :183-:186）。一处特判，不动 parse 路径，坐实契约承诺。
+修复：object case 特判 `trigger.objectType === "root"` → 直接 `return true`（`knowledge/activator.expr.ts:186`，链路注释 :182-:185）。一处特判，不动 parse 路径，坐实契约承诺。
 
 ## 出厂身份作废
 
