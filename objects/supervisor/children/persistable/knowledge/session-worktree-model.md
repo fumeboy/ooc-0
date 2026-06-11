@@ -10,7 +10,7 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 
 ## 三态
 
-- **main = canonical stone**：Object 已提交的权威自我，唯一默认读源（`stones/main/objects/<id>/`，main git worktree；stoneDir 默认即此）。
+- **main = canonical stone**：Object 已提交的权威自我，**无 session 上下文（super / HTTP 无 sid / bootstrap）时的默认读源**（`stones/main/objects/<id>/`，main git worktree；裸 `stoneDir(ref)` 默认即此）。注意：**main 不是 session 内的读源**——session 内读须经 `resolveStoneIdentityRef` 路由到该 session 的 worktree（见下「读纪律」），否则读不到本 session 新建/改动的对象。
 - **session worktree = 会话内试验层**：业务 session（非控制面）对任意 stone 文件的 write_file / file_window.edit **不即时改 main**，落该 session 从 main HEAD **eager** 派生的 git 分支，物理路径 **`flows/<sid>/`**（session 一创建即 `git worktree add flows/<sid>` checkout main 全量文件；plain write、不 commit）。本 session 即时生效，main 不变、别 session 读旧版。worktree 是完整副本——读写收敛同一目录，无 shadow，裸读（program shell `$OOC_SELF_DIR`）看得到完整 identity。改动可跨 self / cross-object（改别人 / 建新对象），合入时由 evolve_self 分类处理。
 - **super-flow evolve_self = 身份合入闸门**：把某业务 session worktree 改动正式合入 main——commit `session-<sid>` 分支 → rebase → `tryMergeSelf` 分类：self-scope ff-merge 回 main（署名 objectId）/ cross-scope 转 PR-Issue → supervisor `resolve` 评审合入。合入后 GC：`gitWorktreeUnregister` 解除 `.git` link，**保留 `flows/<sid>` 运行时数据**，session 对话历史不丢。**session 分支即演化单元**，是身份从「试验」到「提交」的唯一 LLM 演化通道。
 
@@ -18,15 +18,22 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 
 旧 plain overlay 用 shadow 叠加部分文件：裸读路径（program shell、visible endpoint）看不到完整 identity，多通道各自手拼路径，一漏接就读到旧版/裸 main。worktree 是完整副本，读写收敛同一目录，结构上消除 shadow 漏接。
 
-## 五通道全接入 `resolveStoneIdentityDir`
+## 读纪律：所有身份/配置读一律经 `resolveStoneIdentityDir/Ref`
 
-统一访问原语 `resolveStoneIdentityDir(ref, mode)`：business session → worktree（session 创建时 eager 建，五通道统一走 `flows/<sid>/`）；super flow / 控制面直走 canonical main。接入点：
+统一访问原语 `resolveStoneIdentityDir(ref, mode)` / `resolveStoneIdentityRef(ref, "read")`：business session → worktree（session 创建时 eager 建，统一走 `flows/<sid>/`）；super flow / 控制面 / 无 sid → canonical main。**不变量：任何对象身份/配置（self / readable / executable / visible / knowledge / 存在性）的读，绝不自建裸 `{baseDir, objectId}` ref 直读——后者硬落 main、对 session 内未合入对象不可达。新增读点必过这一关。**
+
+已接入点（非穷举——新增读点同样必接入；2026-06-11 sweep 暴露下方 6-8 曾漏接，致 session 内新对象不可达，已修 62871c50）：
 
 1. `write_file` / `file_window.edit` 写 — `@ooc/builtins/file/executable/index.ts`。
 2. `loadSelfInstructions` 读 — `packages/@ooc/core/thinkable/context/index.ts`。
 3. executable/visible/readable loader 读。
 4. program shell `$OOC_SELF_DIR` — `packages/@ooc/builtins/program/executable/self-env.ts`。
 5. 控制面 visible endpoint — `packages/@ooc/core/app/server/modules/ui/api.client-source-url.ts`。
+6. talk target 存在性检查 — `packages/@ooc/core/executable/windows/talk/index.ts`（漏接 → session 内新 peer `target 不存在`）。
+7. context self 方法注册 + peer readable/方法注册 — `packages/@ooc/core/thinkable/context/object-windows.ts`（漏接 → 新对象 executable/readable 加载不到、render 落 placeholder）。
+8. readable 渲染 — `packages/@ooc/core/thinkable/context/renderers/xml.ts`。
+
+**仍 main-anchored 的边界（残留，跟踪）**：`derivePeerObjectWindows` 的 hierarchical peer 发现（`discoverStoneHierarchicalPeers`）+ 全局 `object-type-registrar`（startup 只扫 `stones/`）——session 内新建 **child** 对象不会自动作为 hierarchical peer 出现（talk 过的 peer 走 talk_window 收集路径已 session-aware，不受影响）。
 
 锚点：`packages/@ooc/core/persistable/stone-worktree.ts:127` resolveStoneIdentityDir / `:143` resolveStoneIdentityRef / `:89` ensureSessionWorktree / `:30` sessionStoneBranch / `:54` sessionUsesWorktree / `:47` sessionWorktreePath；合入在 `packages/@ooc/core/programmable/evolve-self.ts:133` evolveSelfMerge / `:108` evolveSelfDiff。
 

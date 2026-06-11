@@ -18,7 +18,9 @@
 
 ## 当前设计
 
-**stone identity = session-worktree 统一模型**——三态（main canonical / session worktree 试验层 / evolve_self 合入闸门）权威单一来源 `knowledge/session-worktree-model.md`（设计权威 `docs/2026-06-09-remove-metaprog-unify-session-worktree-design.md`，在 `docs/2026-06-05-stone-flow-overlay-versioning-design.md` 基础上完成；取代旧 plain overlay/shadow）。一句话：main 是唯一默认读源，业务 session 的写落从 main eager 派生的 git worktree（物理 `flows/<sid>/`、不 commit），唯有 super flow `evolve_self` 能把试验合入 main。
+**stone identity = session-worktree 统一模型**——三态（main canonical / session worktree 试验层 / evolve_self 合入闸门）权威单一来源 `knowledge/session-worktree-model.md`（设计权威 `docs/2026-06-09-remove-metaprog-unify-session-worktree-design.md`，在 `docs/2026-06-05-stone-flow-overlay-versioning-design.md` 基础上完成；取代旧 plain overlay/shadow）。一句话：业务 session 内**读写都经该 session 的 worktree**——写落从 main eager 派生的 git worktree（物理 `flows/<sid>/`、不 commit），**读也经 `resolveStoneIdentityRef` 路由到同一 worktree**（它是 main 的完整副本，物理同含继承自 main 的对象 + 本 session 新建/改动的对象，是该 session 的**真实运行时态**）；唯有 super flow `evolve_self` 能把试验合入 main 共享。**main 不是 session 内的读源，只是无 session 上下文（super / HTTP 无 sid / bootstrap）时的默认读源**——所以 session 内 `create_object` 的新对象当场就能被 talk / 渲染 / 加载方法，**不必先合入 main**；合入只是「提升为跨 session 共享」的正交动作。
+
+**读纪律（不变量）**：任何对象身份/配置（self / readable / executable / visible / knowledge / 存在性）的读，**一律经 `resolveStoneIdentityRef(ref, "read")` → `stoneDir(ref)`**，绝不自建裸 `{baseDir, objectId}` ref 直读——后者硬落 main、对 session 内未合入对象不可达。新增读点必过这一关（review checklist）。
 
 两条进入 canonical 的合法通道（互不经过对方）：① **LLM 演化** = 业务 session worktree → super flow `evolve_self`；② **HTTP 控制面写入** = `httpDirectMainWrite`（`versioning.ts:811`）直 commit main、立即生效、不开 worktree（人类已决策的编辑不走 session 隔离）。
 
@@ -36,7 +38,7 @@
 
 worktree 统一模型五通道全接入并落地（write_file / loadSelfInstructions / loader / program shell `$OOC_SELF_DIR` / visible endpoint），gate 全绿（tsc + 924 core/builtins tests + storybook Tier A 0 fail + silent-swallow + deprecated-symbols）。stone/pool/flow 三分稳定；csv 替代 sql 后无 migration runner 依赖。
 
-近期收口（iteration-02 后）：① session worktree 物理落点迁到 `flows/<sid>`（方案 A），身份与运行时同落 `objects/<id>/`（a4d11bf1）；② **§10 thread-context 完整收敛**——thread.json.contextWindows[] 字段退役，thread-context.json 成唯一权威，writeThread 单点刷（b24ba0ef，iteration-02 时还是待办，现已闭）；③ HTTP 直 commit main + GC 用 `gitWorktreeUnregister` 保留运行时数据；④ 建对象原语 `createObjectInSession` 恢复（2f4456f9）。
+近期收口（iteration-02 后）：① session worktree 物理落点迁到 `flows/<sid>`（方案 A），身份与运行时同落 `objects/<id>/`（a4d11bf1）；② **§10 thread-context 完整收敛**——thread.json.contextWindows[] 字段退役，thread-context.json 成唯一权威，writeThread 单点刷（b24ba0ef，iteration-02 时还是待办，现已闭）；③ HTTP 直 commit main + GC 用 `gitWorktreeUnregister` 保留运行时数据；④ 建对象原语 `createObjectInSession` 恢复（2f4456f9）；⑤ **读路径 session-aware 收口**（2026-06-11，62871c50）——storybook 全维 harness sweep 暴露：多数读点绕过 `resolveStoneIdentityRef` 自建裸 main ref，致 session 内 `create_object` 新对象当场 talk/render/加载方法全不可达（误判为「未合入」）。修：talk target 存在性检查 + thinkable/context self/peer 方法注册 + readable 渲染接回 chokepoint（visible/client-source-url 本已修好）。残留：`derivePeerObjectWindows` 的 hierarchical peer 发现 + 全局 `object-type-registrar` 仍 main-anchored（session 内新建 child 不自动作 hierarchical peer 出现；talk 过的 peer 不受影响）。
 
 ## 已知问题 / 边界与未决
 
