@@ -26,7 +26,7 @@ await self.callMethod("<window_id>", "<method>", { ... })
 
 > 已退役：旧的 `program.callMethod / function 子模式`（`exec(method="program", args={window_id, method, ...})` 当 meta-call 通道）已删；program 现在只剩 shell/ts/js 三种语言模式（`runtime.ts:10-13`）。元调用统一收敛到上面两条。
 
-UI / agent-native 客户端走第三条独立通道：HTTP `callMethod` → `loadUiMethods` 拿 `ui_methods` 字典执行（`ui_methods` 归 **visible** 维度，不归我）。`window.methods`（LLM 路径）与 `ui_methods`（HTTP 路径）entry 现在都是标准 `ObjectMethod`（2026-06-10 删 `UiServerMethod` 后统一），区别仅在导出位置/调用通道，各写各的、不互相代替；都需要则写两份。
+UI / agent-native 客户端走第三条独立通道：HTTP `call_method` 调 `window.methods` 里标了 `for_ui_access: true` 的方法（2026-06-11 起废独立 `ui_methods` 维度——LLM 路径与 HTTP 路径共用同一份 `window.methods` 表，只是 HTTP 侧按 `for_ui_access` 过滤可见性，`filterMethodsByVisibility` ui 档，`packages/@ooc/core/_shared/types/registry.ts:95`）。要给前端调的方法标 `for_ui_access`，不标只给 LLM；同一 entry 即可被两条通道复用，无需写两份。
 
 ## 演化与生效
 

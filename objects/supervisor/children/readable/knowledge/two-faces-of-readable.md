@@ -27,6 +27,6 @@ activates_on:
 
 > readable = Object 怎样被「思考者（LLM）」读到。
 > - 静态面：readable.md（自我介绍名片，与 self.md 双面身份）。
-> - 动态面：readable.ts/renderXml（按状态算 XML）+ windowMethods（控展示状态）+ compressView（压缩态）。
+> - 动态面：readable hook（`ReadableFn`，按状态算 XML，合并进 `window.readable`）+ windowMethods（控展示状态）+ compressView（压缩态）。
 
 上面这条统一表述（readable = Object 怎样被思考者读到，含静态 + 动态两面）即本维度的权威定义。早期有过只覆盖静态面的窄表述（"可被其他 Agent 阅读的（能够进行自我介绍）"），现已收口为本节的统一表述，不再保留窄版。

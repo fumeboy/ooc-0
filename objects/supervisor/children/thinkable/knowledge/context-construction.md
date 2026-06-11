@@ -106,7 +106,7 @@ window 关键属性：`id`（稳定唯一，root 固定 `"root"`）/ `class`/ `s
 | 5 | stone 的 `readme.md`（身份说明 fallback） |
 | 6 | `<readable source="placeholder">`（整链 miss 的兜底） |
 
-builtin type（root/talk/do/todo/file/knowledge/program/search/plan/skill_index/method_exec/feishu_*）走 `registry.def.readable` 或 `def.renderXml`，不读 stone。
+builtin type（root/talk/do/todo/file/knowledge/program/search/plan/skill_index/method_exec/feishu_*）走 `registry.def.readable`（renderer 只读这一个字段，`thinkable/context/renderers/xml.ts:141`；talk/do/relation/feishu 的 XML 渲染函数也挂在 `readable` 上，旧 `renderXml` 字段已并入），不读 stone。
 
 ## ProcessEvent → transcript item 映射（`context/index.ts:68 processEventToItems`）
 

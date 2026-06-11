@@ -27,11 +27,11 @@ Object 的 UI 页面有两类入口：
 - stone scope 默认解析 `visible/index.tsx`（`:68`，+ legacy `client/index.tsx` 回退 `:71`/`:75`）；`?file=diff` 白名单则解析 `visible/diff.tsx`（`:63`，**无 legacy 回退**，缺失干净 404 → 调用方回退 before-after，见 [[window-diff-resolver]]）。
 - 渲染器：`packages/@ooc/web/src/domains/clients/ObjectClientRenderer.tsx:195` 动态 `import(fsUrl)`；404 → `StoneFallback`/`NotProducedYet`，加载/渲染错 → `LoadErrorBox`/ErrorBoundary。
 
-## ui_methods 调用通道
+## call_method 调用通道（for_ui_access）
 
-UI 经 HTTP `POST /call_method` 调 Object `executable/index.ts` 平行导出的 `ui_methods` 字典（legacy `server/index.ts` 仅作回退，canonical = `executable/index.ts`，`packages/@ooc/core/runtime/server-loader.ts:15` `UiMethods`/`:122` `loadUiMethods`）——这是**人类侧专路**，与 LLM 侧的 **object method**（program sandbox 里 `self.callMethod`）分流。
+UI 经 HTTP `POST /call_method` 调 Object `executable/index.ts` 的 `window.methods` 里标了 `for_ui_access: true` 的方法（2026-06-11 起废独立 `ui_methods` 导出——HTTP 路径与 LLM 路径共用同一份 `window.methods`，只是 HTTP 侧按 `for_ui_access` 过滤可见性）——这是**人类侧专路**，与 LLM 侧路径（program sandbox 里 `self.callMethod`）分流。
 
-- 服务端：callMethod 服务在 `packages/@ooc/core/app/server/modules/stones/service.ts:387`（+ `modules/flows/service.ts` 对端），经 `loadUiMethods(ref)`（`runtime/server-loader.ts`）取 `uiMethods[method]`；错误码 `METHOD_LOAD_FAILED`（`stones/service.ts:394`）/ `METHOD_NOT_FOUND`（`:402`）。HTTP 入口 `modules/stones/api.call-method.ts:6`（`POST /api/stones/:id/call_method`）。
+- 服务端：callMethod 服务在 `packages/@ooc/core/app/server/modules/stones/service.ts:376`（+ `modules/flows/service.ts` 对端），经 `loadObjectWindow(ref)`（`runtime/server-loader.ts`）取 `window.methods[method]`，仅 `entry.for_ui_access === true` 才执行（`service.ts:391`）；错误码 `METHOD_LOAD_FAILED`（`:383`）/ `METHOD_NOT_FOUND`（`:393`，未找到或未标 for_ui_access）。HTTP 入口 `modules/stones/api.call-method.ts:6`（`POST /api/stones/:id/call_method`）。
 - 前端入口：`packages/@ooc/web/src/transport/endpoints.ts` `stoneCallMethod`（`:67`）/ `flowCallMethod`（`:70`）；`ObjectClientRenderer.tsx:84` `callMethodFor` 合成 callMethod prop。
 
-**边界**：visible 只管 UI 资源（tsx）+ 调用通道；`ui_methods` 实现本身归 programmable。
+**边界**：visible 只管 UI 资源（tsx）+ 调用通道；method 实现本身归 executable/programmable，可见性标记 `for_ui_access` 的判定归 visible。

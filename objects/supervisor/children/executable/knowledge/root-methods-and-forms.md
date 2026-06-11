@@ -6,7 +6,7 @@ activates_on: {"object::root": "show_description"}
 
 ## root 上注册的全局 object method
 
-root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins/root/executable/index.ts:57`，每条一个 `method.*.ts`，经 `registerExecutable("root", { methods })` 注入），共 16 个：
+root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins/root/executable/index.ts:36`，每条一个 `method.*.ts`，经 `registerExecutable("root", { methods })` 注入，`:101`），共 17 个：
 
 - **do** — 派生子 thread，创建 do_object。
 - **talk** — 与 user 或其他 Object 对话，创建 talk_object。
