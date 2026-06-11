@@ -4,6 +4,8 @@
 
 ## 核心设计
 
+> ⚠️ **设计已迁移中（2026-06-11，用户拍板）**：「session worktree 合入 main」模型**退役**——`session-<sid>` worktree 是纯运行时派生物、**永不合并回 main**；沉淀进 canonical 改走 **feat-branch PR 流程**（super(foo) `new_feat_branch` 开 feat 分支 → 在分支上直接编辑 → `evolve_self` finalizer commit+开 PR → reviewer 冒泡审批合入）。权威设计 `docs/2026-06-11-reflectable-feat-branch-pr-flow-design.md`；**P1+P2 已落**（commit 2735241c：退役 session 合入 + feat 分支直接编辑 + reviewer 集冒泡），**P3-P6 待建**（多 reviewer 审批 / PR context window+G2 端点 / `.world.json` 合入闸 / 失败回修 loop）。下文 self-scope ff / cross-scope PR-Issue / `evolveSelfMerge` 等描述属退役模型，待 P3-P6 完成后全面回流本对象。
+
 核心设计：**业务 session 试验 → super flow 合入的自我演化闭环**。Object 在业务 session 的 worktree 里试改自身身份/知识/方法（main canonical 不动），经受保护的 super flow `evolve_self` 把试验合入 main（self-scope ff-merge / cross-scope 开 PR-Issue 待评审），并沉淀记忆。reflectable 不是新机制，是 talk-delivery / stone / pool / knowledge 在 super session 下的协同。
 
 ## 我负责的
