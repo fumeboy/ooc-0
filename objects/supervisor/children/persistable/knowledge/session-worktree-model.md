@@ -1,7 +1,7 @@
 ---
 title: stone identity = session 永不合入 + feat-branch PR 沉淀
 description: main canonical / session worktree 纯运行时(永不合入) / feat-branch PR 沉淀闸；session-aware 读全接入
-activates_on: {"object::root": "show_description", "method::root::evolve_self": "show_content"}
+activates_on: {"object::root": "show_description", "method::root::create_pr_and_invite_reviewers": "show_content"}
 ---
 
 # stone identity = session 永不合入 + feat-branch PR 沉淀
@@ -12,7 +12,7 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 
 - **main = canonical stone**：Object 已提交的权威自我，**无 session 上下文（super / HTTP 无 sid / bootstrap）时的默认读源**（`stones/main/objects/<id>/`，main git worktree；裸 `stoneDir(ref)` 默认即此）。注意：**main 不是 session 内的读源**——session 内读须经 `resolveStoneIdentityRef` 路由到该 session 的 worktree（见下「读纪律」），否则读不到本 session 新建/改动的对象。
 - **session worktree = 纯运行时派生物（永不合入）**：业务 session（非控制面）对任意 stone 文件的 write_file / file_window.edit **不即时改 main**，落该 session 从 main HEAD **eager** 派生的 git 分支（`session-<sid>`），物理路径 **`flows/<sid>/`**（session 一创建即 `git worktree add flows/<sid>` checkout main 全量文件；plain write、不 commit）。本 session 即时生效，main 不变、别 session 读旧版。worktree 是完整副本——读写收敛同一目录，无 shadow，裸读（program shell `$OOC_SELF_DIR`）看得到完整 identity。**`session-<sid>` 分支永不合并回 main（2026-06-11 用户拍板）**——它只为取得完整对象配置+工作区用于运行，session 归档即弃。session 内新建/改动当场可用靠 session-aware 读，与「进 canonical」是两件事。
-- **feat 分支 worktree = 沉淀闸**：要让改动成为 canonical，由 super(foo) 经 reflectable 的 feat-branch PR 流程——`new_feat_branch` 从 main 派生 `feat/<slug>` 分支（worktree 落 `stones/<branch>/`，与 main / session worktree 并列）绑进 thread → 直接编辑 → `evolve_self` finalizer commit + 开 PR + reviewer 冒泡审批 → 合入 main（机制权威在 reflectable）。与 session 分支正交、互不相碰。合入复用 `resolvePrIssue`（ff-merge + archive）+ `gitWorktreeUnregister`（解 `.git` link、保留运行时数据）等底层原语。
+- **feat 分支 worktree = 沉淀闸**：要让改动成为 canonical，由 super(foo) 经 reflectable 的 feat-branch PR 流程——`new_feat_branch` 从 main 派生 `feat/<slug>` 分支（worktree 落 `stones/<branch>/`，与 main / session worktree 并列）绑进 thread → 直接编辑 → `create_pr_and_invite_reviewers` finalizer commit + 开 PR + reviewer 冒泡审批 → 合入 main（机制权威在 reflectable）。与 session 分支正交、互不相碰。合入复用 `resolvePrIssue`（ff-merge + archive）+ `gitWorktreeUnregister`（解 `.git` link、保留运行时数据）等底层原语。
 
 ## 为什么取代 overlay
 
@@ -41,7 +41,7 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 
 ## 两条进入 canonical 的合法通道（互不经过对方）
 
-- **LLM 沉淀（feat-branch PR）**：super(foo) `new_feat_branch` 开 feat 分支 → 直接编辑 → `evolve_self` finalizer commit + 开 PR → reviewer 冒泡审批 → 合入 main（`resolvePrIssue`，`.world.json prAutoMerge` 控自动/人工）。改已存在对象文件用 `write_file`/`edit`，建新对象骨架用 `create_object`（口诀与落点见 `knowledge/stone-pool-flow-three-trees.md`）。**session 分支不参与合入**。
+- **LLM 沉淀（feat-branch PR）**：super(foo) `new_feat_branch` 开 feat 分支 → 直接编辑 → `create_pr_and_invite_reviewers` finalizer commit + 开 PR → reviewer 冒泡审批 → 合入 main（`resolvePrIssue`，`.world.json prAutoMerge` 控自动/人工）。改已存在对象文件用 `write_file`/`edit`，建新对象骨架用 `create_object`（口诀与落点见 `knowledge/stone-pool-flow-three-trees.md`）。**session 分支不参与合入**。
 - **HTTP 控制面写入**：`putSelf` / `putServerSource` / `createStone` 经 `httpDirectMainWrite`（`stone-versioning.ts:561`）直 commit main，立即生效，不开 worktree。
 
 ## 例外与边界

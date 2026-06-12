@@ -1,10 +1,10 @@
 ---
-title: evolve_self —— feat-branch PR 沉淀 finalizer
+title: create_pr_and_invite_reviewers —— feat-branch PR 沉淀 finalizer
 description: 怎么把一次身份/知识/身体改动经 feat 分支开成 PR 合进 main；问沉淀怎么落 canonical / feat 分支 / PR 审批时看这篇
 activates_on:
   "object::root": "show_description"
   "method::root::new_feat_branch": "show_content"
-  "method::root::evolve_self": "show_content"
+  "method::root::create_pr_and_invite_reviewers": "show_content"
 ---
 
 # 沉淀进 canonical = feat-branch PR
@@ -17,7 +17,7 @@ activates_on:
 
 2. **直接编辑** —— 绑定生效后用普通 `write_file` / `file_window.edit` 编辑 feat worktree 下文件，**不**把文件内容作方法参数传。`packages/@ooc/core/persistable/stone-worktree.ts:169` `resolveStoneIdentityRef` 把 feat 绑定放在 sessionId 路由**最前面、覆盖优先**（`:179-184`，经 `ensureFeatBranchWorktreeReady` 确保就绪），读写自然落 feat worktree。
 
-3. **evolve_self()** —— finalizer（**无 edits 参数**）。锚点 `packages/@ooc/builtins/root/executable/method.evolve-self.ts` `evolveSelfMethod`：读绑定 → `commitAndOpenPr`（commit 署名 actor → 算 reviewer 集 → `createPrIssue`）→ `deliverPrWindowToReviewers` 把 pr_window 投给每个 reviewer。底层 `stone-feat-branch.ts:240` `commitAndOpenPr` / `:92` `computeReviewerSet`。
+3. **create_pr_and_invite_reviewers()** —— finalizer（**无 edits 参数**）。锚点 `packages/@ooc/builtins/root/executable/method.evolve-self.ts` `evolveSelfMethod`：读绑定 → `commitAndOpenPr`（commit 署名 actor → 算 reviewer 集 → `createPrIssue`）→ `deliverPrWindowToReviewers` 把 pr_window 投给每个 reviewer。底层 `stone-feat-branch.ts:240` `commitAndOpenPr` / `:92` `computeReviewerSet`。
 
 ## reviewer 集冒泡（rule A）
 
@@ -35,7 +35,7 @@ activates_on:
 
 ## 失败回修 loop
 
-reject / request-changes / 合入失败 → `executable/windows/pr/delivery.ts:166` `routePrRepairMessage` 按 PR record `authorThreadId` 找 super(foo) thread → inbox 追 verdict+反馈 → 翻 running（找不到 fail-loud `NO_AUTHOR_THREAD`）。super(foo) 收 message 后 `new_feat_branch(同 intent)` 幂等重绑续修：request-changes 时旧 worktree+编辑仍在可续改，reject 后旧 worktree 已归档、从 main 重派重做。re-edit → 再 `evolve_self` 重开 PR。
+reject / request-changes / 合入失败 → `executable/windows/pr/delivery.ts:166` `routePrRepairMessage` 按 PR record `authorThreadId` 找 super(foo) thread → inbox 追 verdict+反馈 → 翻 running（找不到 fail-loud `NO_AUTHOR_THREAD`）。super(foo) 收 message 后 `new_feat_branch(同 intent)` 幂等重绑续修：request-changes 时旧 worktree+编辑仍在可续改，reject 后旧 worktree 已归档、从 main 重派重做。re-edit → 再 `create_pr_and_invite_reviewers` 重开 PR。
 
 ## 边界
 

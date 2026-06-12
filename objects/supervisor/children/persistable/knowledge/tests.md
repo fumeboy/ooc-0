@@ -18,7 +18,7 @@ activates_on: {"object::root": "show_description"}
 
 ## Tier B —— agent-native rubric（真 LLM，env-gated）
 
-业务 session 内 agent 改 self → 落 `flows/<sid>/` session worktree（`stones/main` canonical 不变、session 永不合入）；要沉淀经 feat-branch PR：`new_feat_branch` → feat worktree 编辑 → `evolve_self` 开 PR → approve → merge 后 main 有非 bootstrap 署名 commit；重读 HTTP 证明可恢复。
+业务 session 内 agent 改 self → 落 `flows/<sid>/` session worktree（`stones/main` canonical 不变、session 永不合入）；要沉淀经 feat-branch PR：`new_feat_branch` → feat worktree 编辑 → `create_pr_and_invite_reviewers` 开 PR → approve → merge 后 main 有非 bootstrap 署名 commit；重读 HTTP 证明可恢复。
 
 rubric（规格已就地收编进本 tests.md；story 代码在 `packages/@ooc/storybook/stories/`）：
 

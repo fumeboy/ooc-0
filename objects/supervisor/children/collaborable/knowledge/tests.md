@@ -19,7 +19,7 @@ seed 一次 `user→talk→target` 的派送后，只验通道，不验对端回
 - **L4-DELIVER-INBOX** — 初始消息以 per-message append-only 落 callee 线程的 inbox（`inbox/msg_*.json`）。
 - **L4-TALK-BUILTIN-FEATURE** — talk window 是 `isBuiltinFeature`：状态 inline 进 thread-context，不写独立 dir。
 - **L4-CROSS-OBJECT-TALK** — agent 主动 talk 别的对象、双方各落 thread；需 worker/LLM thinkloop，控制面不可确定性验证，**归 Tier B（skip）**。
-- **L4-PR-ISSUE-FILE** — feat 分支 `evolve_self` 开 PR-Issue 待 reviewer 评审；需 super flow worker 编排，**归 Tier B/e2e（skip）**。
+- **L4-PR-ISSUE-FILE** — feat 分支 `create_pr_and_invite_reviewers` 开 PR-Issue 待 reviewer 评审；需 super flow worker 编排，**归 Tier B/e2e（skip）**。
 - **L4-RELATION-POOL** — 对象关系沉淀进 `pools/<id>/knowledge/relations/<peer>.md`；由运行流触发，需 worker，**归 Tier B（skip）**。
 
 控制面通道接通 ≠ 协作真的发生：上面三个 skip 正是 Tier A 摸不到的边界，必须由 Tier B 补。
@@ -45,7 +45,7 @@ supervisor 创建一个新对象，经 talk 联系它、请它自我介绍，新
 | L4-DELIVER-INBOX | A (`stories/L4_collaborable.stories.ts`) | 初始消息投递到 callee 线程的 inbox（inbox/msg_*.json） |
 | L4-TALK-BUILTIN-FEATURE | A (`stories/L4_collaborable.stories.ts`) | talk window 是 isBuiltinFeature（inline 进 thread-context，不写独立 dir） |
 | L4-CROSS-OBJECT-TALK | B-skip (`stories/L4_collaborable.stories.ts`) | agent 主动 talk 别的对象 → 双方各落 thread（需 worker） |
-| L4-PR-ISSUE-FILE | B-skip (`stories/L4_collaborable.stories.ts`) | feat 分支 `evolve_self` 开 PR → `flows/super/issues/issue-<id>.json` 出现 |
+| L4-PR-ISSUE-FILE | B-skip (`stories/L4_collaborable.stories.ts`) | feat 分支 `create_pr_and_invite_reviewers` 开 PR → `flows/super/issues/issue-<id>.json` 出现 |
 | L4-RELATION-POOL | B-skip (`stories/L4_collaborable.stories.ts`) | relation 落 `pools/<id>/knowledge/relations/<peer>.md` |
 
 跑法：Tier A 进 `bun run test:storybook`（CI gate，应 0 FAIL）；Tier B 经 `RUN_STORYBOOK_AGENT=1` 对运行中的 world 派任务。改我这条维度的 method/window 协议时，先回这里核对 TC，再同步 specs。

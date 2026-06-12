@@ -33,7 +33,7 @@
 
 ## 已知问题 / 边界与未决
 
-- **自改 method 集的边界与生效**（跨切，与 executable 共担）：自改 `executable/index.ts` 无硬 deny（权威落点 executable/knowledge/permission.md「deny 档当前 0 项」待办）；method 集/readable 为全局 main-canonical，per-session 改须经 reflectable feat-branch PR（`new_feat_branch` → 编辑 → `evolve_self` finalizer 开 PR）合入 main 后重注册才生效。programmable 只描述 *如何写* 才能生效，不规定 *谁可以写*——后者由 reflectable.business_task_isolation + caller 显式请求决定。
+- **自改 method 集的边界与生效**（跨切，与 executable 共担）：自改 `executable/index.ts` 无硬 deny（权威落点 executable/knowledge/permission.md「deny 档当前 0 项」待办）；method 集/readable 为全局 main-canonical，per-session 改须经 reflectable feat-branch PR（`new_feat_branch` → 编辑 → `create_pr_and_invite_reviewers` finalizer 开 PR）合入 main 后重注册才生效。programmable 只描述 *如何写* 才能生效，不规定 *谁可以写*——后者由 reflectable.business_task_isolation + caller 显式请求决定。
 - **params schema 校验未强制**：`ObjectMethod.schema` 字段已存在（结构化渲染 + fail-soft），但写入期没有硬闸门；若要自动参数检查/转换，需在 exec 调用路径 + ui callMethod 路径同时加。
 - **`export const window` 当前是单数**：后续可演化为复数 windows 字典（注册多个自定义 window 类型）。
 - **hot-reload 仅 tier 1**：tier 2（结构变更先标记 + 懒迁移 / vtable 重算）、tier 3（core/builtin 版本升级走重启）仍是设计阶段。三档按修改内容分级的完整模型见 knowledge/world-core-interface-and-hot-reload-tiers。
@@ -42,14 +42,14 @@
 
 ## 优化方向 / 待办
 
-1. 收口「自改 method 集生效路径」的 affordance：让 agent 默认走 write_file + evolve_self，而非 program shell 写孤儿路径（programmable tier=Bad 根因的剩余 design 部分）。
+1. 收口「自改 method 集生效路径」的 affordance：让 agent 默认走 write_file + create_pr_and_invite_reviewers，而非 program shell 写孤儿路径（programmable tier=Bad 根因的剩余 design 部分）。
 2. 把 `ObjectMethod.schema` 升级为写入期闸门（exec 调用路径 + ui callMethod 双路径），把当前「LLM 自觉填参」换成结构化校验。
 
 ## 协作
 
 - **parent**：supervisor（我向它汇报 programmable 维度的设计现状与跨维度冲突）。
 - **兄弟 executable**：custom window 的 object method 复用 executable 的 `ObjectMethod` / WindowRegistry / exec 协议；method 注册经 `registerExecutable`（与 readable 的 `registerReadable` 维度劈分）；「自改 method 集的边界与生效」与之共担。
-- **兄弟 reflectable**：自写方法闭环的触发与协议归 reflectable（business_task_isolation / evolve_self）；programmable 管被改对象（方法库）的形状与生效条件。
+- **兄弟 reflectable**：自写方法闭环的触发与协议归 reflectable（business_task_isolation / create_pr_and_invite_reviewers）；programmable 管被改对象（方法库）的形状与生效条件。
 - **兄弟 readable**：我管的 object method（操作数据）与 readable 管的 window method（控制 window 展示）是两类并列方法；我这半是「自写 `executable/index.ts` 的 object method 并热更」。两入口注册 / 同名 fail-loud 的劈分机制详见 readable 维度 knowledge/readable-registration。
 
 ## 名词解释
@@ -65,5 +65,5 @@
 - **mtime 失效**：loader 缓存键含文件 mtime，写文件改 mtime → 下次 import 拿新模块（`?t=mtime` 破坏 import cache 的机制、FS 精度 caveat 权威见 knowledge/self-written-method-hot-reload）。
 - **ProgramSelf**（`programSelf`）：注入进 program ts/js sandbox 与 custom method dispatcher 的能力对象——`{ dir, callMethod, getData, setData, getThreadLocal, setThreadLocal }`。与 method receiver `ctx.self` 是两个东西。
 - **`$OOC_SELF_DIR`**：program shell 经 env 透出的 stone 目录路径，由 `resolveStoneIdentityDir(ref,"write")` 解析（business session → session worktree object 目录；super/控制面 → main canonical）。
-- **session worktree**：business session 的 stone 写落点 `flows/<sid>/objects/<id>/`（main HEAD 完整副本），是纯运行时派生物、永不合并回 main；进 canonical 另走 super flow feat-branch PR（`new_feat_branch` → 编辑 → `evolve_self` 开 PR）。
+- **session worktree**：business session 的 stone 写落点 `flows/<sid>/objects/<id>/`（main HEAD 完整副本），是纯运行时派生物、永不合并回 main；进 canonical 另走 super flow feat-branch PR（`new_feat_branch` → 编辑 → `create_pr_and_invite_reviewers` 开 PR）。
 - **World / Core**：Core = `@ooc/core` 运行时内核（类 JVM）；World = 用户工作目录（类项目目录，含 stones/pools/flows + node_modules）。builtin 与 stone 结构同构，定义所有权与发现方式不同。详见 knowledge/world-core-interface-and-hot-reload-tiers。

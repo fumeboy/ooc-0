@@ -14,9 +14,9 @@ activates_on:
 
 ## 层次 A：闭环成立（已验证）
 
-`talk(super)` → super(foo) `new_feat_branch` 开 feat 分支 → 直接 `write_file`/`edit` → `evolve_self` 开 PR → reviewer 冒泡审批 → 全 approve 聚合 `ready-to-merge` → 经 `.world.json` `prAutoMerge` 闸（缺省 false=人工 `/resolve{merge}`、true=自动 `resolvePrIssue(merge)`）合入 main → 下一轮新 thread 见新身份/新方法。stone executable 还能 mtime 热更（`packages/@ooc/core/runtime/server-loader.ts:87` 动态 `import(...?t=mtimeMs)`）。
+`talk(super)` → super(foo) `new_feat_branch` 开 feat 分支 → 直接 `write_file`/`edit` → `create_pr_and_invite_reviewers` 开 PR → reviewer 冒泡审批 → 全 approve 聚合 `ready-to-merge` → 经 `.world.json` `prAutoMerge` 闸（缺省 false=人工 `/resolve{merge}`、true=自动 `resolvePrIssue(merge)`）合入 main → 下一轮新 thread 见新身份/新方法。stone executable 还能 mtime 热更（`packages/@ooc/core/runtime/server-loader.ts:87` 动态 `import(...?t=mtimeMs)`）。
 
-证据：2026-06-11 真 LLM 端到端 **Good**——agent `create_object(bar)` → `talk(super)`（冒泡到 canonical 祖先作 actor）→ `new_feat_branch` → feat 分支 `write_file` → `evolve_self()` 开 PR（reviewers 冒泡、main 未变）→ reviewer approve → 聚合 `ready-to-merge` → 经 `.world.json` `prAutoMerge` 闸（缺省 false=人工 `/resolve{merge}`）合入 main → 新 session 见新身份。A 的循环真的能闭。
+证据：2026-06-11 真 LLM 端到端 **Good**——agent `create_object(bar)` → `talk(super)`（冒泡到 canonical 祖先作 actor）→ `new_feat_branch` → feat 分支 `write_file` → `create_pr_and_invite_reviewers()` 开 PR（reviewers 冒泡、main 未变）→ reviewer approve → 聚合 `ready-to-merge` → 经 `.world.json` `prAutoMerge` 闸（缺省 false=人工 `/resolve{merge}`）合入 main → 新 session 见新身份。A 的循环真的能闭。
 
 ## 层次 B：尚未闭过一次——三个结构性缺口
 
@@ -55,7 +55,7 @@ closing B 的路径：**把越来越多框架行为推进 Object 拥有的、热
 | 2 modify 改 | write_file/edit | shell sed repo | native ✗ / shell ✓ |
 | 3 verify 验证 | （无 OOP gate 入口） | shell `bun tsc/test` | shell ✓ |
 | 4 reload 生效 | —— | curl live server | **✗（同进程未热更）/ ✓（重启后）**——killer |
-| 5 governance | talk(super)→new_feat_branch→evolve_self→PR | —— | **✗**（core 无主，领地/reviewer 不覆盖） |
+| 5 governance | talk(super)→new_feat_branch→create_pr_and_invite_reviewers→PR | —— | **✗**（core 无主，领地/reviewer 不覆盖） |
 
 三个 ✗（阶段 1/4/5）精确对应三缺口；逃生舱能勉强走完 1-3，但 4（生效）和 5（治理）即使有逃生舱也断。**一次失败的 dogfooding 实证三缺口**，比十页哲学更能定位下一个该建的能力。探针为 design（未执行），要点：用唯一 token 检测残留、改 repo 工作树后 `git checkout --` 务必复原、最好在隔离 worktree 副本里跑。
 

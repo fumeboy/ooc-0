@@ -26,7 +26,7 @@ activates_on:
 
 ## Tier B —— agent-native（真 LLM，env-gated）
 
-派我「把项目约定沉淀为长期记忆」走 super flow（pool sediment write-through）；以 `waitForSuperFlow` + `listMemoryFiles` + `hasValidFrontmatter` 核验 memory 真落 pools/ 且 frontmatter 合法（≈ e2e S5）。super flow 是独立 job，须单独等。feat-branch PR 沉淀（new_feat_branch → 编辑 → evolve_self → PR → resolve merge/reject/rollback）的端到端归 e2e `packages/@ooc/tests/e2e/backend/stones-versioning.e2e.test.ts`（直调 method exec + persistable，不依赖真 LLM；self-scope / cross-scope reviewers / resolve / rollback / recovery-check 全覆盖）。
+派我「把项目约定沉淀为长期记忆」走 super flow（pool sediment write-through）；以 `waitForSuperFlow` + `listMemoryFiles` + `hasValidFrontmatter` 核验 memory 真落 pools/ 且 frontmatter 合法（≈ e2e S5）。super flow 是独立 job，须单独等。feat-branch PR 沉淀（new_feat_branch → 编辑 → create_pr_and_invite_reviewers → PR → resolve merge/reject/rollback）的端到端归 e2e `packages/@ooc/tests/e2e/backend/stones-versioning.e2e.test.ts`（直调 method exec + persistable，不依赖真 LLM；self-scope / cross-scope reviewers / resolve / rollback / recovery-check 全覆盖）。
 
 **rubric（S5 Good 7 条，已就地收编进本篇）：**
 
@@ -39,8 +39,8 @@ activates_on:
 业务 session worktree 隔离可确定性单测；feat-branch PR 沉淀 / reviewer 冒泡 / memory 由 super flow 编排、需 worker，故归 Tier B/e2e（skip）。
 
 - `L6-WORKTREE-WRITE` —— 业务 session 内改自身 self 落 worktree，stones/main canonical 不变（且永不合入）。（可跑：ensureSessionWorktree）
-- `L6-EVOLVE-FEAT-PR` —— new_feat_branch → 直接编辑 feat worktree → evolve_self 开 feat-branch PR（reviewers={supervisor}、main 暂不变）。（skip：沉淀由 super flow 编排，需 worker）
-- `L6-EVOLVE-CROSS-PR` —— evolve_self 触及别人对象 → reviewer 集冒泡含别人 owner + supervisor（`computeReviewerSet`）。（skip：cross-scope evolve 需 super flow 编排，控制面无 worker）
+- `L6-EVOLVE-FEAT-PR` —— new_feat_branch → 直接编辑 feat worktree → create_pr_and_invite_reviewers 开 feat-branch PR（reviewers={supervisor}、main 暂不变）。（skip：沉淀由 super flow 编排，需 worker）
+- `L6-EVOLVE-CROSS-PR` —— create_pr_and_invite_reviewers 触及别人对象 → reviewer 集冒泡含别人 owner + supervisor（`computeReviewerSet`）。（skip：cross-scope evolve 需 super flow 编排，控制面无 worker）
 - `L6-MEMORY-POOL` —— long memory 落 `pools/<id>/knowledge/memory/<slug>.md`（write-through，不 PR）。（skip：需 worker）
 - `L6-CREATE-OBJECT-WORKTREE` —— create_object 在业务 session 落 session worktree `objects/<newId>/`（当场可用、永不合入；进 canonical 走 feat-branch PR）。（skip：root method，需 agent 在 worker thinkloop 调）
 

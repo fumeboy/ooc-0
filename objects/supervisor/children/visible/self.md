@@ -12,7 +12,7 @@
 - **flow client pages**：`flows/<sid>/objects/<obj>/client/pages/<page>.tsx`——session 内的多页扩展（单入口迁移的命名残留见「名词解释 · client/pages」）。
 - **调用通道**：UI 经 HTTP `/call_method` 调 Object 的 `ui_methods` 字典（人类侧专路，与 LLM 侧 object method 分流）——通道与 tsx 资源是我的，`ui_methods` 实现归 programmable。详见「名词解释 · ui_methods」。
 - **client-source-url**：后端权威给出某 Object visible 源码的 `{absPath, fsUrl}`，前端据此 `dynamic import`，不再自拼路径。
-- **client evolution**：业务 session 在自己的 worktree 里改 `*.tsx`（统一 write_file → session worktree 写路径，去 metaprog 后唯一写通道），进 canonical 走 super flow feat-branch PR（`new_feat_branch` → feat 分支编辑 → `evolve_self` finalizer 开 PR → 审批合入 main）；合入后下次客户端加载即生效（重写自己的界面）。
+- **client evolution**：业务 session 在自己的 worktree 里改 `*.tsx`（统一 write_file → session worktree 写路径，去 metaprog 后唯一写通道），进 canonical 走 super flow feat-branch PR（`new_feat_branch` → feat 分支编辑 → `create_pr_and_invite_reviewers` finalizer 开 PR → 审批合入 main）；合入后下次客户端加载即生效（重写自己的界面）。
 - **ooc:// 寻址**：Object 知识侧产出稳定 `ooc://client/...` URI，1:1 映射 SPA route。
 - **loop_timeline**：thread loop 的 Time Machine + window diff 可视化视图。
 - **scope 选择**：stone client（跨 session 稳定）放 Object 的"主页/身份名片/长期面板"；flow client pages（与 session 绑定）放"本次任务进度/实时输出/会话内可编辑视图"。把临时 session 状态塞进 stone client，会让其它 session 看到陈旧无关 UI——这是 scope 误用的典型代价。

@@ -24,7 +24,7 @@ activates_on:
 
 ## 一句话流程
 
-> **建新对象 = `create_object`（落 session worktree）；改已存在对象的文件 = `write_file`/`edit`；让改动进 canonical = `talk(super)` → `new_feat_branch` 开 feat 分支 → 在分支上编辑 → `evolve_self`（finalizer）开 PR → reviewer 审批合入 main（详见 Step 3）。**
+> **建新对象 = `create_object`（落 session worktree）；改已存在对象的文件 = `write_file`/`edit`；让改动进 canonical = `talk(super)` → `new_feat_branch` 开 feat 分支 → 在分支上编辑 → `create_pr_and_invite_reviewers`（finalizer）开 PR → reviewer 审批合入 main（详见 Step 3）。**
 
 不要用 `mkdir` 手搓骨架，也不要裸 `write_file` 建新对象——新对象还没 `package.json`，`write_file` 靠它判 owner 边界会拒。
 
@@ -115,7 +115,7 @@ export const window = {
 
 - `talk(target="super")` → super flow → `new_feat_branch`：从 main 派生一条 feat 分支 worktree 并绑进 thread（绑定覆盖路由让后续 write_file 直接落 feat worktree）。
 - 在 feat 分支上直接 `write_file`/`edit` 编辑五件套。
-- `evolve_self`（finalizer，无 edits 参数）：commit（署名 actor）→ `computeReviewerSet` 冒泡算 reviewer 集（变更触及路径的顶层领地 owner ∪ supervisor，author 不自审）→ 开 PR → 投递 pr_window 给 reviewer。
+- `create_pr_and_invite_reviewers`（finalizer，无 edits 参数）：commit（署名 actor）→ `computeReviewerSet` 冒泡算 reviewer 集（变更触及路径的顶层领地 owner ∪ supervisor，author 不自审）→ 开 PR → 投递 pr_window 给 reviewer。
 - reviewer 经 pr_window `approve`/`reject`/`request_changes` 审批；全 approve → ready-to-merge → `.world.json prAutoMerge`（缺省 false=人工 `/resolve{merge}`）闸合入 main。
 - 下一轮新 thread 自动看见 main 上的落盘内容。
 

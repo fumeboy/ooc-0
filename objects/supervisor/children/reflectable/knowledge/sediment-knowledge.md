@@ -16,9 +16,9 @@ super flow 有两条**互斥**的沉淀通道，选错会静默失败：
 - **pool sediment（直写）**：仅运行时事实记忆（memory / relations）。write-through、**不分支/不 PR**、立即生效。落点见 `packages/@ooc/core/persistable/pool-object.ts:68,73`：
   - `pools/<self>/knowledge/memory/<slug>.md` —— 长期记忆，一条一个文件，slug 用 kebab-case。
   - `pools/<self>/knowledge/relations/<peer>.md` —— long_term relation 文件。
-- **feat-branch PR**：任何 stone 变更（身份 `self.md` / `readable.md` / 身体 `executable/` / `visible/` / seed knowledge）。**必须** `new_feat_branch` 开分支 → 在 feat worktree 直接编辑 → `evolve_self` 开 PR（机制详见 `knowledge/feat-branch-pr.md`）。
+- **feat-branch PR**：任何 stone 变更（身份 `self.md` / `readable.md` / 身体 `executable/` / `visible/` / seed knowledge）。**必须** `new_feat_branch` 开分支 → 在 feat worktree 直接编辑 → `create_pr_and_invite_reviewers` 开 PR（机制详见 `knowledge/feat-branch-pr.md`）。
 
-**陷阱（体验官 #2 实证）**：feat 分支绑定生效时 `write_file pools/...` 仍静默落 pool（feat 绑定覆盖路由只管 stone 路径，pool 不在 worktree 模型内）→ `evolve_self` NO_CHANGES、PR 开不出。要沉淀身份/身体务必写 stone 路径（`self.md` 等），不要误写进 pool。
+**陷阱（体验官 #2 实证）**：feat 分支绑定生效时 `write_file pools/...` 仍静默落 pool（feat 绑定覆盖路由只管 stone 路径，pool 不在 worktree 模型内）→ `create_pr_and_invite_reviewers` NO_CHANGES、PR 开不出。要沉淀身份/身体务必写 stone 路径（`self.md` 等），不要误写进 pool。
 
 super flow 禁止动：业务 thread.json / pool 的 data/ 与 files/（运行时业务态，不是反思沉淀）。
 

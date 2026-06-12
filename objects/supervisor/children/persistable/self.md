@@ -22,7 +22,7 @@
 
 - **main = canonical**：唯一权威读源（`stones/main/objects/<id>/`，main worktree），无 session 上下文（super / HTTP 无 sid / bootstrap）时的默认读源。
 - **session worktree = 纯运行时派生物**：业务 session 内**读写都经该 session 的 worktree**——写落从 main eager 派生的 git worktree（物理 `flows/<sid>/`、分支 `session-<sid>`、不 commit），**读也经 `resolveStoneIdentityRef` 路由到同一 worktree**（它是 main 完整副本，含继承自 main 的对象 + 本 session 新建/改动的对象，是该 session 的真实运行时态）。**永不合并回 main**，session 归档即弃。所以 session 内 `create_object` 的新对象当场就能被 talk / 渲染 / 加载方法，**不必先合入 main**；但「进 canonical」是另一件刻意的事。
-- **feat 分支 worktree = 沉淀闸**：要让改动成为 canonical 走 reflectable 的 **feat-branch PR**——super(foo) `new_feat_branch` 从 main 派生 `feat/<slug>` 分支（worktree 落 `stones/<branch>/`，与 main / session worktree 并列），绑进 `thread.persistence.stonesBranch`、直接编辑、`evolve_self` finalizer commit + 开 PR + reviewer 冒泡审批合入。**与 session 分支正交、互不相碰**。
+- **feat 分支 worktree = 沉淀闸**：要让改动成为 canonical 走 reflectable 的 **feat-branch PR**——super(foo) `new_feat_branch` 从 main 派生 `feat/<slug>` 分支（worktree 落 `stones/<branch>/`，与 main / session worktree 并列），绑进 `thread.persistence.stonesBranch`、直接编辑、`create_pr_and_invite_reviewers` finalizer commit + 开 PR + reviewer 冒泡审批合入。**与 session 分支正交、互不相碰**。
 
 **读纪律（不变量）**：任何对象身份/配置（self / readable / executable / visible / knowledge / 存在性）的读，**一律经 `resolveStoneIdentityRef(ref, "read")` → `stoneDir(ref)`**，绝不自建裸 `{baseDir, objectId}` ref 直读——后者硬落 main、对 session 内对象不可达。新增读点必过这一关（review checklist）。
 
@@ -69,7 +69,7 @@ session-aware 读统一访问原语全接入并落地（write_file / loadSelfIns
 - **thread.json**：thread 的元数据（线程身份、状态、inbox 指针等），写盘前剥 in-process 内存字段。§10 后**不再**携带 contextWindows。
 - **thread-context.json**：`flows/<sid>/objects/<id>/threads/<tid>/thread-context.json`，该 thread contextWindows 数组的**唯一完整权威**落盘（含 builtin inline + flow ref）。由 writeThread 单点刷。
 - **canonical**：Object 已提交的权威自我，即 `stones/main/objects/<id>/`（main worktree）。唯一默认读源。
-- **evolve（evolve_self）**：super flow 沉淀的 finalizer——读 feat 分支绑定 → commit（署名 actor）→ 算 reviewer 集冒泡 → 开 PR。**不再合入 session 分支**；进 canonical 是 PR review 通过后的合入（`resolvePrIssue`）。机制权威在 reflectable 维度。
+- **evolve（create_pr_and_invite_reviewers）**：super flow 沉淀的 finalizer——读 feat 分支绑定 → commit（署名 actor）→ 算 reviewer 集冒泡 → 开 PR。**不再合入 session 分支**；进 canonical 是 PR review 通过后的合入（`resolvePrIssue`）。机制权威在 reflectable 维度。
 - **PR-Issue**：feat 分支变更转交 reviewer 集评审的请求记录（`pr-issue.ts:62` `PrIssueRecord`，持 reviewers / approvals / branch），存 `flows/super/issues/`。审批聚合 `aggregatePrApproval`，合入 `resolvePrIssue`，`.world.json prAutoMerge` 控自动/人工。
 - **seed knowledge / sediment knowledge**：定义详见 supervisor `knowledge/ooc-glossary.md`。落我这片的差异：seed 落 stone（进 git review）、sediment 落 pool（写就生效不进 git），synthesizer 双源扫描。
 

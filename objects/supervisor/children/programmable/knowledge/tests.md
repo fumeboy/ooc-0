@@ -25,7 +25,7 @@ activates_on: {"object::root": "show_description"}
 
 ## Tier B —— agent-native（真 LLM，env-gated）
 
-我（supervisor）在业务 session 内 `write_file` 写 `objects/<newId>/...` 建对象并写自定义 object method，经 super flow feat-branch PR（`new_feat_branch` → feat 分支编辑 → `evolve_self` finalizer 开 PR → reviewer 审批 → 合入）进 main；`customWindowInvocations` + `functionOutputFor` 实证 method 真执行。代码：`stories/programmable.story.ts` 的 `runAgentNative()`。
+我（supervisor）在业务 session 内 `write_file` 写 `objects/<newId>/...` 建对象并写自定义 object method，经 super flow feat-branch PR（`new_feat_branch` → feat 分支编辑 → `create_pr_and_invite_reviewers` finalizer 开 PR → reviewer 审批 → 合入）进 main；`customWindowInvocations` + `functionOutputFor` 实证 method 真执行。代码：`stories/programmable.story.ts` 的 `runAgentNative()`。
 
 rubric（已就地收编，对应 e2e `backend-programmable-self-command`）：
 
@@ -34,7 +34,7 @@ rubric（已就地收编，对应 e2e `backend-programmable-self-command`）：
 - **Bad**：method 未注册 / 调用失败。
 
 > LLM 端点 infra 抖动（超时 / socket）= 非能力问题 → SKIP（rollupTier→OK），不计能力 Bad。
-> 新模型下 `create_object` 先落 session worktree；`evolve_self` 合入 main 是单独的合入能力——只落 worktree 也算建对象能力达成。
+> 新模型下 `create_object` 先落 session worktree；`create_pr_and_invite_reviewers` 合入 main 是单独的合入能力——只落 worktree 也算建对象能力达成。
 
 ## Story 索引
 
@@ -42,7 +42,7 @@ rubric（已就地收编，对应 e2e `backend-programmable-self-command`）：
 
 | Story id | expectation |
 |----------|-------------|
-| AN-PROG-01 | supervisor 经 write_file + evolve_self 亲手创建带身份 + 知识的对象（agent-native）。 |
+| AN-PROG-01 | supervisor 经 write_file + create_pr_and_invite_reviewers 亲手创建带身份 + 知识的对象（agent-native）。 |
 | L7-EXEC-HOTRELOAD | 改写 `executable/index.ts` 后 `loadObjectWindow` 加载到新 method。 |
 | L7-UI-METHOD-HOTRELOAD | 改 `ui_methods` 后 `/call_method` 反映新逻辑。 |
 | L7-SERVER-SOURCE-RW | PUT 再 GET `/api/stones/:id/server-source` 读写一致。 |

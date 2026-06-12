@@ -41,7 +41,7 @@ UI / agent-native 客户端走第三条独立通道：HTTP `call_method` 调 `wi
 ## 自改 method 集的边界（跨切未决）
 
 - **per-object isolation**：`executable/index.ts` 在 `stones/<self>/` 下而非 `flows/<sid>/`，同一 Object 跨 session 共享同一份 self window；多 session 并发调用共享 loader 缓存，mtime 变化对所有 session 一起生效。session 特化逻辑应在 method 内经 `ctx.thread` / `self.getData` 区分，而非 fork 新 server。
-- **生效需 main-canonical**：method 集 / readable 为全局 main-canonical；per-session worktree 里改的 method 须经 reflectable `evolve_self` 合入 main 后重注册才对所有 session 生效。
+- **生效需 main-canonical**：method 集 / readable 为全局 main-canonical；per-session worktree 里改的 method 须经 reflectable `create_pr_and_invite_reviewers` 合入 main 后重注册才对所有 session 生效。
 - **维度劈分**：自写 method 落 object method（经 `registerExecutable`，自写 `executable/index.ts` 热更）。两入口注册 / 同名 fail-loud 的完整劈分机制详见 readable 维度 knowledge/readable-registration。
 - **谁可以写不由本维度规定**：programmable 只描述 *如何写* 才生效（mtime 热更条件）。路径权限 / 是否允许 super flow 自动写 → 由 reflectable.business_task_isolation + caller 显式请求决定。自改 `executable/index.ts` 当前无硬 deny——权威落点 executable/knowledge/permission.md「deny 档当前 0 项」待办。
 - **HTTP 写直 commit main**：HTTP 写 stone 入口直接 commit main（`httpDirectMainWrite`），立即生效；`versionedStoneWrite` / `openMetaprogWorktree` 已于 2026-06-09 删除。
