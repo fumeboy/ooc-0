@@ -40,7 +40,7 @@ context 自上而下分六层，每层的纳入判据不同：
 >
 > 代价交代（这是 trade 不是免费午餐）：声明一次后，LLM 要做一次「window w_123 是 knowledge class → 支持上面声明的方法」的 class→instance 映射。对模型这是 trivial 且可靠的推理，28% 的省量远超它。
 >
-> 分组粒度（关键约束）：按**实际可见的方法集**分组，而非光按 class 名。creator do_window 与 child do_window 可能因权限差异（creator 的 close 被拒）渲染出不同方法集——分组要认这个差异，否则会抹掉它。同方法集才合并声明。
+> 分组粒度（关键约束）：按**实际可见的方法集**分组，而非光按 class 名——为「将来出现 per-instance 门控（某实例的某 method 被禁）」预留：同方法集合并声明，不一致则 fail-soft 裂组（`knowledge#2`），既不抹差异也不崩。**现状注**：渲染器**无 per-instance 门控**，同 class 方法集恒一致（creator/child do 的 `close` 都在菜单里、exec 时才被 onClose 拒，不是菜单层差异），故裂组当前不触发——分组 key 实现上即 class 名 + 一致性断言守门。
 
 ### 3. 实例层 —— 只带实例独有的东西
 
@@ -128,7 +128,7 @@ activator 知识按 `activates_on` intent 激活（seed + sediment 双源，上�
     <!-- ③ 实例层：每个 window 只带 id + class 引用 + 实例独有状态；无 methods、无空壳 -->
     <context_windows>
       <window id="w_do_creator" class="do" status="active" is_creator="true">
-        <unavailable methods="close"/>   <!-- 方法集差异在实例上标注，既不抹掉差异也不为它另起一个 class -->
+        <!-- future：实例级方法集差异的表达位（<unavailable methods="close"/>）；现状渲染器无 per-instance 门控，恒不渲染此节点 -->
         <transcript>…与 caller 的恒在通道最近若干条…</transcript>
       </window>
       <window id="w_do_child" class="do" status="running">
@@ -164,7 +164,7 @@ activator 知识按 `activates_on` intent 激活（seed + sediment 双源，上�
 
 - **方法菜单从「每实例一份」变「每 class 一份」**：8 个 knowledge 实例共用 `<class name="knowledge">` 一份声明，现状那 28% 的逐 window 重复拷贝消失；exec hint 从 14 处收敛到 `<window_classes>` 上的一处。
 - **实例只承载会变的东西**：do/talk 带 transcript、plan 带 steps、form 带 fill_state——「换一个同 class 实例会变」的才进实例层。
-- **方法集差异不靠复制表达**：creator do 的 `close` 不可用，用实例上的 `<unavailable>` 标注，而非为它克隆一份 class 声明（守住「按真实方法集分组」的约束）。
+- **方法集差异的表达（future，现状不渲染）**：若将来出现 per-instance 门控（某实例某 method 被禁），用实例 `<unavailable>` 标注或裂组，而非克隆 class 声明。现状渲染器无此门控（creator do 的 `close` 仍在菜单、exec 时才被 onClose 拒），故 `<unavailable>` 是预留表达、当前恒不渲染。
 - **情境协议下沉**：`forms` 因有 form 在场而作为 knowledge 激活；`self-evolution` 未命中 super flow → 进 overflow 而非常驻。
 - **无空壳**：身份走 instructions，不再渲染 140 字符的空 self window；空 viewport/target 不渲染。
 

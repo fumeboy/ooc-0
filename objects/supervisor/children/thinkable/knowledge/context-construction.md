@@ -66,15 +66,19 @@ Object 不知道 context 之外的任何事——内存/文件系统里再多状
   <self object_id="supervisor"/>            <!-- 只暴露 objectId 标记；身份正文走 instructions -->
   <thread id="t_xxx" status="running">
     <creator_thread_id/> <parent_thread_id/>
+    <!-- class 声明层：本轮出现的每个 window class 的方法契约声明一次，插在 <context_windows> 前 -->
+    <window_classes hint='exec(window_id, method, args={...})。每个 class 的方法对其全部实例可用'>
+      <class name="root">
+        <method name="...">简述<arg name type required>...</arg></method>
+      </class>
+      <class name="knowledge">...</class>     <!-- 多个 knowledge 实例共享这一份声明 -->
+    </window_classes>
     <context_windows>
-      <window id="root" type="root" status="active">
+      <window id="root" class="root" status="active">
         <title>...</title>
-        <readable>...</readable>            <!-- 或 <compressed level="N"/> -->
-        <methods hint='通过 exec(window_id="root", method="<name>", args={...}) 调用'>
-          <method name="...">简述</method>
-        </methods>
+        <readable>...</readable>            <!-- 或 <compressed level="N">…expand 提示就地…</compressed> -->
         <sub_windows>                        <!-- parentWindowId = 本 window.id 的那些 -->
-          <window id="f_xxx" type="method_exec" .../>
+          <window id="f_xxx" class="method_exec" .../>   <!-- 实例只带 id + class + 独有状态，无 <methods> -->
         </sub_windows>
       </window>
       ...
@@ -88,7 +92,7 @@ Object 不知道 context 之外的任何事——内存/文件系统里再多状
 </context>
 ```
 
-window 关键属性：`id`（稳定唯一，root 固定 `"root"`）/ `class`/ `status`（open/running/active/archived/done/closed/executing/success/failed）/ 可选 `sharing`·`read_only`（跨 thread 共享态：`ref` 只读引用 / `lent_out` 已借出）。`<methods>` 把 object method（控 object）与 window method（控展示）合并呈现——exec 入口相同，LLM 不需区分（`renderers/xml.ts:80`）；未注册 type fail-soft 无 methods 节点。
+window 关键属性：`id`（稳定唯一，root 固定 `"root"`）/ `class`/ `status`（open/running/active/archived/done/closed/executing/success/failed）/ 可选 `sharing`·`read_only`（跨 thread 共享态：`ref` 只读引用 / `lent_out` 已借出）。**方法契约不随实例渲染**：每个 window class 的方法在 `<window_classes>` 的 `<class name="...">` 里**声明一次**（`renderWindowClassesNode` → `computeVisibleMethodSet`，`renderers/xml.ts`），实例 window 只带 `class=` 引用——object method（控 object）与 window method（控展示）合并声明，exec 入口相同 LLM 不需区分；同 class 多实例去重为一份 `<class>`，未注册 class fail-soft 不进声明层。
 
 ## 单 window 内容的渲染优先级链
 

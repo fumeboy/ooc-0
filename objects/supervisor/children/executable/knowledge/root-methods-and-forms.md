@@ -23,7 +23,7 @@ root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins
 
 > 注：原 `metaprog` method 已删。它承载的 supervisor 治理动作（resolve PR-Issue / rollback stone）已转控制面 governance 端点 `POST /api/runtime/pr-issues/:issueId/resolve` / `POST /api/runtime/stones/:objectId/rollback`（底层 `packages/@ooc/core/persistable/stone-versioning.ts` 的 `resolvePrIssue` / `rollback`），治理语义权威在 reflectable 维度；它的写动作（改自己 / 建别人 / 改别人）下放给 write_file / create_object 落 session worktree、沉淀走 feat-branch PR（`new_feat_branch` → 编辑 → `create_pr_and_invite_reviewers` 开 PR）。
 
-其它 object 也注册自己的 object method：do_object（continue/wait/close/move）、talk_object（say/wait/close）、file_object（edit/reload/set_range/close）、method_exec（refine/submit，`packages/@ooc/core/executable/windows/method_exec/index.ts:53`）。
+其它 object 也注册自己的 object method：do_object（continue/wait/close/move）、talk_object（say/wait/close）、file_object（edit/reload/set_range/close）、method_exec（refine/submit，`packages/@ooc/core/executable/windows/method_exec/index.ts:21`）。
 
 ## method 与 knowledge 经 intent trigger 协作
 
