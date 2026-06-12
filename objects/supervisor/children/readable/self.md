@@ -12,7 +12,7 @@ readable 有**静态面（readable.md 自我介绍名片）**和**动态面（re
 
 ## 我负责的
 
-一个 OOC Object 进入 LLM context 时，它的"长相"由 readable 维度决定。代码层我是与 executable **并列的一等注册维度**——`executable` 经 `registerExecutable` 注册 object method（操作业务数据），我经 `registerReadable` 注册整套动态展示构造（`packages/@ooc/core/runtime/object-registry.ts:128`）；静态自我介绍则走持久层 readable.md（`readReadable` / `writeReadable`，`packages/@ooc/core/persistable/stone-readme.ts:18/46`）。我持有的字段（`ObjectDefinition`，`packages/@ooc/core/_shared/types/registry.ts:62-79`）：
+一个 OOC Object 进入 LLM context 时，它的"长相"由 readable 维度决定。代码层我是与 executable **并列的一等注册维度**——`executable` 经 `registerExecutable` 注册 object method（操作业务数据），我经 `registerReadable` 注册整套动态展示构造（`packages/@ooc/core/runtime/object-registry.ts:128`）；静态自我介绍则走持久层 readable.md（`readReadable` / `writeReadable`，`packages/@ooc/core/persistable/stone-readable.ts:17/37`）。我持有的字段（`ObjectDefinition`，`packages/@ooc/core/_shared/types/registry.ts:62-79`）：
 
 - **readable.md（静态自我介绍）**：Object 的对外名片，渲染器作为 `<readable>` 槽位的最低优先级来源读取（`renderers/xml.ts:170`）。与 self.md 构成双面身份。
 - **readable（动态渲染 hook）**：把 Object 渲染成 context 里的 XML 子节点序列（`ReadableFn`，`registry.ts:29`），优先级高于静态 readable.md。所有 builtin 都用这个字段——talk/do/method_exec/feishu_chat/feishu_doc 也是 `registerReadable({ readable })`（旧名 `renderXml` 已并入 `readable`，registry.ts:56；"renderXml" 现仅是 XML-生成函数的非正式叫法）。
