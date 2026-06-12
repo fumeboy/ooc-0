@@ -6,7 +6,7 @@ activates_on: {"object::root": "show_description"}
 
 ## root 上注册的全局 object method
 
-root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins/root/executable/index.ts:36`，每条一个 `method.*.ts`，经 `registerExecutable("root", { methods })` 注入，`:101`），共 17 个：
+root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins/root/executable/index.ts:36`，每条一个 `method.*.ts`，经 `registerExecutable("root", { methods })` 注入，`:101`），共 15 个（沉淀方法 `new_feat_branch` / `create_pr_and_invite_reviewers` **已移出 root** → 挂在 reflect_request window，见下）：
 
 - **do** — 派生子 thread，创建 do_object。
 - **talk** — 与 user 或其他 Object 对话，创建 talk_object。
@@ -16,8 +16,7 @@ root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins
 - **open_file** / **open_knowledge** — 把文件 / 知识载入 context。
 - **write_file** — 创建或覆盖**已存在对象**的文件（落盘与版本化重定向在 file builtin，`packages/@ooc/builtins/file/executable/index.ts`）。
 - **create_object** — 建一个**全新对象**的骨架（仅业务 session）：落 session worktree `objects/<newId>/{package.json,self.md,readable.md[,knowledge]}`（`method.create-object.ts`）；进 canonical 走后续 feat-branch PR 沉淀。
-- **new_feat_branch** — 沉淀第一步（super flow 内）：从 main 派生一条 feat 分支 worktree 并绑进 thread，让后续 write_file 直接落 feat worktree（`method.new-feat-branch.ts`）。同 intent 重调幂等重绑（回修 resume 入口）。
-- **create_pr_and_invite_reviewers** — 沉淀 finalizer（super flow 内，无 edits 参数）：读 feat 分支绑定 → commit（署名 actor）→ 算 reviewer 集冒泡 → 开 PR → 投递 pr_window 给 reviewer（`method.evolve-self.ts`）。不再是 session 合入命令。
+> 沉淀方法**不在 root**——`new_feat_branch` / `create_pr_and_invite_reviewers` 挂在 **reflect_request window**（`packages/@ooc/core/reflectable/reflect-request/`，标 `for_reflectable` 仅 super flow surface）：前者从 main 派生 feat 分支 worktree 并绑进 thread（让后续 write_file 直接落 feat worktree、同 intent 幂等重绑承接回修）；后者是 finalizer（无 edits 参数：读绑定 → commit 署名 → 算 reviewer 集冒泡 → 开 PR → 投递 pr_window）。机制权威见 reflectable 维度。
 - **glob** / **grep** — 按文件名 / 内容搜索，创建 search_object。
 - **example** — 构造 example_window（标准对象定义样板，`method.example.ts`）。
 - **open_feishu_chat** / **open_feishu_doc** — 飞书外接（经 extendable 注册，寄生于 executable）。

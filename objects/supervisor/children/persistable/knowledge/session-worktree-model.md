@@ -1,7 +1,7 @@
 ---
 title: stone identity = session 永不合入 + feat-branch PR 沉淀
 description: main canonical / session worktree 纯运行时(永不合入) / feat-branch PR 沉淀闸；session-aware 读全接入
-activates_on: {"object::root": "show_description", "method::root::create_pr_and_invite_reviewers": "show_content"}
+activates_on: {"object::root": "show_description", "method::reflect_request::create_pr_and_invite_reviewers": "show_content"}
 ---
 
 # stone identity = session 永不合入 + feat-branch PR 沉淀
