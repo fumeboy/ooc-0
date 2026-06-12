@@ -23,7 +23,7 @@ object 的 `visible/diff.tsx` **default export** 一个 `({previous, current}: W
 
 `packages/@ooc/web/src/domains/sessions/components/window-diff/resolveWindowDiff.tsx` 的 `resolveWindowDiffKind` 按 `current?.type ?? previous?.type` 解析：
 
-1. **builtin 静态** —— `BUILTIN_DIFF[type]` 命中 → builtin 自己的 diff 组件。有 builtin 目录的 file/knowledge/search/program/plan 在 `@ooc/builtins/<type>/visible/diff`；无目录的 talk/do/relation/method_exec 留 web 本地（与线 A `builtin-visible-registry` 同款不对称）。
+1. **builtin 静态** —— `BUILTIN_DIFF[type]` 命中 → builtin 自己的 diff 组件。有 builtin 目录的 file/knowledge/search/program/plan 在 `@ooc/builtins/<type>/visible/diff`；无 builtin 目录的 talk/do/method_exec 在 web 本地（`builtin-diff-registry.tsx:29-31`）；`relation` 型当前未注册、走 dynamic-diff → before-after 降级。
 2. **dynamic-diff（user-defined）** —— object 写了自己的 `visible/diff.tsx` → 动态加载（`clientSourceUrl` 带 `?file=diff` 白名单寻址 `visible/diff.tsx`，无 legacy 回退；缺失干净 404）。
 3. **before-after（回退）** —— object 没写 diff.tsx → 用 `WindowVisible` 并列渲 previous + current（复用线 A 动态加载，让未写 diff 的 object 也有比裸 JSON 好的降级）。
 4. **JSON 兜底** —— `FallbackJsonDiff`。

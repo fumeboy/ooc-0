@@ -24,8 +24,8 @@ OOC 系统的工作区称为 OOC World, 通过 **ooc-world-meta** 这个 World �
     - OOC Object 会以 context window 的形式展示在 context 中 （这一特性对应 readable 维度）
     - context window 的 methods 可以被执行 （这一特性对应 executable 维度）
 3. OOC 系统具有 md 文件形式的 knowledge, 其 frontmatter 中持有 activated_on 字段，用于声明何时被触发加载，thinkloop 在构造 context 时会进行这个触发检查，knowledge 触发后会进入 context 
-    - OOC Object 在执行 method 时，method 的实现处可以选择返回 method_exec_from 这个对象 并直接给出 method knowledge 并解析出 method 执行的意图(intent), knowledge 的 activated_on 可以配置要被哪些意图激活
-    - method_exec_from 对象会提供两个 method, refine 和 submit, refine 可以继续向 form 填充参数，method 实现处也会根据最新填充的参数计算出意图 并给出新的 method knowledge，系统会根据新的意图匹配要激活的知识。通过 多步执行 form 的 refine 来 “渐进式表达执行意图” 可以伴随实现知识的 “渐进式披露”
+    - OOC Object 在执行 method 时，method 的实现处可以选择创建 method_exec form 并直接给出 method knowledge 并解析出 method 执行的意图(intent), knowledge 的 activated_on 可以配置要被哪些意图激活
+    - method_exec form 提供两个 method: refine 和 submit，refine 可以继续向 form 填充参数，method 实现处也会根据最新填充的参数计算出意图 并给出新的 method knowledge，系统会根据新的意图匹配要激活的知识。通过 多步执行 form 的 refine 来 “渐进式表达执行意图” 可以伴随实现知识的 “渐进式披露”
 4. OOC Object 的一次思考过程称为 thread, thread 持有 context。OOC Object 可以创建 sub thread 并行处理子问题，也可以和其他 Object talk (也可能会创建一个新的 thread)，与其他 thread 的会话过程会以 context window 的形式出现在 context 中，与其他对象的thread的会话窗口称为 talk window，与自己的sub thread的会话窗口称为 do window。
 
 ## executable
@@ -33,7 +33,7 @@ OOC 系统的工作区称为 OOC World, 通过 **ooc-world-meta** 这个 World �
 1. LLM 本身支持 tool_use, OOC 系统面向 context windows 设计了 4 个基础 tool, 分别是 exec(执行 method) / close(关闭一个 window) / wait(等待一个 window 新的信息) / compress(压缩context信息)
 2. 所有 OOC Object 都可以自己实现并注册 methods，注册时需提供 method name、method description
 3. object method 实现处需要声明 method 可以关联的 intent 列表，提供程序来计算 args=>intents, 来进行相关知识的匹配
-4. object method 实现处可以在构造 method_exec_from 时一并返回一些方法知识信息或提示信息, 这些信息会直接展示在 context 中 method_exec_from 的相关位置
+4. object method 实现处可以在创建 method_exec form 时一并返回一些方法知识信息或提示信息, 这些信息会直接展示在 context 中 method_exec form 的相关位置
 
 ## collaborable
 

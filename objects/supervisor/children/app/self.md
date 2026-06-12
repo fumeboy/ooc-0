@@ -20,10 +20,10 @@
 
 ## 当前设计（锚真实代码）
 
-- server 装配 + onError 全覆盖：`packages/@ooc/core/app/server/index.ts:212`（onError）/ `:218-224`（7 个 module use：health / runtime / stones / pools / ui / flows / world-config）/ `:342`（listen 0.0.0.0）。
+- server 装配 + onError 全覆盖：`packages/@ooc/core/app/server/index.ts:211`（onError）/ `:217-223`（7 个 module use：health / runtime / stones / pools / ui / flows / world-config）/ `:341`（listen 0.0.0.0）。
 - world 根解析 + 端口：`packages/@ooc/core/app/server/bootstrap/config.ts:48`（`--world → OOC_WORLD_DIR → OOC_BASE_DIR → cwd`）/ `:52`（端口 `OOC_APP_PORT ?? 3000`）。
-- AppShell 导航派生：`packages/@ooc/web/src/app/shell.tsx:64`（activeSessionId）/ `:83`（activeObjectId）/ `:252`（4s thread 轮询，`setInterval(..., 4000)`）。
-- 路由真相：`packages/@ooc/web/src/app/routing.ts:42`（RouteState 6 kind：welcome / scope / file / stoneClient / flowPage / flowsView）/ `:79`（toPath）/ `:160`（parseRoute）/ `:140`（useRouteState）。
+- AppShell 导航派生：`packages/@ooc/web/src/app/shell.tsx:68`（activeSessionId）/ `:87`（activeObjectId）/ `:256`（4s thread 轮询，`setInterval(..., 4000)`）。
+- 路由真相：`packages/@ooc/web/src/app/routing.ts:42`（RouteState 6 kind：welcome / scope / file / stoneClient / flowPage / flowsView）/ `:80`（toPath）/ `:165`（parseRoute）/ `:145`（useRouteState）。
 
 ## 现状
 
@@ -31,7 +31,7 @@
 
 ## 已知问题 / 边界与未决
 
-- `modules/ui/api.list-flows.ts` 定义了 `GET /api/flows`（`listFlowsApi(service)`），service 侧 `ui/service.ts:183` 已有 `listFlows()` 实现，但 `modules/ui/index.ts` 未 `.use(listFlowsApi(...))` —— 路由从未挂载的半孤儿，要么补挂、要么删掉这个 api 文件。（注意 flows module 另有自己更重的 `listFlows()`，`flows/service.ts:344`，带 pause/status；ui 这份只回目录名。）
+- `modules/ui/api.list-flows.ts` 定义了 `GET /api/flows`（`listFlowsApi(service)`），service 侧 `ui/service.ts:183` 已有 `listFlows()` 实现，但 `modules/ui/index.ts` 未 `.use(listFlowsApi(...))` —— 路由从未挂载的半孤儿，要么补挂、要么删掉这个 api 文件。（注意 flows module 另有自己更重的 `listFlows()`，`flows/service.ts:327`，带 pause/status；ui 这份只回目录名。）
 - `/api/tree` 是整树递归返回（非懒加载），超大 world 需重设计。
 - `/api/file/read` 有意绕过 baseDir 隔离，**无策略层/鉴权**，仅限本地可信 dev；公开部署必须先加白名单。
 - 模块级 `default*` 单例（pauseStore / jobManager）是未注入时的 fallback，多次 buildServer 不显式注入会串状态——测试须显式注入。
@@ -47,7 +47,7 @@
 
 ## 名词解释
 
-（一句定义 + 指向篇目；机制细节不在此重复。job/worker/scheduler-yield/pause-resume/notifyThreadActivated 的完整语义在 `knowledge/server-routes-and-worker.md`「runtime 编排」，AppShell/ui_methods 在 `knowledge/client-appshell-and-chat.md`，`--world` 解析在 `knowledge/startup-constraints.md`。）
+（一句定义 + 指向篇目；机制细节不在此重复。job/worker/scheduler-yield/pause-resume/notifyThreadActivated 的完整语义在 `knowledge/server-routes-and-worker.md`「runtime 编排」，AppShell/chat 模型在 `knowledge/client-appshell-and-chat.md`，`--world` 解析在 `knowledge/startup-constraints.md`。）
 
 - **job**：worker 调度的一次任务（kind=`run-thread`/`resume-thread`，状态机 queued→running→done|failed）。
 - **worker · scheduler**：只跑队列、不周期扫 fs 的执行器，调 `runScheduler` 推进 thread thinkloop。
@@ -55,7 +55,7 @@
 - **pause · resume**：pause 是进程内调度开关；resume 是半轮粒度恢复（不重跑模型、重放上次未消费的 LLM 输出，避免重复扣费）。
 - **notifyThreadActivated**：事件源写完 inbox/翻状态后调用的薄通知，转成 `createRunThreadJob`——「状态翻转 → enqueue」的唯一通道。
 - **AppShell**：client 顶层布局组件，URL 即单向真相（从 react-router URL 派生导航字段，导航走 `navigate(toPath(...))` 回流）。
-- **ui_methods vs window.methods**：ui_methods 是 Object 给人类（UI）调的方法集，**只有它经 HTTP `call_method` 暴露**；window.methods 给 LLM 调，不经 HTTP。
+- **call_method 可调方法**：HTTP `call_method` 只暴露 `window.methods` 里标了 `for_ui_access: true` 的方法（2026-06-11 起独立的 `ui_methods` 维度已废，LLM 侧与人类侧共用同一 `window.methods` 字典、按 `for_ui_access` 过滤分流）。
 - **--world 解析**：world 根解析顺序 flag → `OOC_WORLD_DIR` → `OOC_BASE_DIR` → cwd；启动必须显式 `--world`（否则把源码目录当 world 污染源码树），并归一为绝对路径。
 - **user object**：web session 中人类驱动的被动 flow object（`objectId="user"`），worker 显式跳过调度（`worker.ts:40,46`）。
 

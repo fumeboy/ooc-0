@@ -24,9 +24,9 @@ OOC world 是一棵统一文件树 `{baseDir}/`，分三棵子树。三分是 **
 - `visible/index.tsx` — stone visible UI 源码（原 client/index.tsx）。
 - `knowledge/<slug>.md` — **seed knowledge**：人类预置的先天能力基底，进 git review，可挂 eval gate。
 
-stone = 设计（code）不是数据（data）：低频、要 review。物理骨架只预创 3 件可见小文件（`.stone.json` + 空 self.md + 空 readable.md），其余 lazy mkdir（`stone-object.ts:createStoneObject`）。
+stone = 设计（code）不是数据（data）：低频、要 review。物理骨架只预创 3 件文件（`package.json` + 空 self.md + 空 readable.md），其余 lazy mkdir（`stone-object.ts:createStoneObject`）。
 
-**建新对象骨架 = `create_object` root method**（`stone-create-object.ts:93 createObjectInSession`，2f4456f9）：仅 business session 可调（super/无 session fail-loud 提示走 HTTP），`resolveStoneIdentityRef(write)` 拿 session worktree ref → 复用 createStoneObject + writeSelf + writeReadable 建骨架（package.json + self + readable + knowledge）**不 commit**，`enqueueSessionWrite` 锁内做 main + worktree 双重 ALREADY_EXISTS 校验。落 `flows/<sid>/objects/<newId>/`，main 不变、当场可用（session-aware 读），进 canonical 走 feat-branch PR（新对象冒泡到最近 canonical 祖先作 actor 代发）。口诀：**建新对象 = create_object；改已存在对象文件 = write_file/edit**（write_file 靠 package.json 判 owner，接不上「无 package.json 的新对象骨架」）。
+**建新对象骨架 = `create_object` root method**（`stone-create-object.ts:94 createObjectInSession`，2f4456f9）：仅 business session 可调（super/无 session fail-loud 提示走 HTTP），`resolveStoneIdentityRef(write)` 拿 session worktree ref → 复用 createStoneObject + writeSelf + writeReadable 建骨架（package.json + self + readable + knowledge）**不 commit**，`enqueueSessionWrite` 锁内做 main + worktree 双重 ALREADY_EXISTS 校验。落 `flows/<sid>/objects/<newId>/`，main 不变、当场可用（session-aware 读），进 canonical 走 feat-branch PR（新对象冒泡到最近 canonical 祖先作 actor 代发）。口诀：**建新对象 = create_object；改已存在对象文件 = write_file/edit**（write_file 靠 package.json 判 owner，接不上「无 package.json 的新对象骨架」）。
 
 ## pool — 事实层（持久 + 不 git）
 
@@ -44,7 +44,7 @@ pool **不进 git / 不走 worktree 模型**：事实单向积累，写就生效
 
 - **session worktree 根**：`flows/<sid>/` 本身是从 `stones/main` 派生的 git worktree（分支 `session-<sid>`，物理路径 `flows/<sid>`、名路径解耦），session 创建即 eager checkout main 全量 stone 文件。LLM 在 session 内的所有 stone 写直接落此目录、当场可用，但**该分支永不合入 main**；要沉淀进 canonical 经 super flow 的 feat-branch PR（机制权威 reflectable `knowledge/feat-branch-pr.md`）。
 - **身份与运行时同落 `objects/<objectId>/`**（a4d11bf1）：一个 `objects/<id>/` 目录同时容纳该对象 tracked stone 身份（worktree checkout）+ untracked 运行时轨迹，物理不分离、靠 `.gitignore` 分离语义。main 根 gitignore（`persistable/stone-bootstrap.ts:72` `STONE_MAIN_GITIGNORE`）= 白名单 + 黑名单：`/*` 排除顶层运行时 → `!/objects/` `!/.gitignore` 放行 → `objects/**/threads/` + `objects/**/.flow.json` + `objects/**/state.json` 再黑掉任意深度（含 nested children/）的运行时产物。`ensureMainGitignore` 内容不一致即覆盖更新（旧 world 升级）。
-- 运行时轨迹：`.flow.json` / `threads/<tid>/thread.json`（线程元数据）/ `threads/<tid>/thread-context.json`（**§10 已完整退役 thread.json.contextWindows[]**，b24ba0ef——thread-context.json 是 contextWindows 唯一权威，`thread-json.ts:69 writeThread` 是唯一持久化入口、单点刷、自动覆盖所有绕过 WindowManager 的写路径；entries 由 `flow-thread-context.ts:51 buildThreadContextEntries` 唯一规则产出）/ `debug/` / `data.json`（session-scoped，ProgramSelf.getData/setData 载体）/ `knowledge/relations/<peer>.md`（session 层关系）。
+- 运行时轨迹：`.flow.json` / `threads/<tid>/thread.json`（线程元数据）/ `threads/<tid>/thread-context.json`（**§10 已完整退役 thread.json.contextWindows[]**，b24ba0ef——thread-context.json 是 contextWindows 唯一权威，`thread-json.ts:68 writeThread` 是唯一持久化入口、单点刷、自动覆盖所有绕过 WindowManager 的写路径；entries 由 `flow-thread-context.ts:67 buildThreadContextEntries` 唯一规则产出）/ `debug/` / `data.json`（session-scoped，ProgramSelf.getData/setData 载体）/ `knowledge/relations/<peer>.md`（session 层关系）。
 
 ## 边界
 

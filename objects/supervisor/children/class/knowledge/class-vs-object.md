@@ -24,4 +24,4 @@ OOC 把 `class` 提升为与 `object` **平级的一等概念**（2026-06-07）�
 
 ## class 不可交互如何强制
 
-seedSession 拿到 talk target 后，若是 `_builtin/<id>` 前缀（class 寻址）则抛 `INVALID_INPUT`——class 不能作对话目标（`packages/@ooc/core/app/server/modules/flows/service.ts:415`）。
+seedSession 拿到 talk target 后，若是 `_builtin/<id>` 前缀（class 寻址）则抛 `INVALID_INPUT`——class 不能作对话目标（`packages/@ooc/core/app/server/modules/flows/service.ts:398`）。

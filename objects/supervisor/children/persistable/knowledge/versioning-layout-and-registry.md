@@ -17,7 +17,7 @@ activates_on: {"object::root": "show_description"}
 
 ## objectId 嵌套展开
 
-含 `/` 的 objectId 物理布局由 nestedObjectPath（canonical 定义 `packages/@ooc/core/_shared/types/thread.ts:85`，经 `common.ts` re-export）展开：split("/") 后 segments 间插入 `children/` marker。所以 objectId `supervisor/persistable` 落在 `stones/main/objects/supervisor/children/persistable/`（`stone-object.ts:60 ancestorObjectIds` / `:45 stoneChildrenDir`，`_shared/types/thread.ts:70 STONE_CHILDREN_SUBDIR`）。
+含 `/` 的 objectId 物理布局由 nestedObjectPath（canonical 定义 `packages/@ooc/core/_shared/types/thread.ts:97`，经 `common.ts` re-export）展开：split("/") 后 segments 间插入 `children/` marker。所以 objectId `supervisor/persistable` 落在 `stones/main/objects/supervisor/children/persistable/`（`stone-object.ts:59 ancestorObjectIds` / `:44 stoneChildrenDir`，`_shared/types/thread.ts:82 STONE_CHILDREN_SUBDIR`）。
 
 ## 路径计算函数
 

@@ -80,7 +80,7 @@ export const window = {
       schema: { /* 可选：结构化参数渲染 + fail-soft 校验 */ },
       for_ui_access: true,               // 可选：标了它，该 method 才可经 HTTP call_method 被前端/client 调（visible UI 用）；不标只给 LLM
       exec: async (ctx) => {
-        // ctx：thread / self / args / form?（method.ts:147 MethodExecutionContext）
+        // ctx：thread / self / args / form?（method.ts:155 MethodExecutionContext）
         return { ok: true, result: "...", data: {} };   // 或 { ok: false, error } 或 { ok: true, window }（constructor）；for_ui_access 方法前端从 data 取数渲染
       },
     },
@@ -92,7 +92,7 @@ export const window = {
 
 - 字段名是 **`methods`**（不是 `commands`）；每条 entry 是头等 `ObjectMethod`，与内置 window 上的 method 同构（`description / intents? / onFormChange? / schema? / for_ui_access? / exec`）。旧 `match` / `knowledge` 字段已删，旧 `export const llm_methods` 会被 loader 硬切报错。**UI 可调机制（2026-06-11 起）= 给方法标 `for_ui_access: true`，不再有独立 `export const ui_methods` 维度**——HTTP `call_method` 只暴露 `window.methods` 里标了它的方法（`stones/service.ts` / `flows/service.ts` call_method 校验 `entry.for_ui_access===true`）。
 - 返回 `MethodOutcome` 三态：`{ ok:true, result? }` | `{ ok:true, window }`（`kind:"constructor"`，manager 自动 mount 到 thread context）| `{ ok:false, error }`。method **不抛异常**，错误走结构化结果让上游 LLM 自己判断。`exec` 也可直接返回 `undefined`（成功无文本）或裸 `string`（即 result），runtime 规范化（`method.ts:56 normalizeMethodOutcome`）。
-- `exec` 的 `ctx` 是 `MethodExecutionContext`（`method.ts:147`）：`thread? / self?（receiver window）/ args / form?` 等。`ctx.programSelf`（`dir / callMethod / getData / setData / getThreadLocal / setThreadLocal`）**只在 program_window 跑用户代码时由 dispatcher 注入**（`builtins/program/executable/self.ts:9`），不是普通 object method 的通用入参。
+- `exec` 的 `ctx` 是 `MethodExecutionContext`（`method.ts:155`）：`thread? / self?（receiver window）/ args / form?` 等。`ctx.programSelf`（`dir / callMethod / getData / setData / getThreadLocal / setThreadLocal`）**只在 program_window 跑用户代码时由 dispatcher 注入**（`builtins/program/executable/self.ts:80`），不是普通 object method 的通用入参。
 - **window method**（只控展示，如 `set_viewport`）归 readable 维度，写在 `readable.ts` 的 `registerReadable({ windowMethods })`，不写在 executable。同一 type 上同名方法不能既是 object 又是 window method，registry 注册期 fail-loud。
 - **继承靠 class**：`package.json` 的 `ooc.class` 声明父类；缺省 `parentClass` 隐式继承 `"root"`，自动拿到 `talk / do / todo / plan / program / open_file / open_knowledge / glob / grep` 等通用方法，不必重复声明。prototype chain 已彻底剔除（2026-06-07）。
 - **纪律**：列表/搜索类 method 必须有默认分页；`exec` 返回大 JSON 必须包大小截断（防把下轮 LLM 请求打 413）。不要把 RPC helper / 业务逻辑对外导出，全部 module-private，只通过 `methods` 暴露（要给前端/client 调的标 `for_ui_access`）；stone 内不建独立 `src/` 子目录（私有 sibling 用 `executable/_*.ts`）——`src/` 会被 LLM 当成可裸 import 的脚本，绕过 method 契约。

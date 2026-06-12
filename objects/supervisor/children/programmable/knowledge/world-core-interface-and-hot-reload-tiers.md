@@ -22,13 +22,13 @@ builtin 包与 stone 包**结构完全同构**（都有 self.md / readable / exe
 
 一个最小 World 本身就是标准 Bun workspace：根 `package.json`（`workspaces: ["stones/*"]` + 对 `@ooc/*` 的依赖）+ `.world.json`（端口 / worker / llm 默认 / hotReload watchPaths）+ `.env`（密钥不进 git）。三层持久化对应三个目录：`stones/`（Object 定义，进 git）/ `pools/`（跨 session 沉淀，不进 git）/ `flows/`（运行时实例，不进 git）。
 
-stone 包 `package.json` 的 `ooc` 段声明身份：`objectId / kind:"stone" / type / prototype / mixins / register`（可选，不写按约定路径查）。stone 的 `@ooc/core` 用 **peerDependencies** 强制与 World 根同版本，避免 workspace 解析出多副本。
+stone 包 `package.json` 的 `ooc` 段声明身份：`objectId / kind:"stone" / type / class`（`class` 替代已删除的 `prototype`；`register` 可选，不写按约定路径查）。stone 的 `@ooc/core` 用 **peerDependencies** 强制与 World 根同版本，避免 workspace 解析出多副本。
 
 > 注意：以上是 npm-publish 终态的目标布局。当前 ooc-2 仓同时是 Core 源码仓 + dogfooding World，用 `workspace:*` 把 `.ooc-world` 链到本地 `packages/@ooc/*`，改源码即生效，不走 publish→install。
 
 ## Core↔Stone 契约
 
-Core 对外工厂 `createWorldRuntime({ worldPath, config })` → `WorldRuntime`（`httpHandler` / `stoneRegistry` / `startWorker` / `dispose`）。stone 反向约束：根必有 `package.json`（含 `ooc.objectId` / `ooc.kind`）+ `self.md`，readable/executable/visible/knowledge 至少一个；`executable/index.ts` 导出方法表。**stone 之间只能经 `exec(objectId, method, args)` 协作，禁止直接 import 另一个 stone 的源码**（直接 import 会绕过权限、破坏热更、阻碍独立打包 —— 见三陷阱）。
+Core 对外工厂 `createWorldRuntime({ worldPath, dev? })` → `WorldRuntime`（`observable` / `serialQueue` / `serverLoader` / `stoneRegistry` / `dispose`）。stone 反向约束：根必有 `package.json`（含 `ooc.objectId` / `ooc.kind`）+ `self.md`，readable/executable/visible/knowledge 至少一个；`executable/index.ts` 导出方法表。**stone 之间只能经 `exec(objectId, method, args)` 协作，禁止直接 import 另一个 stone 的源码**（直接 import 会绕过权限、破坏热更、阻碍独立打包 —— 见三陷阱）。
 
 `@ooc/cli` 是用户与 Core 的唯一入口：`ooc init`（脚手架）/ `ooc dev`（后端 fs watch 热更 + 前端 Vite HMR，统一端口免 CORS）/ `ooc build`（编译 stones 到 `.ooc-dist/`）/ `ooc start`（用预构建 bundle，关 HMR）。这四条命令**已落地**（`packages/@ooc/cli/src/index.ts` 薄 dispatcher + `commands/{init,dev,build,start}.ts`），CLI lifecycle 细节见本片末「World 目录布局 / package.json 模板 / CLI lifecycle」一节。
 
@@ -93,10 +93,10 @@ stone 包 `package.json` 的 `ooc` 段声明身份：`objectId / kind:"stone" / 
 | 阶段 | 内容 | 现状 |
 |------|------|------|
 | **M0** | `@ooc/cli` 骨架：`ooc dev` 启动当前 app.server + vite | **已落地**（`packages/@ooc/cli`） |
-| **M1** | Core 重构：导出 `createWorldRuntime` 工厂，消灭 module-level singleton（pauseStore/jobManager 等迁入 WorldRuntime）——最大重构、地基 | **已落地**（`packages/@ooc/core/runtime/world-runtime.ts:76`，聚合 objects/observable/serialQueue/serverLoader/stoneRegistry） |
+| **M1** | Core 重构：导出 `createWorldRuntime` 工厂，消灭 module-level singleton（pauseStore/jobManager 等迁入 WorldRuntime）——最大重构、地基 | **已落地**（`packages/@ooc/core/runtime/world-runtime.ts:61`，聚合 observable/serialQueue/serverLoader/stoneRegistry） |
 | **M2** | World/Stone 契约：StoneRegistry 扫 `stones/*/package.json` 的 `ooc.objectId`，builtin 走同一 loader；packages 目录重命名为 stones | **已落地**（`runtime/stone-registry.ts`，`createStoneRegistry(worldPath,{autoDiscover})`） |
 | **M3** | 热更：fs watch + bun reimport（executable/readable）+ Vite 动态注入 stone visible | **tier 1 已落地**（`runtime/hot-reload.ts` → `serverLoader.invalidateStone`） |
-| **M4** | `ooc init/build/start`；self.md/prototype 变更打标记 + 懒迁移 | **CLI 已落地**；懒迁移 / vtable 重算（tier 2）仍**未落地** |
+| **M4** | `ooc init/build/start`；self.md/class 变更打标记 + 懒迁移 | **CLI 已落地**；懒迁移 / vtable 重算（tier 2）仍**未落地** |
 | **M5** | npm publish 配置（changesets），验证 `ooc init && bun dev` 端到端 | **未落地**（仍 monorepo `workspace:*`，未对外发布） |
 
 **关键判断**（设计原话）：M1（抽 WorldRuntime、灭 module-level singleton）是所有后续工作的地基——此判断已被现状印证，M1 落地后 M0/M2/M3-tier1/M4-CLI 接连落成。剩余真正未落地的是 tier 2 懒迁移、build 的 visible bundling、M5 npm publish。
@@ -106,7 +106,7 @@ stone 包 `package.json` 的 `ooc` 段声明身份：`objectId / kind:"stone" / 
 统一事件入口 `StoneRegistry` 的 `stone:changed`。实现里 `StoneChangedEvent` 有 4 个 kind（`packages/@ooc/core/runtime/stone-registry.ts:33`），由 `classifyChange(files)`(:51) 按路径判：`/visible/`→`view`、`/knowledge/` 或 `readable.md`→`knowledge`、`self.md` 或 `package.json`→`identity`、其余→`code`（注意 children 子目录的变更被跳过）。
 
 - **第一档（即时热替换）**：`executable/**` / `visible/**` / `readable.(md|ts)` / `knowledge/**`——纯函数或只读数据，不持有实例状态。服务端经 mtime reimport（见 self-written-method-hot-reload），新调用走新 module、在途调用继续旧 module；前端经 Vite HMR 局部刷新不丢 React state。单轮 thinkloop 内 pin 一个版本快照，避免同轮 readable 与 executable 看到不同版本。
-- **第二档（先标记 + 懒迁移）**：`self.md` 的 type/prototype/mixins、method 增删/可见性升级、state.json schema 变化。不立即替换，而在实例 `state.json._meta` 打 `stone_version_mismatch`，下次被 thread 引用时触发迁移钩子（`executable/migrate.ts`，失败转人工审查）；prototype 链变化重算受影响 objectId 的 vtable。哲学是「先标记，再懒迁移」，不在保存时做全局同步迁移。
+- **第二档（先标记 + 懒迁移）**：`self.md` 的 type/class 变更、method 增删/可见性升级、state.json schema 变化。不立即替换，而在实例 `state.json._meta` 打 `stone_version_mismatch`，下次被 thread 引用时触发迁移钩子（`executable/migrate.ts`，失败转人工审查）；class 链变化重算受影响 objectId 的 vtable。哲学是「先标记，再懒迁移」，不在保存时做全局同步迁移。
 - **第三档（重启）**：`@ooc/core` / `@ooc/web` / `@ooc/builtins/*` 版本升级——JVM 自身升级不在热更范围，semver pin + `bun install && ooc dev` 重启。
 
 > 实现现状：tier 1 已落（`HotReloadWatcher` fs.watch → `invalidateStone`，见 self-written-method-hot-reload）。tier 2 的懒迁移 / vtable 重算、tier 3 的 builtin 走第二档（`OOC_DEV=true` dogfooding），仍是设计阶段未落地。设计文档列了 5 个 kind（含 `schema`），实现收敛为 4 个（`schema` 未单列）——信代码。

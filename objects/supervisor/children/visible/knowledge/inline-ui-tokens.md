@@ -19,7 +19,7 @@ Object 向 user 发消息时，可在文本里嵌 `[[ui{"comp":"<name>",...}ui]]
 
 `InlineUiComponent` dispatch（`packages/@ooc/web/src/shared/ui/InlineUiContent.tsx:91`）：
 
-- **file-link**（`:92`，`FileLinkInline` `:101`）——必选 `path`、可选 `label`；渲染 React-Router `<Link>` 跳 file viewer。关键：用 `useLocation()` 读当前 thread 上下文（query string 的 `sessionId/objectId/threadId`，`:124`）拼到 file URL，让 RightPanel 的 chat 跨文件查看持续显示。
+- **file-link**（`:92`，`FileLinkInline` `:101`）——必选 `path`、可选 `label`；渲染 React-Router `<Link>` 跳 file viewer。关键：用 `useLocation()` 读当前 thread 上下文（query string 的 `sessionId/objectId/threadId`，`:103`）拼到 file URL，让 RightPanel 的 chat 跨文件查看持续显示。
 - **follow-ups**（`:93`，`FollowUpsInline`）——渲染后续操作组。
 
 ## 失败回退（fail-soft）

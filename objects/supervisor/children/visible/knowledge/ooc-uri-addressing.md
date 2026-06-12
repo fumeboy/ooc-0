@@ -20,7 +20,7 @@ activates_on:
 
 ## 为什么归 visible
 
-ooc:// 是原生寻址 URI，visible 是把它落到"人类看得见的页面"的渲染层；二者 1:1 对应。stone 短链导航见 `packages/@ooc/web/src/app/routing.ts` `parseRoute` 的 `/stones/:objectId` 分支（`routing.ts:15`/`:94`）。
+ooc:// 是原生寻址 URI，visible 是把它落到"人类看得见的页面"的渲染层；二者 1:1 对应。stone 短链导航见 `packages/@ooc/web/src/app/routing.ts` `parseRoute` 的 `/stones/:objectId` 分支（`routing.ts:15`/`:260`）。
 
 ## agent-native parity 缺口（待设计）
 

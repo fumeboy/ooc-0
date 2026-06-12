@@ -18,7 +18,7 @@ activates_on:
 ## ContextWindow —— Object 出现在 context 中的形态
 
 - **ContextWindow** 指 **Object 出现在 context 中的形态**：既是信息展示单元、又是行动挂载点。它不是独立于 Object 的临时数据结构——每个 window 背后都对应一个 Object（builtin 或 user-defined），window 上挂的 method 就是 Object 的 method，window method 与 object method 合并统称 **Method**。thread 持有一组 `contextWindows`。
-- **不要用 ContextObject 这个词**：它把「Object（实体本身）」和「ContextWindow（实体在 context 中的形态）」揉成一个名，反而把两者搅浑。按语境拆开说——指实体时写 **ooc object / Object**，指它在 context 里的窗口形态时写 **ContextWindow**。（代码里 `ContextObject` 仍作 `ContextWindow` 的历史别名残留，以代码为准；但文档表意一律不用它。）
+- **不要用 ContextObject 这个词**：它把「Object（实体本身）」和「ContextWindow（实体在 context 中的形态）」揉成一个名，反而把两者搅浑。按语境拆开说——指实体时写 **ooc object / Object**，指它在 context 里的窗口形态时写 **ContextWindow**。（代码里已无 `ContextObject` 导出类型，仅个别注释提及其更名沿革；文档表意亦一律不用它。）
 - **Context 是视角不是归属**：同一个 ooc object 可同时出现在多个 thread 的 context（状态只存一份），每个 thread 持自己的视角参数。详见 ooc-philosophy.md「Context = 视角」。
 
 ## 知识两源：seed vs sediment

@@ -16,7 +16,7 @@ activates_on: {"object::root": "show_description"}
 
 | TC | 断言 |
 |----|------|
-| TC-PROG-01 | 定义 `ui_methods` 经 HTTP `call_method` 返回正确值。注：`ui_methods` 调用语义归 **visible**；此 TC 测的是 `ui_methods` 的写入/加载/热更路径（与 `window.methods` 同住 `executable/index.ts`、共用 loader），这一面 programmable 与 visible 共担。 |
+| TC-PROG-01 | 标有 `for_ui_access: true` 的方法经 HTTP `call_method` 从 `MethodOutcome.data` 返回正确值。调用语义归 **visible**；此 TC 测的是方法的写入/加载/热更路径（写在 `executable/index.ts` `window.methods` 里，共用 loader），这一面 programmable 与 visible 共担。 |
 | TC-PROG-02 | 方法拿到 `ctx.self.dir`（自己的 stone 路径）且目录真实存在。 |
 | TC-PROG-03 | `window.methods` 经 `loadObjectWindow` 可加载（LLM 路径 object method）。 |
 | TC-PROG-04 | 热更新 —— 改 `executable` 后已有方法变更、新增方法立即生效。 |
@@ -44,5 +44,5 @@ rubric（已就地收编，对应 e2e `backend-programmable-self-command`）：
 |----------|-------------|
 | AN-PROG-01 | supervisor 经 write_file + create_pr_and_invite_reviewers 亲手创建带身份 + 知识的对象（agent-native）。 |
 | L7-EXEC-HOTRELOAD | 改写 `executable/index.ts` 后 `loadObjectWindow` 加载到新 method。 |
-| L7-UI-METHOD-HOTRELOAD | 改 `ui_methods` 后 `/call_method` 反映新逻辑。 |
+| L7-UI-METHOD-HOTRELOAD | 改 `for_ui_access` 方法后 `/call_method` 反映新逻辑。 |
 | L7-SERVER-SOURCE-RW | PUT 再 GET `/api/stones/:id/server-source` 读写一致。 |

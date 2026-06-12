@@ -4,13 +4,13 @@
 
 ## 核心设计
 
-核心设计：**Object 持有并演化自身 UI，`ooc://` 原生寻址 1:1 映射 SPA route**。stone scope 是单页 `visible/index.tsx`、flow scope 是多页 `client/pages`；人类经 `/call_method` 调 Object 的 ui_methods 交互。与 readable（LLM 侧展示）互为镜像（详见 readable 维度 `readable-vs-visible`）。
+核心设计：**Object 持有并演化自身 UI，`ooc://` 原生寻址 1:1 映射 SPA route**。stone scope 是单页 `visible/index.tsx`、flow scope 是多页 `client/pages`；人类经 `/call_method` 调 Object 标了 `for_ui_access` 的方法交互。与 readable（LLM 侧展示）互为镜像（详见 readable 维度 `readable-vs-visible`）。
 
 ## 我负责的
 
 - **stone client**：每个 Object 在自己的 stone 里有 `stones/<self>/visible/index.tsx`——跨 session 稳定的单页入口（"主页"）。
 - **flow client pages**：`flows/<sid>/objects/<obj>/client/pages/<page>.tsx`——session 内的多页扩展（单入口迁移的命名残留见「名词解释 · client/pages」）。
-- **调用通道**：UI 经 HTTP `/call_method` 调 Object 的 `ui_methods` 字典（人类侧专路，与 LLM 侧 object method 分流）——通道与 tsx 资源是我的，`ui_methods` 实现归 programmable。详见「名词解释 · ui_methods」。
+- **调用通道**：UI 经 HTTP `/call_method` 调 Object `window.methods` 里标了 `for_ui_access: true` 的方法（人类侧专路，与 LLM 侧 object method 分流）——通道与 tsx 资源是我的，方法实现归 programmable。详见「名词解释 · ui_methods」。
 - **client-source-url**：后端权威给出某 Object visible 源码的 `{absPath, fsUrl}`，前端据此 `dynamic import`，不再自拼路径。
 - **client evolution**：业务 session 在自己的 worktree 里改 `*.tsx`（统一 write_file → session worktree 写路径，去 metaprog 后唯一写通道），进 canonical 走 super flow feat-branch PR（`new_feat_branch` → feat 分支编辑 → `create_pr_and_invite_reviewers` finalizer 开 PR → 审批合入 main）；合入后下次客户端加载即生效（重写自己的界面）。
 - **ooc:// 寻址**：Object 知识侧产出稳定 `ooc://client/...` URI，1:1 映射 SPA route。
@@ -26,15 +26,15 @@
 - `app/server/modules/ui/api.client-source-url.ts:58` — stone scope 带 `?sessionId` 时经 `resolveStoneIdentityRef(read)` 路由到 session worktree 的 `visible/index.tsx`；不带则读 main canonical（`:60-62`）。`:68` 解析 `visibleDir(stoneRef)/index.tsx`，`:71/:75` fallback legacy `client/index.tsx`；`:63` `?file=diff` 白名单解析 `visible/diff.tsx`（无 legacy 回退）。
 - `persistable/stone-client.ts` `visibleIndexFile`（`:20`）/ `readVisibleSource`（`:41`）/ `writeVisibleSource`（`:51`）（stone 单页入口读写薄壳）；`flowClientPageFile`（`:30`，pageName `/^[A-Za-z0-9_-]+$/` 防穿越，`:32`） / `readFlowClientPage`（`:58`） / `writeFlowClientPage`（`:66`）。
 - `persistable/stone-object.ts:22` `visibleDir` — canonical visible 目录路径计算。
-- callMethod 路径**不在** ui module，而是 `app/server/modules/stones/service.ts:376` `callMethod`（+ `modules/flows/service.ts` 对端）：`loadObjectWindow(ref)`（`runtime/server-loader.ts`）取 `window.methods[method]`，仅当 `entry.for_ui_access === true` 才执行（`service.ts:391`；2026-06-11 起无独立 `ui_methods`/`loadUiMethods`，HTTP 路径与 LLM 路径共用 `window.methods`、按 `for_ui_access` 过滤）；错误码 `METHOD_LOAD_FAILED`（`:383`）/ `METHOD_NOT_FOUND`（`:393`，未找到或未标 for_ui_access）。HTTP 入口 `POST /api/stones/:id/call_method`（`modules/stones/api.call-method.ts:6`）。
+- callMethod 路径**不在** ui module，而是 `app/server/modules/stones/service.ts:364` `callMethod`（+ `modules/flows/service.ts` 对端）：`loadObjectWindow(ref)`（`runtime/server-loader.ts`）取 `window.methods[method]`，仅当 `entry.for_ui_access === true` 才执行（`service.ts:379`；2026-06-11 起无独立 `ui_methods`/`loadUiMethods`，HTTP 路径与 LLM 路径共用 `window.methods`、按 `for_ui_access` 过滤）；错误码 `METHOD_LOAD_FAILED`（`:371`）/ `METHOD_NOT_FOUND`（`:381`，未找到或未标 for_ui_access）。HTTP 入口 `POST /api/stones/:id/call_method`（`modules/stones/api.call-method.ts:6`）。
 
 前端渲染面（`packages/@ooc/web/src/`）：
-- `domains/clients/ObjectClientRenderer.tsx:195` — 动态 `import(fsUrl)` 加载 Object 自写组件；404 → `StoneFallback`（`:186`）/ `NotProducedYet`（`:99`），加载/渲染错 → `LoadErrorBox`（`:113`）/ ErrorBoundary。`:84` `callMethodFor` 合成 callMethod prop（POST stone/flow call_method）。
+- `domains/clients/ObjectClientRenderer.tsx:198` — 动态 `import(fsUrl)` 加载 Object 自写组件；404 → `StoneFallback`（`:185`）/ `NotProducedYet`（`:102`），加载/渲染错 → `LoadErrorBox`（`:116`）/ ErrorBoundary。`:84` `callMethodFor` 合成 callMethod prop（POST stone/flow call_method）。
 - `domains/clients/client-path.ts:39` `matchClientTarget` / `:80` `normalizeClientFilePath` — 统一识别 canonical+legacy、flat+versioning 四种 visible entry 路径，避免多处 regex 漂移。
 - `shared/ui/oocUri.ts:29` `parseOocUri`（flow 映射 `:46-52`、stone 映射 `:56`、不识别 `:60` 返回 null）/ `:68` `isOocUri` — `ooc://client/...` ↔ SPA route 映射；不识别返回 null（降级纯文本）。
-- `transport/endpoints.ts` `clientSourceUrl` / `stoneCallMethod`（`:67`，`/api/stones/:id/call_method`）/ `flowCallMethod`（`:70`）— 前端调用入口。
+- `transport/endpoints.ts` `clientSourceUrl` / `stoneCallMethod`（`:66`，`/api/stones/:id/call_method`）/ `flowCallMethod`（`:69`）— 前端调用入口。
 - `domains/sessions/components/LoopTimeline.tsx` — loop_timeline Time Machine 视图；其展开某 window 的 diff 由 `window-diff/resolveWindowDiff.tsx` 解析（见 `knowledge/window-diff-resolver.md`）。
-- `app/routing.ts:46-47/93-105` — 路由 `RouteState` 含 `stoneClient`（`/stones/<id>`）/ `flowPage`（`/flows/<sid>/<obj>/pages/<page>`）两种 visible 视图 kind；`toPath` 对二者往返保留 `?sessionId&objectId&threadId` query——切到 stone client 预览 / flow page 后右栏仍续显同一 thread chat，URL 即视图状态的单一记忆。
+- `app/routing.ts:47-48/98-109` — 路由 `RouteState` 含 `stoneClient`（`/stones/<id>`）/ `flowPage`（`/flows/<sid>/<obj>/pages/<page>`）两种 visible 视图 kind；`toPath` 对二者往返保留 `?sessionId&objectId&threadId` query——切到 stone client 预览 / flow page 后右栏仍续显同一 thread chat，URL 即视图状态的单一记忆。
 
 ## 现状
 
@@ -59,7 +59,7 @@
 - **ooc:// URI**：OOC 暴露给 Agent 知识侧的稳定寻址协议，前缀 `ooc://client/`。Agent 只产出 `ooc://client/stones/<self>` 或 `ooc://client/flows/<sid>/<self>/pages/<name>`，由 visible 解析层 1:1 映射成控制面 SPA route——Agent 不写易漂移的物理路径（`web/.../shared/ui/oocUri.ts`）。
 - **visible/index.tsx**：stone scope 的 canonical 单页入口（"主页"），跨 session 稳定。default export 一个 `({window}) => JSX` 组件。后端只解析此文件名（+ legacy `client/index.tsx` 回退），不扫根具名 tsx。
 - **client/pages/<page>.tsx**：flow scope 的多页扩展（session 内）。注意单入口迁移只覆盖了 stone 的 `visible/`，flow 多页仍落 `client/pages/`（命名残留不一致，`persistable/stone-client.ts:25`）。
-- **ui_methods**：Object `executable/index.ts` 平行导出的、给人类侧用的方法字典。经 HTTP `POST /call_method` 调用，与 LLM 侧 object method（program sandbox `self.callMethod`）分流。资源与通道归 visible，实现归 programmable。
+- **ui_methods**（概念名，非独立导出）：`executable/index.ts` 的 `window.methods` 里标了 `for_ui_access: true` 的方法集合——经 HTTP `POST /call_method` 暴露给人类侧，与 LLM 侧路径分流。2026-06-11 起无独立 `ui_methods` 导出，HTTP 与 LLM 共用同一份 `window.methods`，仅按 `for_ui_access` 过滤可见性。资源与通道归 visible，实现归 programmable。
 - **ObjectClientRenderer**：前端动态 `import(fsUrl)` 加载 Object 自写 tsx 组件并渲染的渲染器；404 → `StoneFallback`/`NotProducedYet`，加载/渲染错 → `LoadErrorBox`/ErrorBoundary；合成 `callMethod` prop 注入组件（`web/.../clients/ObjectClientRenderer.tsx`）。
 - **client-source-url**：后端权威 endpoint `GET /api/objects/:scope/:objectId/client-source-url`，返回 visible 源码的 `{absPath, fsUrl}`（`fsUrl=/@fs${absPath}`，靠 Vite `/@fs` 暴露给浏览器）。前端据此 import，不自拼路径。带 `?sessionId` 路由到 session worktree 预览；`?file=diff` 白名单解析 `visible/diff.tsx`。
 - **visible/diff.tsx**：Object 自有的"变化的展示"组件，default export `({previous, current}) => JSX`，对称 `visible/index.tsx`（"当前的展示"）。

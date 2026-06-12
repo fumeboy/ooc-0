@@ -42,7 +42,7 @@ harness 循环不止"发现 bug → 修 bug"；**每一轮都必须把发现固�
 
 ## Steer vs Execute 硬分工
 
-- **人类（Steer）**：维护我的 design 指引顶层 narrative；内循环根本性歧义时拍板；危险动作 human-in-the-loop（全局 pause / 删除 / 不可逆迁移）；决定 ui_methods 暴露面。**Steer 成本极高，任何可下放的 Execute 都应下放到 Agent 侧——不该陷入"再多一行就让 Agent 干"的拖延。**
+- **人类（Steer）**：维护我的 design 指引顶层 narrative；内循环根本性歧义时拍板；危险动作 human-in-the-loop（全局 pause / 删除 / 不可逆迁移）；决定哪些 method 标 `for_ui_access` 暴露给人类/client。**Steer 成本极高，任何可下放的 Execute 都应下放到 Agent 侧——不该陷入"再多一行就让 Agent 干"的拖延。**
 - **Agent（Execute）**：一切具体动作（open / refine / submit / write_file / 跑测试 / 改代码）；把内循环结果回报；在自己 stone 的 method 库与 knowledge 沉淀。**AgentOfX 不擅自动哲学层——不改对象树顶层 design narrative（我的 self.md / knowledge），有歧义经 super flow 抛给我。**
 
 ## 当前运行时：Claude Code 暂行（不是 dogfooding 终态）

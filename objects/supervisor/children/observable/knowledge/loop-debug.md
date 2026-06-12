@@ -18,10 +18,10 @@ observable 在 thinkloop 周围加观测点，把每一轮 LLM 调用的输入/�
 
 ## loop_NNNN 三类文件（默认关闭，enableDebug 开启）
 
-`packages/@ooc/core/observable/index.ts:126-221` 的 `beginLlmLoop` / `finishLlmLoop` 分配 loopIndex（4 位 0 padding）、计时、字节统计，开启后写 `<threadDir>/debug/`。落点路径由 `packages/@ooc/core/persistable/debug-file.ts:157` 的 `debugDir(ref)` = `threadDir(ref)/debug` 解析，`threadDir`（`persistable/common.ts:72`）= `objectDir/threads/<tid>`、`objectDir`（同文件:61）= `flows/<sid>/objects/<nestedObjectPath>`——即运行时统一落 `flows/<sid>/objects/<id>/threads/<tid>/debug/`，与 stone identity 同落 `objects/<id>/`。三类文件：
+`packages/@ooc/core/observable/index.ts:126-221` 的 `beginLlmLoop` / `finishLlmLoop` 分配 loopIndex（4 位 0 padding）、计时、字节统计，开启后写 `<threadDir>/debug/`。落点路径由 `packages/@ooc/core/persistable/debug-file.ts:154` 的 `debugDir(ref)` = `threadDir(ref)/debug` 解析，`threadDir`（`persistable/common.ts:72`）= `objectDir/threads/<tid>`、`objectDir`（同文件:61）= `flows/<sid>/objects/<nestedObjectPath>`——即运行时统一落 `flows/<sid>/objects/<id>/threads/<tid>/debug/`，与 stone identity 同落 `objects/<id>/`。三类文件：
 - `loop_NNNN.input.json`：本轮 inputItems + contextSnapshot。
 - `loop_NNNN.output.json`：normalized outputItems + provider/model。
-- `loop_NNNN.meta.json`：provider / model / latencyMs / messageCount / toolCount / toolCallCount / contextBytes / status / error / **windowsSnapshot**（每条 entry `{id, type, contentHash, parentWindowId?, status?, compressLevel?, fileDiff?}`）。
+- `loop_NNNN.meta.json`：provider / model / latencyMs / messageCount / toolCount / toolCallCount / contextBytes / status / error / **windowsSnapshot**（每条 entry `{id, class, contentHash, parentWindowId?, status?, compressLevel?, fileDiff?}`）。
 
 loopIndex 由 `packages/@ooc/core/runtime/observable-store.ts:94-110` 的 `loopKey` + `allocateLoopIndex` 分配。
 
@@ -37,4 +37,4 @@ loopIndex 由 `packages/@ooc/core/runtime/observable-store.ts:94-110` 的 `loopK
 
 ## windowsSnapshot（window content hash）
 
-`packages/@ooc/core/observable/window-hash.ts` 的 `buildWindowsSnapshot`：type-agnostic 算每个 ContextWindow 的 contentHash——`Bun.hash(JSON.stringify(stripVolatile(window), sortedKeys)).toString(36)`。sorted key 防 V8 字段顺序漂移；剥 volatile（compressLevel 默认值等）与 persist 同款规则。每条 entry 形如 `{id, type, contentHash, parentWindowId?, status?, compressLevel?, fileDiff?}`——`fileDiff?` 仅 file_window 计算，含 path + previousContent/currentContent，是前端 CodeMirror Merge 双侧渲染的来源（previousContent 由 finishLlmLoop 从上一 loop meta 拿，二进制 / >200KB 时两侧置 ""）。前端拿 loop N + loop N-1 的 windowsSnapshot 算 added/changed/removed/unchanged 四态 diff（渲染属 visible，observable 只产数据）。
+`packages/@ooc/core/observable/window-hash.ts` 的 `buildWindowsSnapshot`：type-agnostic 算每个 ContextWindow 的 contentHash——`Bun.hash(JSON.stringify(stripVolatile(window), sortedKeys)).toString(36)`。sorted key 防 V8 字段顺序漂移；剥 volatile（compressLevel 默认值等）与 persist 同款规则。每条 entry 形如 `{id, class, contentHash, parentWindowId?, status?, compressLevel?, fileDiff?}`——`fileDiff?` 仅 file_window 计算，含 path + previousContent/currentContent，是前端 CodeMirror Merge 双侧渲染的来源（previousContent 由 finishLlmLoop 从上一 loop meta 拿，二进制 / >200KB 时两侧置 ""）。前端拿 loop N + loop N-1 的 windowsSnapshot 算 added/changed/removed/unchanged 四态 diff（渲染属 visible，observable 只产数据）。

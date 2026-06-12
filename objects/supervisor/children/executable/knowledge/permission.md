@@ -25,7 +25,7 @@ activates_on: {"object::root": "show_description"}
 
 ## thinkloop 接入点
 
-think 主循环在分派 tool call 前对每个 pending call 调 `decidePermission(thread, call)`（`packages/@ooc/core/thinkable/thinkloop.ts:1`、:272-): allow→继续 dispatch；ask→落 permission_ask + paused + 中止本轮（复用现有 pause 的「安全暂停点」：assistant output 已记录、tool call 未执行）；deny→落 permission_denied + 合成 function_call_output + 跳过。approve 后下一轮重走该 tool call（这次 decider 返回 allow），reject 走 deny 路径。
+think 主循环在分派 tool call 前对每个 pending call 调 `decidePermission(thread, call)`（`packages/@ooc/core/thinkable/thinkloop.ts:251`）：allow→继续 dispatch；ask→落 permission_ask + paused + 中止本轮（复用现有 pause 的「安全暂停点」：assistant output 已记录、tool call 未执行）；deny→落 permission_denied + 合成 function_call_output + 跳过。approve 后下一轮重走该 tool call（这次 decider 返回 allow），reject 走 deny 路径。
 
 ## 不变量
 

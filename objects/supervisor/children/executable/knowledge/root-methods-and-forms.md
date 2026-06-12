@@ -6,7 +6,7 @@ activates_on: {"object::root": "show_description"}
 
 ## root 上注册的全局 object method
 
-root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins/root/executable/index.ts:36`，每条一个 `method.*.ts`，经 `registerExecutable("root", { methods })` 注入，`:101`），共 15 个（沉淀方法 `new_feat_branch` / `create_pr_and_invite_reviewers` **已移出 root** → 挂在 reflect_request window，见下）：
+root 注册一组顶层 object method（`ROOT_METHODS`，`packages/@ooc/builtins/root/executable/index.ts:34`，经 `registerExecutable("root", { methods })` 注入，`:99`），共 15 个（沉淀方法 `new_feat_branch` / `create_pr_and_invite_reviewers` **已移出 root** → 挂在 reflect_request window，见下）：
 
 - **do** — 派生子 thread，创建 do_object。
 - **talk** — 与 user 或其他 Object 对话，创建 talk_object。

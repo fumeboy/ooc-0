@@ -21,7 +21,7 @@ activates_on: {"object::root": "show_description"}
 
 ## 2. 系统活动快照（/api/runtime/activity）
 
-`packages/@ooc/core/app/server/modules/runtime/service.ts:178-186` 的 `getActivity` 一次读出服务端此刻全貌：running/queued job + 每个 running 的 `ageMs` + `runningCount` + 主导日志模式（`logPatterns`）。端点 `packages/@ooc/core/app/server/modules/runtime/api.activity.ts`，response schema 显式校验，route-audit.e2e 验证真路由已注册。
+`packages/@ooc/core/app/server/modules/runtime/service.ts:324` 的 `getActivity` 一次读出服务端此刻全貌：running/queued job + 每个 running 的 `ageMs` + `runningCount` + 主导日志模式（`logPatterns`）。端点 `packages/@ooc/core/app/server/modules/runtime/api.activity.ts`，response schema 显式校验，route-audit.e2e 验证真路由已注册。
 
 ## 3. harness 超时快照
 

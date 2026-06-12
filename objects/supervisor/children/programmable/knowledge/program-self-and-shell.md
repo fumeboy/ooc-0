@@ -15,14 +15,14 @@ program ts/js sandbox 与 custom method dispatcher 路径执行用户代码时�
 
 ## 两条使用路径
 
-`runOneExec`（`packages/@ooc/builtins/program/executable/runtime.ts:50`）只路由 shell / ts / js 三种语言模式（旧的 callMethod / function 子模式已退役，见 :10-13）：
+`runOneExec`（`packages/@ooc/builtins/program/executable/runtime.ts:54`）只路由 shell / ts / js 三种语言模式（旧的 callMethod / function 子模式已退役，见 :10-13）：
 
-- **ts/js sandbox**：经 `createProgramSelf`(:87) 注入 self 到用户代码（无 persistence 时 self 为 null）；`executeUserCode` 写 tmp `.mjs` → in-process `import(...?t=id)` 执行，console 进 stdout、`_result_` 进 returnValue、异常解析行号。脚本内可 `await self.callMethod(...)` 编排多步调用。
+- **ts/js sandbox**：经 `createProgramSelf`(:91) 注入 self 到用户代码（无 persistence 时 self 为 null）；`executeUserCode` 写 tmp `.mjs` → in-process `import(...?t=id)` 执行，console 进 stdout、`_result_` 进 returnValue、异常解析行号。脚本内可 `await self.callMethod(...)` 编排多步调用。
 - **shell**：经 `buildProgramShellEnv`（runtime.ts:69，传 `thread.persistence`）注入 env。
 
 ## program shell `$OOC_SELF_DIR`（worktree 统一模型）
 
-`buildProgramShellEnv(session: FlowObjectRef | undefined)`（`packages/@ooc/builtins/program/executable/self-env.ts:19`）目前只透出 `OOC_SELF_DIR`——签名只收 session 工作区引用，不收 thread。它经 `resolveStoneIdentityDir(ref, "write")`(:26) 解析（不是硬拼旧扁平路径）：
+`buildProgramShellEnv(session: FlowObjectRef | undefined)`（`packages/@ooc/builtins/program/executable/self-env.ts:19`）目前只透出 `OOC_SELF_DIR`——签名只收 session 工作区引用，不收 thread。它经 `resolveStoneIdentityDir(ref, "write")`(:26，不是硬拼旧扁平路径）解析：
 
 - **business session** → 该 session worktree 的 object 目录 `flows/<sid>/objects/<id>/`（main HEAD 完整副本，裸读裸写都看得到完整 identity，改动落 worktree 不污染 main，经 super flow `create_pr_and_invite_reviewers` 合入才永久）。
 - **super / 控制面** → main canonical。

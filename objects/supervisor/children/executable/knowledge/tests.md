@@ -12,8 +12,8 @@ activates_on: {"object::root": "show_description"}
 
 判据（结构验证，无 LLM）：
 
-- **TC-EXEC-01**：Object 自定义的 `ui_methods` 在 context window 上执行并返回结果——经 `/api/stones/{id}/call_method` 调 `add(x,y)` 返回 `{ sum: 5 }`（method 调用改变/返回世界状态）。
-- **TC-EXEC-02**：Object 定义的 `window.methods`（LLM 路径方法）经 `loadObjectWindow` loader 可加载，且 `paths` 还原正确。
+- **TC-EXEC-01**：Object 自定义的 `for_ui_access` 方法经 HTTP `/api/stones/{id}/call_method` 执行并 `data` 通道返回结果——调 `add(x,y)` 返回 `{ sum: 5 }`。
+- **TC-EXEC-02**：Object 定义的 `window.methods`（LLM 路径方法）经 `loadObjectWindow` loader 可加载。
 
 代码：`packages/@ooc/storybook/stories/executable.story.ts`（`runControlPlane`），收为 `bun:test` 的入口在 `stories/_control-plane.test.ts`。
 
@@ -39,7 +39,7 @@ rubric（收编 `playbooks/executable.playbook.md` + e2e S1/S2，**原样保留*
 - **L3-METHOD-COLLISION** —— 同一 type 上 object method 与 window method 同名 → 注册期 fail-loud（`assertNoMethodNameCollision`）。属维度边界用例：它锚的是「object method（我）与 window method（readable）名全局唯一」的不变量，从我这侧（先 `registerExecutable` 再 `registerReadable` 触发）验证。
 - **L3-CONSTRUCTOR-LOOKUP** —— `kind=constructor` 的 method 经 `lookupConstructor` 命中（root 命令委托到 Object constructor）。
 - **L3-PARENTCLASS-CHAIN** —— 未注册 type 经 `parentClass` 链回退解析 method（class/executable：缺省继承 root）。
-- **L3-UI-METHOD-CALL** —— Object 的 `ui_methods` 经 HTTP `/call_method` 执行并返回结果。
+- **L3-UI-METHOD-CALL** —— Object 的 `for_ui_access` 方法经 HTTP `/call_method` 执行并 `data` 通道返回结果。
 - **L3-WINDOW-COMMAND-LOAD** —— Object 的 `window.methods`（LLM 路径命令）经 `loadObjectWindow` 可加载。
 
 ## L3 中归 readable 的条目（不归我）

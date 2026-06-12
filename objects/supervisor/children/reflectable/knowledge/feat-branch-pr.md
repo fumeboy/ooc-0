@@ -29,13 +29,13 @@ activates_on:
 
 ## 审批 + 合入闸
 
-每个 reviewer 的 super-session pr-review thread 收到 `pr_window`（`packages/@ooc/core/executable/windows/pr/delivery.ts:81` `deliverPrWindowToReviewers`，threadId=`:39` `prReviewThreadId`）+ 激活 `packages/@ooc/builtins/root/knowledge/pr-review.md` 协议，经 window 的 `approve`/`reject`/`request_changes` method（`executable/windows/pr/index.ts`）行使评审。
+每个 reviewer 的 super-session pr-review thread 收到 `pr_window`（`packages/@ooc/core/reflectable/pr/delivery.ts:81` `deliverPrWindowToReviewers`，threadId=`:39` `prReviewThreadId`）+ 激活 `packages/@ooc/builtins/root/knowledge/pr-review.md` 协议，经 window 的 `approve`/`reject`/`request_changes` method（`reflectable/pr/index.ts`）行使评审。
 
-聚合 `packages/@ooc/core/persistable/pr-issue.ts:119` `aggregatePrApproval`：全 approve→ready-to-merge / 任一 reject→rejected（一票否决）/ 否则 changes-requested|pending。`.world.json prAutoMerge`（`world-config.ts:84`，缺省 `DEFAULT_PR_AUTO_MERGE=false`@`:117`=人工）：true 立即 `resolvePrIssue(merge)`；false 留 open 待人工 `POST /pr-issues/:id/resolve {merge}`。单一编排点 `executable/windows/pr/approval-flow.ts:103` `applyPrApproval`（HTTP `approvePrIssue` 与 pr_window method 同源委托它）。合入复用 `stone-versioning.ts:291` `resolvePrIssue`。
+聚合 `packages/@ooc/core/persistable/pr-issue.ts:119` `aggregatePrApproval`：全 approve→ready-to-merge / 任一 reject→rejected（一票否决）/ 否则 changes-requested|pending。`.world.json prAutoMerge`（`world-config.ts:84`，缺省 `DEFAULT_PR_AUTO_MERGE=false`@`:117`=人工）：true 立即 `resolvePrIssue(merge)`；false 留 open 待人工 `POST /pr-issues/:id/resolve {merge}`。单一编排点 `reflectable/pr/approval-flow.ts:103` `applyPrApproval`（HTTP `approvePrIssue` 与 pr_window method 同源委托它）。合入复用 `stone-versioning.ts:291` `resolvePrIssue`。
 
 ## 失败回修 loop
 
-reject / request-changes / 合入失败 → `executable/windows/pr/delivery.ts:166` `routePrRepairMessage` 按 PR record `authorThreadId` 找 super(foo) thread → inbox 追 verdict+反馈 → 翻 running（找不到 fail-loud `NO_AUTHOR_THREAD`）。super(foo) 收 message 后 `new_feat_branch(同 intent)` 幂等重绑续修：request-changes 时旧 worktree+编辑仍在可续改，reject 后旧 worktree 已归档、从 main 重派重做。re-edit → 再 `create_pr_and_invite_reviewers` 重开 PR。
+reject / request-changes / 合入失败 → `reflectable/pr/delivery.ts:166` `routePrRepairMessage` 按 PR record `authorThreadId` 找 super(foo) thread → inbox 追 verdict+反馈 → 翻 running（找不到 fail-loud `NO_AUTHOR_THREAD`）。super(foo) 收 message 后 `new_feat_branch(同 intent)` 幂等重绑续修：request-changes 时旧 worktree+编辑仍在可续改，reject 后旧 worktree 已归档、从 main 重派重做。re-edit → 再 `create_pr_and_invite_reviewers` 重开 PR。
 
 ## 边界
 

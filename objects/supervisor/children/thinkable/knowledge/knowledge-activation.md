@@ -59,7 +59,7 @@ knowledge 激活实际是二维的：
 
 ## 出厂身份作废
 
-每轮注入框架序言「你是谁：身份只由 self.md 定义」（`knowledge/basic-knowledge.ts:18`）——防止 LLM 即兴演角色，身份唯一来源是 self.md。
+每轮注入框架序言「你是谁：身份只由 self.md 定义」（`packages/@ooc/builtins/root/knowledge/interaction-core.md`，经 protocol processor 按 `object::root` always-on 激活）——防止 LLM 即兴演角色，身份唯一来源是 self.md。
 
 ## 未决：死知识
 

@@ -27,16 +27,16 @@ Object 不知道 context 之外的任何事——内存/文件系统里再多状
 
 ## 每轮合成进 LLM 输入的几块（非 ThreadContext 直接字段）
 
-入口 `buildInputItems()`（`context/index.ts:337`）：
+入口 `buildInputItems()`（`context/index.ts:358`）：
 
 1. **稳定窗口快照**：`createDefaultPipeline().run(thread)` 产出 snapshot，`XmlRenderer` 渲成一条 system message；其中 knowledge / protocol / peer 等 derived 窗口由 pipeline 内的 processor 合成（含已 reconcile 回 context 的 peer 窗口）。
-2. **self / instructions**：`loadSelfInstructions()`（`context/index.ts:434`）经 `resolveStoneIdentityRef(..,"read")` 解析 stone/worktree 路径读 `self.md`，注入 `LlmGenerateParams.instructions`。
-3. **[ooc:paths]**：`buildPathsItem()`（`context/index.ts:400`）合成环境路径 system message（world_root / object_id / object_stone_dir / object_flow_dir / session_id / current_thread_id / current_thread_dir）；business session 命中已建 worktree 时 object_stone_dir 显示 `flows/<sid>/objects/<id>/`，否则 main。
+2. **self / instructions**：`loadSelfInstructions()`（`context/index.ts:464`）经 `resolveStoneIdentityRef(..,"read")` 解析 stone/worktree 路径读 `self.md`，注入 `LlmGenerateParams.instructions`。
+3. **[ooc:paths]**：`buildPathsItem()`（`context/index.ts:430`）合成环境路径 system message（world_root / object_id / object_stone_dir / object_flow_dir / session_id / current_thread_id / current_thread_dir）；business session 命中已建 worktree 时 object_stone_dir 显示 `flows/<sid>/objects/<id>/`，否则 main。
 4. **历史事件流**：`thread.events` 经 `processEventToItems` 展开为 transcript input items（`_foldedBy` 折叠的事件跳过）。
 
 ## context_windows 的六个来源（合成 ≠ 持久化）
 
-`thread.contextWindows` 只是持久化那一份；每轮渲染前 **ContextPipeline processor 链**（`createDefaultPipeline().run(thread)`，`context/pipeline.ts:97`）把它和多组**合成窗口**拼成最终 window 列表（旧的单函数入口 `collectExecutableKnowledgeEntries` 已于 Phase F 2026-06-04 拆解进 pipeline，各来源现由独立 processor / 模块产出：protocol.ts / activator-windows.ts / skill-index.ts / window-enrichment.ts / synthesizer.ts 的 derivePeerObjectWindows）。六大来源：
+`thread.contextWindows` 只是持久化那一份；每轮渲染前 **ContextPipeline processor 链**（`createDefaultPipeline().run(thread)`，`context/pipeline.ts:69`）把它和多组**合成窗口**拼成最终 window 列表（旧的单函数入口 `collectExecutableKnowledgeEntries` 已于 Phase F 2026-06-04 拆解进 pipeline，各来源现由独立 processor / 模块产出：protocol.ts / activator-windows.ts / skill-index.ts / window-enrichment.ts / object-windows.ts 的 derivePeerObjectWindows）。六大来源：
 
 1. **持久化窗口**（thread-context.json）：LLM/user 主动 open 的 root/talk/do/todo/plan/program/file/explicit-knowledge/search/method_exec/自定义 object。
 2. **protocol knowledge**（source=`protocol`）：每轮按条件注入的框架常量窗口——`internal/basic`（机制说明）、`internal/root/basic`（root method 清单）、`internal/windows/<type>/basic`（该 type 出现时）、`internal/reflectable/*`（super session）、creator-reply（含 isCreatorWindow do/talk 时）、end-reflection-reminder（业务 thread 开 end form 时）。
@@ -51,9 +51,9 @@ Object 不知道 context 之外的任何事——内存/文件系统里再多状
 
 | 位置 | 条目 | 来源 | 角色 |
 |------|------|------|------|
-| 1 | `<context>...</context>` XML（一条 system message） | pipeline snapshot → `XmlRenderer.render`（`renderers/xml.ts:376`） | 稳定状态层：我现在拥有的全部世界快照 |
-| 2 | `[ooc:paths]` system message | `buildPathsItem`（`context/index.ts:400`） | 环境路径锚点 |
-| 3+ | transcript（历史 ProcessEvent） | `processEventToItems`（`context/index.ts:68`） | 过程事件层：这个 thread 经历过什么 |
+| 1 | `<context>...</context>` XML（一条 system message） | pipeline snapshot → `XmlRenderer.render`（`renderers/xml.ts:369`） | 稳定状态层：我现在拥有的全部世界快照 |
+| 2 | `[ooc:paths]` system message | `buildPathsItem`（`context/index.ts:430`） | 环境路径锚点 |
+| 3+ | transcript（历史 ProcessEvent） | `processEventToItems`（`context/index.ts:67`） | 过程事件层：这个 thread 经历过什么 |
 
 `instructions`（self.md 正文）走 LLM provider 的专门 `instructions` 字段（权重高于 system message），不进 `input` 数组。
 
@@ -85,16 +85,16 @@ Object 不知道 context 之外的任何事——内存/文件系统里再多状
   <context_overflow item_count="N">           <!-- BudgetManager 排除掉的窗口在此留摘要行（id/title/relevance/reason），silent-swallow ban：被裁的也要可见 -->
     <item id title relevance reason/>...
   </context_overflow>
-</thread></context>
+</context>
 ```
 
-window 关键属性：`id`（稳定唯一，root 固定 `"root"`）/ `class`/ `status`（open/running/active/archived/done/closed/executing/success/failed）/ 可选 `sharing`·`read_only`（跨 thread 共享态：`ref` 只读引用 / `lent_out` 已借出）。`<methods>` 把 object method（控 object）与 window method（控展示）合并呈现——exec 入口相同，LLM 不需区分（`renderers/xml.ts:79`）；未注册 type fail-soft 无 methods 节点。
+window 关键属性：`id`（稳定唯一，root 固定 `"root"`）/ `class`/ `status`（open/running/active/archived/done/closed/executing/success/failed）/ 可选 `sharing`·`read_only`（跨 thread 共享态：`ref` 只读引用 / `lent_out` 已借出）。`<methods>` 把 object method（控 object）与 window method（控展示）合并呈现——exec 入口相同，LLM 不需区分（`renderers/xml.ts:80`）；未注册 type fail-soft 无 methods 节点。
 
 ## 单 window 内容的渲染优先级链
 
 每个 `<window>` 正文怎么来，先看 compressLevel 再看 readable：
 
-- `compressLevel ≥ 1`：优先 `def.compressView(ctx, level)`；缺则输出 `<compressed level="N"/>` 占位，并自动追加 `expand` method（`renderers/xml.ts:105`）。
+- `compressLevel ≥ 1`：优先 `def.compressView(ctx, level)`；缺则输出 `<compressed level="N"/>` 占位，并自动追加 `expand` method（`renderers/xml.ts:117`）。
 - `compressLevel = 0`：走 readable 解析链。对自定义 Object type 按下表优先级找；自身 type miss 后沿 parentClass 继承链逐个 ancestor 回退（P6.§7）：
 
 | 优先级 | 来源 |
@@ -108,7 +108,7 @@ window 关键属性：`id`（稳定唯一，root 固定 `"root"`）/ `class`/ `s
 
 builtin type（root/talk/do/todo/file/knowledge/program/search/plan/skill_index/method_exec/feishu_*）走 `registry.def.readable`（renderer 只读这一个字段，`thinkable/context/renderers/xml.ts:141`；talk/do/relation/feishu 的 XML 渲染函数也挂在 `readable` 上，旧 `renderXml` 字段已并入），不读 stone。
 
-## ProcessEvent → transcript item 映射（`context/index.ts:68 processEventToItems`）
+## ProcessEvent → transcript item 映射（`context/index.ts:67 processEventToItems`）
 
 过程事件层不是自由文本，每条 ProcessEvent 按 kind 映射成确定的 Responses-first item：
 
@@ -128,18 +128,17 @@ builtin type（root/talk/do/todo/file/knowledge/program/search/plan/skill_index/
 | `llm_interaction.call_started` | `[]` 不进 transcript（仅 crash recovery 磁盘锚点） |
 | `llm_interaction.tool_use`（旧格式） | `[]` 已被 function_call 取代 |
 
-带 `_foldedBy` 的 event 整条跳过（位置由对应 `events_summary` 占位，`context/index.ts:364`）。
+带 `_foldedBy` 的 event 整条跳过（位置由对应 `events_summary` 占位，`context/index.ts:385`）。
 
-## [ooc:paths] 字段（`buildPathsItem`，`context/index.ts:388`）
+## [ooc:paths] 字段（`buildPathsItem`，`context/index.ts:430`）
 
 每轮注入，给元编程动作（写 stone / server method / knowledge）落到正确路径：`world_root`（所有子树父目录）/ `object_id` / `object_stone_dir`（身份·知识·server·client 长期存放；business session 命中已建 worktree 时显示 `flows/<sid>/objects/<id>/`，否则 main）/ `object_flow_dir`（本 session 临时产出）/ `session_id` / `current_thread_id` / `current_thread_dir`（thread.json·debug·loop_*.json 所在）。
 
 ## 渲染管线与预算
 
-- `createDefaultPipeline()`（`context/pipeline.ts:97`）串接 activator / protocol / peer / knowledge 等 processor 产出 derived 窗口。
-- 预算 `loadBudgetThresholds()`（`context/budget.ts:47`）只保留软/硬阈值；**自动衰减 / emergency guard 已退役（P6, 2026-06-03 删除 applyNaturalDecay/applyEmergencyGuard/estimateThreadTokens）**。新模型是 **BudgetManager**（`context/budget.ts:8`）：`score(window)` 由 provenance/priority/recency/signal 算 0.0–1.0 相关度，`allocate(windows, totalBudget)` 按相关度排序，在 token 预算内返回 `{visible, overflow}`——预算靠**纳入/排除**实施，不再靠自动降级。compressLevel 仍被 compress/expand 命令与渲染器消费，但级别不再被系统自动推进。
+- `createDefaultPipeline()`（`context/pipeline.ts:69`）串接 activator / protocol / peer / knowledge 等 processor 产出 derived 窗口。
+- 预算 `loadBudgetThresholds()`（`context/budget.ts:58`）只保留软/硬阈值；**自动衰减 / emergency guard 已退役（P6, 2026-06-03 删除 applyNaturalDecay/applyEmergencyGuard/estimateThreadTokens）**。新模型是 **BudgetManager**（`context/budget.ts:110`）：`score(window)` 由 provenance/priority/recency/signal 算 0.0–1.0 相关度，`allocate(windows, totalBudget)` 按相关度排序，在 token 预算内返回 `{visible, overflow}`——预算靠**纳入/排除**实施，不再靠自动降级。compressLevel 仍被 compress/expand 命令与渲染器消费，但级别不再被系统自动推进。
   - 设计取舍：旧的「自然衰减按轮数计数 + emergency guard 强制降级」是时间驱动的隐式压缩，行为难预测、易和 LLM 显式 compress 打架；改成相关度排序的显式纳入更可解释、和「LLM 自己决定压什么」不冲突。
-  - 注：源文档 `object-context-composition.md §6` 仍按旧 decay/guard 模型描述——已 drift，信代码与本节。
 
 ## 关键不变量
 
@@ -150,4 +149,4 @@ builtin type（root/talk/do/todo/file/knowledge/program/search/plan/skill_index/
 
 ## 当前债
 
-derived 窗口分两类回写：peer-style 窗口（id=type=objectId、非 builtin）每轮经 `reconcilePeerWindowsIntoContext`（`context/index.ts:350`，idempotent）写回 `thread.contextWindows`，保证 exec()→WindowManager 能 requireParent 命中；但 protocol/activator/skill/form knowledge 等其余 derived 窗口仍不写回，只靠 transient `_renderedWindows` 兜底观测（`context/index.ts:360`，让 finishLlmLoop 的 windowsSnapshot 反映 LLM 实际看到的集合）。后者使 mock 路径与真实渲染存在两套读取分支，长期应收敛为一套。
+derived 窗口分两类回写：peer-style 窗口（id=type=objectId、非 builtin）每轮经 `reconcilePeerWindowsIntoContext`（`context/index.ts:302`，idempotent）写回 `thread.contextWindows`，保证 exec()→WindowManager 能 requireParent 命中；但 protocol/activator/skill/form knowledge 等其余 derived 窗口仍不写回，只靠 transient `_renderedWindows` 兜底观测（`context/index.ts:381`，让 finishLlmLoop 的 windowsSnapshot 反映 LLM 实际看到的集合）。后者使 mock 路径与真实渲染存在两套读取分支，长期应收敛为一套。
