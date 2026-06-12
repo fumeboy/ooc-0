@@ -68,6 +68,104 @@ activator 知识按 `activates_on` intent 激活（seed + sediment 双源，上�
 - **结构必需窗口 pin**。creator window、当前操作的 form 等「结构上不可缺」的窗口给保护位，不因 score 波动被挤进 overflow。
 - **被裁的仍可见**（silent-swallow ban 保留）：overflow 的窗口在 `<context_overflow>` 留摘要行。
 
+## 理想 context 的 XML 形状
+
+把六层落成具体骨架（与 [[context-construction]] 的现状 XML 对照看）：
+
+```xml
+<context>
+  <self object_id="agent_of_executable"/>   <!-- 仅对外标记；身份正文走 instructions，不另起空 self window -->
+  <thread id="t_exec_main" status="running">
+    <creator_thread_id>t_supervisor</creator_thread_id>
+
+    <!-- ① 固定协议层：仅无条件必需者常驻。forms/self-evolution 等情境协议不在此，下沉到 ④ 按 intent 激活 -->
+    <protocol name="interaction-core">你是谁 / 私有思考空间 / exec·close·wait 三原语 / 工具调用规则……</protocol>
+
+    <!-- ② 类型声明层：本轮出现的每个 type 的方法契约声明一次；exec 调用约定也只说一次 -->
+    <window_types hint='调用：exec(window_id, method, args={...})。每个 type 的方法对其全部实例可用'>
+      <type name="root">
+        <method name="do">派生子 thread 执行一段工作（可 wait 阻塞等回写）
+          <arg name="msg" type="string" required="true">写入子线程的初始消息</arg>
+        </method>
+        <method name="talk">开一个对外持续会话
+          <arg name="target" type="string" required="true">目标 objectId（"user" 也是）</arg>
+          <arg name="title" type="string" required="true">会话主题</arg>
+        </method>
+        <method name="program">执行 shell/ts/js
+          <arg name="language" type="string" required="true" enum="shell|ts|js">语言</arg>
+          <arg name="code" type="string" required="true">代码</arg>
+        </method>
+        <method name="plan">拆任务为 steps（传 plan 文本或 steps 列表）</method>
+        <!-- …其余 root method 同样声明一次… -->
+      </type>
+      <type name="talk">
+        <method name="say">向对端发消息（可 wait 等回复）
+          <arg name="msg" type="string" required="true">消息正文</arg>
+        </method>
+        <method name="wait">本线程进 waiting 等对端回写</method>
+        <method name="close">关闭本 talk_window（creator 通道不可关）</method>
+      </type>
+      <type name="do">
+        <method name="continue">向子线程追加消息（可 wait 阻塞）
+          <arg name="msg" type="string" required="true">追加内容</arg>
+        </method>
+        <method name="wait">…</method>
+        <method name="close">归档本 do_window</method>
+      </type>
+      <type name="method_exec">
+        <method name="refine"><arg name="args" type="object" required="true">补充/修正参数</arg></method>
+        <method name="submit">参数齐后提交执行</method>
+      </type>
+      <type name="knowledge">         <!-- 8 个 knowledge 实例共享这一份声明，菜单不再逐实例复制 -->
+        <method name="close">关闭本知识窗</method>
+        <method name="set_viewport">调整渲染区段</method>
+      </type>
+      <!-- plan / todo 同理各声明一次 -->
+    </window_types>
+
+    <!-- ③ 实例层：每个 window 只带 id + type 引用 + 实例独有状态；无 methods、无空壳 -->
+    <context_windows>
+      <window id="w_do_creator" type="do" status="active" is_creator="true">
+        <unavailable methods="close"/>   <!-- 方法集差异在实例上标注，既不抹掉差异也不为它另起一个 type -->
+        <transcript>…与 caller 的恒在通道最近若干条…</transcript>
+      </window>
+      <window id="w_do_child" type="do" status="running">
+        <transcript>…子任务回写…</transcript>
+      </window>
+      <window id="w_talk_peerb" type="talk" status="open">
+        <target>peer_b</target>
+        <transcript>…</transcript>
+      </window>
+      <window id="w_plan_1" type="plan"><steps>…steps + 各自状态…</steps></window>
+      <window id="w_todo_1" type="todo"><content>…</content><activates_on>…</activates_on></window>
+      <window id="f_program_1" type="method_exec" parent="root">
+        <method>program</method>
+        <fill_state>language=shell ✓ / code=missing</fill_state>
+        <unknown_args ignored="lang">未知参数 `lang` 已忽略，本 method 接受 language(必填), code(必填)</unknown_args>
+      </window>
+      <!-- ④ 知识层：activator 按 intent 激活。forms 因当前有 method_exec form 而激活；各实例只带 path + 正文，零菜单重复 -->
+      <window id="k_forms" type="knowledge"><path>internal/forms</path>…form 推进协议正文…</window>
+    </context_windows>
+
+    <inbox>…未被任何 talk/do 收纳的兜底消息…</inbox>
+  </thread>
+
+  <!-- ⑥ 预算：被裁掉的仍可见（silent-swallow ban）。self-evolution 未激活、旧搜索低相关，压无可压后入此 -->
+  <context_overflow item_count="2">
+    <item id="k_self_evolution" title="self-evolution" relevance="0.31" reason="budget_overflow"/>
+    <item id="w_search_old" title="旧搜索结果" relevance="0.28" reason="compressed_then_overflow"/>
+  </context_overflow>
+</context>
+```
+
+这份骨架相对现状的关键差异：
+
+- **方法菜单从「每实例一份」变「每 type 一份」**：8 个 knowledge 实例共用 `<type name="knowledge">` 一份声明，现状那 28% 的逐 window 重复拷贝消失；exec hint 从 14 处收敛到 `<window_types>` 上的一处。
+- **实例只承载会变的东西**：do/talk 带 transcript、plan 带 steps、form 带 fill_state——「换一个同 type 实例会变」的才进实例层。
+- **方法集差异不靠复制表达**：creator do 的 `close` 不可用，用实例上的 `<unavailable>` 标注，而非为它克隆一份 type 声明（守住「按真实方法集分组」的约束）。
+- **情境协议下沉**：`forms` 因有 form 在场而作为 knowledge 激活；`self-evolution` 未命中 super flow → 进 overflow 而非常驻。
+- **无空壳**：身份走 instructions，不再渲染 140 字符的空 self window；空 viewport/target 不渲染。
+
 ## 一句话规范
 
 **固定协议最小常驻 → 类型契约声明一次 → 实例只带自己独有 → 知识按 intent 激活、一个事实一个家 → 预算锚真实渲染成本、降级先于丢弃。** 落到量化目标：真信息占比从 ~26% 拉高，方法菜单从 ~50%（含 28% 重复）降到「每 type 一份」，整体可压缩约 1/4–1/3 而不损失任何 LLM 决策所需信息。
