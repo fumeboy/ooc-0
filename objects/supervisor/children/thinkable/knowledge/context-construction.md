@@ -94,6 +94,14 @@ Object 不知道 context 之外的任何事——内存/文件系统里再多状
 
 window 关键属性：`id`（稳定唯一，root 固定 `"root"`）/ `class`/ `status`（open/running/active/archived/done/closed/executing/success/failed）/ 可选 `sharing`·`read_only`（跨 thread 共享态：`ref` 只读引用 / `lent_out` 已借出）。**方法契约不随实例渲染**：每个 window class 的方法在 `<window_classes>` 的 `<class name="...">` 里**声明一次**（`renderWindowClassesNode` → `computeVisibleMethodSet`，`renderers/xml.ts`），实例 window 只带 `class=` 引用——object method（控 object）与 window method（控展示）合并声明，exec 入口相同 LLM 不需区分；同 class 多实例去重为一份 `<class>`，未注册 class fail-soft 不进声明层。
 
+## class 声明层对 object 单例（class=objectId）的处理
+
+class 声明层去重的收益来自「一个 class 多个实例」（8 个 knowledge 实例 → 1 份 `<class>`）。但 peer/children object 以 window 进 context 时 `class=objectId`（§六来源 5，`object-windows.ts:211`）——每个单例自成一个 class，是 `1 class : 1 instance`。这类「单例 class」的处理（self 不在此列：当前 thread 的 self 操作面走 root window `class="root"`，不另占 class 声明）：
+
+- **只列自定义方法，继承不重复**：`computeVisibleMethodSet` 经 `registry.getObjectDefinition(window.class)` 取 def，而 `getObjectDefinition`（`runtime/object-registry.ts:185`）直接返回该 type 自己的 def、**不沿 parentClass 链合并**。故 `<class name="<objectId>">` 只列该 object 注册的 public 方法；继承自 root 的通用方法（do/talk/program…）不在此、收敛在 `<class name="root">` 一处——**多个单例之间不会各列一遍继承方法**（「不合并继承」在渲染层恰好避免了跨单例重复）。
+- **无自定义方法的单例不占声明层**：`renderWindowClassesNode` 对 `methodNames.length === 0` 的 window `continue`（`renderers/xml.ts`），纯数据 object 只在 `<context_windows>` 作数据 window 出现。
+- **1:1 split 自洽，不特殊处理**：单例 class 去重收益为零，但语义正确——object 单例**本就是 class**（class=objectId 可被 parentClass 继承，自定义方法是 class 级事实），且继承不重复、空集零开销。为「count=1 就地渲染」加条件分支只会破坏「方法恒在 `<window_classes>`、实例恒在 `<context_windows>`」的结构一致性，得不偿失。
+
 ## 单 window 内容的渲染优先级链
 
 每个 `<window>` 正文怎么来，先看 compressLevel 再看 readable：
