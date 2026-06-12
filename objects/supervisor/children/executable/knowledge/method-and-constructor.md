@@ -34,7 +34,7 @@ LLM 调我的 method 时猜错参数名（给 `say` 传 `content` 而非 `msg`�
 </method>
 ```
 
-（当前 `xml.ts:113` 仅渲染 method name + brief 描述；把必填 `<arg>` spec 补进这个已有的 `<methods>` 渲染器，是本契约要落地的部分，改动收敛在一处。）
+（落点：`xml.ts` 的 `renderRequiredArgNodes` 把 `schema.args` 里 `required:true` 的项渲染进已有 `<methods>` 块的 method 节点，有 `enum` 作属性带上；可选参数不进、无必填则空，行为退回仅 brief。）
 
 **可选参数 → 渐进 + 兜底，不进 eager。**
 
@@ -46,7 +46,7 @@ LLM 调我的 method 时猜错参数名（给 `say` 传 `content` 而非 `msg`�
 
 - 不新增「`onFormChange` 控制哪些可选参数可见」的机制。当前可选参数最多 4 个（plan），进 form 一次性全列零 context 压力；「渐进揭示可选」是个还不存在的问题，留待真出现 8+ 可选的 method 再议。
 - 不靠别名表迁就 LLM 猜测（`program` 的 `lang` 别 `language` 是既成窄例，不向外扩张——否则是打地鼠 + 命名面熵增）。
-- 不做「孤儿值就近映射」。eager 契约已把必填猜错压到接近零；若 LLM 仍无视眼前契约传未知参数，**响亮回显**（「未知参数 `content` 已忽略，本 method 接受 `msg`(必填)…」）优于静默映射——静默映射会让 LLM 以为 key 是 `content`、系统却私自改写，埋语义漂移。这是廉价兜底，不是主路。
+- 不做「孤儿值就近映射」。eager 契约已把必填猜错压到接近零；若 LLM 仍无视眼前契约传未知参数，**响亮回显**（「未知参数 `content` 已忽略，本 method 接受 `msg`(必填)…」）优于静默映射——静默映射会让 LLM 以为 key 是 `content`、系统却私自改写，埋语义漂移。这是廉价兜底，不是主路。落点在 `method_exec/readable.ts` 渲染层（同时握 LLM 实传的 `accumulatedArgs` 与契约 `schema.args`，算未知 key 最直接、零状态、不碰 refine 控制流；schema-fill/refine 只在 `schema.args` 范围内迭代、拿不到多出的 key）。
 
 残余猜测面只剩「拼错可选参数名」，由响亮回显兜住，可接受。
 
