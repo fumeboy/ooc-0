@@ -50,7 +50,14 @@
 
 已落地，每步绿（commit `c44a0042`→`2efa7bb8`）。**supervisor 本身就是 `instantiate_with_new_world=true` 的 builtin class 实例**（`packages/@ooc/builtins/supervisor/package.json:ooc.kind=class`）——每个新 world bootstrap 自动拥有一个 supervisor object，不再需要 listStones 特殊逻辑。实证：全新 world → supervisor 自动实例化为真 object → welcome 默认无门槛 → 对话加载完整身份 + 全部 5 篇 seed knowledge + root 命令。
 
-**组合 Increment 1 已落地**（2026-06-13，commit `bc5a12e4`→`60012954`，分支 ooc-agent-composition）：`filesystem` builtin 类（grep/glob/open_file/write_file 经委托）+ supervisor 经 `ooc.members:["filesystem"]` 声明持有它。**纯加法**，不碰 root god-object / agency / `ROOT_WINDOW_ID` 锚。双层实证：Tier A 确定性（storybook TC-COMP-01..04 + core member-composition 集成测试绿）；Tier B 真实 LLM（claude-opus-4-8：supervisor 在 thinkloop 发现 filesystem 成员窗 → `exec(filesystem, grep)` ok:true → 命中真实匹配 → 正确归因；AN-COMP-01 PASS、非持久化实测正确）。**supervisor 本身就是 `instantiate_with_new_world=true` 的 builtin class 实例**（`packages/@ooc/builtins/supervisor/package.json:ooc.kind=class`）——每个新 world bootstrap 自动拥有一个 supervisor object，不再需要 listStones 特殊逻辑。实证：全新 world → supervisor 自动实例化为真 object → welcome 默认无门槛 → 对话加载完整身份 + 全部 5 篇 seed knowledge + root 命令。
+**组合 Increment 1 已落地**（2026-06-13，commit `bc5a12e4`→`60012954`，分支 ooc-agent-composition）：`filesystem` builtin 类（grep/glob/open_file/write_file 经委托）+ supervisor 经 `ooc.members:["filesystem"]` 声明持有它。**纯加法**，不碰 root god-object / agency / `ROOT_WINDOW_ID` 锚。双层实证：Tier A 确定性（storybook TC-COMP-01..04 + core member-composition 集成测试绿）；Tier B 真实 LLM（claude-opus-4-8：supervisor 在 thinkloop 发现 filesystem 成员窗 → `exec(filesystem, grep)` ok:true → 命中真实匹配 → 正确归因；AN-COMP-01 PASS、非持久化实测正确）。
+
+**Increment 2 已落地**（commit `da93c165`）—— **Object/Agent 边界 + 组合泛化**：
+- **tool-object 不是 Agent**：`filesystem`/`terminal` 设 `parentClass=null`（不继承 root）→ 它们**没有 agency**（`resolveMethod("filesystem","talk")===undefined`），只有自己的工具方法。Object/Agent 区分在**类型层**落实（纠正 Increment 1 「tool 经隐式 root 意外继承 agency」）。agent（supervisor→…→root）的 agency 不受影响。
+- **terminal 成员**（program: shell/ts/js，委托 program constructor）。supervisor 声明 `members:["filesystem","terminal"]`。组合泛化到第二个成员，Tier B 实证 supervisor `exec(terminal, program)` → 真实 echo 输出。
+- Tier A：TC-COMP-05 验 Object/Agent 边界；core 918 tests 0 fail。
+
+**剩余（subtractive 核心手术，待按 优化方向#3 谨慎分阶段 + 真实 LLM 兜底执行）**：① 显式 `_builtin/agent` 类承载 agency（talk/do/plan/todo/end）+ 声明成员（需 builtin class 多跳链支持 + readDeclaredMembers 走链）；② world/knowledge/interpreter 余下成员（承载 create_object/open_knowledge/ts-js）；③ 把 agency/工具方法移出 root god-object 后**移除 root 同名方法** + exec 默认目标 `root → agent self window` + getOpenableMethods 渲染改读 agent 链。爆炸半径：exec.ts 默认 root（`:98`）/ getOpenableMethods 渲染 / ~6 测试文件断言 ROOT_METHODS / permission e2e。**因改动 agent 核心命令面与 exec 语义，宜分阶段、每阶段 Tier A+Tier B(真实 LLM) 双验，避免「e2e PASS≠真路由通」。****supervisor 本身就是 `instantiate_with_new_world=true` 的 builtin class 实例**（`packages/@ooc/builtins/supervisor/package.json:ooc.kind=class`）——每个新 world bootstrap 自动拥有一个 supervisor object，不再需要 listStones 特殊逻辑。实证：全新 world → supervisor 自动实例化为真 object → welcome 默认无门槛 → 对话加载完整身份 + 全部 5 篇 seed knowledge + root 命令。
 
 ## 已知问题 / 边界与未决
 
