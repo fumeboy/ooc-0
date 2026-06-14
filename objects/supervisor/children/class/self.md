@@ -12,6 +12,11 @@
 - **object** 是可交互 Agent：持五件套（self.md / readable / executable / visible / knowledge），可被 talk、跑 thinkloop。
 - **class** 是**不可交互**的类定义：组成相同的五件套，但只供 object 继承——不能被 talk、不跑 thinkloop。**单继承**（object 至多一个 class；class 可继承另一 class，单链）。
 
+**单例 vs 非单例 class（constructor 轴；与 ooc.kind/ooc.class 正交）**——回答「这个 class 有一个规范实例，还是按需造很多实例」：
+- **单例 class**：有**唯一规范实例**、可直接寻址，无需 constructor。例：agent（supervisor 经 `instantiate_with_new_world` 每 world 一个实例）、tool-object（filesystem/terminal/world/knowledge_base，作成员 by-reference 单例注入）。
+- **非单例 class**：提供 **constructor**，每次调用**产出一个新 object 实例**，该实例在 context 中的投影 = **一个 context window**。例：file（`open_file` 构造）、talk（`talk` 构造）、todo / plan / knowledge / search / method_exec / pr / reflect_request。
+- **由此统一一个核心认知**：系统里那些「builtin 窗类型」绝大多数就是**非单例 ooc class，其实例是 context window**。注册一个窗类型 ≡ 注册一个非单例 class（constructor + readable + method）。这把窗注册与 class 模型合一（后续把 `BASE_TYPE_DEFINITIONS` 收敛进 builtins class 定义的依据），并让 window 的投影 class 可由实例的 ooc.class 推得（→ context.md 核心 2/7 的 class-dynamic 落地前提）。
+
 **继承统一收敛到 class（来龙去脉）**：class 抽象的引入收敛了两个体验缺口到同一根因——(1) 全新 world 撞「需先创建至少一个 stone」（welcome 只取 `/api/stones`，而 builtin supervisor 既不在 world stones 也不在 world packages）；(2) builtin 的 self.md/knowledge 从磁盘读永远落空（`stoneDir(builtinRef)` 指向空的 `<world>/packages/@ooc/builtins/<id>`，supervisor 一直靠 LLM 即兴演角色）。同一根因：OOC 缺显式「类」抽象——builtin 应是**类**（随框架发布、被继承），world 里应有它的**实例**（可交互、own 身份磁盘副本）（`docs/ooc-6/class-abstraction.md:11`）。
 
 原 `prototype`（self.md frontmatter 的实例链）已于 2026-06-07 **彻底剔除**——代码 / 文档 / 注释无兼容层。stone 用 `package.json` 的 `ooc.class` 声明父类，registrar/synthesizer 读它设 `parentClass`。
@@ -40,7 +45,7 @@
 
 继承（class，IS-A）之外，OOP 还有**组合（HAS-A）**：**一个 Object 像持有 data 一样持有 objects**。这是我负责的第二条复用机制，与继承正交：
 
-- **设计期·静态**：class 经 `package.json` 的 `ooc.members`（string[]）声明它**构造时一并持有**的成员对象；实例经类链继承该声明（与 method/knowledge 同样沿 `ooc.class` 回退）。这区别于**运行时·动态**的 parent-child（thinkloop 里 `do` 出的子 agent）——一个是「我由什么构成」，一个是「我此刻派生了谁」，本质不同、不可揉。
+- **设计期·静态**：class 经 `package.json` 的 `ooc.members`（string[]）声明它**构造时一并持有**的成员对象；实例经类链继承该声明（与 method/knowledge 同样沿 `ooc.class` 回退）。这区别于**运行时·动态**的 parent-child（thinkloop 里 `talk(target=自己)` fork 的子线程 / 经 talk 派的子 agent）——一个是「我由什么构成」，一个是「我此刻派生了谁」，本质不同、不可揉。
 - **成员 = tool-object**：被持有、被**操作**（exec 它的方法），不是 Agent（不被 talk、不跑 thinkloop）。共享基础设施（如 filesystem）取**全局单例 by reference**、非每实例新建。
 - **注入**：`injectMemberWindowsIfObjectThread`（`packages/@ooc/core/executable/windows/_shared/init.ts`）读类声明的 members，把每个成员作为 first-class 可 exec 的 ContextWindow 注入 agent context（`class=` 成员 type，`isMemberWindow=true` → 非持久化、每轮 init 幂等重注入，仿 self 窗，避免 thread-context.json 死 _ref）。挂在 peer 注入同 3 个加载点（flows seed / thread 冷恢复 / talk 派送）。
 - **exec 路由不变**：成员是 seeded builtin type（registry 全局注册），`exec(window_id="filesystem", method="grep")` 经 `requireParent → registry.resolveMethod` 正常解析——成员方法造出新对象（grep→search 窗）。
@@ -71,7 +76,7 @@
 
 1. 补 world 级 `classes/<id>/` 持久层扫描 + 注册（解锁用户自定义 class、多实例），与 `objects/` 解析对称。
 2. 补 visible/readable 沿 class 链回退（synthesizer 渲染 self window 经文件解析原语回退），并设计 self.md 快照过期检测以缓解漂移。
-3. **组合后续 increment**：① `agent` 基类（= root + agency: talk/do/plan/todo/end），root 瘦成最小 Object 基类，concrete agent 继承 `agent`、tool-object 继承 root；② 余下成员对象 `terminal`(bash)/`interpreter`(ts/js,terminal 持有)/`knowledge`/`world`(create_object/evolve_self/governance)；③ 搬 root god-object 的方法到对应成员后**移除 root 同名方法**，消解 Increment 1 的过渡态冗余（agent 当前在 root 与成员上看到同名方法）。每步保持纯加法→可验证→再减。
+3. **组合后续 increment**：① `agent` 基类（= root + agency: talk/plan/todo/end），root 瘦成最小 Object 基类，concrete agent 继承 `agent`、tool-object 继承 root；② 余下成员对象 `terminal`(bash)/`interpreter`(ts/js,terminal 持有)/`knowledge`/`world`(create_object/evolve_self/governance)；③ 搬 root god-object 的方法到对应成员后**移除 root 同名方法**，消解 Increment 1 的过渡态冗余（agent 当前在 root 与成员上看到同名方法）。每步保持纯加法→可验证→再减。
 4. **实例运行时可变成员**：成员「像 data 一样持有」=实例状态，class 声明初始成员、实例运行时可 acquire/drop（中途装 browser）并随实例持久化——机制待落（当前仅类声明静态注入）。
 
 ## 名词解释
@@ -81,12 +86,12 @@
 - **`_builtin/<id>` 寻址**：框架 builtin class 的寻址前缀。磁盘五件套读运行进程的框架包 `@ooc/builtins/<id>`（不 vendor 进 world），由 `resolveBuiltinDir` / `resolveBuiltinReadDir` 解析；registry 以此前缀直接注册为 class 键。bare id（如 `supervisor`）反而解析回 `objects/<id>` 实例目录——前缀专用收窄避免 class 遮蔽同名 instance 磁盘。
 - **`ooc.kind`**：stone `package.json` 标记**自身是 class 还是 object** 的字段，值 `"class"` / `"object"`——回答「我是类还是实例」。class 的 package.json 写 `kind:"class"`（如 supervisor，`packages/@ooc/builtins/supervisor/package.json:13`）；`createStone` 实例化的 object 写 `kind:"object"`（`packages/@ooc/core/persistable/stone-object.ts:167`），`ui/service.ts:81` 据 `ooc.kind==="object"` 判 stone marker。与 `ooc.class`（声明父类继承）正交：`kind` 答「我是什么」，`class` 答「我继承谁」。
 - **`ooc.class`**：stone `package.json` 的**继承声明**字段，替代已删除的 `prototype`，回答「我继承谁」。值为父类 id（如 `"_builtin/supervisor"`）；registrar/synthesizer 读它设 `ObjectDefinition.parentClass`。是 object 的权威父类。class 身份本身由 `ooc.kind` 决定，不由本字段决定。
-- **parentClass（三态）**：`ObjectDefinition.parentClass`。`undefined`→隐式继承 `"root"`（拿 talk/do/todo/plan/program 等通用方法）；`null`→显式不继承（仅 root 与 method_exec）；`string`→具名父类，须已注册。
+- **parentClass（三态）**：`ObjectDefinition.parentClass`。`undefined`→隐式继承 `"root"`（继承 root 基类方法；agency 在 `_builtin/agent` 层）；`null`→显式不继承（仅 root 与 method_exec）；`string`→具名父类，须已注册。
 - **parentClass 链**：自 `self.type` 沿 `parentClass` 向上的 class id 序列（`resolveParentClassChain`，closest→farthest）。method / window-method / knowledge 在自身 miss 后沿此链回退；带 `seen` Set 环检测与 `MAX_DEPTH=64`。
 - **instantiate_with_new_world**：class `package.json`（`ooc.instantiate_with_new_world`）的 boolean flag。为 true 时 world bootstrap 幂等实例化出同名 `objects/<id>` object（拷 class self.md 为 own 身份、写 `ooc.class`、commit on main；`objects/<id>/` 已存在则跳过，`instantiate-classes.ts:48`）。supervisor 即此类 class。
 - **own 身份 / 共享行为**：实例化时仅 self.md 拷快照（own、不跟框架升级）；方法 / knowledge 经 parentClass 链**活继承** class（框架升级自动生效，除非 own 覆盖）。
 - **ClassNotFoundError**：`createFlowObject` 收到未注册 class 时抛（`code==="CLASS_NOT_FOUND"`、携 `classId`）——悬空 class fail-loud，不静默 miss。
-- **组合（HAS-A）**：与继承（IS-A）并列的第二条复用轴——Object 像持有 data 一样持有 objects。**设计期·静态**关系（class 声明、构造函数建），区别于运行时·动态的 parent-child（do 出的子 agent）。
+- **组合（HAS-A）**：与继承（IS-A）并列的第二条复用轴——Object 像持有 data 一样持有 objects。**设计期·静态**关系（class 声明、构造函数建），区别于运行时·动态的 parent-child（talk fork / 经 talk 派的子 agent）。
 - **成员对象 / tool-object**：被某 agent 组合持有、被**操作**（exec 其方法）而非被 talk 的非-Agent Object（如 filesystem/terminal/world）。共享物取全局单例 by reference。
 - **`ooc.members`**：class `package.json` 的组合声明字段（string[]，成员 type 串），回答「我由哪些成员对象构成」。与 `ooc.class`（继承谁）、`ooc.kind`（我是类还是实例）正交。实例经类链继承该声明。
 - **isMemberWindow**：成员门面窗标记。同 `isSelfWindow`——从类声明确定性重建、每轮 init 幂等重注入、不持久化（经 `isNonPersistedWindow` 剔除），避免 thread-context.json 落死 _ref。
