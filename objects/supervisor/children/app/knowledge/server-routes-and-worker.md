@@ -41,7 +41,7 @@ Elysia app 在 `packages/@ooc/core/app/server/index.ts` 装配：`:212` 是 `onE
 ## runtime 编排（`server/runtime/`）
 
 - **job-manager.ts**：job 队列与状态机。`createRunThreadJob` 走 dedupe（`:41`，`createJob(..., dedupe=true)`，按 session+object 复用 queued/running job）；`createResumeThreadJob` **不** dedupe（`:44`，`dedupe=false`，每次显式恢复入队新 job）；`tryClaimQueuedJob`（`:66`）原子翻 queued→running 保多 tick 并发不重复处理。
-- **worker.ts**：只跑队列，不周期扫 fs。`runScheduler` 单批跑满 `workerMaxTicks ?? 15`（`:75`）；若 thread 仍 running，写 `scheduler_yielded` 事件留痕（`:90`），并在当前 job 标 done 后由 `processQueuedJobs` 续跑（自唤醒，让长任务跨 job）。状态翻转 → enqueue 由事件源 `notifyThreadActivated` 触发（talk-delivery / do_window.continue / issue appendComment / end auto-reply / resume / scheduler-yield）。启动期一次性兜底 `enqueueRunningThreadsAtBootstrap`（`:178`）入队 orphan running thread。`user` object 是被动对象，worker 跳过不调度（`worker.ts:40,46`）。
+- **worker.ts**：只跑队列，不周期扫 fs。`runScheduler` 单批跑满 `workerMaxTicks ?? 15`（`:75`）；若 thread 仍 running，写 `scheduler_yielded` 事件留痕（`:90`），并在当前 job 标 done 后由 `processQueuedJobs` 续跑（自唤醒，让长任务跨 job）。状态翻转 → enqueue 由事件源 `notifyThreadActivated` 触发（talk-delivery / talk fork 内存派送 / issue appendComment / end auto-reply / resume / scheduler-yield）。启动期一次性兜底 `enqueueRunningThreadsAtBootstrap`（`:178`）入队 orphan running thread。`user` object 是被动对象，worker 跳过不调度（`worker.ts:40,46`）。
 - **pause-store.ts / resume.ts / thread-query.ts**：进程内 pause 状态、半轮粒度 resume（接着执行上次已拿到但未消费的 LLM 输出，不重跑模型避免重复扣费）、线程查询。
 
 ## 本地联调原则

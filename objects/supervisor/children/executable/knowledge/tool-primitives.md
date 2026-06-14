@@ -20,4 +20,4 @@ LLM 直接学习的是 tool 原语。每新增能力就加 tool 会让行动面�
 
 ## form 生命周期
 
-更早曾有 open/refine/submit/close/wait 五个顶层入口（已退役），其中 refine/submit 仅服务 form。迁移后：open 并入 exec；refine/submit 不再是顶层 tool，而是 `method_exec` object 上注册的两条 object method，经 `exec(form_id, "refine"/"submit")` 调用，与 do.continue / talk.say 同构（`packages/@ooc/core/executable/windows/method_exec/index.ts:21`）。**现稳定原语恒为 exec / close / wait 三个。**
+更早曾有 open/refine/submit/close/wait 五个顶层入口（已退役），其中 refine/submit 仅服务 form。迁移后：open 并入 exec；refine/submit 不再是顶层 tool，而是 `method_exec` object 上注册的两条 object method，经 `exec(form_id, "refine"/"submit")` 调用，与 talk.say 同构（`packages/@ooc/core/executable/windows/method_exec/index.ts:21`）。**现稳定原语恒为 exec / close / wait 三个。**
