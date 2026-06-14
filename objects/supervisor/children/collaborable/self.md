@@ -14,7 +14,7 @@ OOC 的协作不是「调用对方的函数」，而是「**消息 + 持续会�
 
 我的子能力：
 - **ThreadMessage** — 跨 thread 的最小消息单元（from/to、object、windowId、source）。
-- **talk_window** — 统一两形态的持续会话窗口：**peer 会话**（跨 object，`say` 走磁盘 talk-delivery）与 **fork 子窗**（同 object，`isForkWindow=true`，`say` 走内存树寻址，等同旧 do continue；子→父 reply 的协议细节见下「当前设计」条目）（`packages/@ooc/core/executable/windows/talk/method.say.ts`、fork 内存派送见 `talk/fork.ts`）。
+- **talk_window** — 统一两形态的持续会话窗口：**peer 会话**（跨 object，`say` 走磁盘 talk-delivery）与 **fork 子窗**（同 object，`isForkWindow=true`，`say` 走内存树寻址，等同旧 do continue；子→父 reply 的协议细节见下「当前设计」条目）。`say` 是 thread 的行为（thread 持 inbox/outbox），逻辑落 `packages/@ooc/builtins/thread/executable/say.ts`，talk 窗的 `say` method 共享同一实现（薄 delegation）；fork 内存派送见 `talk/fork.ts`。
 - **peer 感知三态** — self 怎么感知身边的 Agent；现在该用哪个见下 §peer 感知三态（表）。
 - **talk-delivery** — peer 跨 object 派送的唯一入口（双写 inbox/outbox、事件驱动入队）。
 - **creator window** — 每个 thread 启动时指向创建方的恒在通道（一律 talk_window：同 object ⇒ fork 子窗，跨 object ⇒ peer 会话窗），不可 close。子→父回报的唯一合法通道。
@@ -33,14 +33,14 @@ self 怎么感知「身边有哪些 Agent」与「我和它们的关系」，经
 
 ## 当前设计（锚真实代码）
 
-- `say` window method：`talk_window` 上发一条消息，`wait=true` 让父线程进 `waiting` 等回报唤醒（`packages/@ooc/core/executable/windows/talk/method.say.ts` `executeTalkWindowSay`）。注意 `say` 是挂在 talk_window 上的 method（`ObjectMethod`，由 manager dispatch），不再叫 "command"。
+- `say` 是 **thread 的行为**（thread 持 inbox/outbox，向对端那条 thread 发一条消息）：真正逻辑落在 thread builtin（`packages/@ooc/builtins/thread/executable/say.ts` `executeSay`，据会话窗形态分流 fork 内存派送 / peer 磁盘派送），`ObjectMethod` 定义在 `thread/executable/method.say.ts`。它注册在 thread class 上，并被会话窗（talk / reflect_request）共享复用——LLM 仍在 `talk_window` 上 `exec(window, "say")`，落到这同一份逻辑，`wait=true` 让父线程进 `waiting` 等回报唤醒。`say` 是 method（由 manager dispatch），不再叫 "command"。
 - `deliverTalkMessage`：跨 object 派送唯一入口——解析 caller/target、解析或创建 callee thread、`caller.outbox` + `callee.inbox` 双写同一 messageId、callee 状态翻 running、双写 thread.json、`notifyThreadActivated` 事件驱动入队（`packages/@ooc/core/executable/windows/talk/delivery.ts:76`，双写见 `:195`-`:196`）。
 - `resolveCalleeReplyToWindowId`：入站消息按 targetThreadId → objectId → creator window 三级归属窗口（`delivery.ts:247`）。
 - `target="super"` 自指别名：翻译为派往自己的 super 分身，跨 session 自我协作（`delivery.ts:11` 注释、`packages/@ooc/core/_shared/types/constants.ts` `isSuperSessionId`）。
 - `isCreatorSelf`：按 creatorObjectId 是否=自身（且同 session）判定 creator window 形态——同 object ⇒ fork 子窗（`isForkWindow`），跨 object ⇒ peer 会话窗（`packages/@ooc/core/executable/windows/_shared/init.ts`）。
 - inbox per-message 存储：`persistInboxMessages` 幂等 append、`readInboxMessages` 扫目录合并（`packages/@ooc/core/persistable/inbox-store.ts:34` / `:58`）；`writeThread` 先落目录再从 thread.json strip（`packages/@ooc/core/persistable/thread-json.ts:68` / `stripVolatileForPersist:45`）。
 - `talk_window.share`（仅 fork 子窗）：`exec(window_id=<fork_window_id>, method="share", args={window_id:<target>, mode:"readonly-ref"|"move"})`。**readonly-ref**=对端拿分享时刻 freeze snapshot（只读引用上不能 exec object method，仅 close 释放本地引用），自己保留 mutable-ref（owner）继续 live；**move**=所有权移交对端（对端升 mutable-ref / live owner），自己降 mutable-ref shadow 临时只读。**归还**：borrower 在 creator fork 窗用 `mode="move"` 发起，按 id 检测对端有同 id 的 mutable-ref shadow → 视为归还，原 owner 吸收 latest 内容恢复 live；fork 子窗 archive 时所有 borrowed owner 自动归还。跨 thread window id 严格不变（用于 shadow↔owner 配对）。可 share：file/knowledge/search/program/todo/plan/custom；fork 子窗自身/talk/method_exec/root 不可（`packages/@ooc/core/executable/windows/talk/method.share.ts` `executeShare`）。消息通道仍是协作主路径，window 共享只是把已组织好的上下文一次性带过去，省对端重复打开。
-- 子→父 reply：唯一合法通道是 creator talk_window 上 `say`（fork 子窗走内存树派送、peer 会话窗走磁盘派送）写 transcript，自动 deliver 到父 / caller inbox。**`end({result})` 不是回报通道**——end 只声明本轮结束，传 result 时其内容被自动作为最后一条 say 写入 creator window（不是隐式回报）。缺这条 prompt 子 LLM 会 hallucinate `end({result})` 致 result 静默吞（reply 通道实现见 `packages/@ooc/core/executable/windows/talk/method.say.ts`）。
+- 子→父 reply：唯一合法通道是 creator talk_window 上 `say`（fork 子窗走内存树派送、peer 会话窗走磁盘派送）写 transcript，自动 deliver 到父 / caller inbox。**`end({result})` 不是回报通道**——end 只声明本轮结束，传 result 时其内容被自动作为最后一条 say 写入 creator window（不是隐式回报）。缺这条 prompt 子 LLM 会 hallucinate `end({result})` 致 result 静默吞（reply 通道实现见 `packages/@ooc/builtins/thread/executable/say.ts`）。
 - ThreadMessage 数据边界契约：写路径只用 canonical（`content` / `toObjectId` / `createdAt` ms 数字）；读边界做运行时兼容 legacy 别名（`content ?? text`、`toObjectId ?? targetObjectId`、ISO string createdAt 走 Date.parse）。TS 类型 ≠ 磁盘真实数据，系统边界（磁盘读 / HTTP body / 跨 Agent 消息）必须归一化（渲染边界归一化见 `packages/@ooc/core/thinkable/context/renderers/xml.ts` 的 messageBody 兼容读）。
 - PR-Issue：stone-versioning 跨自治区改动的评审 token，**不在我的运行时通道内**，落 `flows/super/issues/`、仅 supervisor 决议（`packages/@ooc/core/persistable/pr-issue.ts` `createPrIssue`）。这是 Issue 在系统里**仅存的**承担形态。
 - **「Issue 看板」已废弃**（2026-05-26 移除）：曾设想用 session 级共享 Issue（含订阅 / @mention / comment 流）承载多个对象就同一 topic 会话——这条路已被否，**不是我现行的协作机制**。多对象会话现在一律走 talk_window + inbox/outbox，不再有共享议题对象（见 `pr-issue.ts:1`-`:17` 头注对二者的区分）。
