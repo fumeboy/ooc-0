@@ -8,7 +8,7 @@ activates_on:
 # OOC 对象模型
 
 > 本篇是 class 维度关于**「OOC 里 object / class 是什么、怎么继承、怎么组合、怎么分层」**的**单一权威**。
-> 它把原先散落在 `builtin-addressing-and-instantiate.md` 的设计逐步吸收进来（吸收完即删，避免分散/漂移）。class vs object（一等平级、唯一继承）的设计已落在 `class/self.md`。
+> class / object 模型原先散落在 sibling knowledge 的旧文档已全部吸收完毕并删除；class vs object（一等平级、唯一继承）的设计落在 `class/self.md`，本篇是对象模型整体的单一权威。
 > 与 context.md（thinkable·context 的权威）是**平级关系**：context.md 讲"object 投影到 context 后怎么构造成 LLM 输入"，本篇讲"object / class 自身是什么"；class-dynamic（投影 class 不持久化、按视角算）的设计归 context.md，本篇只声明其前提。
 
 ## 编辑规范
@@ -70,10 +70,18 @@ activates_on:
 
 ## 三、细节补充
 
-*(待核心设计定稿后补——`ooc.kind`/`ooc.class`/`ooc.members`/`instantiate_with_new_world` 字段、constructor 注册接口、`_builtin/` 寻址、同名辨析等。吸收 builtin-addressing-and-instantiate.md。)*
+- **`ooc.kind`（class / object 标识）**：`package.json` 的 `ooc.kind` 声明这份 stone **是 ooc class 还是 ooc object**——`ooc.kind=class` 标记它是一个 **class**（**单例**：class 即其唯一规范实例，可直接寻址、不另建实例对象）；缺省 / `ooc.kind=object` 则是一个普通可交互 **object**。与 `ooc.class`（声明继承谁）正交：`kind` 答「我是类还是实例」，`class` 答「我继承谁」。
+- **`_builtin/<id>` 寻址**：框架 builtin class 以 `_builtin/<id>` 寻址，五件套读自运行进程的 `@ooc/builtins/<id>` 包（不 vendor 进 world）；bare id 解析回 world 的 `objects/<id>`、与 class 磁盘分离。详见 `class/self.md`「寻址」段。
+- *(其余待补：`ooc.class`/`ooc.members` 字段语义、constructor 注册接口、同名辨析等。)*
 
 ---
 
 ## 四、模拟推演
 
 *(待核心设计定稿后补——open_file 全链路 / agent vs tool-object 边界 / thread 作为 object 的持久化 / builtin 实例化 own 身份 / 跨视角投影，逐 case 暴露设计 gap。)*
+
+---
+
+## 迁移映射（非设计 / 旧）
+
+- **`instantiate_with_new_world` 已废弃**：原设计把框架 builtin 做成 **class**，并经 `package.json` 的 `ooc.instantiate_with_new_world=true` 在每个新 world bootstrap 时把 class 的 self.md 拷进 `objects/<id>`、自动实例化出一个 object 副本（supervisor 即此类）。**现已废弃**——一份 stone 直接由 `ooc.kind` 声明自身是 class 还是 object，不再走「class→每 world 自动实例化成 object」这条路。**supervisor 由此改为直接的 ooc object（`ooc.kind=object`）**，不再是 class + 自动实例化。代码 `packages/@ooc/core/app/server/bootstrap/instantiate-classes.ts` 的旧 flag 待回流移除。
