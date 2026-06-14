@@ -21,7 +21,7 @@ talk_window.target 一般指向另一个 flow object id；特殊地 `target === 
 
 - `packages/@ooc/core/executable/windows/talk/delivery.ts:94`（+ worker `runtime/worker.ts:282`）—— `calleeObjectId = await resolveSuperActor(baseDir, caller.objectId)`：caller canonical → 派进自身 super 分身；caller **非 canonical**（新对象只在 session）→ 沿 parent 链冒泡到最近 canonical 祖先（顶层→supervisor）作 actor（`super-actor.ts:51`）。
 - 这是跨 session 派送（caller 当前 session ≠ "super"），不约束 caller/callee 同 session。
-- callee thread（super 反思线程）启动时注入指向 caller 的 **creator reflect_request window**（不是普通 talk_window）：它复用 talk 的会话/回报机制，反思线程据此把结论「回报」给原线程，但额外挂 `new_feat_branch` / `create_pr_and_invite_reviewers` 沉淀方法（标 `for_reflectable`，仅 super flow surface）。reflect_request 是 reflectable 在 core 的落脚点（window 家族物理寄居 `packages/@ooc/core/reflectable/`：`reflect-request/` 会话+沉淀 / `pr/` 评审），由 `executable/windows/_shared/init.ts` 在 super session 注入 `class:"reflect_request"`（非 super 仍是 talk）。
+- callee thread（super 反思线程）启动时注入指向 caller 的 **creator reflect_request window**（不是普通 talk_window）：它复用 talk 的会话/回报机制，反思线程据此把结论「回报」给原线程，但额外挂 `new_feat_branch` / `create_pr_and_invite_reviewers` 沉淀方法（标 `for_reflectable`，仅 super flow surface）。reflect_request 是 reflectable 的落脚点（正式 ooc class 包 `packages/@ooc/builtins/reflect_request/` 会话+沉淀 / `packages/@ooc/builtins/pr/` 评审），由 `executable/windows/_shared/init.ts` 在 super session 注入 `class:"reflect_request"`（非 super 仍是 talk）。
 
 ## 协议知识注入
 

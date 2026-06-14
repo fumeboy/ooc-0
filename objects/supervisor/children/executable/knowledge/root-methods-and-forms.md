@@ -23,7 +23,7 @@ activates_on: {"object::root": "show_description"}
 
 **root 基类自身** 只剩边缘 misc：**example**（对象定义样板，`method.example.ts`）、**open_feishu_chat** / **open_feishu_doc**（飞书外接，经 extendable 注册、寄生于 executable）。
 
-> 沉淀方法**不在 agent 也不在 root**——`new_feat_branch` / `create_pr_and_invite_reviewers` 挂在 **reflect_request window**（`packages/@ooc/core/reflectable/reflect-request/`，标 `for_reflectable` 仅 super flow surface）：前者从 main 派生 feat 分支 worktree 并绑进 thread（让后续 write_file 直接落 feat worktree、同 intent 幂等重绑承接回修）；后者是 finalizer（读绑定 → commit 署名 → 算 reviewer 集冒泡 → 开 PR → 投递 pr_window）。机制权威见 reflectable 维度。
+> 沉淀方法**不在 agent 也不在 root**——`new_feat_branch` / `create_pr_and_invite_reviewers` 挂在 **reflect_request window**（`packages/@ooc/builtins/reflect_request/`，标 `for_reflectable` 仅 super flow surface）：前者从 main 派生 feat 分支 worktree 并绑进 thread（让后续 write_file 直接落 feat worktree、同 intent 幂等重绑承接回修）；后者是 finalizer（读绑定 → commit 署名 → 算 reviewer 集冒泡 → 开 PR → 投递 pr_window）。机制权威见 reflectable 维度。
 
 > 注：原 `metaprog` method 已删。它承载的 supervisor 治理动作（resolve PR-Issue / rollback stone）已转控制面 governance 端点 `POST /api/runtime/pr-issues/:issueId/resolve` / `POST /api/runtime/stones/:objectId/rollback`（底层 `packages/@ooc/core/persistable/stone-versioning.ts` 的 `resolvePrIssue` / `rollback`），治理语义权威在 reflectable 维度；它的写动作（改自己 / 建别人 / 改别人）下放给 filesystem.write_file / world.create_object 落 session worktree、沉淀走 feat-branch PR。
 
