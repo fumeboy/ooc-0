@@ -54,9 +54,9 @@ LLM 调我的 method 时猜错参数名（给 `say` 传 `content` 而非 `msg`�
 
 带 `kind: "constructor"` 的 method 必须返回 `{ ok: true, window: ContextWindow }`；manager 看到后把 window 插进 thread 的 contextWindows、按 isBuiltinFeature 写盘、把 window 作为 form.result 反馈给 LLM。
 
-root 上的 `talk` / `do` / `todo` / `plan` / `program` / `open_file` / `open_knowledge` / `glob` / `grep` 已退化为**薄分发器**——只保留 description / schema / onFormChange 这些 LLM 视野所需字段，`exec` 体内调 `lookupConstructor("<type>").exec(ctx)` 把构造委托给 type 自身注册的 constructor method。`lookupConstructor` 按 `kind === "constructor"` 标记索引、而非按名字（`object-registry.ts:272`）。
+agent 的 agency `talk` / `plan`（注册在 `_builtin/agent`）与各 tool-object 成员的 constructor 方法（`open_file` / `open_knowledge` / `glob` / `grep` 在 filesystem/knowledge_base 成员上）都退化为**薄分发器**——只保留 description / schema / onFormChange 这些 LLM 视野所需字段，`exec` 体内调 `lookupConstructor("<type>").exec(ctx)` 把构造委托给 type 自身注册的 constructor method。`lookupConstructor` 按 `kind === "constructor"` 标记索引、而非按名字（`object-registry.ts:272`）。
 
-好处：创建 object 与调普通 method 在 ObjectMethod 这一层统一——不再需要 root 为每个 type 单写一份构造逻辑。自定义 Agent 想加 "open <agent>" 入口，只需在 methods 表挂一个 `kind: "constructor"` 的 ObjectMethod。
+好处：创建 object 与调普通 method 在 ObjectMethod 这一层统一——不再需要 agent 为每个 type 单写一份构造逻辑。自定义 Agent 想加 "open <agent>" 入口，只需在 methods 表挂一个 `kind: "constructor"` 的 ObjectMethod。
 
 ## 自定义 method 注册
 
