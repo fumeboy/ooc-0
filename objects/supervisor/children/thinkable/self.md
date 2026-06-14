@@ -56,7 +56,7 @@ thinkable 这个维度拆成这些子模块
 - **渐进式知识激活**：执行经 open→refine→submit 渐进暴露窗口与方法，knowledge 随之按 trigger 渐进激活——执行到哪、知识激活到哪，控制每轮 context 体积。
 - **seed / sediment**：knowledge 双源（seed=设计期 stone `knowledge/` 进 git；sediment=运行时沉淀 pool `knowledge/{memory,relations}/` 不进 git，同名覆盖 seed）；详见 supervisor `knowledge/ooc-glossary.md`。
 - **inheritable**：knowledge frontmatter 字段，唯有显式 `true` 才下传给嵌套子 Agent（领域层级轴）。
-- **exec / close / wait / compress**：LLM 操作世界的 4 个基础 tool。
+- **exec / close / wait**：LLM 操作世界的 3 个基础 tool（恒 3 个）。`compress` 不在其中——它是经 `exec(method="compress")` 调的 window method。
 - **ProcessEvent**：thread 运行产生的过程事件流（LLM 输出 / tool 调用 / context 变化），构成 transcript 过程事件层。
 - **BudgetManager**：相关度排序的预算实施器，按 score 在 token 预算内纳入/排除窗口（取代退役的自然衰减 / emergency guard）。
 

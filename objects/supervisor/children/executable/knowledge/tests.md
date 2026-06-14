@@ -4,9 +4,9 @@ activates_on: {"object::root": "show_description"}
 
 # executable 维度的测试规格
 
-这是我（executable）这一片的能力测试规格——验证「LLM 经 4 个稳定 tool 原语在 context window 上调 Method 改变世界」是否真的成立。规格的代码体在 `packages/@ooc/storybook/`，我在这里吸收 Tier A 的判据、原样保留 Tier B 的 rubric，并索引相关 story。
+这是我（executable）这一片的能力测试规格——验证「LLM 经 3 个稳定 tool 原语（exec/close/wait）在 context window 上调 Method 改变世界」是否真的成立。规格的代码体在 `packages/@ooc/storybook/`，我在这里吸收 Tier A 的判据、原样保留 Tier B 的 rubric，并索引相关 story。
 
-测试分两层：**Tier A** 是控制面确定性（零真 LLM、可进 CI，跑 `bun run test:storybook`），只验**结构**；**Tier B** 是 agent-native（真 LLM、env-gated），对运行中的 world 派任务、抽过程轨迹 + 确定性产物核验。4 原语 exec/close/wait/compress 驱动真实编辑的深度行为属 Tier B + e2e S1/S2。
+测试分两层：**Tier A** 是控制面确定性（零真 LLM、可进 CI，跑 `bun run test:storybook`），只验**结构**；**Tier B** 是 agent-native（真 LLM、env-gated），对运行中的 world 派任务、抽过程轨迹 + 确定性产物核验。3 原语 exec/close/wait（compress 经 exec 调）驱动真实编辑的深度行为属 Tier B + e2e S1/S2。
 
 ## Tier A —— 控制面确定性
 
