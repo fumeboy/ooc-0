@@ -11,7 +11,9 @@ activates_on: {"object::root": "show_description"}
 seed 一次 `user→talk→target` 的派送后，只验通道，不验对端回应（那归 Tier B）：
 
 - **TC-COLLAB-01 · talk-delivery**：target 的 callee thread inbox 真实收到 user 那条消息（消息双写已落到 callee 的 inbox/）。
-- **TC-COLLAB-02 · 路由表**：user.root 上挂了一个指向 target 的 talk_window（cross-object talk 的路由表条目，`type==="talk"` 且 target 命中）。
+- **TC-COLLAB-02 · 路由表**：user.root 上挂了一个指向 target 的 talk_window（cross-object talk 的路由表条目，`class==="talk"` 且 target 命中）。
+
+> **talk 双形态（do→talk 合并，2026-06-14）**：talk window 现统一 **peer 会话**（target=别的对象，上面 TC 覆盖）与 **fork 子线程**（target=自己 objectId ⇒ `isForkWindow=true`，旧 do 并入）两形态。fork 形态的不变量（建窗即知子线程 id、`say` 走内存树派送、close 即 archive 子线程）目前由 **core 测试**守（`executable/windows/__tests__/sharing.test.ts`、`thinkable/__tests__/context.test.ts`）；storybook gate 的 fork 形态 TC 待补（与 class-dynamic 弧一起落，见 `docs/2026-06-14-context-redesign-impl-plan.md`）。
 
 单元 catalog（`L4_collaborable.stories.ts`）把同一组通道拆得更细，并对需要 worker/真 LLM 的部分诚实 skip：
 

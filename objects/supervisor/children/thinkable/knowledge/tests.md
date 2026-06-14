@@ -19,6 +19,15 @@ activates_on:
 - **TC-THINK-02**：Object `self.md` 作为身份被 `readSelf` 加载（→ 进 LLM instructions）。
 - **TC-THINK-03**：LLM input 的 `<methods>` 节点渲染 method 的**语义 description**（取自 `*_BASIC` 知识，经 `extractBasicDescription`），而非仅 method 名 / paths。这是回归守卫——曾经只渲 `paths.join(",")`（≈ 方法名），LLM 看不懂每个 command 的含义；退回该行为则本 TC 变红。
 
+### context 核心设计判据（权威 `knowledge/context.md` 11 条）
+
+context 的构造是 thinkable 的核心。已落地并守住的判据：
+
+- **attention 分层（核心 10/12）已实现并测**：与 creator 的对话全文进 LLM Messages 数组、creator 窗在 XML 只剩句柄；sub/peer 窗新消息在 message 流只出「前 50 字」缩略、全文留该窗 transcript。守卫 = `packages/@ooc/core/thinkable/context/__tests__/attention-tiering.test.ts`。
+- **method 按 class 聚合 + parentClass 链继承（核心 4）**：见 `class` 维度 tests + `renderers/xml.ts` 的 `window_classes` 声明层。
+
+**待与 builtin/thread-as-object 弧一起补的判据**（核心 2/7/9/11，class-dynamic，当前未实现、见 `docs/2026-06-14-context-redesign-impl-plan.md` 决断）：thread-context.json 不存 class（只存 object id + 展示状态）、class 由 readable 按视角动态算、thread window（自己视角句柄）vs talk window（他者视角）双投影、share=object 引用。这些落地时在此补 Tier A TC。
+
 ## Tier B —— agent-native（真 LLM，env-gated）
 
 派多轮任务：轮 1 学一条独特约定（如「ID 用 ULID」），轮 2 用该约定。`processTrace` 显示连贯沿用。
