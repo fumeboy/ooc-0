@@ -110,44 +110,49 @@ activates_on:
 
 - **window 属性**：`id`（稳定唯一）/ `class` / `status` / 可选 `sharing`（核心 13：`readonly-ref` / `move` 态）。
 - **命名约定**：window 的分类一律称 **class**（OOC 的一等继承抽象、唯一继承机制）；`type` 只留给 method arg 的**数据类型**（`<arg type="string">`）。
-- **单窗内容优先级**：`compressLevel ≥ 1` → `compressView`；否则走 readable 解析链（registry.readable → stone `executable` 的 window.readable → `readable.ts` → `readable.md` → placeholder），沿 parentClass 链回退。
 
-### 3.3 context windows 的来源（合成 ≠ 持久化）
+### 3.3 ContextWindow 的实现接口（依赖倒置：context 定接口、别人实现）
 
-`thread.contextWindows`（持久化那份）+ 每轮 pipeline 合成的派生窗：
-1. **持久化窗**（thread-context.json）：LLM/user open 的 talk / 子线程 / knowledge / file / program / method_exec / 自定义 object。
-2. **protocol knowledge**：每轮按条件注入的框架协议常量（`interaction-core` 等；情境性协议按 intent 激活，不常驻）。
-3. **activator knowledge**：seed + sediment 双源按 `activates_on` 激活（机制见 [[knowledge-activation]]，上限受控）。
-4. **skill_index** / **peer·children object 自动注入**（peer 本身作为 window 进 context，`class=objectId`，渲染走其 readable）/ **enrichment**（运行时派生字段，落盘前剥离）。
+> context **不关心 window 从哪来、是什么具体类型**——talk / 知识 / 文件 / peer 对象 / 子线程……都是其他模块（持久化层、协作层、knowledge 层、builtin）对本接口的实现。context 只要求每个 window 满足下面的接口，然后把拿到的一组 window 组装成 LLM 输入。**怎么产出这组 window、用什么具体类型，由各模块按接口提供，context 不耦合其来源**——这是依赖倒置，避免 context 设计随窗口类型增删而改。
+
+一个 context window 须向 context 提供：
+
+- **`id` + `class`**：稳定标识 + 它的 OOC class（context 据此聚合方法、沿 parentClass 链解析继承的方法）。
+- **content 渲染（readable）**：给定本窗展示状态，产出展示节点（或"无内容"）——即 object 的 readable（核心 8）。content 怎么算（注册时直接给的 / 从 stone 读的 / 动态函数 / 静态名片）由 **readable 维度**定，**context 只调这个接口**。
+- **window method**：调整本窗展示、读写本窗的展示状态块（核心 6）；object method 归 object——context 只按 class 把方法菜单聚合进 `<window_classes>`（核心 4），不关心方法实现。
+- **展示状态块**：一块可持久化的展示态（核心 7）；window method 的读写对象。
+- 可选：**压缩态渲染**（compressLevel ≥ 1 时的简化呈现）/ **关闭副作用** / **本窗消费了哪些消息**（供 attention 分流去重）。
+
+context 侧职责到此为止：拿到一组满足接口的 window → 逐窗调 readable 渲染 + 按 class 聚合方法 + attention 分流（核心 10/12）+ 预算分配。
 
 ### 3.4 Context Change（过程事件）→ input item
 
-window 内容变化主动报告为 event，按 kind 映射为确定 item：
+window 内容变化主动报告为 event，context 按 kind 映射为确定 item：
 
 | event | 输出 |
 |---|---|
-| `inbox_message_arrived`（creator 窗） | system，**全文**（header msg_id/from/window_id + 正文） |
+| `inbox_message_arrived`（creator 窗） | system，**全文**（核心 12） |
 | `inbox_message_arrived`（其他 talk 窗） | system，**缩略**（`<window> 收到新消息 "…前 50 字"`，核心 12） |
 | `context_compressed` / `scheduler_yielded` / `inject` | system 简述（silent-swallow ban：任何变化都对 LLM 可见） |
-| `events_summary` | 替换被 `_foldedBy` 折叠的中段历史 |
-| llm_interaction.text / function_call / function_call_output | assistant / function_call / function_call_output |
-| thinking / call_started | 不进 transcript（reasoning 不复喂；call_started 仅 crash recovery 锚点） |
+| `events_summary` | 替换被折叠的中段历史 |
+| llm 文本 / function_call / function_call_output | assistant / function_call / function_call_output |
+| reasoning / call_started | 不进 transcript（reasoning 不复喂；call_started 仅 crash recovery 锚点） |
 
 ### 3.5 预算与可见性
 
-context 是稀缺资源（两条轴：信息密度、class/实例正确性）。`BudgetManager`：`score(window)` 由 provenance/priority/recency/signal 算相关度，`allocate` 按相关度在 token 预算内分 `{visible, overflow}`。口径：**锚渲染输出**（非 JSON 序列化）估 token；超预算**先把低相关窗压一档（compressLevel）再踢 overflow**；creator 窗 / 当前 form 等结构必需窗 **pin** 保护；被裁的窗在 `<context_overflow>` 留摘要行（silent-swallow ban）。
+context 是稀缺资源（两条轴：信息密度、class/实例正确性）。按相关度排序在 token 预算内分 `{visible, overflow}`；口径：**锚渲染输出**（非序列化对象）估 token；超预算**先把低相关窗压一档再踢 overflow**；creator 窗 / 当前 form 等结构必需窗 **pin** 保护；被裁的窗在 `<context_overflow>` 留摘要行（silent-swallow ban）。
 
-### 3.6 持久化与"视角"语义
+### 3.6 视角(POV)：context 是视角而非归属
 
-- **状态块持久化**：window 展示状态（compressLevel / viewport 等）落 `thread-context.json`（核心 7）。
-- **state ≠ context**：object 跨 thread 共享的业务状态存 `flows/<sid>/<oid>/state.json`；thread 视角存 thread-context.json，对独立 flow object 只存轻量 `_ref` 指针，hydrate 时另读 state.json。内置特性（talk/子线程/method_exec 无独立 state）完整 inline。
-- **context = 视角(POV) 而非归属**：同一 object（如一场跨 agent talk）可同时出现在多个 thread 的 context，每个 thread 持自己的视角参数（compressLevel / sharing 快照）；object 状态只存一份。thread-context.json 即 OOC 的"指针表"，`_ref` 对应 OO 的对象指针。
+- 同一 object（如一场跨 agent 的 talk）可同时出现在多个 thread 的 context；每个 thread 持自己的**视角参数**（展示状态块：compressLevel / viewport / sharing 快照），object 的业务状态只存一份。
+- 故 thread 的 context 是一张"指针表"——每个 window 是对某 object 的引用（核心 2），引用语义对应 OO 的对象指针。
+- **state ≠ context**：window 展示状态（视角）属 context、随 thread 走；object 跨 thread 共享的业务状态属 object 自身。两者落盘的**具体布局归持久化层**定，context 不耦合。
 
-### 3.7 旧概念清除清单（系统调整时彻底移除）
+### 3.7 与旧实现的迁移映射（非设计；系统调整对照用）
 
 | 旧概念 | 归并到 |
 |---|---|
-| `do` 方法 / `do_window` class / `continue` / `move` | `talk`（target=自己 fork 子线程）/ `say` / `share`(readonly-ref·move) |
+| `do` 方法 / `do_window` class / `continue` / `move` | `talk`（target=自己 ⇒ fork 子线程）/ `say` / `share`(readonly-ref·move) |
 | `compress` 顶层 tool / `scope=auto` | window method `compress`（exec 调用），原语回到 3 个 |
 | sharing `ref` / `lent_out` 命名 | `readonly-ref` / `move`（核心 13 语义） |
 | 渲染层把 `window.class` 漂成 XML `type=` | 统一 `class=`，`type` 仅 arg 数据类型 |
