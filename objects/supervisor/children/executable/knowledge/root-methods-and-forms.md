@@ -10,10 +10,9 @@ activates_on: {"object::root": "show_description"}
 
 **你自己（agent self 窗）的 agency** —— 注册在 `_builtin/agent` 基类（`packages/@ooc/builtins/root/executable/index.ts` 的 `AGENCY_METHODS`，`registerExecutable("_builtin/agent", …)`），具体 agent 经 `ooc.class` 继承：
 
-- **do** — 派生子 thread，创建 do_object。
-- **talk** — 与 user 或其他 Object 对话，创建 talk_object。
+- **talk** — 统一两形态创建 talk_object：target=别的对象（`"user"` 也是）⇒ peer 会话；target=自己 objectId ⇒ fork 一条同对象子线程（旧 do 并入）。
 - **plan** / **todo** — 更新 plan / 创建可见待办。
-- **end** — 标记当前 thread 完成。传 `result` 时自动调 creator window 的 continue/say 把内容写进 transcript 并 auto-archive 父侧 do_window；不传则只标记本轮结束。result 是便捷糖，不是回报通道。
+- **end** — 标记当前 thread 完成。传 `result` 时自动调 creator talk_window 的 say 把内容写进 transcript；不传则只标记本轮结束。result 是便捷糖，不是回报通道。
 
 **成员工具对象**（agent 经 `ooc.members` 持有、注入为成员窗的 tool-object，调用时 window_id 指向对应成员窗）：
 
@@ -28,7 +27,7 @@ activates_on: {"object::root": "show_description"}
 
 > 注：原 `metaprog` method 已删。它承载的 supervisor 治理动作（resolve PR-Issue / rollback stone）已转控制面 governance 端点 `POST /api/runtime/pr-issues/:issueId/resolve` / `POST /api/runtime/stones/:objectId/rollback`（底层 `packages/@ooc/core/persistable/stone-versioning.ts` 的 `resolvePrIssue` / `rollback`），治理语义权威在 reflectable 维度；它的写动作（改自己 / 建别人 / 改别人）下放给 filesystem.write_file / world.create_object 落 session worktree、沉淀走 feat-branch PR。
 
-其它 object 也注册自己的 object method：do_object（continue/wait/close/move）、talk_object（say/wait/close）、file_object（edit/reload/set_range/close）、method_exec（refine/submit，`packages/@ooc/core/executable/windows/method_exec/index.ts:21`）。
+其它 object 也注册自己的 object method：talk_object（say/wait/close/share/talk——peer 会话 + fork 子窗两形态统一一类）、file_object（edit/reload/set_range/close）、method_exec（refine/submit，`packages/@ooc/core/executable/windows/method_exec/index.ts:21`）。
 
 ## method 与 knowledge 经 intent trigger 协作
 
@@ -36,4 +35,4 @@ activates_on: {"object::root": "show_description"}
 
 ## form 推进流程
 
-`exec(method="program")` args 不齐 → 系统创建 `method_exec` form → `exec(form_id, "refine", args={...})` 补参 → `exec(form_id, "submit")` 提交执行。refine / submit 是 method_exec object 上注册的两条 object method，与 do.continue / talk.say 同构。
+`exec(method="program")` args 不齐 → 系统创建 `method_exec` form → `exec(form_id, "refine", args={...})` 补参 → `exec(form_id, "submit")` 提交执行。refine / submit 是 method_exec object 上注册的两条 object method，与 talk.say 同构。

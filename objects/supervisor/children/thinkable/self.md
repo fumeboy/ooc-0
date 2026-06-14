@@ -37,7 +37,7 @@ thinkable 这个维度拆成这些子模块
 
 - **死知识**：无 `activates_on` frontmatter 的 pool knowledge 永不自动激活；写错 schema 的 sediment 仅 warn 跳过，靠 LLM 自觉，缺统一写入期闸门 / 巡检。→ 计划：给 knowledge 写入加统一校验闸门，frontmatter schema 不合法即拒绝（而非 warn 跳过），消灭死知识。这是当前最高价值待办。
 - **derived 窗口两套读取分支**：derived 窗口不写回 `thread.contextWindows`，靠 transient `_renderedWindows` 兜底观测（`context/index.ts:381`），mock 路径与真实渲染分两套。→ 计划：收敛为一套，让真实渲染与 mock 路径走同一条。
-- **compress scope=auto 未实现**：落地状态权威见 knowledge/thread-and-thinkloop.md（scope=windows/events 已落地、scope=auto 抛 not-implemented）。→ 计划：scope=auto 留作紧急压缩占位——旧 `applyEmergencyGuard` 自动降级已删；scope=auto 预留紧急压缩、策略未定（≠复活旧 guard），待补。
+- **compress scope=auto 未实现**：落地状态权威见 knowledge/thinkloop.md（scope=windows/events 已落地、scope=auto 抛 not-implemented）。→ 计划：scope=auto 留作紧急压缩占位——旧 `applyEmergencyGuard` 自动降级已删；scope=auto 预留紧急压缩、策略未定（≠复活旧 guard），待补。
 
 ## 边界
 
@@ -49,7 +49,7 @@ thinkable 这个维度拆成这些子模块
 - **Context**：Object 本轮思考能看见的全部世界，也是它的世界边界——context 之外的状态（内存/文件）对它不存在。
 - **Thread**：思考过程的运行时节点，持有自己的 context/windows/inbox/outbox/events/status。
 - **Thread Tree**：thread 派生子 thread 形成的树，多 thread 可并行思考；OOC 的类 SubAgent 底座。
-- **thinkloop**：单 thread 内一轮思考循环；结构与调度见 knowledge/thread-and-thinkloop.md。
+- **thinkloop**：单 thread 内一轮思考循环；结构与调度见 knowledge/thinkloop.md（thread 是什么见 knowledge/thread.md）。
 - **activates_on**：knowledge frontmatter 里声明「我何时进入 context」的 trigger map（表达式→级别）。
 - **trigger**：activates_on 的 key 表达式，五类——`object::<type>` / `method::<objtype>::<method>` / `object_id::<id>` / `intent::<name>`（支持 `program.*` wildcard）/ `super`；旧 `window::<type>` 归一化为 `object::<type>`。
 - **show_description / show_content**：两个激活级别（只露标题描述 / 展开正文）；多 trigger 命中取 max。

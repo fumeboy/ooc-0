@@ -165,9 +165,9 @@ context 是稀缺资源（两条轴：信息密度、class/实例正确性）。
 
 | 旧概念 | 归并到 |
 |---|---|
-| `do` 方法 / `do_window` class / `continue` / `move` | `talk`（target=自己 ⇒ fork 子线程）/ `say` / `share`(readonly-ref·move) |
+| 旧 `do` 方法 / `do_window` class / `continue` / `move`（已并入 talk，2026-06-14） | `talk`（target=自己 ⇒ fork 子线程）/ `say` / `share`(readonly-ref·move) |
 | `compress` 顶层 tool / `scope=auto` | window method `compress`（exec 调用），原语回到 3 个 |
-| sharing `ref`(只读引用) / `lent_out`(已借出) 态 | 引用模式 `readonly-ref`（核心 2）；缺省持有 = `mutable-ref`；`move` 是产生只读态的动作（核心 11）、非稳态 |
+| 旧 sharing kind `ref`(只读引用) / `lent_out`(已借出)（已并入新命名，2026-06-14） | 引用模式 `readonly-ref`（核心 2）；缺省持有 = `mutable-ref`；`move` 是产生只读态的动作（核心 11）、非稳态 |
 | 渲染层把 `window.class` 漂成 XML `type=` | 统一 `class=`，`type` 仅 arg 数据类型 |
 | 逐实例方法菜单重复 / 空 self 窗壳 | class 声明一次 / self 身份走 instructions |
 | 自己 thread 的 events + creator 对话裸渲在 `<thread>` 块 / message 流、无预算归属；`isCreatorWindow` 标记 | 收敛为自己视角的 **thread window**（核心 9/10）：creator 对话是 thread window 的内容通道（不再是独立 creator 窗）；XML 只渲 methods、内容进 message 流、一并纳入预算 |

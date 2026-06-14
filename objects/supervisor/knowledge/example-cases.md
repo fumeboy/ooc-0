@@ -19,7 +19,7 @@ activates_on:
 要点：
 
 - **拆分粒度准则**——有跨 session 状态 / 领域专属知识 / 会被 talk 频繁调用 → 当 Agent；无状态脚本 / 「输入→输出」/ 多 Agent 通用 → 当 skill。拒绝 1 个巨石 Agent（领域知识互相干扰、改一处重载整石），也拒绝把无状态工具强行做成 Agent（徒增 stone/talk 负担）。一个工作流阶段（如安全评估）只是某 Agent 的一段流程，不拆。
-- **协作只走 talk + do_window.move**：上游 `sentry_factor_dev` 不直接调下游 method，而是 talk 派任务 + `do_window.move(mode="ref")` 把方案 file 作只读快照共享；下游阻塞反向 talk 回上游（不硬猜、不直接 talk 用户）。拓扑非循环。
+- **协作只走 talk + talk_window.share**：上游 `sentry_factor_dev` 不直接调下游 method，而是 talk 派任务 + fork 子窗的 `share(mode="readonly-ref")` 把方案 file 作只读快照共享；下游阻塞反向 talk 回上游（不硬猜、不直接 talk 用户）。拓扑非循环。
 - 例证：OOC 用「领域 Agent + 流程编排 Agent + 通用 skill」的层次，把平铺的 skill 集合表达成有边界、可协作、可演化的对象图。
 
 ## Case 2 — 飞书集成（外部 SaaS → ContextWindow，而非 Agent）

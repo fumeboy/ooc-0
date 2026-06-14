@@ -15,11 +15,11 @@ readable 有**静态面（readable.md 自我介绍名片）**和**动态面（re
 一个 OOC Object 进入 LLM context 时，它的"长相"由 readable 维度决定。代码层我是与 executable **并列的一等注册维度**——`executable` 经 `registerExecutable` 注册 object method（操作业务数据），我经 `registerReadable` 注册整套动态展示构造（`packages/@ooc/core/runtime/object-registry.ts:128`）；静态自我介绍则走持久层 readable.md（`readReadable` / `writeReadable`，`packages/@ooc/core/persistable/stone-readable.ts:17/37`）。我持有的字段（`ObjectDefinition`，`packages/@ooc/core/_shared/types/registry.ts:62-79`）：
 
 - **readable.md（静态自我介绍）**：Object 的对外名片，渲染器作为 `<readable>` 槽位的最低优先级来源读取（`renderers/xml.ts:170`）。与 self.md 构成双面身份。
-- **readable（动态渲染 hook）**：把 Object 渲染成 context 里的 XML 子节点序列（`ReadableFn`，`registry.ts:29`），优先级高于静态 readable.md。所有 builtin 都用这个字段——talk/do/method_exec/feishu_chat/feishu_doc 也是 `registerReadable({ readable })`（旧名 `renderXml` 已并入 `readable`，registry.ts:56；"renderXml" 现仅是 XML-生成函数的非正式叫法）。
+- **readable（动态渲染 hook）**：把 Object 渲染成 context 里的 XML 子节点序列（`ReadableFn`，`registry.ts:29`），优先级高于静态 readable.md。所有 builtin 都用这个字段——talk/method_exec/feishu_chat/feishu_doc 也是 `registerReadable({ readable })`（旧名 `renderXml` 已并入 `readable`，registry.ts:56；"renderXml" 现仅是 XML-生成函数的非正式叫法）。
 - **windowMethods**：控制 window 展示的**方法表**（如 file 的 `set_viewport`、program 的 `set_history_window`）。与 object method 并列但签名不同——它接收 `windowState` 快照、返回新的 `WindowDisplayState`，**不原地 mutate**（`packages/@ooc/core/_shared/types/window-method.ts:34`）。
 - **compressView**：折叠态/快照态渲染（compressLevel 1/2），让 context 预算紧张时 Object 仍能给出元信息（`CompressViewHook`）。
 - **onClose**：window 关闭时的副作用 hook（如拒绝关闭系统派生窗、级联关闭 sub）。
-- **consumedMessageIds**：transcript 类窗（talk/do）声明"本轮我已消费哪些 inbox/outbox 消息"，供 renderer 顶层去重。
+- **consumedMessageIds**：transcript 类窗（talk，含 peer 会话与 fork 子窗两形态）声明"本轮我已消费哪些 inbox/outbox 消息"，供 renderer 顶层去重。
 
 ## 当前设计
 
@@ -30,7 +30,7 @@ readable 有**静态面（readable.md 自我介绍名片）**和**动态面（re
 
 ## 现状
 
-维度劈分已彻底落地（commit `3afb1a10` registry 劈分 → `37352954` readable 代码体归位 readable.ts → `dca75a66` barrel 加载两维度、executable 不再 import readable）。8 个有 readable.ts 的 builtin（file/knowledge/plan/program/root/search/skill_index/todo）的展示维度全部自注册到位；talk/do/method_exec/relation/feishu 同样经 `registerReadable({ readable })` 注册各自的 XML 渲染函数。`example` builtin 是标准对象定义样板。storybook 单元化 catalog 的 L3 已钉死维度劈分判据（registerExecutable/registerReadable 互不覆盖、同名 fail-loud、file.set_viewport 是 windowMethod 不在 object methods 表）。
+维度劈分已彻底落地（commit `3afb1a10` registry 劈分 → `37352954` readable 代码体归位 readable.ts → `dca75a66` barrel 加载两维度、executable 不再 import readable）。8 个有 readable.ts 的 builtin（file/knowledge/plan/program/root/search/skill_index/todo）的展示维度全部自注册到位；talk/method_exec/relation/feishu 同样经 `registerReadable({ readable })` 注册各自的 XML 渲染函数。`example` builtin 是标准对象定义样板。storybook 单元化 catalog 的 L3 已钉死维度劈分判据（registerExecutable/registerReadable 互不覆盖、同名 fail-loud、file.set_viewport 是 windowMethod 不在 object methods 表）。
 
 ## 已知问题 / 演化方向
 
@@ -40,7 +40,7 @@ readable 有**静态面（readable.md 自我介绍名片）**和**动态面（re
 ## 名词解释
 
 - **readable.md**：Object 写给外部世界的静态自我介绍（原 readme.md，2026-05-28 重命名）。供 user / 其他 Object 理解"我是谁、能做什么、何时找我"，是协作网络里的名片。渲染器作 `<readable>` 槽位最低优先级来源读取（`readReadable`，`stone-readme.ts:18`）。
-- **readable.ts / ReadableFn**：动态上下文渲染函数 `(ctx: RenderContext) => XmlNode[] | Promise<XmlNode[]>`（`packages/@ooc/core/_shared/types/registry.ts:29`）。按 Object 当前状态算出 context XML，优先级高于静态 readable.md。这是 `ObjectDefinition` 上唯一的渲染 hook 字段——talk/do/method_exec/feishu_chat/feishu_doc 的渲染函数也挂在它上（"renderXml" 是这类 XML-生成函数的非正式叫法，非独立字段/类型）。
+- **readable.ts / ReadableFn**：动态上下文渲染函数 `(ctx: RenderContext) => XmlNode[] | Promise<XmlNode[]>`（`packages/@ooc/core/_shared/types/registry.ts:29`）。按 Object 当前状态算出 context XML，优先级高于静态 readable.md。这是 `ObjectDefinition` 上唯一的渲染 hook 字段——talk/method_exec/feishu_chat/feishu_doc 的渲染函数也挂在它上（"renderXml" 是这类 XML-生成函数的非正式叫法，非独立字段/类型）。
 - **window method**：控制 window 展示（viewport 等）的方法，类型 `WindowMethod`（`packages/@ooc/core/_shared/types/window-method.ts:34`），`kind:"window"`。与 object method 物理分离、签名不同——exec 额外收 `windowState` 快照、返回新 state，不原地 mutate 业务数据。经 `registerReadable` 的 `windowMethods` 表注册。
 - **WindowDisplayState**：window 纯展示状态容器（`packages/@ooc/core/_shared/types/window-state.ts:8`）：viewport / lines / columns / transcriptViewport / resultsViewport / historyViewport。window method 写、`readable` 读，随 window 落 thread-context.json。只放展示参数，不放业务数据。
 - **compressView / CompressViewHook**：折叠/快照态渲染 hook（`registry.ts:31`），签名 `(ctx, level: 1|2) => XmlNode[]`。context 预算紧张时让 Object 仍给出元信息。

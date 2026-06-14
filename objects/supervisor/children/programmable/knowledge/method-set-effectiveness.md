@@ -14,7 +14,7 @@ custom window 上的 object method 有两条调用入口，共享同一份 `wind
 exec(window_id="<self_object_id>", method="<name>", args={ ... })
 ```
 
-与 `do_window.continue` / `talk_window.say` 完全同构（window id/type 约定见 self.md）。custom dispatcher 在取出 `methods[<name>].exec` 时包一层 `programSelf` 注入到 ctx，对 manager.submit 透明。
+与 `talk_window.say` 完全同构（window id/type 约定见 self.md）。custom dispatcher 在取出 `methods[<name>].exec` 时包一层 `programSelf` 注入到 ctx，对 manager.submit 透明。
 
 **路径 B：ts/js sandbox 里 `self.callMethod`（脚本编排）**
 

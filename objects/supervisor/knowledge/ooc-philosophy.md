@@ -34,7 +34,7 @@ self.md（声明）/ readable（序列化）/ executable（行为）/ visible（
 1. **Observer 是 LLM 不是 CPU**：对象的第一观察者是 LLM。readable 是"给 AI 看的 `toString()`"，compressLevel 是"清晰度档位"。**Object 的接口不只是方法签名（给执行器看），还包括 readable 输出（给推理器看）——两者同等重要。**
 2. **两个外部世界**：传统 OO 的"外部"是统一的（其他对象）；OOC 有两个——其他 Agent（消费 readable + `public` 方法）与人类用户（消费 visible + `for_ui_access` 方法），两者权限模型不同。这是 readable/visible 镜像、以及 method 双可见性轴的设计来源（agent-native parity 公理：任何能力都要回答"人怎么用 / Agent 怎么用"）。
 3. **运行时改写自己的类**：传统 OO 类定义编译时确定；OOC 的 Agent 通过 reflectable / programmable / visible / 改 self.md 重定义自己——这是设计目标，不是 hack。stone 五件套就是 Agent 的源代码，Agent 是自己的维护者。
-4. **对象图动态涌现**：runtime object 由 thread 按需创建（do_window 派生 method_exec、open_file 创建 file），生命周期靠引用计数管理，peer/children 自动注入 context。更像 OS 进程树 + 共享内存，不是静态类图。
+4. **对象图动态涌现**：runtime object 由 thread 按需创建（talk fork 派生子线程、open_file 创建 file），生命周期靠引用计数管理，peer/children 自动注入 context。更像 OS 进程树 + 共享内存，不是静态类图。
 
 ## Context = 视角，不是归属
 

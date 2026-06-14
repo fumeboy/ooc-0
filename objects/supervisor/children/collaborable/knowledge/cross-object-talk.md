@@ -4,15 +4,15 @@ activates_on: {"object::root": "show_description"}
 
 # cross-object talk —— Object 之间用消息+窗口协作
 
-OOC 的协作不是「调用对方函数」，而是「消息 + 持续会话窗口」。两个长得像、语义不同的窗口：
+OOC 的协作不是「调用对方函数」，而是「消息 + 持续会话窗口」。统一一种窗口 **talk_window**，按 target 分两形态：
 
-- **talk_window**：跨 object 的持续会话窗口。`root.talk` 创建，target 是对端 flow object id（`"user"` 也是一个 flow object）。`say` 发消息（source=`talk`，控制面代用户发时 source=`user`），可 `wait`。同一对端**复用同一 talk_window**，不要每发一条就 close 再重开。
-- **do_window**：同 object 内 `root.do` fork 子线程的对话窗口。`continue` 追加消息（source=`do`）。
+- **peer 会话**（target=别的 flow object id，`"user"` 也是一个 flow object）：跨 object 的持续会话。`say` 发消息走磁盘 talk-delivery（source=`talk`，控制面代用户发时 source=`user`），可 `wait`。同一对端**复用同一 talk_window**，不要每发一条就 close 再重开。
+- **fork 子窗**（target=自己 objectId，`isForkWindow=true`，旧 do_window 并入）：fork 一条同对象子线程，承载父-子算力分身。`say` 走内存树寻址（同 session 同 job、不付磁盘 IO，等同旧 do continue 的父→子/子→父追加）。
 
-判定一个 thread 的 creator window 是 do 还是 talk，由 `isCreatorSelf` 决定——creatorObjectId 是否=自身（且同 session）（`packages/@ooc/core/executable/windows/_shared/init.ts:57`）。
+判定一个 thread 的 creator window 形态由 `isCreatorSelf` 决定——creatorObjectId 是否=自身（且同 session）：同 ⇒ fork 子窗，异 ⇒ peer 会话窗（`packages/@ooc/core/executable/windows/_shared/init.ts`）。
 
-`say` 的细节：`talk_window.say` 是挂在 talk_window 上的 object method（`sayMethod: ObjectMethod`，不再叫 "command"）——它改协作状态（发消息落对方 inbox），不是只控展示的 window method（展示控制类 method 归 readable 注册）。`wait=true` 时父线程进 `status="waiting"`，等对端回复进 inbox 唤醒（`packages/@ooc/core/executable/windows/talk/method.say.ts` `executeTalkWindowSay`，wait 逻辑见该函数 `ctx.args.wait === true` 分支）。
+`say` 的细节：`talk_window.say` 是挂在 talk_window 上的 object method（`sayMethod: ObjectMethod`）——它改协作状态（发消息落对方 inbox），按 `isForkWindow` 自分流（fork → 内存树派送、peer → 磁盘派送）。`wait=true` 时父线程进 `status="waiting"`，等对端回复进 inbox 唤醒（`packages/@ooc/core/executable/windows/talk/method.say.ts`）。
 
-在对象关系三轴里，talk / do 主要承载 **peer 平等轴**：同级 Agent 平等协作，只能 talk 说服、**不能支配对方、不能直接改对方运行时状态**。运行时管控跑偏的 child 也走 talk，不暴力写 child 状态。
+在对象关系三轴里，talk 承载 **peer 平等轴 + parent-child 层级轴**：peer 会话窗是同级 Agent 平等协作，只能 talk 说服、**不能支配对方、不能直接改对方运行时状态**；fork 子窗是同对象父子算力分身。运行时管控跑偏的 child 也走 talk，不暴力写 child 状态。
 
 creator window 是每个新 thread 启动时指向创建方的恒在通道，`isCreatorWindow=true` 拒绝 close；callee 通过 creator talk_window 的 `say` 回报给 caller（`packages/@ooc/core/executable/windows/_shared/init.ts` `initContextWindows`，`isCreatorWindow: true` 注入见 `:136` / `:153`）。

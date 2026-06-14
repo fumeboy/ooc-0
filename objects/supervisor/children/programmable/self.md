@@ -11,7 +11,7 @@
 ## 我负责的
 
 - **自我门面 window + object method 表**：每个 Object 在自己的 `stones/<self>/executable/index.ts` 里 `export const window: Partial<ObjectDefinition>`（window.id=window.class=objectId，**不再有 `custom:` 前缀**）。`window.methods` 是标准 `ObjectMethod` 字典，与内置 window（do/talk/file）上的 method 完全同构。人类侧 UI 调用不再是独立的 `ui_methods` 导出——给 `window.methods` 里的方法标 `for_ui_access: true` 即开放 HTTP `call_method` 通道（2026-06-11 起废 `ui_methods` 维度），可见性/通道判定归 **visible**，我只负责 object method 的自写与热更。
-- **统一调用协议**：LLM 经 `exec(window_id="<self_object_id>", method=<name>, args={...})` 直接调，与 `do_window.continue` / `talk_window.say` 同构；ts/js sandbox 里另有 `await self.callMethod(window_id, method, args)` 供脚本编排多步调用。UI / agent-native 经 HTTP `call_method` 调 `window.methods` 里标了 `for_ui_access` 的方法（同一份方法表，按可见性过滤）。
+- **统一调用协议**：LLM 经 `exec(window_id="<self_object_id>", method=<name>, args={...})` 直接调，与 `talk_window.say` 同构；ts/js sandbox 里另有 `await self.callMethod(window_id, method, args)` 供脚本编排多步调用。UI / agent-native 经 HTTP `call_method` 调 `window.methods` 里标了 `for_ui_access` 的方法（同一份方法表，按可见性过滤）。
 - **写文件即热更**：loader 按 `executable/index.ts` 的 mtime 缓存，`?t=mtime` 破坏 bun import cache；写文件后下一次调 method 自动重新 import，新形态立刻生效——不重启进程、不重新部署。
 - **ProgramSelf 注入**：program ts/js sandbox 与 custom method dispatcher 路径收到 `programSelf = { dir, callMethod, getData, setData, getThreadLocal, setThreadLocal }`（2026-06-02 起字段名 `programSelf`，与 method receiver `ctx.self` 区分）。program shell 经 env 透出 `$OOC_SELF_DIR`。
 - **自写方法闭环**：与 reflectable 配合，super flow 经 `write_file` 重写 `executable/index.ts` → 下一次调 method 看到新形态。
