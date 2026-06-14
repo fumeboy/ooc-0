@@ -29,7 +29,7 @@ stone identity 文件（`self.md` / `readable.*` / `executable/**` / `visible/**
 1. `write_file` / `file_window.edit` 写 — `@ooc/builtins/file/executable/index.ts`。
 2. `loadSelfInstructions` 读 — `packages/@ooc/core/thinkable/context/index.ts`。
 3. executable/visible/readable loader 读。
-4. program shell `$OOC_SELF_DIR` — `packages/@ooc/builtins/program/executable/self-env.ts`。
+4. terminal bash `$OOC_SELF_DIR` — `packages/@ooc/builtins/terminal_process/executable/shell.ts`。
 5. 控制面 visible endpoint — `packages/@ooc/core/app/server/modules/ui/api.client-source-url.ts`。
 6. talk target 存在性检查 — `packages/@ooc/core/executable/windows/talk/index.ts`（漏接 → session 内新 peer `target 不存在`）。
 7. context self 方法注册 + peer readable/方法注册 — `packages/@ooc/core/thinkable/context/object-windows.ts`（漏接 → 新对象 executable/readable 加载不到、render 落 placeholder）。

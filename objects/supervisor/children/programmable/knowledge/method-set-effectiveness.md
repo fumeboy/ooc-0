@@ -22,9 +22,9 @@ exec(window_id="<self_object_id>", method="<name>", args={ ... })
 await self.callMethod("<window_id>", "<method>", { ... })
 ```
 
-只在 program 的 ts/js sandbox 内可用（`ProgramSelf.callMethod`）。不仅可调 custom window 的 method，也可调 do/talk/file 等任意 window 上已注册 method，用于一段脚本里编排多步调用。**已知边界**：`callMethod` 直接索引 `getObjectDefinition(type).methods[method]`（`self.ts:69`），不走 `resolveMethod` 沿 parentClass 链回退；继承自父 class 的 method 经此路径取不到，只能取本 class 自身声明的 method。
+只在 interpreter 的 ts/js sandbox 内可用（`InterpreterSelf.callMethod`）。不仅可调 custom window 的 method，也可调 talk/file 等任意 window 上已注册 method，用于一段脚本里编排多步调用。**已知边界**：`callMethod` 直接索引 `getObjectDefinition(type).methods[method]`（`self.ts:64`），不走 `resolveMethod` 沿 parentClass 链回退；继承自父 class 的 method 经此路径取不到，只能取本 class 自身声明的 method。
 
-> 已退役：旧的 `program.callMethod / function 子模式`（`exec(method="program", args={window_id, method, ...})` 当 meta-call 通道）已删；program 现在只剩 shell/ts/js 三种语言模式（`runtime.ts:10-13`）。元调用统一收敛到上面两条。
+> 已退役：旧的 `program.callMethod / function 子模式`（当 meta-call 通道）已删；ts/js 现在只剩 interpreter 的语言模式。元调用统一收敛到上面两条。
 
 UI / agent-native 客户端走第三条独立通道：HTTP `call_method` 调 `window.methods` 里标了 `for_ui_access: true` 的方法（2026-06-11 起废独立 `ui_methods` 维度——LLM 路径与 HTTP 路径共用同一份 `window.methods` 表，只是 HTTP 侧按 `for_ui_access` 过滤可见性，`filterMethodsByVisibility` ui 档，`packages/@ooc/core/_shared/types/registry.ts:95`）。要给前端调的方法标 `for_ui_access`，不标只给 LLM；同一 entry 即可被两条通道复用，无需写两份。
 

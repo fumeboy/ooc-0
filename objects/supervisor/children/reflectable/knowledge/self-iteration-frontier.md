@@ -22,7 +22,7 @@ activates_on:
 
 | # | 缺口 | 锚点 | 为什么断 |
 |---|---|---|---|
-| 1 | **边界** | `executable/windows/_shared/session-path.ts:54`（逃逸判定+抛错）/`:58`（豁免读取） | data 原语（write_file/open_file/edit）被 world-clamp（`../` 相对逃逸 + world 外绝对路径一律拒绝）；OOC 核心源码在 world 之外的 repo，**没被建模成 world 内可编辑的 Object**，OOP-native 路径够不着。已留豁免：`.world.json` `allowEscapeWorldFilePathLimit=true` 显式解除该拦截（`world-config.ts` 缺省 false），供「宿主仓库当 world」自举场景。仍有的逃生舱是 `program(shell)`（`builtins/program/executable/shell.ts:7` cwd=process.cwd() 不 clamp）——非 OOP、未沙箱。 |
+| 1 | **边界** | `executable/windows/_shared/session-path.ts:54`（逃逸判定+抛错）/`:58`（豁免读取） | data 原语（write_file/open_file/edit）被 world-clamp（`../` 相对逃逸 + world 外绝对路径一律拒绝）；OOC 核心源码在 world 之外的 repo，**没被建模成 world 内可编辑的 Object**，OOP-native 路径够不着。已留豁免：`.world.json` `allowEscapeWorldFilePathLimit=true` 显式解除该拦截（`world-config.ts` 缺省 false），供「宿主仓库当 world」自举场景。仍有的逃生舱是 `terminal.run`（bash）（`packages/@ooc/builtins/terminal_process/executable/shell.ts:14` cwd=process.cwd() 不 clamp）——非 OOP、未沙箱。 |
 | 2 | **重载（杀手）** | `runtime/server-loader.ts:87`（动态 import）+ `runtime/hot-reload.ts:133`（startHotReloadWatcher，递归 fs.watch stones/ 树触发 reload） | 热更只覆盖 *stone* executable（叶子、动态 import）。核心进程启动时加载一次，改了不热更、必须重启——「改核心→看效果→再改」在进程内闭不上。 |
 | 3 | **治理** | `persistable/stone-feat-branch.ts`（computeReviewerSet）+ `stone-versioning.ts`（resolvePrIssue/rollback） | reviewer 冒泡 / PR / merge / rollback 模型是 stone 形状（按对象领地算 reviewer 集）。核心源码「无主」，没有 Object 拥有它，领地/reviewer 模型不适用。 |
 
