@@ -8,7 +8,7 @@ activates_on:
 # OOC 对象模型
 
 > 本篇是 class 维度关于**「OOC 里 object / class 是什么、怎么继承、怎么组合、怎么分层」**的**单一权威**。
-> 它把原先散落在 `class-vs-object.md` / `builtin-addressing-and-instantiate.md` 的设计逐步吸收进来（吸收完即删，避免分散/漂移）。
+> 它把原先散落在 `builtin-addressing-and-instantiate.md` 的设计逐步吸收进来（吸收完即删，避免分散/漂移）。class vs object（一等平级、唯一继承）的设计已落在 `class/self.md`。
 > 与 context.md（thinkable·context 的权威）是**平级关系**：context.md 讲"object 投影到 context 后怎么构造成 LLM 输入"，本篇讲"object / class 自身是什么"；class-dynamic（投影 class 不持久化、按视角算）的设计归 context.md，本篇只声明其前提。
 
 ## 编辑规范

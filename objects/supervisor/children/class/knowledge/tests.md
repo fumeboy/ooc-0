@@ -33,4 +33,4 @@ rubric（原样）：
 - **L9-CLASS-NOT-USER** —— user 是被动对象，不被实例化为可交互 instance。
 - **L9-CLASS-NONINTERACTIVE** —— seedSession 拒绝 `_builtin/` class 作对话目标（400）。
 
-规格已就地收编进本 tests.md（单一来源）；story 代码在 `packages/@ooc/storybook/stories/`。概念见 sibling `class-vs-object` / `builtin-addressing-and-instantiate`。class 链 knowledge 继承（Step 1b 无条件 vs Step 1 opt-in）见 `class/self.md`。
+规格已就地收编进本 tests.md（单一来源）；story 代码在 `packages/@ooc/storybook/stories/`。概念见 sibling `builtin-addressing-and-instantiate`；class vs object（一等平级）与 class 链 knowledge 继承（Step 1b 无条件 vs Step 1 opt-in）见 `class/self.md`。
