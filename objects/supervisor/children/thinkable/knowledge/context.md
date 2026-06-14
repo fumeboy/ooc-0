@@ -1,6 +1,6 @@
 ---
 title: context 设计（LLM 输入的构成、构造与派生能力）
-description: thinkable 维度关于 context 的单一权威——核心设计(13 条) + 派生能力 + 细节补充；context=一组 context window；window=OOC object 在 context 的引用投影
+description: thinkable 维度关于 context 的单一权威——核心设计(14 条) + 派生能力 + 细节补充 + cases 模拟分析；context=一组 context window；window=OOC object 在 context 的引用投影
 activates_on:
   "object::root": "show_description"
 ---
@@ -14,12 +14,14 @@ activates_on:
 维护本文须守以下规范，使其长期高内聚、低耦合、不漂移：
 
 1. **单一权威**：context 设计只此一处。新增/变更 context 设计先改本文，再改代码；不另起平行文档（避免分散）。
-2. **三段结构**：① 核心设计（原子原则，逐条编号、一句一条、相互正交）；② 派生能力（核心组合后涌现的能力，不引入新原则）；③ 细节补充（接口/组装/边界）。新内容按归属入段，不混段。
+2. **四段结构**：① 核心设计（原子原则，逐条编号、一句一条、相互正交）；② 派生能力（核心组合后涌现的能力，不引入新原则）；③ 细节补充（接口/组装/边界）；④ cases 模拟分析（把设计放进真实运行时场景推演，暴露并收敛缺口）。新内容按归属入段，不混段。
 3. **高内聚低耦合（依赖倒置）**：本文只讲 context 自身的设计 + 它**对外暴露的接口**（如 ContextWindow 接口）；**不讲其他模块怎么实现**（window 从哪来、readable 怎么解析、落盘布局……一律 "由 X 维度/层按接口实现，context 不耦合"）。
 4. **描述设计与接口、非实现走查**：讲"是什么/为什么/契约"，不逐函数走查实现；代码锚点仅在确有必要时给（且只锚 context 自身代码）。
 5. **精炼标准语言**：一句话能说清不写三句；术语统一（window=class、arg=type；readonly-ref/move；等）。
 6. **旧概念单独标注**：与旧实现的差异/迁移放「迁移映射」一节，明确标"非设计"，不混进核心设计。
 7. **自洽**：任何改动须与全文不矛盾（尤其核心设计各条之间、核心与派生之间）；发现矛盾先修设计再落文字。
+8. **cases 用段落、场景说清**：第四节每个 case 用**段落**（非表格）记录——先把场景的前因后果讲清楚（谁在什么状态下做了什么、触发了什么），再点出它暴露的设计 gap 与方向。
+9. **被证伪的内容即删、不留干扰**：某条 case/gap 经推敲确认**不是问题**，直接从文档删除——不保留"其实不是 gap"之类的半成品标注（那是误导后来者的垃圾信息）。结论若有价值，沉淀进相关核心设计的措辞里，而非留在第四节。
 
 ---
 
@@ -27,7 +29,7 @@ activates_on:
 
 1. **context 是 LLM 的输入**；context 由一组 **context window** 组成。
 
-2. **context window 是 OOC object 在 context 中的投影**——一个对该 object 的引用。
+2. **context window 是 OOC object 在 context 中的投影**——一个对该 object 的引用。同一 OOC object 还可对应到**不同类型的 context window**：取决于视角与用途，同一对象在不同 thread 的 context 里可投影成不同形态的窗（如 thread 的两种投影，见核心 14）。
 
 3. context window 可**挂载 method**；method 展示在 context 中，借此告诉 LLM 可以做哪些行动；LLM 经 **tool use 执行某个 method** 来行动。
 
@@ -55,6 +57,11 @@ activates_on:
     - **readonly-ref**：对方只能调该窗的 **window method**（看/调展示），不能调 object method。
     - **move**：移交所有权——对方可调 **object method**；移交后，自己持有的那个窗降为 **readonly-ref**。
 
+14. **一条 thread 按视角投影为两种 context window**（核心 2 的"同一 object 可对应不同类型窗"在 thread 上的落地）：
+    - **creator 视角 → talk window**：在 creator 的 context 里，该 thread 投影为 talk window，**只展示对话内容**（creator 与该 thread 的往来消息）。
+    - **自己视角 → thread window**：在该 thread 自己的 context 里，它投影为 thread window——承载核心 10/11/12 所说的全部特殊设计（10/12 从自己视角说的"creator 的 talk window"即此 thread window）。**thread event 与 creator message 都是 thread window 的一部分**，于是这两者也一并纳入 context 预算与治理（everything is a window：原先散落的 message 流，归到了 thread window 这个收敛点）。
+    - 构造 Context XML 时，thread window **只展示 methods、不展示内容**；其内容（thread event + creator 对话）展示在 LLM Messages 中（与核心 10/12 的 attention 分流一致）。
+
 ---
 
 ## 二、核心设计组合产生的派生能力
@@ -75,7 +82,7 @@ activates_on:
   - `talk(target, share=[…])` / `say(msg, share=[…])`：经核心 13 把我 context 里的窗（object 引用）共享给对方 thread 传上下文（readonly-ref / move）。
   - 由此涌现：子任务委派、fan-out（开多条 talk）、跨 thread 传上下文——全是 talk + window 传递的组合，无需 do/continue/move 等独立概念。
 
-- **attention 分层（主线强 attend、旁路弱 attend）**：核心 10+12 ⇒ 与 creator（派活方，无论 user 还是 parent thread）的对话进 message 流（全文、强 attend）、creator 窗在 XML 只剩句柄；与 sub/peer 的对话留在该窗 transcript（XML、弱 attend）、message 流只出缩略提示。判据是「是否 creator 窗」，与对端是 user 还是对象无关。
+- **attention 分层（主线强 attend、旁路弱 attend）**：核心 10+12+14 ⇒ 与 creator（派活方，无论 user 还是 parent thread）的对话进 message 流（全文、强 attend），它是自己视角 **thread window** 的内容、在 XML 只渲 methods 句柄；与 sub/peer 的对话留在该窗 transcript（XML、弱 attend）、message 流只出缩略提示。判据是「是否 creator 窗」，与对端是 user 还是对象无关。
 
 - **协作全显式、可观测**：跨 thread 信息流只经 message + window 传递（核心 9+13），不共享内存；所有协作痕迹落 event / transcript，可回放、可 debug。
 
@@ -152,7 +159,7 @@ window 内容变化主动报告为 event，context 按 kind 映射为确定 item
 
 ### 3.5 预算与可见性
 
-context 是稀缺资源（两条轴：信息密度、class/实例正确性）。按相关度排序在 token 预算内分 `{visible, overflow}`；口径：**锚渲染输出**（非序列化对象）估 token；超预算**先把低相关窗压一档再踢 overflow**；creator 窗 / 当前 form 等结构必需窗 **pin** 保护；被裁的窗在 `<context_overflow>` 留摘要行（silent-swallow ban）。
+context 是稀缺资源（两条轴：信息密度、class/实例正确性）。按相关度排序在 token 预算内分 `{visible, overflow}`；口径：**锚渲染输出**（非序列化对象）估 token，且**含 thread window 的内容通道**——thread event + creator 对话虽走 message 流，但它们是 thread window 的一部分（核心 14），故同样计入预算、可被该窗的 `compress` 折叠；超预算**先把低相关窗压一档再踢 overflow**；当前 form 等结构必需窗 **pin** 保护；被裁的窗在 `<context_overflow>` 留摘要行（silent-swallow ban）。
 
 ### 3.6 视角(POV)：context 是视角而非归属
 
@@ -169,32 +176,36 @@ context 是稀缺资源（两条轴：信息密度、class/实例正确性）。
 | sharing `ref` / `lent_out` 命名 | `readonly-ref` / `move`（核心 13 语义） |
 | 渲染层把 `window.class` 漂成 XML `type=` | 统一 `class=`，`type` 仅 arg 数据类型 |
 | 逐实例方法菜单重复 / 空 self 窗壳 | class 声明一次 / self 身份走 instructions |
+| 自己 thread 的 events + creator 对话裸渲在 `<thread>` 块 / message 流、无预算归属 | 收敛为自己视角的 **thread window**（核心 14）：XML 只渲 methods、内容进 message 流、一并纳入预算 |
 
 ---
 
 ## 四、cases 模拟分析
 
-把上面的设计放进真实运行时场景推演，发现**当前设计仍有缺口**（多为"二分模型没穷尽真实态"或"瞬时语义没补生命周期"）。逐 case 列暴露的设计 gap：
+把上面的设计放进真实运行时场景推演，能暴露设计是否还有欠缺。下列每个 case 先描述场景，再点出它暴露的设计 gap 与补法方向。这些 gap 多落在"二分模型没穷尽真实态"或"瞬时语义没补生命周期"，补法皆为**给已有概念加一段生命周期或一条规则**，而非引入新机制（守"简单叠加涌现、勿过度机制化"）。
 
-| case | 暴露的设计 gap | 严重 |
-|---|---|---|
-| **多 peer 并发 + 我正等某非-creator 回复** | **非 gap（已澄清）**：`wait` 是 tool use 执行，其 tool-use 事件本就在 thread event、展示在 LLM Messages 中——LLM 自见"我在等什么"，无需额外「焦点轴」。且 Agent 可同时等多个 window 的 IO，本就没有单一"当前焦点"可升格；多窗等待下"任意 inbox 唤醒"恰是正确语义（任一被等 IO 到达都应醒）。旁支 marker 是有意的弱 attend，LLM 自行取舍。 | — |
-| **creator 主线长对话逼近预算** | **message 流无预算、无节流、无 compress**：核心 10/12 把 creator 全文放进 message 流，而细节 3.5 预算只算 XML 窗——这条最重要的通道无人测量、无界增长；`compress(scope=windows)` 对 creator 句柄窗是空操作，`scope=events` 折叠又会伤 creator 主线。 | 高 |
-| **跨 thread share(readonly-ref) + owner 改了 object** | **跨 thread 引用的一致性模型缺失**：核心 13 说"传引用"(live 指针)、3.6 说"业务状态只存一份"，但跨 thread 必然物化成 borrower 侧冻结副本——owner 后续改动对 borrower 永久 stale 且无失效事件，破了 silent-swallow ban 与"单份状态"两条铁律。设计既没承诺 live、也没承诺"快照+@sharedAt+失效通知"。 | 高 |
-| **move 后 owner thread 结束 / move 链 A→B→C** | **share/move 是瞬时事件、缺生命周期(租约)**：核心 13 只定义移交那一刻谁能调什么，没定义 owner 死亡时归还、move 链的 owner 追踪、readonly-ref 能否 close、僵尸 ref 窗的失效态。 | 高 |
-| **fork=复用某 thread 的全部 context windows** | **所有权已定**（fork 子线程默认持 `readonly-ref`、源 thread 保留所有权 → 不再踩同一 object）。**剩余 fork 可移植性未定义**：通道窗(creator-do/child-do/peer-talk → "一个对端两个父"悬空拓扑)本质不可复制；creator 窗须重挂为指向新父而非沿用祖父；fork 全量复制与"context 是稀缺资源"仍张力（默认是否按相关度裁剪/只 share 子集）。 | 中 |
-| **真实窗类型逐个套 ContextWindow 接口** | **接口是乐观最小集，漏三类**：① 窗-窗层级(parentWindowId / sub_windows)；② budget/attention 元数据(relevance / provenance / compressLevel)；③ 窗自身的**生命周期/派生型 method**（form 的 refine/submit、search.open_match、plan.expand_step）——核心 5 的 window/object 二分缺判定轴、漏了"工厂型 method"这一类；核心 6/7"状态配置块持久化"是过强全称（form.fill 装不进、self/member 门面窗确定性重建不落盘）。 | 中-高 |
-| **creator 判据边界（无 creator/裸消息/多 creator）** | **creator 判据未穷尽**：顶层无 creator 线程、无归属窗的裸 inbox 消息（默认走全文=最高 attention，与"主线最重要"反向）、多 isCreatorWindow 静默 first-win、creator 全文无尺寸上界——缺一条"消息归类全函数"把每条 inbox 落入恰好一档 {creator 全文 \| sub/peer 缩略 \| 无主-最低档显式标 unrouted}，与"每 thread ≤1 creator 窗"不变量。 | 中 |
+> 注：曾经记在这里的 **「creator 主线长对话逼近预算 / message 流无预算」** 已由**核心 14**解决——message 流是自己视角 thread window 的内容通道，thread event 与 creator 对话都是该窗的一部分，故一并纳入 3.5 预算、可被该窗 `compress` 折叠。它不再是开放 gap。
 
-### 反思：当前设计的关键欠缺（按主题收敛）
+### Case A — 跨 thread 共享后 owner 改了对象（一致性模型缺失，高）
 
-> 注：「attention 缺当前焦点轴」经推敲**不是 gap**——`wait` 的 tool-use 事件已在 message 流可见（LLM 自见在等什么），且可同时等多窗、无单一焦点可升格。下列才是真欠缺。
+thread A 把它 context 里的窗 W（指向 object O）以 `readonly-ref` share 给 thread B；现在 B 的 context 里也有一个指向 O 的引用窗。随后 A（或某个持 `move` 权的 thread）调 object method 改了 O 的业务状态。**B 侧那个窗还显示旧值吗？** 核心 13 说"传引用"（live 指针语义）、3.6 说"业务状态只存一份"；但跨 thread（更别说跨进程/跨对象）时，B 拿到的几乎必然是一份物化的冻结副本——O 后续的改动 B 永远看不到，且没有任何失效事件通知 B。这同时破了两条铁律：silent-swallow ban（变化对 LLM 不可见）和"单份状态"。设计既没承诺 live、也没承诺快照语义。**方向**：钉死一致性模型——要么承认"copy-on-share 快照 + `@sharedAt` 标记 + 过期失效事件"，要么定义真正的 live-ref 解析路径；fork 与 share 跨 thread 的口径要统一。
 
-1. **message 流要纳入预算与治理**：预算口径 = 窗 + message 流；creator 主线需一套等价 viewport/老化/折叠（everything is a window 的应有之义：creator 对话也该能被 compress，只是它的"窗"在 message 流侧）。
-2. **跨 thread 共享要钉一致性模型**：明确"copy-on-share 快照语义 + @sharedAt + 过期失效事件"（承认 context 是本-thread 指针表、跨 thread 必物化），或定义真正的 live-ref 解析。统一 fork/share 跨 thread 的口径。
-3. **share/move 升级为「所有权租约」**：补归还（复用反向 `say(share=move)`，不加新动词）+ thread 终止钩子触发归还 + sharing 终态(owner 失联)。
-4. **fork 所有权已定 + 剩可移植性**：fork 子线程默认对复用窗持 `readonly-ref`、源 thread 保留所有权（已写入派生能力，复用核心 13，消除踩同一 object）。剩余：ContextWindow 接口加「可移植性」——通道窗(creator/child-do/peer-talk)默认**不参与 fork**、object-projection 窗可复制（以 readonly-ref）；creator 窗须重挂指向新父；fork 默认按相关度裁剪而非全量。
-5. **ContextWindow 接口补三槽**：层级(parentWindowId)、budget/attention 元数据、method 第三类（生命周期/工厂型）；核心 5 的 method 二分加判定轴、核心 6/7"状态块"承认"瞬态/确定性重建窗"例外。
-6. **消息归类全函数 + creator 单一性不变量**：每条 inbox 必落恰好一档；无归属裸消息默认最低档并显式标 `unrouted`；每 thread ≤1 creator 窗，违反则告警（不静默 first-win）。
+### Case B — move 之后的所有权生命周期（缺租约，高）
 
-> 这些 gap 多在"二分模型/瞬时语义没穷尽真实运行时态"——补法皆为**给已有概念加一段生命周期或一条规则**，而非新机制（守"简单叠加涌现、勿过度机制化"）。落地前，1（message 流预算）、2（跨 thread 一致性）影响最广、最高优先。
+A 把窗 `move` 给 B（所有权转 B，A 自己降为 `readonly-ref`）。接着可能发生三件事：(i) A 这条 thread 结束了——它那个残留的 readonly-ref 窗怎么处理？(ii) B 又把同一个窗 `move` 给 C，move 链 A→B→C 上当前 owner 谁来追踪？(iii) B 结束了却没归还，object 的所有权悬空、谁来兜底？核心 13 只定义了"移交那一刻"谁能调什么，它是个**瞬时事件、没有生命周期**：没定义 owner 死亡时归还、move 链 owner 追踪、readonly-ref 能否被 close、僵尸 ref 窗的失效态。**方向**：把 share/move 升级为"所有权租约"——补归还（复用反向 `say(share=move)`，不加新动词）、thread 终止钩子触发归还、sharing 终态（owner 失联时的兜底）。
+
+### Case C — fork 复用一条 thread 的全部 context windows（剩可移植性，中）
+
+thread 经 `talk(target, fork=<thread id>)` 开一条新线程，新线程复用源 thread 的全部 context windows（即 fork 那组 object 引用）。**所有权已定**：子线程默认对复用的窗持 `readonly-ref`、源 thread 保留所有权（见派生能力，复用核心 13），不再踩同一 object。剩余未定义的是**可移植性**：源 thread 的 context 里有一类"通道窗"——它自己视角的 thread window（核心 14）、指向其 creator 的句柄、指向其 sub/peer 的 talk window，这些代表的是"一段具体对话关系/拓扑"，复制到新线程会产生"一个对端两个父"的悬空拓扑，**本质不可复制**；而指向普通 object（文件/知识/peer 对象本体）的投影窗可以复制（以 readonly-ref）。此外 fork 全量复制与"context 是稀缺资源"有张力（是否该默认按相关度裁剪、只复用子集）。**方向**：ContextWindow 接口加一条"可移植性"——通道窗默认**不参与 fork**、object-projection 窗可复制；fork 默认按相关度裁剪而非全量。
+
+### Case D — 真实窗类型逐个套 ContextWindow 接口（接口是乐观最小集，中-高）
+
+把 form / search / plan 等真实窗逐个套 3.3 的 ContextWindow 接口时，发现接口漏了三类：① **窗-窗层级**（form 内嵌子窗，需 `parentWindowId` / `sub_windows`）；② **budget/attention 元数据**（`relevance` / `provenance` / `compressLevel` 接口没暴露）；③ 窗自身的**生命周期/工厂型 method**——form 的 `refine`/`submit` 会产出新窗、`search.open_match` 打开一个匹配项、`plan.expand_step` 展开步骤，这类"产出新窗"的 method 既不是纯 window method（只改展示）也不是 object method（改对象本体），核心 5 的二分缺这根判定轴。此外核心 6/7"每个窗带一块可持久化状态配置块"是过强的全称——form.fill 的瞬态输入装不进、self/member 这类门面窗是确定性重建的、不需落盘。**方向**：接口补三槽；核心 5 method 二分加判定轴（容纳"工厂型 method"）；核心 6/7 承认"瞬态/确定性重建窗"例外。
+
+### Case E — creator 判据的边界（缺归类全函数，中）
+
+attention 分流全靠"是否 creator 窗"这一判据，但边界情形它没穷尽：(i) 顶层 supervisor thread 根本没有 creator（谁派的它？）；(ii) 一条 inbox 消息没有归属窗（裸消息）——当前默认走全文=最高 attention，恰与"主线最重要"反向；(iii) 万一出现多个 `isCreatorWindow`，当前静默 first-win；(iv) creator 全文没有尺寸上界。**方向**：补一条"消息归类全函数"，让每条 inbox 必落入恰好一档 `{creator 全文 | sub/peer 缩略 | 无主→最低档并显式标 unrouted}`，配合"每 thread ≤1 creator 窗"不变量（违反则告警、不静默）。
+
+### 收敛
+
+落地前最高优先是 **Case A（跨 thread 引用一致性）** 与 **Case B（share/move 租约）**——二者同属"跨 thread 所有权/引用"这一最薄弱区且相互牵连。Case C/D/E 是接口与判据的补全，可随系统调整分批吸收。
