@@ -169,3 +169,31 @@ context 是稀缺资源（两条轴：信息密度、class/实例正确性）。
 | sharing `ref` / `lent_out` 命名 | `readonly-ref` / `move`（核心 13 语义） |
 | 渲染层把 `window.class` 漂成 XML `type=` | 统一 `class=`，`type` 仅 arg 数据类型 |
 | 逐实例方法菜单重复 / 空 self 窗壳 | class 声明一次 / self 身份走 instructions |
+
+---
+
+## 四、cases 模拟分析
+
+把上面的设计放进真实运行时场景推演，发现**当前设计仍有缺口**（多为"二分模型没穷尽真实态"或"瞬时语义没补生命周期"）。逐 case 列暴露的设计 gap：
+
+| case | 暴露的设计 gap | 严重 |
+|---|---|---|
+| **多 peer 并发 + 我正等某非-creator 回复** | attention 只有一根静态轴「是否 creator 窗」，缺**运行时焦点轴**：thread 已在 `wait(on=X)` 记录焦点，渲染层却不消费它——被等窗对 LLM 无标记、被无关旁支误唤醒并丢焦点、marker 风暴淹没真信号。 | 高 |
+| **creator 主线长对话逼近预算** | **message 流无预算、无节流、无 compress**：核心 10/12 把 creator 全文放进 message 流，而细节 3.5 预算只算 XML 窗——这条最重要的通道无人测量、无界增长；`compress(scope=windows)` 对 creator 句柄窗是空操作，`scope=events` 折叠又会伤 creator 主线。 | 高 |
+| **跨 thread share(readonly-ref) + owner 改了 object** | **跨 thread 引用的一致性模型缺失**：核心 13 说"传引用"(live 指针)、3.6 说"业务状态只存一份"，但跨 thread 必然物化成 borrower 侧冻结副本——owner 后续改动对 borrower 永久 stale 且无失效事件，破了 silent-swallow ban 与"单份状态"两条铁律。设计既没承诺 live、也没承诺"快照+@sharedAt+失效通知"。 | 高 |
+| **move 后 owner thread 结束 / move 链 A→B→C** | **share/move 是瞬时事件、缺生命周期(租约)**：核心 13 只定义移交那一刻谁能调什么，没定义 owner 死亡时归还、move 链的 owner 追踪、readonly-ref 能否 close、僵尸 ref 窗的失效态。 | 高 |
+| **fork=复用某 thread 的全部 context windows** | **fork 可移植性未定义**：全量复制会把 creator 窗(错挂祖父、无回报通道)、通道窗(creator-do/child-do/peer-talk → "一个对端两个父"悬空拓扑)、move/ref 窗一并拷贝；"快照拷贝"措辞误导（只冻展示状态、object 业务态仍共享）；且 fork 全量与"context 是稀缺资源"张力。 | 高 |
+| **真实窗类型逐个套 ContextWindow 接口** | **接口是乐观最小集，漏三类**：① 窗-窗层级(parentWindowId / sub_windows)；② budget/attention 元数据(relevance / provenance / compressLevel)；③ 窗自身的**生命周期/派生型 method**（form 的 refine/submit、search.open_match、plan.expand_step）——核心 5 的 window/object 二分缺判定轴、漏了"工厂型 method"这一类；核心 6/7"状态配置块持久化"是过强全称（form.fill 装不进、self/member 门面窗确定性重建不落盘）。 | 中-高 |
+| **creator 判据边界（无 creator/裸消息/多 creator）** | **creator 判据未穷尽**：顶层无 creator 线程、无归属窗的裸 inbox 消息（默认走全文=最高 attention，与"主线最重要"反向）、多 isCreatorWindow 静默 first-win、creator 全文无尺寸上界——缺一条"消息归类全函数"把每条 inbox 落入恰好一档 {creator 全文 \| sub/peer 缩略 \| 无主-最低档显式标 unrouted}，与"每 thread ≤1 creator 窗"不变量。 | 中 |
+
+### 反思：当前设计的关键欠缺（按主题收敛）
+
+1. **attention 缺「当前焦点」轴**：强 attend 应是 `f(isCreatorWindow ∨ id===thread.waitingOn)`——被显式 `wait` 的窗临时升格为全文+不缩略+预算 pin，wakeup 后降回。这把"谁派的活(creator)"与"我此刻卡在等谁(waitingOn)"两轴分开。
+2. **message 流要纳入预算与治理**：预算口径 = 窗 + message 流；creator 主线需一套等价 viewport/老化/折叠（everything is a window 的应有之义：creator 对话也该能被 compress，只是它的"窗"在 message 流侧）。
+3. **跨 thread 共享要钉一致性模型**：明确"copy-on-share 快照语义 + @sharedAt + 过期失效事件"（承认 context 是本-thread 指针表、跨 thread 必物化），或定义真正的 live-ref 解析。统一 fork/share 跨 thread 的口径。
+4. **share/move 升级为「所有权租约」**：补归还（复用反向 `say(share=move)`，不加新动词）+ thread 终止钩子触发归还 + sharing 终态(owner 失联)。
+5. **fork 加「可移植性」语义**：ContextWindow 接口加一条——通道窗(creator/child-do/peer-talk)默认**不参与 fork**，object-projection 窗可复制；creator 窗须重挂为指向新父；fork 默认按相关度裁剪而非全量。
+6. **ContextWindow 接口补三槽**：层级(parentWindowId)、budget/attention 元数据、method 第三类（生命周期/工厂型）；核心 5 的 method 二分加判定轴、核心 6/7"状态块"承认"瞬态/确定性重建窗"例外。
+7. **消息归类全函数 + creator 单一性不变量**：每条 inbox 必落恰好一档；无归属裸消息默认最低档并显式标 `unrouted`；每 thread ≤1 creator 窗，违反则告警（不静默 first-win）。
+
+> 这些 gap 多在"二分模型/瞬时语义没穷尽真实运行时态"——补法皆为**给已有概念加一根轴或一段生命周期**，而非新机制（守"简单叠加涌现、勿过度机制化"）。落地前，1（焦点轴）、2（message 流预算）、3（跨 thread 一致性）是高优先、影响最广的三条。
