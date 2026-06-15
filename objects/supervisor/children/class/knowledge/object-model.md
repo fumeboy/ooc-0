@@ -1,6 +1,6 @@
 ---
 title: OOC 对象模型（class / object / 继承 / 单例·非单例 / context window / children / agent 分层）
-description: class 维度关于 OOC 对象模型的单一权威——核心设计 + 派生设计 + 细节补充 + 模拟推演；class=self.md/readable/executable/visible/persistable/types.ts，object=class 实例 + 运行时 data
+description: class 维度关于 OOC 对象模型的单一权威——核心设计 + 派生设计 + 细节补充 + 模拟推演；class=self.md/readable/executable/visible/persistable/types.ts/index.ts，object=class 实例 + 运行时 data
 activates_on:
   "object::root": "show_description"
 ---
@@ -34,7 +34,8 @@ activates_on:
    - **`executable`**（`executable/index.ts`）—— 它的 **object method**。
    - **`visible`**（`visible/index.tsx`）—— 它向 OOC 系统用户提供 UI 界面。
    - **`persistable`**（`persistable/index.ts`）—— 它的**自定义持久化逻辑**（缺省走系统默认）。
-   - **`types.ts`** —— 定义该 class 的 **data 结构**（object 运行时数据的类型）；非单例 class 还在此导出 **constructor**（见核心 3）。
+   - **`index.ts`** —— class 的**后端程序路由**（不含 visible 前端）：`export const Class = { constructor?, executable, readable, persistable }`，把各维度的程序入口收口在一处；非单例 class 在此注册 **constructor**（见核心 3）。
+   - **`types.ts`** —— 定义该 class 的 **object data 结构**（object 自身运行时数据的类型；**不是** window 投影结构，见核心 4）。
    - 可选 **`common/`** —— 放公用的程序函数。
 
    **object** = 某 class 的实例，持运行时 **data**（结构由 `types.ts` 定义；如何序列化见核心 7）。
@@ -42,11 +43,11 @@ activates_on:
 2. **继承形成单链**：object 经 `ooc.class` 继承一个 class；class 也可以继承另一个 class；逐级向上形成一条**继承链**（单继承——每个节点至多一个父）。自身未定义的部分沿链回退到最近的提供者。
 
 3. **class 分单例 / 非单例**：
-   - **非单例 class**：可复用模板，在 `types.ts` 导出 **constructor** 函数用于构造 object 实例；可被继承。
+   - **非单例 class**：可复用模板，在 `index.ts` 的 `Class.constructor` 注册 **constructor**（`exec(args)` 产出新 object 实例的初始 data）；可被继承。
    - **单例 class**：恰一个实例——object 一旦**自定义自己的函数方法**（持自己的 自定义程序逻辑），就成为**自身 class 的单例**（object 即 class）；单例 class **不可被继承**。
 
-4. **object 在 LLM 视角下呈现为 context window**：context window 向 LLM 展示 object 的**内容**与它**具有的方法**；如何把 object 构造成 context window，由 object 的 **readable** 控制。
-   readable 还可额外提供 **window method**，用于调节窗口信息展示的**程度**（详细 / 部分 / 总结 / 压缩）。**window method 只控制 window 的信息展示，不影响 object 行为、不改变 object 数据**。
+4. **object 在 LLM 视角下呈现为 context window**：object 持自身 **data**（核心 1 的 `types.ts`），由 object 的 **readable** 把 data **投影**成 context window——按视角动态算出 window 的 class 与展示内容，并声明该 window 展示哪些 object method。window 的投影态（如 viewport）与 object data **分离**。
+   readable 还可提供 **window method** 调节展示**程度**（详细 / 部分 / 总结 / 压缩）：window method **只动 window 投影态、返回新的 window 状态对象**（不可变），不影响 object 行为、不改变 object data。
 
 5. **object method 由 executable 实现**：区别于 window method（核心 4），object method **可改变 object 数据、可产生副作用**。
 
@@ -72,7 +73,8 @@ activates_on:
 
 - **`ooc.kind`（class / object 标识）**：`package.json` 的 `ooc.kind` 声明这份 stone **是 ooc class 还是 ooc object**——`"class"` 是一份**类定义**（单例与非单例皆是 class，区别在是否有 constructor，见核心 3）；缺省 / `"object"` 是一个具体**实例**。与 `ooc.class`（声明继承谁）正交：`kind` 答「我是类还是实例」，`class` 答「我继承谁」。逐文件定义骨架见 sibling `example.md`。
 - **`_builtin/<id>` 寻址**：框架 builtin class 以 `_builtin/<id>` 寻址，五件套读自运行进程的 `@ooc/builtins/<id>` 包（不 vendor 进 world）；bare id 解析回 world 的 `objects/<id>`、与 class 磁盘分离。详见 `class/self.md`「寻址」段。
-- *(其余待补：`ooc.class` 字段语义、constructor 注册接口、同名辨析等。组合成员经 thread-as-object 构造时的初始 context 表达，归 thinkable·thread，不在 `package.json` 设字段。)*
+- **`index.ts` 的 `Class` 注册**：class 后端程序入口一处收口——`export const Class = { constructor?, executable, readable, persistable }`（不含 visible 前端）。`constructor` 仅非单例 class 需要（单例 class 即其唯一实例、无需 constructor），其 `exec(args)` 返回新实例的初始 object data。逐文件骨架见 sibling `example.md`。
+- *(其余待补：`ooc.class` 字段语义、同名辨析等。组合成员经 thread-as-object 构造时的初始 context 表达，归 thinkable·thread，不在 `package.json` 设字段。)*
 
 ---
 
