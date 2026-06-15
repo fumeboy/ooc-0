@@ -6,6 +6,8 @@
 
 核心设计：**stone / pool / flow 三子树 + session-worktree**。身份/事实/产物分落 stone（静，进 git 的 canonical 身份）/ pool（积，跨 session 沉淀、不进 git）/ flow（动，每 session 一份运行态）；每个业务 session 是从 stones/main 派生的 git worktree，Object 离开内存可从磁盘恢复成同一个自己。
 
+第二条边界：**core 只提供框架与 API，builtin object 自己的序列化逻辑归 builtin**（object-model 核心 7 的落地纪律）。判据=「实例独占的肉身序列化」归 builtin（如 thread 容器持久化），「任何实例都用的机制 / 多 actor 共享的子系统」归 core 框架（通用 data IO、存储原语、git versioning、PR-Issue 治理账本）；接缝=registry dispatch。权威 `knowledge/core-framework-vs-builtin-logic.md`。
+
 ## 我负责的
 
 把 Object 的「骨架与肉身」落到一棵统一文件树（OOC world `{baseDir}/`）的**三棵子树**，三分是 World 级别（不是 Agent 级别）的：
@@ -43,6 +45,8 @@
 ## 现状
 
 session-aware 读统一访问原语全接入并落地（write_file / loadSelfInstructions / loader / program shell `$OOC_SELF_DIR` / visible endpoint），`resolveStoneIdentityRef` 增 feat 分支绑定覆盖优先路由（2026-06-11），feat-branch PR 沉淀全链路真 LLM 验通（见 reflectable 现状）。stone/pool/flow 三分稳定；csv 替代 sql 后无 migration runner 依赖。旧 session-合入实现（`stone-evolve-self.ts` / `tryMergeSelf` / `evolveSelfMerge` 等）已删（commit 2735241c）。
+
+thread 容器持久化下沉（2026-06-16）：thread 的 thread.json/thread-context/inbox/hydrate 逻辑从 core 迁入 thread builtin（`builtins/agent/thread/persistable/thread-container.ts`，经 `PersistableModule.container` 注册）；core 的 `writeThread`/`readThread` 退为薄 API 经 registry dispatch 委托，仅留通用框架（`object-data.ts` 单对象 data IO + 文件原语 + 串行写）。pr-issue/git/stone 经判据留 core 框架。详见 `knowledge/core-framework-vs-builtin-logic.md`。
 
 近期收口（iteration-02 后）：① session worktree 物理落点迁到 `flows/<sid>`（方案 A），身份与运行时同落 `objects/<id>/`（a4d11bf1）；② **§10 thread-context 完整收敛**——thread.json.contextWindows[] 字段退役，thread-context.json 成唯一权威，writeThread 单点刷（b24ba0ef，iteration-02 时还是待办，现已闭）；③ HTTP 直 commit main + GC 用 `gitWorktreeUnregister` 保留运行时数据；④ 建对象原语 `createObjectInSession` 恢复（2f4456f9）；⑤ **读路径 session-aware 收口**（2026-06-11，62871c50）——storybook 全维 harness sweep 暴露：多数读点绕过 `resolveStoneIdentityRef` 自建裸 main ref，致 session 内 `create_object` 新对象当场 talk/render/加载方法全不可达（误判为「未合入」）。修：talk target 存在性检查 + thinkable/context self/peer 方法注册 + readable 渲染接回 chokepoint（visible/client-source-url 本已修好）。残留：`derivePeerObjectWindows` 的 hierarchical peer 发现（`discoverStoneHierarchicalPeers`）仍 main-anchored（session 内新建 child 不自动作 hierarchical peer 出现；talk 过的 peer 走 talk_window 收集已 session-aware，不受影响）。
 

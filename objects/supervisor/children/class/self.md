@@ -49,7 +49,7 @@
 
 ## 现状
 
-**组合（成员）已落地**：`filesystem` / `terminal` 作为 tool-object（`parentClass=null`、无 agency、只持自己的工具方法）供 agent 持有；agent 经 `_builtin/agent` 基类得 agency，支持多跳类链（supervisor → `_builtin/agent` → root）。成员经构造 agent 的 thread 对象时作为初始 context 提供（thread-as-object）。
+**组合（成员）已落地**：`filesystem` / `terminal` 作为 tool-object（`parentClass=null`、无 agency、只持自己的工具方法）供 agent 持有；agent 经 `_builtin/agent` 基类得 agency，支持多跳类链（supervisor → `_builtin/agent` → root）。成员经构造 agent 的 thread 对象时作为初始 context 提供（thread-as-object）——**落地形态（2026-06-16）**：每个 agent thread 初始 context 由 `injectMemberWindowsIfObjectThread`（thinkable·context）恒补全局单例成员 `_builtin/{filesystem,terminal,interpreter}` + `_builtin/agent/skill_index`（transient 重注入 / user thread 不补 / 幂等）。旧 `ooc.members` 包级声明退役，此为其落地替代。
 
 **过渡态：root god-object 未拆**：root 仍与成员重复持有 file/program 工具。把 agency 收敛到 `_builtin/agent`、工具方法收敛到成员后**移除 root 同名方法**是一次 deliberate、需分阶段执行的命令面重构（实测仅移除一步就破约 30 个把这些工具当 root 方法内联的测试），暂留；过渡态功能正确、可接受。
 
