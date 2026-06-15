@@ -39,19 +39,17 @@
 - `packages/@ooc/core/thinkable/context/object-windows.ts` 的 `registerStoneObjectType`——parentClass 解析：executable `window.parentClass` 覆盖优先，否则取 `package.json` 的 `ooc.class`（`readStoneClass`）。
 - `packages/@ooc/core/runtime/object-registry.ts:209-214`——`resolveParentClassChain` 沿链解析 + 环检测（`seen` Set + MAX_DEPTH=64）。
 
-## 组合（持有）—— 设计期 HAS-A，与继承并列的第二条复用轴
+## 组合（持有）—— HAS-A，与继承并列的第二条复用轴
 
-继承（class，IS-A）之外，OOP 还有**组合（HAS-A）**：**一个 Object 像持有 data 一样持有 objects**。这是我负责的第二条复用机制，与继承正交：
+继承（class，IS-A）之外，OOP 还有**组合（HAS-A）**：**一个 Object 像持有 data 一样持有 objects**——agent 持有 tool-object（filesystem/terminal/…）作为成员。这是我负责的第二条复用机制，与继承正交：
 
-- **设计期·静态**：class 经 `package.json` 的 `ooc.members`（string[]）声明它**构造时一并持有**的成员对象；实例经类链继承该声明（与 method/knowledge 同样沿 `ooc.class` 回退）。这区别于**运行时·动态**的 parent-child（thinkloop 里 `talk(target=自己)` fork 的子线程 / 经 talk 派的子 agent）——一个是「我由什么构成」，一个是「我此刻派生了谁」，本质不同、不可揉。
-- **成员 = tool-object**：被持有、被**操作**（exec 它的方法），不是 Agent（不被 talk、不跑 thinkloop）。共享基础设施（如 filesystem）取**全局单例 by reference**、非每实例新建。
-- **注入**：`injectMemberWindowsIfObjectThread`（`packages/@ooc/core/executable/windows/_shared/init.ts`）读类声明的 members，把每个成员作为 first-class 可 exec 的 ContextWindow 注入 agent context（`class=` 成员 type，`isMemberWindow=true` → 非持久化、每轮 init 幂等重注入，仿 self 窗，避免 thread-context.json 死 _ref）。挂在 peer 注入同 3 个加载点（flows seed / thread 冷恢复 / talk 派送）。
-- **exec 路由不变**：成员是 seeded builtin type（registry 全局注册），`exec(window_id="filesystem", method="grep")` 经 `requireParent → registry.resolveMethod` 正常解析——成员方法造出新对象（grep→search 窗）。
-- **成员方法的本体**：经 `makeRootDelegator` 委托同一条 search/file constructor 链——与 root 同名方法行为一致，区别只在「谁持有」。
+- **成员经 thread-as-object 表达**：agent 的 thinkloop 跑在一个 **thread 对象**上；构造该 thread 对象时把成员（tool-object）作为它的**初始 context** 提供，成员即作为可 exec 的 ContextWindow 出现在 agent context 里。（取代旧的 `ooc.members` 静态 class 声明——同一组合需求已由 thread 构造时提供初始 context 成员表达，不再单设字段。）
+- **成员 = tool-object**：被持有、被**操作**（exec 它的方法），不是 Agent（不被 talk、不跑 thinkloop）。共享基础设施（如 filesystem）取**全局单例 by reference**。区别于**运行时·动态**的 parent-child（thinkloop 里 `talk(target=自己)` fork 的子线程 / 经 talk 派的子 agent）——一个是「我由什么构成」，一个是「我此刻派生了谁」。
+- **exec 路由**：成员是 registry 全局注册的 builtin type，`exec(window_id="filesystem", method="grep")` 经 `requireParent → registry.resolveMethod` 正常解析——成员方法造出新对象（grep→search 窗），本体经 `makeRootDelegator` 委托同一条 constructor 链。
 
 ## 现状
 
-**组合（成员）已落地**：`filesystem` / `terminal` 作为 tool-object（`parentClass=null`、无 agency、只持自己的工具方法），supervisor 经 `ooc.members` 声明持有；agent 经 `_builtin/agent` 基类得 agency，支持多跳类链（supervisor → `_builtin/agent` → root），成员声明沿链继承。
+**组合（成员）已落地**：`filesystem` / `terminal` 作为 tool-object（`parentClass=null`、无 agency、只持自己的工具方法）供 agent 持有；agent 经 `_builtin/agent` 基类得 agency，支持多跳类链（supervisor → `_builtin/agent` → root）。成员经构造 agent 的 thread 对象时作为初始 context 提供（thread-as-object）。
 
 **过渡态：root god-object 未拆**：root 仍与成员重复持有 file/program 工具。把 agency 收敛到 `_builtin/agent`、工具方法收敛到成员后**移除 root 同名方法**是一次 deliberate、需分阶段执行的命令面重构（实测仅移除一步就破约 30 个把这些工具当 root 方法内联的测试），暂留；过渡态功能正确、可接受。
 
@@ -66,7 +64,7 @@
 1. 补 world 级 `classes/<id>/` 持久层扫描 + 注册（解锁用户自定义 class、多实例），与 `objects/` 解析对称。
 2. 补 visible/readable 沿 class 链回退（synthesizer 渲染 self window 经文件解析原语回退），并设计 self.md 快照过期检测以缓解漂移。
 3. **组合收敛**：root 瘦成最小 Object 基类、agency 收敛到 `_builtin/agent`；补余下成员对象（`knowledge` / `world` 承载 create_object / evolve_self / governance 等）；搬完后**移除 root 同名方法**消解过渡态冗余（agent 当前在 root 与成员上看到同名方法）。每步纯加法→可验证→再减。
-4. **实例运行时可变成员**：成员「像 data 一样持有」=实例状态，class 声明初始成员、实例运行时可 acquire/drop（中途装 browser）并随实例持久化——机制待落（当前仅类声明静态注入）。
+4. **实例运行时可变成员**：成员「像 data 一样持有」=实例状态，thread 构造时提供初始成员、实例运行时可 acquire/drop（中途装 browser）并随实例持久化——运行时增减机制待落（当前仅构造期提供）。
 
 ## 名词解释
 
@@ -79,10 +77,8 @@
 - **parentClass 链**：自 `self.type` 沿 `parentClass` 向上的 class id 序列（`resolveParentClassChain`，closest→farthest）。method / window-method / knowledge 在自身 miss 后沿此链回退；带 `seen` Set 环检测与 `MAX_DEPTH=64`。
 - **own 身份 / 共享行为**：实例化时仅 self.md 拷快照（own、不跟框架升级）；方法 / knowledge 经 parentClass 链**活继承** class（框架升级自动生效，除非 own 覆盖）。
 - **ClassNotFoundError**：`createFlowObject` 收到未注册 class 时抛（`code==="CLASS_NOT_FOUND"`、携 `classId`）——悬空 class fail-loud，不静默 miss。
-- **组合（HAS-A）**：与继承（IS-A）并列的第二条复用轴——Object 像持有 data 一样持有 objects。**设计期·静态**关系（class 声明、构造函数建），区别于运行时·动态的 parent-child（talk fork / 经 talk 派的子 agent）。
+- **组合（HAS-A）**：与继承（IS-A）并列的第二条复用轴——Object 像持有 data 一样持有 objects。成员经构造 agent 的 thread 对象时作为初始 context 提供（thread-as-object），区别于运行时·动态的 parent-child（talk fork / 经 talk 派的子 agent）。
 - **成员对象 / tool-object**：被某 agent 组合持有、被**操作**（exec 其方法）而非被 talk 的非-Agent Object（如 filesystem/terminal/world）。共享物取全局单例 by reference。
-- **`ooc.members`**：class `package.json` 的组合声明字段（string[]，成员 type 串），回答「我由哪些成员对象构成」。与 `ooc.class`（继承谁）、`ooc.kind`（我是类还是实例）正交。实例经类链继承该声明。
-- **isMemberWindow**：成员门面窗标记。同 `isSelfWindow`——从类声明确定性重建、每轮 init 幂等重注入、不持久化（经 `isNonPersistedWindow` 剔除），避免 thread-context.json 落死 _ref。
 
 ## 协作
 

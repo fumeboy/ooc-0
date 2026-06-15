@@ -20,7 +20,7 @@ class 由五件套 + `types.ts`（+ 可选 `common/`）构成；缺省的维度�
 
 ```
 note/
-├── package.json        # ooc 元信息：kind / class / members
+├── package.json        # ooc 元信息：kind / class
 ├── self.md             # 身份正文
 ├── types.ts            # data 结构；非单例 class 还在此导出 constructor
 ├── executable/index.ts # object method —— 改数据 / 有副作用
@@ -29,7 +29,7 @@ note/
 └── persistable/index.ts# 可选：自定义序列化
 ```
 
-## package.json —— `kind` / `class` / `members`
+## package.json —— `kind` / `class`
 
 ```json
 {
@@ -45,7 +45,8 @@ note/
 - **`ooc.kind`** —— 这份 stone 是 **class**（一份定义/模板）还是 **object**（一个具体实例）。`note` 是定义 → `"class"`；它被构造出来的实例（运行时窗）是 `"object"`。
   - 单例 / 非单例是**另一条轴**：是否导出 constructor。`note` 有 constructor → **非单例 class**（按需造多个实例）。单例 class 无 constructor、有唯一规范实例。两者 `kind` 都是 `"class"`。
 - **`ooc.class`**（可选）—— 继承谁，值为父类 id，如 `"_builtin/agent"`；不写则隐式继承基类。是**单链**继承。
-- **`ooc.members`**（可选）—— 组合持有哪些成员对象（string[]，见下「agent 变体」）。
+
+> 组合（持有成员对象）**不在 `package.json` 声明**——agent 的成员（tool-object）经构造其 thread 对象时作为初始 context 提供（thread-as-object，见下「agent 变体」）。
 
 ## self.md —— 身份
 
@@ -175,11 +176,10 @@ agent = 继承 object base class 的 ooc class，在 readable/executable/visible
   "ooc": {
     "objectId": "_builtin/my_agent",
     "kind": "class",
-    "class": "_builtin/agent",
-    "members": ["filesystem", "terminal", "knowledge_base"]
+    "class": "_builtin/agent"
   }
 }
 ```
 
 - **`class`**：继承 `_builtin/agent` 得 agency（talk/…）。
-- **`members`**：经组合（HAS-A）持有 tool-object 成员；成员作为可 exec 的窗注入 context（详见 `class/self.md`「组合」段）。
+- **成员（tool-object）**：经组合（HAS-A）持有——**不在 `package.json` 声明**，而是构造 agent 的 thread 对象时作为初始 context 成员提供（thread-as-object）；成员作为可 exec 的窗出现在 context（详见 `class/self.md`「组合」段）。

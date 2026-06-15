@@ -19,7 +19,7 @@ activates_on:
 2. **四段结构**：① 核心设计（原子原则，逐条编号、一句一条、相互正交）；② 派生设计（核心组合后涌现的能力，不引入新原则）；③ 细节补充（字段/接口/寻址/边界）；④ 模拟推演（把模型放进真实运行时场景，暴露并收敛缺口）。新内容按归属入段，不混段。
 3. **高内聚低耦合（依赖倒置）**：本文只讲对象模型自身 + 它**对外暴露的接口**；**不讲其他维度怎么实现**（持久化布局归 persistable、投影构造归 context.md、UI 渲染归 visible……一律"由 X 维度按接口实现，对象模型不耦合"）。
 4. **描述设计与接口、非实现走查**：讲"是什么/为什么/契约"，不逐函数走查；代码锚点仅在确有必要时给。
-5. **精炼标准语言**：一句话能说清不写三句；术语统一（class/object；单例/非单例；constructor；IS-A 继承 / HAS-A 组合；`ooc.kind`/`ooc.class`/`ooc.members`）。
+5. **精炼标准语言**：一句话能说清不写三句；术语统一（class/object；单例/非单例；constructor；IS-A 继承 / HAS-A 组合；`ooc.kind`/`ooc.class`）。
 6. **旧概念单独标注**：与旧实现的差异/迁移放「迁移映射」，明确标"非设计"，不混进核心。
 7. **自洽**：任何改动须与全文不矛盾（核心各条之间、核心与派生之间），也不得与 context.md / persistable 权威冲突；发现矛盾先修设计再落文字。
 
@@ -72,7 +72,7 @@ activates_on:
 
 - **`ooc.kind`（class / object 标识）**：`package.json` 的 `ooc.kind` 声明这份 stone **是 ooc class 还是 ooc object**——`"class"` 是一份**类定义**（单例与非单例皆是 class，区别在是否有 constructor，见核心 3）；缺省 / `"object"` 是一个具体**实例**。与 `ooc.class`（声明继承谁）正交：`kind` 答「我是类还是实例」，`class` 答「我继承谁」。逐文件定义骨架见 sibling `example.md`。
 - **`_builtin/<id>` 寻址**：框架 builtin class 以 `_builtin/<id>` 寻址，五件套读自运行进程的 `@ooc/builtins/<id>` 包（不 vendor 进 world）；bare id 解析回 world 的 `objects/<id>`、与 class 磁盘分离。详见 `class/self.md`「寻址」段。
-- *(其余待补：`ooc.class`/`ooc.members` 字段语义、constructor 注册接口、同名辨析等。)*
+- *(其余待补：`ooc.class` 字段语义、constructor 注册接口、同名辨析等。组合成员经 thread-as-object 构造时的初始 context 表达，归 thinkable·thread，不在 `package.json` 设字段。)*
 
 ---
 
