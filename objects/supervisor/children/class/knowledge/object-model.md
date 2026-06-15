@@ -70,7 +70,7 @@ activates_on:
 
 ## 三、细节补充
 
-- **`ooc.kind`（class / object 标识）**：`package.json` 的 `ooc.kind` 声明这份 stone **是 ooc class 还是 ooc object**——`ooc.kind=class` 标记它是一个 **class**（**单例**：class 即其唯一规范实例，可直接寻址、不另建实例对象）；缺省 / `ooc.kind=object` 则是一个普通可交互 **object**。与 `ooc.class`（声明继承谁）正交：`kind` 答「我是类还是实例」，`class` 答「我继承谁」。
+- **`ooc.kind`（class / object 标识）**：`package.json` 的 `ooc.kind` 声明这份 stone **是 ooc class 还是 ooc object**——`"class"` 是一份**类定义**（单例与非单例皆是 class，区别在是否有 constructor，见核心 3）；缺省 / `"object"` 是一个具体**实例**。与 `ooc.class`（声明继承谁）正交：`kind` 答「我是类还是实例」，`class` 答「我继承谁」。逐文件定义骨架见 sibling `example.md`。
 - **`_builtin/<id>` 寻址**：框架 builtin class 以 `_builtin/<id>` 寻址，五件套读自运行进程的 `@ooc/builtins/<id>` 包（不 vendor 进 world）；bare id 解析回 world 的 `objects/<id>`、与 class 磁盘分离。详见 `class/self.md`「寻址」段。
 - *(其余待补：`ooc.class`/`ooc.members` 字段语义、constructor 注册接口、同名辨析等。)*
 
