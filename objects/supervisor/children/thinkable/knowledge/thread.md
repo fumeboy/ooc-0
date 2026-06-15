@@ -36,7 +36,7 @@ activates_on:
 
 4. **一个 agent 可并行持多条 thread**：与不同对端对话、跑并行子任务，彼此 context 独立。thread 之间可通过（`talk(target=自己)` ）派生形成一棵 **Thread Tree**。
 
-5. ooc agent 的 talk 函数，在构造 thread 时，可以提供初始的 context 成员
+5. ooc agent 的 talk 函数，在构造 thread 时，可以提供初始的 context 成员，例如初始 thread context 具有 terminal、filesystem 等 object
 
 ---
 

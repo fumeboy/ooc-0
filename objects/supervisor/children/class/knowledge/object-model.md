@@ -1,6 +1,6 @@
 ---
 title: OOC 对象模型（class / object / 继承 / 单例·非单例 / context window / children / agent 分层）
-description: class 维度关于 OOC 对象模型的单一权威——核心设计 + 派生设计 + 细节补充 + 模拟推演；class=self.md/readable/executable/visible/persistable/types.ts/index.ts，object=class 实例 + 运行时 data
+description: class 维度关于 OOC 对象模型的单一权威——核心设计 + 派生设计 + 细节补充 + 模拟推演；class=readable/executable/visible/persistable/types.ts/index.ts，object=class 实例 + 运行时 data；self.md 只属 ooc agent 实例
 activates_on:
   "object::root": "show_description"
 ---
@@ -29,7 +29,6 @@ activates_on:
 
 1. **一切是 object；class 是定义，object 是实例**。
    **class** 由这几件构成：
-   - **`self.md`** —— 身份正文：这个 object 是谁、负责什么。加载为 LLM 的 **instructions**（权重高于 system message，唯一身份来源）。
    - **`readable`**（`readable.ts` / `readable/index.ts` / `readable.md`）—— 它**作为 context window 怎么向 LLM 展示**：渲染什么内容、按视角算出什么 class、提供哪些 window method。
    - **`executable`**（`executable/index.ts`）—— 它的 **object method**。
    - **`visible`**（`visible/index.tsx`）—— 它向 OOC 系统用户提供 UI 界面。
@@ -39,6 +38,8 @@ activates_on:
    - 可选 **`common/`** —— 放公用的程序函数。
 
    **object** = 某 class 的实例，持运行时 **data**（结构由 `types.ts` 定义；如何序列化见核心 7）。
+
+   > **`self.md` 不是 class 成员**——身份正文（这个 object 是谁、负责什么，加载为 LLM 的 **instructions**）只属于 **ooc agent 实例**（核心 9）：agent 的 `self` 是它运行时 **data** 的一个字段，经其 persistable 写入/读回实例目录的 `self.md`。工具 object、非 agent object、以及 class 定义本身都没有 self.md。
 
 2. **继承形成单链**：object 经 `ooc.class` 继承一个 class；class 也可以继承另一个 class；逐级向上形成一条**继承链**（单继承——每个节点至多一个父）。自身未定义的部分沿链回退到最近的提供者。
 
@@ -58,6 +59,7 @@ activates_on:
 8. **children = 命名空间从属、不继承**：ooc class 可有 children class，ooc object 可有 children object；children **从属于 parent、但不继承 parent**——只是命名空间上 children 的 id 以 parent id 为前缀（`parent_id/child_id`）。
 
 9. **ooc agent = 继承 object base class 的 ooc class**：在 readable / executable / visible / persistable 之上，额外具备 **thinkable / collaborable / reflectable**。agent 持名为 **`talk`** 的 object method——执行即创建一条 **thread**，thread 内运行 LLM 的 **thinkloop**，以此实现 agent 的智能。
+   **`self.md` 是 agent 实例独有的身份**：agent 的 data 含一个 `self` 字段（身份正文文本），由 agent 的 persistable 写入/读回实例目录的 `self.md`、并加载为该 agent thinkloop 的 **instructions**。非 agent 的 object（工具 object、class 定义）没有 self.md。
 
 > 核心设计 9 条已逐条与用户敲定（仿 context.md 听写/grill 流程）。**系统自带 builtin class/object 的清单索引见 supervisor `knowledge/builtins.md`**（高内聚低耦合：本文只讲对象模型、不列具体 builtin）。派生设计 / 细节补充 / 模拟推演待补。
 
@@ -86,4 +88,5 @@ activates_on:
 
 ## 迁移映射（非设计 / 旧）
 
+- **`self.md` 从 class 成员降为 agent 实例字段**：原核心 1 把 `self.md` 列为所有 class 的成员文件（每个 builtin 包都带 self.md）。现 `self.md` **只属 ooc agent 实例**（核心 9）——agent 的 `data.self` 字段经 agent persistable 写入/读回实例目录的 self.md；class 定义与非 agent object（工具 object 等）不再有 self.md。builtin 包中除 supervisor（预置 agent 实例）外的静态 self.md 已删除。
 - **`instantiate_with_new_world` 已废弃**：原设计把框架 builtin 做成 **class**，并经 `package.json` 的 `ooc.instantiate_with_new_world=true` 在每个新 world bootstrap 时把 class 的 self.md 拷进 `objects/<id>`、自动实例化出一个 object 副本（supervisor 即此类）。**现已废弃**——一份 stone 直接由 `ooc.kind` 声明自身是 class 还是 object，不再走「class→每 world 自动实例化成 object」这条路。**supervisor 由此改为直接的 ooc object（`ooc.kind=object`）**，不再是 class + 自动实例化。代码 `packages/@ooc/core/app/server/bootstrap/instantiate-classes.ts` 的旧 flag 待回流移除。

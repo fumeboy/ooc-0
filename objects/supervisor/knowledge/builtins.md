@@ -1,38 +1,51 @@
 ---
 title: builtin class / object 索引
-description: OOC 系统自带的 builtin class（基类 + 非单例模板）与 builtin object（单例：tool-object / user / supervisor）清单；对象模型见 class/knowledge/object-model.md
+description: OOC 系统自带的 builtin class/object 清单 + 命名空间层级（parent/children）+ 各自 kind；对象模型见 class/knowledge/object-model.md
 activates_on:
   "object::root": "show_description"
 ---
 
 # builtin class / object 索引
 
-> 索引 OOC 系统自带、用于实现基础系统功能的 builtin class / object。**对象模型本身**（class/object、单例/非单例、constructor、继承、agent 分层）见 class 维度 `knowledge/object-model.md`——本文只回答「系统有哪些 builtin、各自职责」，不复述模型（高内聚低耦合）。
+> 索引 OOC 系统自带、实现基础系统功能的 builtin。**对象模型本身**（class/object、单例/非单例、constructor、继承、children 命名空间、agent 分层）见 class 维度 `knowledge/object-model.md`——本文只回答「系统有哪些 builtin、各自职责、id 与层级」，不复述模型（高内聚低耦合）。
+>
+> 约定：`kind`（class=定义 / object=实例，见对象模型细节补充）；**children 命名空间从属**（id 以 parent id 为前缀 `_builtin/<parent>/<child>`，物理在 `<parent>/children/<child>/`；children 不继承 parent，仅命名空间从属——对象模型核心 8）。`self.md` 只属 ooc agent **实例**（对象模型核心 9），故除 supervisor 外的 builtin 都无 self.md。
 
-## builtin class（基类 + 非单例模板）
+## 基类
 
-- **`ooc object base`** —— 所有 object 的基类（readable / executable / visible / persistable）。
-- **`ooc agent`** —— 继承 object base，额外具 thinkable / collaborable / reflectable（设计见 thinkable `knowledge/agent.md`）。
-- **`thread`** —— agent 一次智能运行的单元（`talk` 创建、跑 thinkloop）。
-- **`plan`** —— 任务结构化。
-- **`todo`** —— 待办项。
-- **`knowledge`** —— 知识条目（按 trigger 激活进 context 的 knowledge 窗实例；激活机制见 thinkable `knowledge/knowledge-activation.md`）。
-- **`method_exec_form`** —— 方法执行表单（method_exec 窗）。
-- **`pr`** —— reviewer 评审窗（reflectable）。
-- **`reflect_request`** —— 反思会话 / 沉淀（reflectable）。
-- **`file`** —— 文件（由 `filesystem` 构造）。
-- **`terminal_process`** —— bash 进程（由 `terminal` 构造）。
-- **`interpreter_process`** —— ts/js 进程（由 `interpreter` 构造）。
+- **`_builtin/root`**（class）—— 所有 object 的基类（readable / executable / visible / persistable）；继承链终点。
+- **`_builtin/agent`**（class）—— 继承 root，额外具 thinkable / collaborable / reflectable（设计见 thinkable `knowledge/agent.md`）。持 `talk`/`plan`/`todo`/`end` agency + 身份 `self`（persistable 写实例目录 self.md）。
 
-## builtin object（单例 builtin object）
+## agent 的 children（`_builtin/agent/<child>`）
 
-tool-object（被 exec、非 agent）：
-- **`filesystem`** —— 提供方法创建 / 读取 / 编辑 / 删除 `file`。
-- **`terminal`** —— 提供方法创建 `terminal_process` 执行 bash 脚本程序。
-- **`interpreter`** —— 提供方法创建 `interpreter_process` 执行 ts/js 脚本程序。
-- **`runtime`** —— 向 Agent 提供系统级接口（如 create object）。
-- **`knowledge_base`** —— 提供知识访问方法（如 open_knowledge）。
+- **`thread`**（class）—— agent 一次智能运行的载体（`talk` 创建、跑 thinkloop）；唯一会话载体 class，按视角投影成 thread/talk/reflect_request 三种 window class。
+- **`plan`**（class）—— 任务结构化。
+- **`todo`**（class）—— 待办项（`mark_done` 标记完成）。
+- **`skill_index`**（object）—— 技能索引（每 thread 由 synthesizer 派生注入）。
+- **`pr`**（class）—— reviewer 评审窗（reflectable；runtime 投递创建）。
+- **`method_exec_form`**（class）—— 方法执行表单（method 参数收集形态的类型归位；form 机制本身 deferred）。
 
-其它：
-- **`user`** —— 代表人类用户的**被动 object**：不跑 thinkloop，是 agent `talk` 的对端。
-- **`supervisor`** —— 顶层 **OOC agent**（统筹各维度子对象）。
+## tool-object（单例 object，被 agent exec；各带 children）
+
+- **`_builtin/filesystem`**（object）—— 文件系统接入；方法 grep/glob/open_file/write_file。
+  - children：**`file`**（class，文件窗）、**`search`**（class，搜索结果窗）。
+- **`_builtin/interpreter`**（object）—— ts/js 解释器；方法 run。
+  - children：**`interpreter_process`**（class，sandbox 进程 + history）。
+- **`_builtin/terminal`**（object）—— bash 终端；方法 run。
+  - children：**`terminal_process`**（class，bash 进程）。
+- **`_builtin/feishu_app`**（object，单例 + 继承 agent）—— 飞书应用接入点；方法 open_chat/open_doc + `init` 起 lark event relay。
+  - children：**`feishu_chat`**（class，飞书会话窗）、**`feishu_doc`**（class，飞书文档窗）。
+- **`_builtin/knowledge_base`**（class）—— 知识库接入；方法 open_knowledge。
+  - children：**`knowledge`**（class，知识条目窗；按 trigger 激活进 context，激活机制见 thinkable `knowledge/` 维度）。
+- **`_builtin/runtime`**（class）—— 向 agent 提供系统级接口（如 create_object）。
+
+## 实例 object
+
+- **`supervisor`**（object，`ooc.class=_builtin/agent`）—— 顶层 **OOC agent 实例**（统筹各维度子对象）；唯一保留静态 self.md 的预置 agent 实例。
+- **`user`**（object）—— 代表人类用户的**被动 object**：不跑 thinkloop，是 agent `talk` 的对端。
+
+## 其它
+
+- **`_builtin/example`**（class）—— 建 class 时照抄的样板（演示 construct / object method / readable / persistable / types，非真实功能对象）。
+
+> 说明：`runtime` / `knowledge_base` 当前 `kind=class`（非单例 object）——它们提供系统/知识接入方法、被 agent 组合持有；若后续确认为单例则可改 `kind=object`（与 filesystem/interpreter/terminal 一致）。`reflect_request` 已不再是注册 class——它是 thread 在 super flow 视角下的投影 class（见对象模型 + thinkable `knowledge/thread.md`）。
