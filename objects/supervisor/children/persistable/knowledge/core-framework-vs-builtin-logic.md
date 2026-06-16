@@ -13,7 +13,7 @@ activates_on: {"object::root": "show_description"}
 把 `core/persistable/` 里的东西按一条线切开：
 
 **core 框架 / API（留 core）——「任何 object 都用、或多 actor 共享」的机制：**
-1. **持久化契约 + dispatch**：`PersistableModule {mode, save, load, container}`（`contract.ts`）、registry 的 `resolvePersistable` / `isInlinePersisted`（按 class 自声明解析，不硬编码）。
+1. **持久化契约 + dispatch**：`PersistableModule {mode, save, load}`（`contract.ts`；`PersistableContext` 含可选 `threadId` 供 thread 二级寻址）、registry 的 `resolvePersistable` / `isInlinePersisted`（按 class 自声明解析，不硬编码）。
 2. **通用单对象 data IO**：`object-data.ts` 的 `saveObjectData` / `loadObjectData`——「class 自定义 persistable.save/load，否则系统默认 state.json」的通用编织点，适用于 file/search/process/plan/… 任何独立 object。
 3. **存储原语**：路径计算（`common.ts` threadDir/objectDir/stoneDir）、串行写（`serial-queue`）、默认 state.json IO（`flow-runtime-object.ts`）、thread-context.json 文件原语（`flow-thread-context.ts` 的 threadContextFile/writeThreadContext/readThreadContext）、inbox per-message append store（`inbox-store.ts`）、`toJson`。
 4. **跨 actor 共享子系统**：git versioning（`stone-*`）、stone/pool 三分布局、**PR-Issue 治理账本**（`pr-issue.ts`）。这些不是「某一个 builtin 实例的 data」，而是多个 actor 共同驱动的协议/基础设施（见三）。
@@ -24,13 +24,15 @@ activates_on: {"object::root": "show_description"}
 
 **一句判据**：序列化的是「**这一个实例自己的肉身**」→ builtin 逻辑；是「**任何实例都要的机制**」或「**多 actor 共享的协议/基础设施**」→ core 框架。
 
-## 二、已落地：thread 容器持久化下沉到 thread builtin
+## 二、已落地：thread 容器持久化下沉到 thread builtin（标准 save/load，无专属 container）
 
-thread 是 builtin object（`_builtin/agent/thread`），它的会话运行态是它自己的肉身，故其持久化**逻辑**归 thread builtin：
+thread 是 builtin object（`_builtin/agent/thread`），它的会话运行态是它自己的肉身，故其持久化**逻辑**归 thread builtin。落字关键：thread 用 **object-model 标准 `persistable.save/load`**，**不**发明专属 `container` 契约（曾有过 `PersistableModule.container = {write, read, writeSnapshot}`，是为实现偶然性套命名，已退役）。
 
-- **逻辑在 builtin**：`builtins/agent/thread/persistable/thread-container.ts` 实现 `ThreadContainerPersistence {write, read, writeSnapshot}`——thread.json strip、thread-context 的 inline 嵌入 vs `_ref`、inbox 落盘、hydrate 冷恢复全在这里。经 `persistable/index.ts` 的 `{mode:"inline", container}` 注册。
-- **框架在 core**：`writeThread`/`readThread`（`thread-json.ts`）退化为**薄 API**，经 registry 解析 `container` 并**委托**；manager 的 persist hook（`window-persistence.ts` 的 `reportContextEdit`）同样委托 `container.writeSnapshot`。thread 调用的原语（object-data / 文件原语 / inbox / 串行写）仍是 core 框架。
-- **fail-loud**：`writeThread`/`readThread` 要求 thread builtin 已注册；缺失 throw（旧码空 registry 静默降级，已纠正为响亮）。
+归属原则（窗持引用、对象持数据）：**context window 只持窗状态（信封 + win + 指向对象的引用），不持被指对象的数据**；thread 的消息/events/status 是 thread 对象自身数据（thread 层），渲染时才投影进窗。
+
+- **逻辑在 builtin**：`builtins/agent/thread/persistable/thread-persist.ts` 的 `saveThread(ctx,thread)` / `loadThread(ctx)`——thread.json strip（thread 自身数据）、thread-context.json 的窗状态 entry（inline class 整窗 vs 独立对象 `_ref`，被指对象数据各自落 state.json，不内联）、inbox per-message 落盘、hydrate 冷恢复全在这里。经 `persistable/index.ts` 的 `{mode:"inline", save, load}` 注册（同 `example/persistable` 一套契约）。
+- **框架在 core**：`writeThread`/`readThread`（`thread-json.ts`）是 thread 作用域**薄 API**（threads/{threadId} 二级寻址），经 registry 解析 `save`/`load` 并用 thread 作用域 ctx（含 `threadId`）**委托**；manager 的 persist hook（`window-persistence.ts` 的 `reportContextEdit`）把 live 实例 map 同步进 `thread.contextWindows` 后整份 `writeThread`（取代旧的 `container.writeSnapshot`）。thread 调用的原语（object-data / 文件原语 / inbox / 串行写）仍是 core 框架。
+- **fail-loud**：`writeThread`/`readThread` 要求 thread builtin 的 `save`/`load` 已注册；缺失 throw（旧码空 registry 静默降级，已纠正为响亮）。
 
 ## 三、为何 pr-issue / git versioning / stone 留 core（不下沉到 builtin）
 
@@ -43,7 +45,7 @@ thread 是 builtin object（`_builtin/agent/thread`），它的会话运行态�
 
 ## 四、接缝：registry dispatch（破依赖倒置）
 
-core 不能 import builtin（分层），故 core 调 builtin 逻辑一律**经 registry**（`resolvePersistable(classId).container`），不直接 import——与「core 调 class 自定义 save/load」同一机制。builtin 反向 import core 框架原语（builtin→core，正确方向）。这避免了 persistable↔runtime 静态环，也让「core=框架、builtin=逻辑」在编译期成立。
+core 不能 import builtin（分层），故 core 调 builtin 逻辑一律**经 registry**（`resolvePersistable(classId).save/load`），不直接 import——thread 与任何 class 自定义持久化走同一机制（不再有 thread 专属 `container` 通道）。builtin 反向 import core 框架原语（builtin→core，正确方向）。这避免了 persistable↔runtime 静态环，也让「core=框架、builtin=逻辑」在编译期成立。
 
 ## 五、未决（需 object-model 设计，未盲改）
 
