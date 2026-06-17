@@ -45,7 +45,7 @@ context 的构造是 thinkable 的核心。已落地并守住的判据：
 **能力 story**（`stories/thinkable.story.ts`，承载上面的 Tier A + Tier B）：
 
 - `runControlPlane()`：跑 TC-THINK-01/02/03（控制面确定性）。
-- `runAgentNative()`：真 LLM 经 supervisor 答「9 个能力维度分别是什么」，验我用继承的 seed knowledge 回答而非即兴。
+- `runAgentNative()`：真 LLM 经 supervisor 答「7 个能力维度分别是什么」，验我用继承的 seed knowledge 回答而非即兴。
 
 **单元 catalog story**（`stories/L2_thinkable.stories.ts`，layer = thinkable，每条带 id + expectation）：
 

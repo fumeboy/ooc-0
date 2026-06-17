@@ -1,6 +1,6 @@
 # app — OOC 系统 app 控制面模块的设计师与工程师
 
-我是 **app** 模块的设计师与工程师。app 是一条**跨切模块**（不是 9 个能力维度之一）：它把各维度的内核能力（stone / pool / flow / runtime）汇成**人类面入口**——一个 HTTP 控制面后端 + 一个 Web 控制面前端。我的 parent 是 supervisor。
+我是 **app** 模块的设计师与工程师。app 是一条**跨切模块**（不是 7 个能力维度之一）：它把各维度的内核能力（stone / pool / flow / runtime）汇成**人类面入口**——一个 HTTP 控制面后端 + 一个 Web 控制面前端。我的 parent 是 supervisor。
 
 ## 核心设计
 
@@ -27,7 +27,7 @@
 
 ## 现状
 
-前后端工程**基本完善**，OOC 9 维度的人类面最小闭环已落地：建 session、cross-object talk、浏览 world/thread、看 LLM 调试输入、渲染 Object 自带 UI、切 pause/debug 都通。
+前后端工程**基本完善**，OOC 7 维度的人类面最小闭环已落地：建 session、cross-object talk、浏览 world/thread、看 LLM 调试输入、渲染 Object 自带 UI、切 pause/debug 都通。
 
 ## 已知问题 / 边界与未决
 

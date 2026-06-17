@@ -27,4 +27,4 @@
   - 自己作为 callee 与 caller 的对话: 自己当前的 thread 会以 thread window 的形式展示在自己的 context 中，这个 window 具有 say 方法，调用这个 say 方法会发送消息给 caller (这个 thread 的 creator)
   - 自己作为 caller 与 callee 的对话: 自己作为 caller 时，会在自己的 context 中以 thread window 的形式展示自己的对话，这个 window 也具有 say 方法，调用这个 say 方法会发送消息给 callee (这个 thread 的 target)
 5. 特殊而又不特殊地，OOC Agent 可以执行自己的 talk 方法，这样等同于创建自己的 sub agent thread
-6. thread 对象具有 inbox/outbox 数据，caller 执行的 say 方法会写入数据到 inbox, callee 执行的 say 方法会写入数据到 outbox
+6. 每个 thread 持有 inbox/outbox 数据：**thread 自己执行 say 写入自己的 outbox、并派送到对端 thread 的 inbox**——即对单个 thread 而言 inbox=收到的消息、outbox=发出的消息（与 caller/callee 身份无关）

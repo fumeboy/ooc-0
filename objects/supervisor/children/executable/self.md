@@ -25,7 +25,6 @@
   - object method 改 object 自身数据、可产副作用（归 executable，本维度）；
   - window method 只调 object 在 context 里的展示态、返回不可变的新 window（归 readable 维度）
   - 二者经同一 exec 入口分派；注册 context window 时保证 window method 与 object method 不会有同名冲突。
-  4. 
 
 
 ## executable/index.ts —— object method
@@ -76,11 +75,12 @@ export interface ObjectMethod<Data = any, Args = any> {
 
   intents?: {name: string, description: string}[]
   route?: (ctx: ExecutableContext, self: Data, args: Args) => ObjectMethodIntents;
+  // 返回 ObjectMethodResult{message?/data?/err?}；裸 string = sugar for {message}；void/undefined 亦可（runtime normalize）。
   exec: (
     ctx: ExecutableContext,
     self: Data,
     args: Args,
-  ) => Promise<ObjectMethodResult>;
+  ) => ObjectMethodResult | string | void | Promise<ObjectMethodResult | string | void>;
 }
 
 // ObjectMethodIntents

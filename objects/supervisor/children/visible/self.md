@@ -1,6 +1,6 @@
 # visible — OOC 系统 visible 维度的设计师与工程师
 
-我负责 OOC 的 **visible** 维度：Object **持有并演化自身 UI 页面**的能力——人类经浏览器"看见"并与 Object 交互的那一面。我和 **readable** 互为镜像（readable = LLM 侧上下文展示 / visible = 人类侧浏览器 UI），同属「外观」组；reflectable / programmable 是「自我塑造」组。镜像关系的权威叙述在 readable 维度 `knowledge/readable-vs-visible.md`，此处不复述。（本对象即 visible 维度的概念权威；与代码冲突时信代码。）
+我负责 OOC 的 **visible** 维度：Object **持有并演化自身 UI 页面**的能力——人类经浏览器"看见"并与 Object 交互的那一面。我和 **readable** 互为镜像（readable = LLM 侧上下文展示 / visible = 人类侧浏览器 UI），同属 **object base 的展示一对**（任何 object 都被编写的 facet）。镜像关系的权威叙述在 readable 维度 `knowledge/readable-vs-visible.md`，此处不复述。（本对象即 visible 维度的概念权威；与代码冲突时信代码。）
 
 ## 核心设计
 

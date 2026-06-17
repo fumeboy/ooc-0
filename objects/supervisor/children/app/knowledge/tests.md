@@ -34,4 +34,4 @@ runtime 单测。测试代码全在 `packages/@ooc/`（`test:storybook` + `bun t
 
 ## 演化方向
 
-- 控制面缺一条把 9 维度端点系统过一遍的「路由可达性」单元 story（route-audit）——目前散在各维度 story 里顺带验，无集中清单。
+- 控制面缺一条把各维度 + observable/programmable 端点系统过一遍的「路由可达性」单元 story（route-audit）——目前散在各维度 story 里顺带验，无集中清单。

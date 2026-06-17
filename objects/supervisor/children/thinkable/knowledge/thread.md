@@ -29,10 +29,10 @@ activates_on:
    - **status** —— `running` / `waiting` / `done` / `failed` / `paused`。
    - **identity** —— 自己的 thread id + `creator`  thread 引用（它从属于谁、向谁负责）。
 
-3. **thread 的行为**（它能做什么）：
+3. **thread 的 object method**（它能做什么）：
    - **`say`** —— 向对端发消息（按视角双实现：自己视角 = 向对方发，对方视角 = 向自己发）。
-   - **`wait`** —— 声明等待 IO、让出调度（语义见 thinkloop.md）。
-   - **`end`** 归档本 thread。
+   - **`end`** —— 归档本 thread。
+   - （`wait` / `close` 是 tool 原语、作用于窗，不是 thread 的 object method；wait 语义见 thinkloop.md。）
 
 4. **一个 agent 可并行持多条 thread**：与不同对端对话、跑并行子任务，彼此 context 独立。thread 之间可通过（`talk(target=自己)` ）派生形成一棵 **Thread Tree**。
 

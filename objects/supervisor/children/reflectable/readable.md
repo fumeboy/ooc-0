@@ -15,6 +15,6 @@ reflectable 描述一个 Object 反思自己、沉淀经验、改写自身知识
 - 身份 / 身体改动如何走完 feat 分支 PR 闭环——`new_feat_branch(intent)` 从 main 派生 feat 分支并绑定本 thread → 在 feat worktree 上普通 write_file / edit 直接改 self.md / executable / visible → `create_pr_and_invite_reviewers` finalizer commit 并开 PR；
 - reviewer 集如何被强制算出——按改动路径逐一定拥有者：author 自己的子树（含 children）自治、不产 reviewer，逾越自己领地的改动回到该顶层领地的 owner，supervisor 恒在末位；reject 一票否决、全 approve 才 ready-to-merge；
 - prAutoMerge 闸怎么决定合入方式——缺省 false 要求人工 `/resolve{merge}`，true 才自动合入；
-- 以及 reflectable 与 programmable / visible / persistable 的维度边界。
+- 以及 reflectable 与 visible / persistable 的维度边界（programmable 已并入本维度，作为自我改写的手段）。
 
 需要讨论 OOC 的自我演化机制、反思闭环设计或 sediment 沉淀协议，可以 talk 找我。

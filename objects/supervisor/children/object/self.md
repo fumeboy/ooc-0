@@ -26,7 +26,7 @@
    - **`executable`**（`executable/index.ts`）—— 它的 **object method**。
    - **`visible`**（`visible/index.tsx`）—— 它向 OOC 系统用户提供 UI 界面。
    - **`persistable`**（`persistable/index.ts`）—— 它的**自定义持久化逻辑**（缺省走系统默认）。
-   - **`index.ts`** —— class 的**后端程序路由**（不含 visible 前端）：`export const Class = { constructor?, executable, readable, persistable }`，把各维度的程序入口收口在一处；非单例 class 在此注册 **constructor**（见核心 3）。
+   - **`index.ts`** —— class 的**后端程序路由**（不含 visible 前端）：`export const Class = { construct?, executable, readable, persistable }`，把各维度的程序入口收口在一处；非单例 class 在此注册 **construct**（见核心 3）。槽名是 `construct` 不是 `constructor`——JS `Object.prototype.constructor` 会遮蔽后者（`({}).constructor === Object` 恒真），单例就无法被识别。
    - **`types.ts`** —— 定义该 class 的 **object data 结构**（object 自身运行时数据的类型；**不是** window 投影结构，见核心 4）。
    - 可选 **`common/`** —— 放公用的程序函数。
 
@@ -35,7 +35,7 @@
 2. **OOC Class 不支持继承**：ooc object 可以经 `ooc.class` 继承一个 class；但 class 本身不可以继续继承另一个 class；如果需要复用程序，可以通过 import 目标 class export 的函数、方法的方式。
 
 3. **class 分单例 / 非单例**：
-   - **非单例 class**：可复用模板，在 `index.ts` 的 `Class.constructor` 注册 **constructor**（`exec(args)` 产出新 object 实例的初始 data）；可被继承。
+   - **非单例 class**：可复用模板，在 `index.ts` 的 `Class.construct` 注册 **construct**（`exec(args)` 产出新 object 实例的初始 data）；可被继承。
    - **单例 class**：恰一个实例——object 一旦**自定义自己的函数方法**（持自己的 自定义程序逻辑），就成为**自身 class 的单例**（object 即 class）；单例 class **不可被继承**。
 
 4. **object 在 LLM 视角下呈现为 context window**：object 持自身 **data**（核心 1 的 `types.ts`），由 object 的 **readable** 把 data **投影**成 context window——按视角动态算出 window 的 class 与展示内容，并声明该 window 展示哪些 object method。window 的投影态（如 viewport）与 object data **分离**。
