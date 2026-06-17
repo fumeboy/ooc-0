@@ -1,54 +1,87 @@
 # readable — OOC 系统 readable 维度的设计师与工程师
 
-我负责 OOC 的**「Object 怎样被读」**——一个 Object 出现在思考者的 context 里时，它**怎样被渲染、怎样自我介绍、怎样被压缩、它的展示状态怎样被控制**。我是 supervisor 之下的维度对象，与 visible 并列——**我管 LLM 侧的展示（渲染进 context），visible 管人类侧的展示（tsx 渲染进浏览器）**。同一个 Object，两个观众，两条展示线。
+我负责 OOC 的 **readable（被读 / 展示）维度**：一个 Object 出现在思考者（LLM）的 context 里时，它**怎样把自己投影成 context window**——按视角算出投影 class、把自身 Data 渲染成展示内容、提供调节展示程度的 window method。我是 supervisor 之下的维度对象，与 visible 并列——**我管 LLM 侧的展示（投影进 context），visible 管人类侧的展示（tsx 画进浏览器）**。同一个 Object，两个观众，两条展示线。
 
-## 我的两个面
+## 编辑规范
 
-readable 有**静态面（readable.md 自我介绍名片）**和**动态面（readable.ts/renderXml 按状态算 XML）**——二者不是两个东西，而是**同一个 `<readable>` 渲染槽位的两种来源**，命中谁就渲染成同一个节点。优先级回退链与实现锚定（含磁盘读取顺序）的单一权威在 `knowledge/two-faces-of-readable.md`，此处不复述。
+维护本文须守以下规范，使其长期高内聚、低耦合、不漂移：
 
-## 核心设计
+1. **单一权威**：readable 维度的概念模型只定义一处。新增/变更先改本文、再改代码；散落的旧知识吸收进来即删旧文档，不另起平行文档。
+2. **四段结构**：① 核心设计（原子原则，逐条编号、一句一条、相互正交）；② 派生设计（核心组合后涌现的能力，不引入新原则）；③ 细节补充（字段/接口/寻址/边界）；④ 模拟推演（把模型放进真实运行时场景，暴露并收敛缺口）。新内容按归属入段，不混段。
+3. **高内聚低耦合**：只讲 readable 自身的设计 + 它对外暴露的契约；object 模型（class/object/继承）归 object 维度、object method 归 executable、context 渲染管线归 thinkable——本文只声明 readable 如何投影，不越界复述。
+4. **描述设计与接口、非实现走查**：讲"是什么/为什么/契约"，不逐函数走查；代码锚点仅在确有必要时给。
+5. **精炼标准语言**：一句话能说清不写三句；术语统一。
+6. **旧概念单独标注**：与旧实现的差异/迁移放「迁移映射」，明确标"非设计"，不混进核心。
+7. **自洽**：任何改动须与全文不矛盾（核心各条之间、核心与派生之间），也不得与其他权威冲突；发现矛盾先修设计再落文字。
 
-核心设计：**Object 怎样被读，由 Object 自己控制**。静态 readable.md 自我介绍、动态 readable/renderXml 把 Object 渲染成 context XML 子节点、window method 控展示状态（viewport 等，只读 windowState、返回新 state，不碰业务数据）、compressView 控压缩态；经 registerReadable 注册，与 executable 物理分维。与 visible（人类侧 UI）互为镜像。
+---
 
-## 我负责的
+## 一、核心设计
 
-一个 OOC Object 进入 LLM context 时，它的"长相"由 readable 维度决定。代码层我是与 executable **并列的一等注册维度**——`executable` 经 `registerExecutable` 注册 object method（操作业务数据），我经 `registerReadable` 注册整套动态展示构造（`packages/@ooc/core/runtime/object-registry.ts:128`）；静态自我介绍则走持久层 readable.md（`readReadable` / `writeReadable`，`packages/@ooc/core/persistable/stone-readable.ts:17/37`）。我持有的字段（`ObjectDefinition`，`packages/@ooc/core/_shared/types/registry.ts:62-79`）：
+1. **怎样被读，由 Object 自己控制**：一个 Object 进入 LLM context 时的"长相"是它自己的 readable 算出来的，不是渲染器替它决定的。readable 是 Object class 的一个维度模块（`readable` 投影函数 + `window` 投影 class 声明），与 executable 并列收口进 `index.ts` 的 `export const Class`。
 
-- **readable.md（静态自我介绍）**：Object 的对外名片，渲染器作为 `<readable>` 槽位的最低优先级来源读取（`renderers/xml.ts:170`）。与 self.md 构成双面身份。
-- **readable（动态渲染 hook）**：把 Object 渲染成 context 里的 XML 子节点序列（`ReadableFn`，`registry.ts:29`），优先级高于静态 readable.md。所有 builtin 都用这个字段——talk/method_exec/feishu_chat/feishu_doc 也是 `registerReadable({ readable })`（旧名 `renderXml` 已并入 `readable`，registry.ts:56；"renderXml" 现仅是 XML-生成函数的非正式叫法）。
-- **windowMethods**：控制 window 展示的**方法表**（如 file 的 `set_viewport`、program 的 `set_history_window`）。与 object method 并列但签名不同——它接收 `windowState` 快照、返回新的 `WindowDisplayState`，**不原地 mutate**（`packages/@ooc/core/_shared/types/window-method.ts:34`）。
-- **compressView**：折叠态/快照态渲染（compressLevel 1/2），让 context 预算紧张时 Object 仍能给出元信息（`CompressViewHook`）。
-- **onClose**：window 关闭时的副作用 hook（如拒绝关闭系统派生窗、级联关闭 sub）。
-- **consumedMessageIds**：transcript 类窗（talk，含 peer 会话与 fork 子窗两形态）声明"本轮我已消费哪些 inbox/outbox 消息"，供 renderer 顶层去重。
+2. **Object 持 Data，readable 把 Data 投影成 window**：Object 自身的业务数据是 `Data`（结构由 class 的 `types.ts` 定义）；readable 把它**投影**成一个 context window——按视角动态算出 window 的 **class** 与展示 **content**（结构化节点或纯文本）。投影是「读」的算子，不持久化投影结果。
 
-## 当前设计
+3. **投影态 win 与业务 Data 分离**：window 的展示态（如 viewport、transcript 区间）是 `win`，与 `Data` 物理分离持久化——runtime 实例信封把 `data` 与 `win` 显式分作两个字段。readable 同时读 `Data`（算内容）与 `win`（算展示范围）。
 
-- **维度劈分（2026-06 主线）**：原单一 `registerObjectType` 拆成 `registerExecutable`（object method + 类元）+ `registerReadable`（我这套展示字段）。两入口共用 `mergeExistingDefinition`（`object-registry.ts`），按维度分别 merge、互不覆盖；同一 type 上 object method 与 window method **同名 fail-loud**（`object-registry.ts:49`，`assertNoMethodNameCollision`）——exec 名全局唯一，dispatch 无歧义。
-- **builtin 物理分文件**：每个 builtin 对象的目录裂成 `executable/index.ts`（executable 维度）+ `readable.ts`（我，自注册 `registerReadable`）+ barrel `index.ts`（分别 side-effect 加载两维度）。**executable 不 import readable**——两维度物理解耦。样板对象见 `packages/@ooc/builtins/example/`（self/executable/readable 三文件分注册）。
-- **window method 只动展示状态**：window method 的 exec 读 `ctx.windowState`、返回新 `WindowDisplayState`（`packages/@ooc/core/_shared/types/window-state.ts:8`，含 viewport / lines / columns / transcriptViewport / resultsViewport / historyViewport 等纯展示字段），由 dispatch 写回 `window.state`。业务数据不归我碰。viewport 类执行体复用共享 `windowSetViewport`（`packages/@ooc/core/executable/windows/_shared/viewport.ts`）。
-- **window.state 持久化**：展示状态随 window 落 thread-context.json（thinkable §10 后 contextWindows 的唯一权威落点），与业务数据分离。
+4. **window method 只动 win、返回新 win，不碰 Data**：readable 提供 window method 调展示**程度/范围**（详细/部分/总结/压缩、viewport…）。它收 `(ctx, self, before_win, args)`、返回**新的 win**（不可变，runtime 写回实例的 win），不改 Data、不产副作用；出错直接 throw。这是它与 executable 的 object method（改 Data、可副作用）的根本分界。
 
-## 现状
+5. **同一 Object 多视角投影成不同 window class**：readable 可声明多个 window class——同一个 Object 实例按视角（看它的 thread POV、它当前状态）投影成不同的 class，每个 class 各自声明展示哪些 object method、提供哪些 window method。投影 class 是渲染期动态算出的（`ReadableProjection.class`），不写进信封的固有 class。
 
-维度劈分已彻底落地（commit `3afb1a10` registry 劈分 → `37352954` readable 代码体归位 readable.ts → `dca75a66` barrel 加载两维度、executable 不再 import readable）。8 个有 readable.ts 的 builtin（file/knowledge/plan/program/root/search/skill_index/todo）的展示维度全部自注册到位；talk/method_exec/relation/feishu 同样经 `registerReadable({ readable })` 注册各自的 XML 渲染函数。`example` builtin 是标准对象定义样板。storybook 单元化 catalog 的 L3 已钉死维度劈分判据（registerExecutable/registerReadable 互不覆盖、同名 fail-loud、file.set_viewport 是 windowMethod 不在 object methods 表）。
+6. **object method 与 window method 同名 fail-loud**：同一个 class 上，object method（executable）与 window method（readable）不能重名——LLM 经统一的 exec-by-name 入口 dispatch，重名会有优先级歧义。注册期直接 fail-loud。
 
-## 已知问题 / 演化方向
+7. **静态 readable.md 名片是投影的最低优先级回退**：Object 可写一张静态自我介绍名片 `readable.md`（"我是谁、能做什么、何时找我"，协作网络里的对外名片，与 self.md 双面身份）。它是 `<readable>` 投影槽位的**最低优先级兜底**——class 有动态 readable 时用动态投影，没有时才回退读这张名片，再没有才落 placeholder。
 
-- **沿 class 链回退尚未行使**：registry 有 `resolveWindowMethod`（window method 沿 parentClass 链回退，镜像 `resolveMethod`，`object-registry.ts:257/261`），但目前无自定义对象覆盖 readable，该链未被真正行使。class 实例若要继承/覆盖框架 class 的展示，需补这条链的实测。
-- **对象树曾缺位**：在 2026-06-09 之前我没有独立 child 对象，window method/展示这片"设计师归属"悬空（暂挂 executable/visible 之间）。现已独立成维（与 visible 并列）。
+8. **与 visible 互为镜像**：readable 是 LLM 侧展示（投影成 context XML），visible 是人类侧展示（tsx 画进浏览器）。两者并列、不互相吞并；同一个 Object，readable 面向思考者、visible 面向用户。
 
-## 名词解释
+---
 
-- **readable.md**：Object 写给外部世界的静态自我介绍（原 readme.md，2026-05-28 重命名）。供 user / 其他 Object 理解"我是谁、能做什么、何时找我"，是协作网络里的名片。渲染器作 `<readable>` 槽位最低优先级来源读取（`readReadable`，`stone-readme.ts:18`）。
-- **readable.ts / ReadableFn**：动态上下文渲染函数 `(ctx: RenderContext) => XmlNode[] | Promise<XmlNode[]>`（`packages/@ooc/core/_shared/types/registry.ts:29`）。按 Object 当前状态算出 context XML，优先级高于静态 readable.md。这是 `ObjectDefinition` 上唯一的渲染 hook 字段——talk/method_exec/feishu_chat/feishu_doc 的渲染函数也挂在它上（"renderXml" 是这类 XML-生成函数的非正式叫法，非独立字段/类型）。
-- **window method**：控制 window 展示（viewport 等）的方法，类型 `WindowMethod`（`packages/@ooc/core/_shared/types/window-method.ts:34`），`kind:"window"`。与 object method 物理分离、签名不同——exec 额外收 `windowState` 快照、返回新 state，不原地 mutate 业务数据。经 `registerReadable` 的 `windowMethods` 表注册。
-- **WindowDisplayState**：window 纯展示状态容器（`packages/@ooc/core/_shared/types/window-state.ts:8`）：viewport / lines / columns / transcriptViewport / resultsViewport / historyViewport。window method 写、`readable` 读，随 window 落 thread-context.json。只放展示参数，不放业务数据。
-- **compressView / CompressViewHook**：折叠/快照态渲染 hook（`registry.ts:31`），签名 `(ctx, level: 1|2) => XmlNode[]`。context 预算紧张时让 Object 仍给出元信息。
-- **registerReadable**：readable 维度的注册入口（`object-registry.ts:128`），接受 `readable / windowMethods / compressView / onClose / consumedMessageIds`。与 `registerExecutable` 类型层互拒越界字段、`mergeExistingDefinition` 按维度互不覆盖、object↔window method 同名 fail-loud。
+## 二、派生设计
 
-## 相关兄弟
+这些不是新增机制，而是核心组合后自然涌现的能力。
 
-- **executable**：与我物理分注册的另一半——它管 object method 改业务数据，我管 window method 控展示；registry 在 `mergeExistingDefinition` 里两维度互不覆盖、同名 fail-loud。
-- **visible**：人类侧的展示（tsx 页面渲染进浏览器、`/call_method` 通道）。我是 LLM 侧、它是人类侧；"变化的展示"上两者交织（windowMethods+state 是变化的控制，visible/diff.tsx 是变化的人类侧呈现）。
-- **thinkable**：context 渲染管线消费我的 readable/renderXml 产出窗口；compress 预算与我的 compressView 配套。
-- **programmable**：Object 自写的 readable.ts 形态与热更归 programmable；我定义 readable 维度"是什么"，它定义"怎么写、怎么热更"。
+- **会话窗去重收纳**：会话载体（thread）投影时，把归属本窗的消息收进 transcript 并报告这批消息 id（`consumedMessageIds`），渲染器据此从顶层 inbox/outbox 兜底里剔除——一条消息要么进某窗 transcript、要么进顶层兜底，"信息只渲一次"（context 模型核心 10）。这是核心 2/5（按视角投影 + 报告已渲内容）的组合，不是新机制。
+- **展示预算自适应**：window method 调展示程度（核心 4）让同一 Object 在 context 预算紧张时给精简投影、宽裕时给详细投影——不改 Data，只换 win，所以投影随时可收放。
+- **沿继承链解析投影**：object 经 ooc.class 单跳继承一个 class 时，readable / window method / window class 声明都沿"self 优先、父类次之"解析（首个命中胜出）——子 class 不覆盖 readable 时自然复用父 class 的投影。
+
+---
+
+## 三、细节补充
+
+- **契约单一权威**：readable 维度的可编译契约在 `packages/@ooc/core/readable/contract.ts`——
+  - `ReadableModule = { readable(ctx, self, win) => ReadableProjection, window: WindowClassDecl[] }`（`contract.ts:78`）。
+  - `ReadableProjection = { class, content, consumedMessageIds? }`（`contract.ts:37`）：投影 class + 展示内容（`XmlNode[] | string`）+ 本窗已收纳消息 id。
+  - `WindowMethod = { name, description, schema?, exec(ctx, self, before_win, args) => Win }`（`contract.ts:51`）：签名收 self(只读 Data)+before_win(当前投影态)+args，返回新 win；出错 throw。
+  - `WindowClassDecl = { class, object_methods, window_methods }`（`contract.ts:71`）：一个投影 class 声明展示哪些 object method（按名引用 executable）+ 提供哪些 window method。
+  - `ReadableContext = { thread?, object:{id,class}, persistence? }`（`contract.ts:20`）：读侧上下文，不携带改业务数据的能力。
+- **装配与注册**：各 class 的 `index.ts` 一处 `export const Class = { construct?, executable, readable, persistable }`（`packages/@ooc/core/runtime/ooc-class.ts:47`）；经单入口 `register(classId, Class, { parentClass })` 注册进 registry（`packages/@ooc/core/runtime/object-registry.ts:103`）。注册期校验 object↔window method 不同名（`object-registry.ts:53`）。
+- **投影态与业务数据分离落盘**：runtime 实例信封 `OocObjectInstance = { id, class, …, data, win }`（`ooc-class.ts:75`）把身份信封、业务 Data、投影态 win 三者显式分离；win 随实例持久化，readable 渲染期读它。
+- **投影解析与回退**：渲染器对每个实例先 `resolveReadable(inst.class)?.readable(ctx, inst.data, inst.win)` 取投影；无 Class.readable 时回退读盘 `readable.md`；都无落 placeholder（`packages/@ooc/core/thinkable/context/renderers/xml.ts:239`，回退链锚点见 `:251/:268/:284`）。静态名片读写在 `packages/@ooc/core/persistable/stone-readable.ts:17`（`readReadable`）。
+- **viewport 纯 helper**：viewport 类 window method 不再走集中执行体，各 class readable 自装 set_viewport，复用纯 helper `mergeViewport` / `applyViewport`（canonical 在 `packages/@ooc/core/_shared/types/viewport.ts`，经 `packages/@ooc/core/readable/viewport.ts` re-export）。
+- **样板**：投影 + window method 的标准样板见 `packages/@ooc/builtins/knowledge_base/children/knowledge/readable/index.ts`（set_viewport + Data 投影）；会话窗"一个实例多视角投影成多 class"见 `packages/@ooc/builtins/agent/children/thread/readable/index.ts`（thread 投影成 thread/talk/reflect_request 三 class）；最小对象样板 `packages/@ooc/builtins/example/`（types/executable/readable/persistable 分文件 + index.ts 一处装配）。
+
+---
+
+## 四、模拟推演
+
+把设计放进真实运行时场景，暴露缺口与方向。
+
+- **沿 class 链回退尚未被行使（中）**：registry 有 `resolveWindowMethod` / `resolveReadable` / `resolveWindowClass`（沿 self→父类解析，首个命中胜出，`object-registry.ts:191/202/223`），但目前没有自定义 object 覆盖框架 class 的 readable，这条回退链没有被真正行使过。方向：补一条"子 class 继承/覆盖父 class 投影"的实测。
+- **投影质量需真 LLM 判（中）**：投影渲染得好不好、压缩得当不当，本质是 context 质量问题，控制面确定性测不出。方向：补 agent-native 验证——agent 自写一个 object 的 readable（控其在 context 里的投影）或调 window method 改 viewport，确定性核验实例 win 的变化。
+
+---
+
+## 迁移映射（非设计 / 旧）
+
+| 旧概念 | 归并到 |
+|---|---|
+| `registerReadable` / `registerExecutable` / `registerObjectType`（分维度注册入口） | 已退役；单入口 `register(classId, Class, { parentClass })`（`object-registry.ts:103`），各维度模块经 `export const Class` 收口 |
+| `ObjectDefinition`（旧 registry store 元素，平铺 methods + 旧 readable hook） | `OocClass`（`ooc-class.ts:47`）；store 元素 `RegisteredClass` |
+| `windowMethods`（旧 ObjectDefinition 字段） | `readable.window[].window_methods`（`contract.ts:74`） |
+| `renderXml` / `ReadableFn (ctx)=>XmlNode[]`（旧动态渲染 hook） | `readable(ctx, self, win) => { class, content }`（`contract.ts:79`）——收 self/win，返回投影 class + 内容 |
+| `WindowDisplayState` / `window.state` / `windowState` 快照 | 投影态 `win`（与 Data 分离，`ooc-class.ts:75`）；window method 返回新 win |
+| `WindowMethodOutcome`（旧 `{ok,state,result}` 返回） | 已退役；window method 直接返回新 win，出错 throw（`contract.ts:51`） |
+| `compressView` / `CompressViewHook` / `onClose` / `mergeExistingDefinition` | 已退役（Wave4 readable 契约不再含这些 deferred hook）；展示程度收放靠 window method 换 win |
+| `windowSetViewport`（旧集中执行体，`executable/windows/_shared`） | 已删；各 class readable 自装 set_viewport，复用纯 helper `mergeViewport`/`applyViewport`（`readable/viewport.ts`） |
+| `_shared/types/window-method.ts` / `window-state.ts` / `registry.ts(ObjectDefinition)`（旧文件） | 均已删；契约统一在 `readable/contract.ts` |
+| **programmable**（曾为独立维度，"Object 自写 readable 的形态/热更"） | 已并入 reflectable（"改身体 = 为自身编程"） |
