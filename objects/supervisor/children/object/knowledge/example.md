@@ -1,22 +1,15 @@
 ---
-title: ooc class 定义示例（五件套逐文件：package.json / types.ts / executable / readable / visible）
-description: 按 object-model.md 的对象模型，给出新建一个 ooc class 的逐文件骨架。设计权威是 object-model.md；存量 builtin 代码可能过期，以本设计为准
+title: ooc class 定义示例
+description: 按 object-model.md 的对象模型，给出新建一个 ooc class 的逐文件骨架；存量 builtin 代码可能过期，以本设计为准
 activates_on:
   "object::root": "show_description"
 ---
 
 # ooc class 定义示例
 
-> 本篇按 sibling **`object-model.md`**（对象模型单一权威）给出新建一个 ooc class 的逐文件骨架。
-> **以设计为准**：仓库现有 builtin（`packages/@ooc/builtins/*`）部分接线已过期——它们 `package.json` 仍写
-> `kind:"builtin"` / `type:"object"`、把 constructor 放在 `executable/`、用已废弃的 `instantiate_with_new_world`。
-> 这些是历史存量，不照搬；下文字段/分层一律以 object-model.md 为准。代码片段是**示意骨架**、非逐字源码。
-
 以一个最小 class `note`（持一段文本 body 的窗）贯穿示例。
 
 ## 文件布局
-
-class 由五件套 + `types.ts`（+ 可选 `common/`）构成；缺省的维度不写文件：
 
 ```
 note/
@@ -38,30 +31,17 @@ note/
   "type": "module",
   "ooc": {
     "objectId": "_builtin/note",
-    "kind": "class"
+    "kind": "class",
+    "class": "foo"
   }
 }
 ```
 
-- **`ooc.kind`** —— 这份 stone 是 **class**（一份定义/模板）还是 **object**（一个具体实例）。`note` 是定义 → `"class"`；它被构造出来的实例（运行时窗）是 `"object"`。
-  - 单例 / 非单例是**另一条轴**：是否导出 constructor。`note` 有 constructor → **非单例 class**（按需造多个实例）。单例 class 无 constructor、有唯一规范实例。两者 `kind` 都是 `"class"`。
-- **`ooc.class`**（可选）—— 继承谁，值为父类 id，如 `"_builtin/agent"`；不写则隐式继承基类。是**单链**继承。
+- **`ooc.kind`** —— 这份 stone 是 **class**（一份定义/模板）还是 **object**（一个具体实例）。
+- **`ooc.class`**（可选）—— 继承谁，值为父类 id，如 `"_builtin/agent"`。仅当 ooc.kind="object" 时有效。
 
-> 组合（持有成员对象）**不在 `package.json` 声明**——agent 的成员（tool-object）经构造其 thread 对象时作为初始 context 提供（thread-as-object，见下「agent 变体」）。
 
-## self.md —— 身份
-
-加载为 LLM 的 instructions（唯一身份来源）。frontmatter 给元信息，正文用 Object 口吻陈述「我是谁、负责什么」：
-
-```markdown
----
-title: note
-description: 一段可追加文本的便签窗
----
-我是一个 note，持有一段文本 body。可被 append 追加内容、按 viewport 调整展示范围。
-```
-
-## types.ts —— object data 结构（非 window 数据结构）
+## types.ts —— object data 结构
 
 ```ts
 export interface Data {
