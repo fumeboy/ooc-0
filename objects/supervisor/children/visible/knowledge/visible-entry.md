@@ -31,7 +31,7 @@ Object 的 UI 页面有两类入口：
 
 UI 经 HTTP `POST /call_method` 调 Object `executable/index.ts` 的 `window.methods` 里标了 `for_ui_access: true` 的方法（2026-06-11 起废独立 `ui_methods` 导出——HTTP 路径与 LLM 路径共用同一份 `window.methods`，只是 HTTP 侧按 `for_ui_access` 过滤可见性）——这是**人类侧专路**，与 LLM 侧路径（program sandbox 里 `self.callMethod`）分流。
 
-- 服务端：callMethod 服务在 `packages/@ooc/core/app/server/modules/stones/service.ts:364`（+ `modules/flows/service.ts` 对端），经 `loadObjectWindow(ref)`（`runtime/server-loader.ts`）取 `window.methods[method]`，仅 `entry.for_ui_access === true` 才执行（`service.ts:379`）；错误码 `METHOD_LOAD_FAILED`（`:371`）/ `METHOD_NOT_FOUND`（`:381`，未找到或未标 for_ui_access）。HTTP 入口 `modules/stones/api.call-method.ts:6`（`POST /api/stones/:id/call_method`）。
+- 服务端：callMethod 服务在 `packages/@ooc/core/app/server/modules/stones/service.ts:316`（+ `modules/flows/service.ts` 对端），经 `loadAndRegisterStoneClass(ref)`（`runtime/server-loader.ts`）装载 stone 的 `export const Class`、`registry.resolveObjectMethods(objectId)` 取 object method（`service.ts:332`），仅 `entry.for_ui_access === true` 才执行（`service.ts:334`）；错误码 `METHOD_LOAD_FAILED`（`:326`）/ `METHOD_NOT_FOUND`（`:336`，未找到或未标 for_ui_access）。HTTP 入口 `modules/stones/api.call-method.ts:6`（`POST /api/stones/:id/call_method`）。
 - 前端入口：`packages/@ooc/web/src/transport/endpoints.ts` `stoneCallMethod`（`:66`）/ `flowCallMethod`（`:69`）；`ObjectClientRenderer.tsx:84` `callMethodFor` 合成 callMethod prop。
 
 **边界**：visible 只管 UI 资源（tsx）+ 调用通道；method 实现本身归 executable/programmable，可见性标记 `for_ui_access` 的判定归 visible。

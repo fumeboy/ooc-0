@@ -31,7 +31,6 @@
 
 ## 已知问题 / 边界与未决
 
-- `modules/ui/api.list-flows.ts` 定义了 `GET /api/flows`（`listFlowsApi(service)`），service 侧 `ui/service.ts:183` 已有 `listFlows()` 实现，但 `modules/ui/index.ts` 未 `.use(listFlowsApi(...))` —— 路由从未挂载的半孤儿，要么补挂、要么删掉这个 api 文件。（注意 flows module 另有自己更重的 `listFlows()`，`flows/service.ts:327`，带 pause/status；ui 这份只回目录名。）
 - `/api/tree` 是整树递归返回（非懒加载），超大 world 需重设计。
 - `/api/file/read` 有意绕过 baseDir 隔离，**无策略层/鉴权**，仅限本地可信 dev；公开部署必须先加白名单。
 - 模块级 `default*` 单例（pauseStore / jobManager）是未注入时的 fallback，多次 buildServer 不显式注入会串状态——测试须显式注入。
@@ -40,7 +39,6 @@
 
 ## 优化方向 / 待办
 
-- 决断 `ui/api.list-flows.ts`：补挂到 ui module，或删除这个未接线的 api 文件（service 实现已在，不缺）。
 - 为 `/api/file/read` 加 path 白名单 / 鉴权层，再考虑非本地暴露。
 - 若 world 规模增长，把 `/api/tree` 改节点级懒加载或分页。
 - 把 stone self/readme/data 编辑、loop debug 等纳入 client 前，先在 `web/src/transport/endpoints.ts` 登记对应 endpoint。

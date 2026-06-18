@@ -45,7 +45,7 @@ knowledge example:
 title: knowledge title
 description: knowledge description
 activates_on:
-  "intent::classFoo::intentName": "show_content"
+  "intent::program.shell": "show_content"
 ---
 
 knowledge content

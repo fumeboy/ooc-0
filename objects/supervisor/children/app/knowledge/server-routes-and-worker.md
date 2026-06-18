@@ -23,7 +23,6 @@ Elysia app 在 `packages/@ooc/core/app/server/index.ts` 装配：`:212` 是 `onE
 - **pools**（`modules/pools/`）：knowledge / data / files 沉淀的 HTTP 入口（pool 不挂 branch、不进 git）；旧 `/api/stones/.../knowledge/*` 保留并加 `X-Deprecated` header。
 - **flows**：session / flow object / thread 生命周期 + call_method；list 附带 paused 状态。`POST /api/sessions`（seedSession）一次性 seed session + user flow object + talk_window + 派送 initialMessage；`POST /api/flows/:sid/continue`（body `{text, targetWindowId?}`）走 user.root.talk_window。`SUPER_SESSION_ID` 在 `modules/flows/service.ts:47`（`assertNotSuperSessionId`，抛于 `:49`）被显式拒绝（reflectable 专用，外部只读保留）。
 - **ui**（`modules/ui/`）：`GET /api/tree`（整树递归 + 基于 `.stone.json`/`.pool.json`/`.flow.json` 元数据存在性打 marker）/ `/api/tree/file`（world 内安全读）/ `/api/file/read`（**有意绕过隔离**，仅本地可信）/ `/api/objects/:scope/:id/client-source-url`（backend 权威解析 client 入口，frontend 不硬编码路径）。
-  - ⚠️ `modules/ui/api.list-flows.ts` 的 `GET /api/flows`（`listFlowsApi`）从未挂载到 `ui/index.ts`，是半孤儿路由——决断（补挂 or 删文件）见 self.md「已知问题」。
 - **world-config**（`modules/world-config/`，单文件 `index.ts`）：world 级配置（`.world.json`）的只读 HTTP 入口，供前端读 LLM provider 等 world 级设置。
 
 ## 启动期自检链（`if (import.meta.main)`，非每请求）
@@ -32,9 +31,8 @@ Elysia app 在 `packages/@ooc/core/app/server/index.ts` 装配：`:212` 是 `onE
 
 1. `ensureStoneRepo`：init bare stones git repo + main worktree，迁移旧扁平布局。必须先于任何版本化 stone 写。
 2. `createPoolObject` for `BUILTIN_OBJECT_IDS`（supervisor / user）：builtin 的 stone/definition 随代码仓发布不写 world，但 pool 是 world 内跨 session 沉淀层，需保证 `pools/<id>/` 存在。
-3. `instantiateBuiltinClassObjects`：把带 `ooc.instantiate_with_new_world` 的框架 builtin class（supervisor）幂等实例化为可交互 `objects/<id>`（拷 self.md + 写 `ooc.class`），让全新 world 自动有 supervisor object。
-4. `runRecoveryCheck`（非阻塞）：遍历 `stones/main/<obj>/executable/index.ts`，加载失败的开 PR-Issue 到 super session，dump objectId + reason，供 Supervisor 决策回滚。
-5. `checkFlowChildrenMigration` / `checkStateContextSplit`：flow 子 object 迁到 `children/` marker、state(对象维) vs context(线程维) 拆分归位，幂等。
+3. `instantiateBuiltinClassObjects`：把 `ooc.kind==="object"` 的框架 builtin class（supervisor）幂等实例化为可交互 `objects/<id>`（拷 self.md + 写 `ooc.class`），让全新 world 自动有 supervisor object。
+4. `runRecoveryCheck`（非阻塞）：经 `loadStoneClass` 遍历加载 `stones/main/<obj>/index.ts`（`export const Class` 装配口），加载失败的开 PR-Issue 到 super session，dump objectId + reason，供 Supervisor 决策回滚。
 
 另：`buildServer` 若 `workerEnabled` 且 `.world.json` 配了 Lark 凭证，会 fire-and-forget 起 `startLarkEventRelay`（ws 长连接收 im.message 反向触发 OOC session；缺凭证 noop），并把 thread 状态翻转 `maybeForwardToLark`。
 
