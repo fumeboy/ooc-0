@@ -30,7 +30,7 @@ activates_on:
 ### self × readable —— 投影成 context window
 
 把 data 投影为单一 window class `"example"`，渲染 `<bump_count>` + `<message>`（message 按 viewport 切片、限长 8192 bytes）；该 window class 声明展示 `object_methods:["bump"]` + `window_methods:[set_viewport]`。
-window method **`set_viewport`** 调整投影视口（line / column range）、返回新的不可变投影态 `ExampleWin = {viewport}`、**不碰 data**，演示 window method 四参签名 `(ctx, self, before, args)` + 返回新 window 状态对象；越界校验失败即 throw（fail-loud）。viewport 协议复用 `@ooc/core/readable/viewport`（DEFAULT_VIEWPORT / mergeViewport / applyViewport），不自造。
+window method **`set_viewport`** 调整投影视口（line / column range）、返回新的不可变投影态 `ExampleWin = {viewport}`、**不碰 data**，演示 window method 四参签名 `(ctx, self, before, args)` + 返回新 window 状态对象；越界校验失败即 throw（fail-loud）。viewport 协议复用 `@ooc/core/_shared/utils/viewport`（DEFAULT_VIEWPORT / mergeViewport / applyViewport），不自造。
 
 ### self × executable —— object method
 

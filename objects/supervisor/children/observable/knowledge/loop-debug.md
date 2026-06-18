@@ -6,7 +6,7 @@ activates_on: {"object::root": "show_description"}
 
 # loop-level debug 落盘
 
-observable 在 thinkloop 周围加观测点，把每一轮 LLM 调用的输入/输出/元数据落盘，供控制面回放与前端 Time Machine 做 window diff。**所有写盘动作委托 `packages/@ooc/core/persistable/debug-file.ts`**，observable 只决定「何时写 / 写什么」。
+observable 在 thinkloop 周围加观测点，把每一轮 LLM 调用的输入/输出/元数据落盘，供控制面回放与前端 Time Machine 做 window diff。**所有写盘动作委托 `packages/@ooc/core/observable/debug-file.ts`**，observable 只决定「何时写 / 写什么」。
 
 ## LlmObservation（内存最近一次）
 
@@ -18,7 +18,7 @@ observable 在 thinkloop 周围加观测点，把每一轮 LLM 调用的输入/�
 
 ## loop_NNNN 三类文件（默认关闭，enableDebug 开启）
 
-`packages/@ooc/core/observable/index.ts:126-221` 的 `beginLlmLoop` / `finishLlmLoop` 分配 loopIndex（4 位 0 padding）、计时、字节统计，开启后写 `<threadDir>/debug/`。落点路径由 `packages/@ooc/core/persistable/debug-file.ts:154` 的 `debugDir(ref)` = `threadDir(ref)/debug` 解析，`threadDir`（`persistable/common.ts:72`）= `objectDir/threads/<tid>`、`objectDir`（同文件:61）= `flows/<sid>/objects/<nestedObjectPath>`——即运行时统一落 `flows/<sid>/objects/<id>/threads/<tid>/debug/`，与 stone identity 同落 `objects/<id>/`。三类文件：
+`packages/@ooc/core/observable/index.ts:126-221` 的 `beginLlmLoop` / `finishLlmLoop` 分配 loopIndex（4 位 0 padding）、计时、字节统计，开启后写 `<threadDir>/debug/`。落点路径由 `packages/@ooc/core/observable/debug-file.ts:154` 的 `debugDir(ref)` = `threadDir(ref)/debug` 解析，`threadDir`（`persistable/common.ts:72`）= `objectDir/threads/<tid>`、`objectDir`（同文件:61）= `flows/<sid>/objects/<nestedObjectPath>`——即运行时统一落 `flows/<sid>/objects/<id>/threads/<tid>/debug/`，与 stone identity 同落 `objects/<id>/`。三类文件：
 - `loop_NNNN.input.json`：本轮 inputItems + contextSnapshot。
 - `loop_NNNN.output.json`：normalized outputItems + provider/model。
 - `loop_NNNN.meta.json`：provider / model / latencyMs / messageCount / toolCount / toolCallCount / contextBytes / status / error / **windowsSnapshot**（每条 entry `{id, class, contentHash, parentWindowId?, status?, compressLevel?, fileDiff?}`）。
@@ -31,7 +31,7 @@ loopIndex 由 `packages/@ooc/core/runtime/observable-store.ts:94-110` 的 `loopK
 
 ## ContextSnapshot（与 XML 同源的结构化快照）
 
-`captureContextSnapshot`（`packages/@ooc/core/persistable/debug-file.ts`）从 ThreadContext 抽取调用 LLM 时刻的子集：id / status / plan / contextWindows / inbox / outbox / events / creatorThreadId / parentThreadId。
+`captureContextSnapshot`（`packages/@ooc/core/observable/debug-file.ts`）从 ThreadContext 抽取调用 LLM 时刻的子集：id / status / plan / contextWindows / inbox / outbox / events / creatorThreadId / parentThreadId。
 
 **关键取舍——同源而非二次解析**：同一份 thread 状态先 render 成 system message XML 喂给 LLM，再 capture 成 JSON 给 UI。两条路同源，所以 UI 拿到的是 LLM 真正看到的那一份，且**不必 re-parse XML**——直接渲染结构化字段。contextSnapshot 字段附在 LlmInputDebugRecord 上，写进 `llm.input.json` / `loop_NNNN.input.json`；旧文件无此字段，UI 做兼容判断。
 
