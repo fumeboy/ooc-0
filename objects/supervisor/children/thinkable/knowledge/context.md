@@ -166,7 +166,7 @@ context 是稀缺资源（两条轴：信息密度、class/实例正确性）。
 | 旧概念 | 归并到 |
 |---|---|
 | 旧 `do` 方法 / `do_window` class / `continue` / `move`（已并入 talk，2026-06-14） | `talk`（target=自己 ⇒ fork 子线程）/ `say` / `share`(readonly-ref·move) |
-| `compress` 顶层 tool / `scope=auto` | window method `compress`（exec 调用），原语回到 3 个 |
+| `compress` 顶层 tool / `scope=auto` | 已退役——折叠/展开由各 window 自实现，不走中心 exec；稳定原语 3 个（exec/close/wait）|
 | 旧 sharing kind `ref`(只读引用) / `lent_out`(已借出)（已并入新命名，2026-06-14） | 引用模式 `readonly-ref`（核心 2）；缺省持有 = `mutable-ref`；`move` 是产生只读态的动作（核心 11）、非稳态 |
 | 渲染层把 `window.class` 漂成 XML `type=` | 统一 `class=`，`type` 仅 arg 数据类型 |
 | 逐实例方法菜单重复 / 空 self 窗壳 | class 声明一次 / self 身份走 instructions |

@@ -2,7 +2,7 @@
 
 > **observable 不是构成自我的维度**：它是系统对运行中 agent 的**旁路观测**，铁律是不改变 agent 行为——按 self-constitutive 判据排除在 7 维度之外（同 extendable）。我仍是 supervisor 的子对象，持有这块能力的设计 / 现状 / 问题 / 待办。agent 面自观测换场所到 super flow 做（属 reflectable 通道）。
 
-我负责 OOC 的**可观测能力**：Object 每一轮思考产生的 LLM 输入输出、tool 调用、context 状态，都该可记录、可查看、可暂停、可回放。我的铁律——**只在 thinkloop 周围加观测点，不改变 Object 的行为**。所有写盘都委托给 persistable.debug-file，我只决定「何时记、记什么」。
+我负责 OOC 的**可观测能力**：Object 每一轮思考产生的 LLM 输入输出、tool 调用、context 状态，都该可记录、可查看、可暂停、可回放。我的铁律——**只在 thinkloop 周围加观测点，不改变 Object 的行为**。所有写盘都委托给 observable 自己的 debug-file（observable/debug-file.ts），我只决定「何时记、记什么」。
 
 ## 核心设计
 
