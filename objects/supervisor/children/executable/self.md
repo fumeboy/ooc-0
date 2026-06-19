@@ -103,20 +103,24 @@ export interface ObjectMethodResult {
 }
 ```
 
-### 填表式渐进式执行
+### 填表式渐进式执行（form）
 
-OOC Object 的 Object Method 支持渐进式执行
+object method 可声明 `route`，把"一次填齐参数才能执行"变成"渐进填表"：发起调用时若参数还不齐 / 需要先定意图，先开一张 **form** 分多轮补齐，齐了再提交。像填电子表单——填几项、给出提示与新填项，继续填、继续提示，直到可提交。
 
-类似于现实中我们填写的电子表单
-要提交行动前，发起一个表单
-填几个参数，然后给出新的填表项并给出提示，然后继续填，然后继续提示，直到表单填写完毕再提交
+- **route 在发起调用时先跑**，据 `(self, args)` 算出 `ObjectMethodIntents{tip?, intents?, quickSubmit?}`：
+  - `quickSubmit=true` ⇒ 参数已齐、无需确认，直接执行（与没声明 route 的 method 同路径）。
+  - 否则 ⇒ 不执行，开一张 **form** 入 context，把 `tip` 回作补参提示。
+- **form 自身是一个对象**（持累积参数 + 填表态），注册两条 object method 供调用：
+  - `refine`：把新参数 merge 进累积参数（可多轮），并重跑 route 刷新 `tip` / `intents`；执行失败的 form 经 refine 可复活回可提交态。
+  - `submit`：用累积参数真正执行目标 method；成功后 form 退场，失败留错误信息、可继续 refine 重试。
+- **route 算出的 `intents` 驱动渐进式知识激活**：填到哪个意图，关联该意图的 knowledge 随之激活、离开即卸载（机制见 thinkable `knowledge-activation.md` 的 `intent::` / `method::` 触发）——执行到哪、知识到哪。
 
-example:
+example（route 据已填参数算意图：缺 `content` 时只回提示不执行；齐了按有无 `id` 分流 create / update）：
 ```ts
 import type { ExecutableContext, ObjectMethod } from "<runtime>/executable";
 import type { Data } from "../types.js";
 
-const appendMethod: ObjectMethod = {
+const createOrUpdate: ObjectMethod = {
   name: 'CreateOrUpdate',
   description: "create or update record.",
   schema: { 
@@ -128,7 +132,7 @@ const appendMethod: ObjectMethod = {
     {name: "update", description: "update record"},
   ],
   route: async(ctx: ExecutableContext, self: Data, args: any) => {
-    if (args.arg1 == "" && args.arg2 == "") {
+    if (!args.content) {
       return {
         tip: "需要补充参数 content，可选参数 id, 留空表示新建，非空表示更新",
         intents: [], 

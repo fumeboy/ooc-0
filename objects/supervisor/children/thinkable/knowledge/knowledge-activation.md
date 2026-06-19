@@ -25,7 +25,7 @@ activates_on:
 
 2. **每篇 knowledge 自带 `activates_on` 触发声明**（frontmatter）：一组 **trigger → 激活级别** 的映射，声明"在什么条件下、激活到什么程度"。没有 `activates_on` 的 knowledge 不会被自动激活。
 
-3. **激活按当前方法的意图触发**：agent 执行某方法时，该方法在 thread 里呈现为一个活跃的 method-exec 窗口（见 context.md），其 parent 对象的 class 即"方法对应的意图"。trigger 把这个意图匹配出来——某篇 knowledge 的 trigger 命中当前活跃方法的意图，这篇就被激活。
+3. **激活按当前在执行的方法意图触发**：method 声明了 `route` 时经填表式渐进执行（见 executable `self.md`），在 thread 里呈现为一张活跃的 method-exec form 窗（见 context.md）；其**目标对象的 class + 方法名 + route 算出的 intents** 共同标识"此刻在做什么意图"。某篇 knowledge 的 trigger 命中这个意图，这篇就被激活。（一次直执行、无 `route` 的方法不产 form，由对象在场等其它 trigger 覆盖——见核心 7。）
 
 4. **激活分两档级别**，由命中的 trigger 指定：
    - **`show_description`**：只露这篇的 title + description（让 LLM 知道"有这么一篇、讲什么"，按需再展开）。
