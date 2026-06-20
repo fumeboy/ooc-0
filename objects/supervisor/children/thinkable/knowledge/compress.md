@@ -72,7 +72,7 @@ activates_on:
 - `compress`：`scope`（`"windows"`|`"events"`，缺省 windows）；events 下 `keepTail`（保留末 N 条）**或** `fromIdx`/`toIdx`（点名区段，含两端）二选一，`summary`（该段摘要、agent 自写）。
 - `expand`：`scope`；events 下 `at`（展开覆盖该 index 的那一段；不给则清空全部折叠）。
 
-无任何 window 自声明 compress 时，由**通用默认方法表**兜底（`readable/default-window-methods.ts`）——避免"各 window 各自实现⇒无人实现"；window class 可同名 override。
+**能力归属（载体收敛后）**：`scope=windows`（展示档位）由**通用默认方法表**兜底（`readable/default-window-methods.ts`，每个 window 都有；避免"各 window 各自实现⇒无人实现"）。`scope=events`（折历史 transcript）**归 thread 窗**（核心 7"折叠归内容所在的窗"）：由 thread class 自声明 compress/expand（`agent/children/thread/readable/compress-events.ts`）覆盖默认表；通用层对 `scope=events` **抛错指向 thread 窗**（避免错窗静默落折叠态 → 写读不同窗静默失效）。window class 同名声明恒优先于默认表。
 
 ### 3.2 compressLevel 投影（scope=windows 读出侧）
 
@@ -119,7 +119,7 @@ items；agent 折的任意区段若只覆盖一对 call/output 的一半，投�
 |---|---|
 | `compress` 顶层 tool / `scope=auto` 原语 | 退役——compress 是 window method，经 exec 调；稳定原语 3 个（context.md 迁移映射同） |
 | events 折叠改 `thread.events` object data（`_foldedBy` 标记 + push `events_summary` 事件） | 退役/dormant——违核心 2/6（改 data 表达视角选择、不可逆）；user 路径走 `win.summarizedRanges`。`events_summary` event kind 的读出渲染暂留，无写入侧 |
-| self 视角 events 折叠态当前挂 **self 门面窗**（`isSelfWindow`、非持久化、靠写盘 inline 后门、stone 冷启动有丢窗洞） | 归宿：挂**自己视角 thread window** 的 win（inline 天然持久化、免后门）；随 thread window 收敛（context.md 3.7） |
+| self 视角 events 折叠态曾挂 **self 门面窗**（`isSelfWindow`、非持久化、靠写盘 inline 后门、stone 冷启动有丢窗洞） | **已落（2026-06-20）**：折叠态挂**自己视角 thread 窗**的 win（`isSelfThreadWindow`、class=THREAD_CLASS_ID inline 天然持久化、免后门、builtin 类冷启动恒注册无丢窗）；self 门面窗持久化后门已删、回归纯 identity+agency |
 | transcript 在预算之后无条件追加、无预算归属 | 纳入预算账（核心 8 / context.md 核心 10） |
 
 ---
@@ -128,9 +128,9 @@ items；agent 折的任意区段若只覆盖一对 call/output 的一半，投�
 
 把设计放进真实运行时推演，暴露欠缺。补法多为"给已有概念加一段规则"，非引入新机制（守"简单叠加涌现"）。
 
-### Case A — self-driven root 的自视折叠承载（载体归属未定，中-高）
+### Case A — self-driven root 的自视折叠承载（已解，2026-06-20）
 
-顶层 supervisor 这类 self-driven root thread **没有 creator**、故没有 creator/会话窗，但它照样有 thread.events（自视历史）要折。核心 7 说"events 折叠归自己视角 thread window"，但当前 self 视角的自视历史是裸渲、唯一普适可挂折叠态的是 self 门面窗（每条 object thread 都有）——故折叠态暂挂门面窗（迁移映射）。**gap**：门面窗职责是身份（self.md），扛会话折叠属语义混；且它非持久化。**方向**：随 thread-as-object 收敛给每条 thread（含 self-driven root）一个承载 events 的自己视角 thread window，折叠态挂其 win（context.md 核心 9/10 的归宿）；收敛前门面窗是 deliberate 的过渡载体、不贸然挪到 creator 窗（self-driven root 无 creator 窗会回退）。
+顶层 supervisor 这类 self-driven root thread 没有 creator，但照样有 thread.events（自视历史）要折。**载体收敛已落**：每条 thread（含 self-driven root）恰好一个**自己视角 thread 窗**（class=THREAD_CLASS_ID，`isSelfThreadWindow`），events 折叠态挂其 `win.summarizedRanges`——THREAD_CLASS_ID 是 inline 持久化的 builtin 类，故折叠态 **inline 天然落 thread-context.json、跨 reload 不丢、冷启动恒注册无丢窗洞**，无需 self 门面窗持久化后门（已删）。**self-driven root 不是特例**：它就是「空 creator 通道的 thread 窗」——creator 对话是 thread 窗内建的上游通道（root 通道为空，`hasCreatorChannel`=false → 不被 wait 当 IO 源、不触发 creator affordance）。self 门面窗回归纯 identity + agency（self.md + object methods、exec 默认目标），不再承载会话折叠。写侧 events-compress 能力归属 thread class（核心 7），agent 只在 thread 窗见到 events 折叠 → 写读自然对齐（真 LLM 实证 + 跨 job reload e2e gate）。
 
 > 曾记于此的 **「agent 主动折叠区段切断 tool-pair 留孤儿、本轮 think 崩」** 已解决——读出侧 events 折叠
 > **投影前吸附到 tool-pair 安全边界**（`snapRangesToToolPairs`，见 3.4）。不再是开放 gap。
@@ -145,4 +145,4 @@ items；agent 折的任意区段若只覆盖一对 call/output 的一半，投�
 
 ### 收敛
 
-**Case A（自视折叠载体归属）** 随 thread-as-object 弧整体收敛——最重要的开放项。Case B 已自洽（记不变量）。Case C 是便捷模式精度、可最后补。
+**Case A（自视折叠载体归属）已解（2026-06-20）**——折叠态收敛到自己视角 thread 窗（inline 持久化、含 self-driven root），写侧能力归属 thread class。Case B 已自洽（记不变量）。**Case C（talk 窗 keepTail 精度）是唯一剩余开放项**——便捷模式精度、可最后补。

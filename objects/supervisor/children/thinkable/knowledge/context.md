@@ -84,13 +84,15 @@ activates_on:
 
 ### 3.1 LLM 输入的最终构成（buildInputItems 每轮合成）
 
-`instructions`（self.md 正文，权重高于 system message，唯一身份来源）+ `input[]` 数组：
+`instructions`（可选顶层，当前不承载身份）+ `input[]` 数组：
 
 | 位置 | 条目 | 角色 |
 |---|---|---|
-| 1 | `<context>…</context>` XML（一条 system message） | 稳定状态层：我此刻拥有的世界快照 |
+| 1 | `<context>…</context>` XML（一条 system message） | 稳定状态层：我此刻拥有的世界快照（含 self 门面窗渲 self.md 身份） |
 | 2 | `[ooc:paths]` system message（world_root / object_id / stone_dir / flow_dir / session_id / thread_id…） | 环境路径锚点 |
 | 3+ | transcript（历史 Context Change / ProcessEvent 流） | 过程层：本 thread 经历过什么 + 与 creator 的对话全文 |
+
+> 身份（self.md）**不在 `instructions`**——它作为 **self 门面窗**的 self 视角内容渲进 `<context>` XML（`resolveProjection`→`readSelf`；peer 视角渲 `readable.md`），身份只活在 self 门面窗这一处。self 门面窗同时挂 object methods（agency，exec 默认目标）；**过程**（thread.events + creator 对话 + events 折叠态）归**自己视角 thread 窗**（核心 9/10）——自己/identity 与过程主体不同、各归各窗。
 
 > 关键约束：Object 不知道 context 之外的任何事——内存/磁盘里再多状态，没进当前 thread 的 context 就不存在。
 
@@ -169,10 +171,10 @@ context 是稀缺资源（两条轴：信息密度、class/实例正确性）。
 | `compress` 顶层 tool / `scope=auto` | 已退役——折叠/展开由各 window 自实现，不走中心 exec；稳定原语 3 个（exec/close/wait）|
 | 旧 sharing kind `ref`(只读引用) / `lent_out`(已借出)（已并入新命名，2026-06-14） | 引用模式 `readonly-ref`（核心 2）；缺省持有 = `mutable-ref`；`move` 是产生只读态的动作（核心 11）、非稳态 |
 | 渲染层把 `window.class` 漂成 XML `type=` | 统一 `class=`，`type` 仅 arg 数据类型 |
-| 逐实例方法菜单重复 / 空 self 窗壳 | class 声明一次 / self 身份走 instructions |
-| 自己 thread 的 events + creator 对话裸渲在 `<thread>` 块 / message 流、无预算归属；`isCreatorWindow` 标记 | 收敛为自己视角的 **thread window**（核心 9/10）：creator 对话是 thread window 的内容通道（不再是独立 creator 窗）；XML 只渲 methods、内容进 message 流、一并纳入预算 |
-| events compress 折叠态（`win.summarizedRanges`，核心 6 展示态）当前停在 **self 门面窗**（id=objectId、`isSelfWindow`、设计为非持久化，靠写盘端 inline 后门落盘；stone 对象冷启动其 class 未注册时 hydrate 丢窗丢 folds）—— exec 默认目标即该窗、写读同窗故能用，但身份门面扛会话折叠属语义混（违高内聚） | 归宿：折叠态挂**自己视角 thread window** 的 win（class=`_builtin/agent/thread`、inline 天然持久化、免后门与冷启动 registry-miss）；随上一行 thread window 收敛一并落。self-driven root（无 creator 窗、仅有 self 门面窗）须由该收敛一并给出承载其 events 的 self-view thread window，否则失折叠能力 |
-| transcript（thread event + creator 对话）当前在 `buildInputItems` 预算分配**之后**无条件追加、不计 token 账（核心 10 已在设计上消除此特例，但代码未兑现：events append-only 无界增长、终将撑爆 context） | 把 transcript token 纳入预算口径（核心 10/3.5）：它是自己视角 thread window 的内容通道，计入该窗预算账；逼近上限可被该窗 `compress(scope=events)` 折叠（含框架代调的 auto 兜底）。可独立于 thread window 收敛先兑现 |
+| 逐实例方法菜单重复 / 空 self 窗壳 | class 声明一次 / **self 身份走 self 门面窗**（self.md 作 self 门面窗 self 视角内容，**非 instructions**） |
+| 自己 thread 的 events + creator 对话裸渲在 `<thread>` 块 / message 流、无预算归属；`isCreatorWindow` 标记 | **已落（2026-06-20）**：收敛为自己视角 **thread 窗**（核心 9/10）——**无独立"creator 窗"概念**，creator 对话是 thread 窗内建的上游通道；XML 只渲 methods、内容进 message 流、一并纳入预算。谓词拆 `isSelfThreadWindow`（自视检测）/ `hasCreatorChannel`（有上游，gate creator affordance） |
+| events compress 折叠态曾停在 **self 门面窗**（`isSelfWindow`、非持久化、靠写盘 inline 后门、stone 冷启动丢窗洞） | **已落（2026-06-20）**：折叠态挂**自己视角 thread 窗**的 win（class=`_builtin/agent/thread`、inline 天然持久化、免后门与冷启动 registry-miss；self-driven root 用空通道 thread 窗承载）；写侧 events-compress 能力归属 thread class。真 LLM 实证 + 跨 job reload e2e gate |
+| transcript（thread event + creator 对话）曾在 `buildInputItems` 预算分配**之后**无条件追加、不计 token 账 | **已落**：transcript token 纳入预算口径（核心 10/3.5，commit 9376ffd8），计入自己视角 thread 窗预算账；逼近上限可 `compress(scope=events)` 折叠 + 越 hard 应急瞬态钳制兜底 |
 
 ---
 
