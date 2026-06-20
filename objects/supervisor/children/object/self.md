@@ -50,7 +50,7 @@
 8. **children = 命名空间从属、不继承**：ooc class 可有 children class，ooc object 可有 children object；children **从属于 parent、但不继承 parent**——只是命名空间上 children 的 id 以 parent id 为前缀（`parent_id/child_id`）。
 
 9. **ooc agent = ooc object with LLM**：在 readable / executable / visible / persistable 之上，额外具备 **thinkable / collaborable / reflectable**。agent 持名为 **`talk`** 的 object method——执行即创建一条 **thread**，thread 内运行 LLM 的 **thinkloop**，以此实现 agent 的智能。
-   **`self.md` 是 agent 实例独有的身份**：agent 的 data 含一个 `self` 字段（身份正文文本），由 agent 的 persistable 写入/读回实例目录的 `self.md`、并加载为该 agent thinkloop 的 **instructions**。非 agent 的 object（工具 object、class 定义）没有 self.md。
+   **`self.md` 是 agent 实例独有的身份**：agent 的 data 含一个 `self` 字段（身份正文文本），由 agent 的 persistable 写入/读回实例目录的 `self.md`、并渲为该 agent **self 门面窗的 self 视角内容**（`resolveProjection`→`readSelf`；他者视角渲 `readable.md`）——**不进 thinkloop instructions**（身份只活在 self 门面窗这一处）。非 agent 的 object（工具 object、class 定义）没有 self.md。
 
 > 核心设计 9 条已逐条与用户敲定（仿 context.md 听写/grill 流程）。**系统自带 builtin class/object 的清单索引见 supervisor `knowledge/builtins.md`**（高内聚低耦合：本文只讲对象模型、不列具体 builtin）。派生设计 / 细节补充 / 模拟推演待补。
 

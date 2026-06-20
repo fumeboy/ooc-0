@@ -1,6 +1,6 @@
 ---
 title: _builtin/agent — OOC Agent class（self × 各维度：四 facet + 三智能面）
-description: builtin agent 的单一权威，以 self×维度切入——class 天然由 readable/executable/visible/persistable 四 facet 构成，agent 在其上额外具 thinkable/collaborable/reflectable 三张智能面。self=身份正文(data.self/self.md)；self×executable=agency talk/plan/todo/end；self×readable=不投影成窗(身份走 thinkloop instructions)；self×persistable=data.self↔实例目录 self.md；唯一合法继承=object 经 ooc.class=_builtin/agent 继承本 class；children=thread/plan/todo/skill_index/pr/method_exec_form 命名空间从属
+description: builtin agent 的单一权威，以 self×维度切入——class 天然由 readable/executable/visible/persistable 四 facet 构成，agent 在其上额外具 thinkable/collaborable/reflectable 三张智能面。self=身份正文(data.self/self.md)；self×executable=agency talk/plan/todo/end；self×readable=投影成 self 门面窗、渲 self.md 身份(self 视角 readSelf/他者 readable.md；非 thinkloop instructions)；self×persistable=data.self↔实例目录 self.md；唯一合法继承=object 经 ooc.class=_builtin/agent 继承本 class；children=thread/plan/todo/skill_index/pr/method_exec_form 命名空间从属
 activates_on:
   "object::root": "show_description"
 ---
@@ -32,9 +32,9 @@ agent 把 agency 收敛在四条 object method，继承本 class 的具体 agent
 
 > thinkloop 三原语 exec / close / wait 不是 agent 的 object method——它们是 tool 层入口，见 thinkable `knowledge/thinkloop.md`。
 
-### self × readable —— 不投影成窗（设计选择）
+### self × readable —— 投影成 self 门面窗、渲 self.md 身份
 
-**agent 的 self 在 readable 维度是「空面」：agent 没有自定义 readable，不投影成 context window，也无 window method。** 这是刻意设计：agent 是「智能 object」抽象，它的 self 在 LLM 视角下表现为 **thread（会话载体）而非静态展示窗**；身份正文（self.md）作为 thinkloop 的 **instructions** 注入，而非作为窗内容渲染。具体 agent 若需 self-window 投影，由其自身的 readable 决定。
+**agent 的 self 投影成一个 self 门面窗（框架注入，id=objectId、class=objectId）：身份正文（self.md）作为该窗的内容渲入 `<context>` XML**——self 视角经 `resolveProjection` 默认投影渲 `readSelf`（self.md），他者视角渲 `readReadable`（readable.md）。agent 通常无自定义 readable module（走框架默认投影即可）。身份 **不进 thinkloop instructions**（身份只活在 self 门面窗这一处）。self 门面窗同时是 agent 的命令面（挂 agency object methods、exec 默认目标）。注意「过程」（thread.events + creator 对话 + events 折叠）归**自己视角 thread 窗**，与 self 门面窗（identity）主体不同、各归各窗。
 
 ### self × persistable —— data.self ↔ 实例目录 self.md（自定义）
 

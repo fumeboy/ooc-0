@@ -23,7 +23,7 @@ activates_on:
 supervisor 的总特征：**所有维度面孔都复用 `_builtin/agent` class、自身零自定义**——身为 `ooc.class=_builtin/agent` 的 object，它天然拥有 agent class 的四 facet（readable/executable/visible/persistable）+ 三智能 facet（thinkable/collaborable/reflectable）；supervisor 不为任一面孔写 override。唯一私有物是 own self.md 身份快照。
 
 ### self × readable
-无自定义。supervisor 是 agent——身份正文（self.md）作为 thinkloop 的 **instructions** 注入，而**不**投影成静态 context window（agent 的 readable 设计，见 builtins `agent.md` self×readable）。它作为 peer object 出现在别的 agent 视角时走系统默认 peer 窗投影 + 文件级 `readable.md`（对外名片），由 core readable 渲染（cross-ref readable 维度）。无 window method。
+无自定义。supervisor 是 agent——身份正文（self.md）**渲为 self 门面窗的 self 视角内容**（`resolveProjection`→`readSelf`，**非** thinkloop instructions；见 builtins `agent.md` self×readable）。它作为 peer object 出现在别的 agent 视角时走系统默认 peer 窗投影 + 文件级 `readable.md`（对外名片），由 core readable 渲染（cross-ref readable 维度）。无 window method。
 
 ### self × executable
 **object method 无自定义**——agency（`talk` / `plan` / `todo` / `end`）全部由 `_builtin/agent` class 提供，supervisor 经 `ooc.class` 继承得到，自身不加 method、不 override。
@@ -86,7 +86,7 @@ supervisor/                # ooc.kind=object 实例（非 class，故无 index.t
 ```ts
 // 来自 _builtin/agent class 的 types.ts —— supervisor 复用，无私有 types.ts
 export interface Data {
-  self: string   // 身份正文（self.md 内容），加载为 thinkloop instructions
+  self: string   // 身份正文（self.md 内容），渲为 self 门面窗 self 视角内容（非 thinkloop instructions）
 }
 ```
 
