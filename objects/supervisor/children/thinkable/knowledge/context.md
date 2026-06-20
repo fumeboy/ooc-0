@@ -171,6 +171,8 @@ context 是稀缺资源（两条轴：信息密度、class/实例正确性）。
 | 渲染层把 `window.class` 漂成 XML `type=` | 统一 `class=`，`type` 仅 arg 数据类型 |
 | 逐实例方法菜单重复 / 空 self 窗壳 | class 声明一次 / self 身份走 instructions |
 | 自己 thread 的 events + creator 对话裸渲在 `<thread>` 块 / message 流、无预算归属；`isCreatorWindow` 标记 | 收敛为自己视角的 **thread window**（核心 9/10）：creator 对话是 thread window 的内容通道（不再是独立 creator 窗）；XML 只渲 methods、内容进 message 流、一并纳入预算 |
+| events compress 折叠态（`win.summarizedRanges`，核心 6 展示态）当前停在 **self 门面窗**（id=objectId、`isSelfWindow`、设计为非持久化，靠写盘端 inline 后门落盘；stone 对象冷启动其 class 未注册时 hydrate 丢窗丢 folds）—— exec 默认目标即该窗、写读同窗故能用，但身份门面扛会话折叠属语义混（违高内聚） | 归宿：折叠态挂**自己视角 thread window** 的 win（class=`_builtin/agent/thread`、inline 天然持久化、免后门与冷启动 registry-miss）；随上一行 thread window 收敛一并落。self-driven root（无 creator 窗、仅有 self 门面窗）须由该收敛一并给出承载其 events 的 self-view thread window，否则失折叠能力 |
+| transcript（thread event + creator 对话）当前在 `buildInputItems` 预算分配**之后**无条件追加、不计 token 账（核心 10 已在设计上消除此特例，但代码未兑现：events append-only 无界增长、终将撑爆 context） | 把 transcript token 纳入预算口径（核心 10/3.5）：它是自己视角 thread window 的内容通道，计入该窗预算账；逼近上限可被该窗 `compress(scope=events)` 折叠（含框架代调的 auto 兜底）。可独立于 thread window 收敛先兑现 |
 
 ---
 
