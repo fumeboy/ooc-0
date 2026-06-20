@@ -85,12 +85,20 @@ renderer 按 win.compressLevel 投影窗内容详略：0 全文 / 1 缩略（截
 - **写入侧不夹边**：compress 追加区段时只规整（排序、合并重叠/相邻），不按 transcript 长度 clamp——写时未必知道读时真实长度。
 - **读出侧按真实长度 clamp + 投影**：`projectSummarizedRanges(items, ranges, renderItem, renderSummary)` 通用 over「item→渲染单元」，按真实 `items.length` 夹边、丢非法段、段内连续 items 折成一条 summary。
 
-### 3.4 读出侧两调用点（坐标系不可混）
+### 3.4 读出侧两调用点（坐标系不可混 + tool-pair 安全）
 
 - **self 视角**：折 `thread.events`（坐标=events index），在 `buildInputItems` 构造 transcript 时投影。
 - **peer/talk 视角**：折该会话窗的 messages transcript（坐标=该窗 `filterTalkMessages` 输出的 messages index），与 transcript viewport（末 N 条）干净组合。
 
 两套坐标系**不能混**：events 折叠的 fromIdx/toIdx 是 events 坐标，messages 折叠是 messages 坐标。
+
+**tool-pair 安全（self 视角专属）**：self 视角的 events 会渲成含 `function_call` / `function_call_output` 的
+items；agent 折的任意区段若只覆盖一对 call/output 的一半，投影后会留孤儿 tool 块——provider 层
+（`claude-transport.ts`）**不** sanitize，孤儿 tool_use/tool_result 会被 LLM provider 拒、本轮 think 崩。
+故 events 折叠**投影前先把区段吸附到 tool-pair 安全边界**（`snapRangesToToolPairs`）：区段只覆盖配对一半
+就外扩到覆盖另一半（两半要么都折、要么都留），pending call（有 call 无 output、恢复期边界）不外扩、原样
+保留；吸附只调本轮投影用的 range、不改存储的折叠态（expand 仍按原 range 还原）。peer 视角折的是 messages
+（无 tool 块），天然免疫、不需吸附。
 
 ### 3.5 预算口径
 
@@ -124,18 +132,17 @@ renderer 按 win.compressLevel 投影窗内容详略：0 全文 / 1 缩略（截
 
 顶层 supervisor 这类 self-driven root thread **没有 creator**、故没有 creator/会话窗，但它照样有 thread.events（自视历史）要折。核心 7 说"events 折叠归自己视角 thread window"，但当前 self 视角的自视历史是裸渲、唯一普适可挂折叠态的是 self 门面窗（每条 object thread 都有）——故折叠态暂挂门面窗（迁移映射）。**gap**：门面窗职责是身份（self.md），扛会话折叠属语义混；且它非持久化。**方向**：随 thread-as-object 收敛给每条 thread（含 self-driven root）一个承载 events 的自己视角 thread window，折叠态挂其 win（context.md 核心 9/10 的归宿）；收敛前门面窗是 deliberate 的过渡载体、不贸然挪到 creator 窗（self-driven root 无 creator 窗会回退）。
 
-### Case B — agent 主动折叠的区段切断 tool-pair（读出侧未 sanitize，高）
+> 曾记于此的 **「agent 主动折叠区段切断 tool-pair 留孤儿、本轮 think 崩」** 已解决——读出侧 events 折叠
+> **投影前吸附到 tool-pair 安全边界**（`snapRangesToToolPairs`，见 3.4）。不再是开放 gap。
 
-agent 调 `compress(scope=events, fromIdx, toIdx)` 折一段时，若区段边界落在一对 function_call / function_call_output 之间——例如 call 在被折区段内、output 在区段外（保留）——读出侧投影把区段替换为 summary 后，会留下**孤儿 output**（或反向留下孤儿 call）。provider 层不 sanitize（3.6），孤儿 tool_result/tool_use 会被 LLM provider 拒、本轮 think 直接失败。应急钳制（3.6）已对后缀保留做了 tool-pair sanitize，但 agent 主动折叠的**任意区段投影**（`projectSummarizedRanges`）当前**没有**这层保护。`keepTail` 折前缀只会产生孤儿 output（边界处）、风险较小；点名 `{fromIdx,toIdx}` 任意区段两种孤儿都可能。**方向**：events 折叠投影统一做 tool-pair sanitize（复用钳制同款逻辑：折叠后丢区段外的孤儿 output / 把孤儿 call 一并纳入折叠区段），或把折叠边界吸附到 tool-pair 安全点。
-
-### Case C — 折叠后 events 继续增长（坐标稳定性，低·已自洽）
+### Case B — 折叠后 events 继续增长（坐标稳定性，低·已自洽）
 
 折了 `[0,k]` 后 thread 继续产出新 events（index k+1、k+2…）。因 events append-only、已发生项的 index 不变，旧 range `[0,k]` 仍精确指向原区段、不被新增干扰；新 events 在段外正常渲。坐标稳定性天然成立，无 gap——记此 case 以钉死"折叠态用 append-only index 而非相对偏移"这条不变量。
 
-### Case D — peer 视角 keepTail 的坐标系（便捷模式精度，低）
+### Case C — peer 视角 keepTail 的坐标系（便捷模式精度，低）
 
 `keepTail=N` 需要 transcript 总长算出 `{fromIdx,toIdx}`。self 视角取 `thread.events.length` 精确；但 talk 窗（peer 视角）的 transcript 是 messages、长度 ≠ 本 thread 的 events.length，故在 talk 窗用 keepTail 算出的边界不准。当前已 fail-soft（写入不夹边、读出按真实 messages.length clamp），不崩、不乱折，仅 keepTail 在 talk 窗上语义不精确；peer 视角用显式 `{fromIdx,toIdx}` 完全正确。**方向**：talk 窗的 keepTail 改用该窗 messages 数算总长（让会话窗 readable 把 message count 经 ctx 传入，或 talk 窗 override compress）。
 
 ### 收敛
 
-落地前最高优先是 **Case B（主动折叠 tool-pair 安全）**——它是已落地 compress 的真实正确性缺口（任意区段折叠可能让本轮 think 崩）。Case A（载体归属）随 thread-as-object 弧整体收敛。Case C 已自洽（记不变量）。Case D 是便捷模式精度、可最后补。
+**Case A（自视折叠载体归属）** 随 thread-as-object 弧整体收敛——最重要的开放项。Case B 已自洽（记不变量）。Case C 是便捷模式精度、可最后补。
