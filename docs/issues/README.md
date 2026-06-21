@@ -1,6 +1,6 @@
 # docs/issues —— 系统设计调整 issue
 
-每次 OOC 系统设计调整在此留一份 issue 文档：记录提案、受影响设计元素、review 意见与最终裁决。完整流程见 supervisor `knowledge/design-workflow.md`。
+每次 OOC 系统设计调整在此留一份 issue 文档：记录提案、受影响设计元素、review 意见与最终裁决。完整流程见 supervisor `knowledge/design-workflow.md`。**涉及源代码变更的 issue 在源码仓 `.worktree/<slug>` 新建 worktree 分支隔离开发。**
 
 ## 命名
 
@@ -46,5 +46,5 @@ date: YYYY-MM-DD
 （fan-out 后由 Supervisor 汇总各 reviewer + 完整性批评官意见）
 
 ## 裁决
-（最终方案 + 落地与一致性回流清单）
+（最终方案 + 落地与一致性回流清单；涉及源代码变更则记录 `.worktree/<slug>` worktree 分支）
 ```

@@ -1,6 +1,6 @@
 ---
 title: 系统设计调整工作流（issue → review → 裁决）
-description: 任何 OOC 系统设计调整（维度核心 / 对象模型 / 交叉契约 / builtin 设计的变更）都走这条流程——发起 issue 文档、按受影响设计元素 fan-out reviewer + 一个完整性批评官、汇总裁决并回流一致性。设计元素注册表见 `./index.md` 的 `#` 清单。
+description: 任何 OOC 系统设计调整（维度核心 / 对象模型 / 交叉契约 / builtin 设计的变更）都走这条流程——发起 issue 文档、按受影响设计元素 fan-out reviewer + 一个完整性批评官、汇总裁决并回流一致性；涉及源代码变更的 issue 在 `.worktree/` 新建 worktree 分支隔离开发。设计元素注册表见 `./index.md` 的 `##` 元素清单。
 ---
 
 # 系统设计调整工作流
@@ -45,9 +45,19 @@ Supervisor：
 
 1. 汇总各 reviewer + 完整性批评官的意见，记进 issue 的「review 记录」段。
 2. 裁决跨维度冲突与待决点，更新改动方案。
-3. 落地：改对应 self.md（面向实施）/ index.md（面向设计）/ 代码。
+3. 落地：改对应 self.md（面向实施）/ index.md（面向设计）/ 代码（**涉及源代码变更走 worktree 隔离，见下节**）。
 4. **一致性回流（强制）**：index.md 与各 self.md 是同一设计的两个投影，落地后必须同步——改了 self.md 核心契约就同步 index.md 对应节，反之亦然。退役某符号/概念时，全树（index.md + 各 self.md + builtin md）引用一并清理（退潮）。
 5. issue 标记 `decided` → `landed`。
+
+## 涉及源代码变更的 issue：worktree 隔离开发
+
+issue 的落地若**涉及源代码变更**（`packages/@ooc/` 等实现代码，区别于纯对象树文档调整），不在主工作区直接改，而是**为该 issue 新建一个 git worktree 分支**隔离开发：
+
+- worktree 落在源码仓库根的 **`.worktree/` 目录**下，每个 issue 一个（分支 / 目录名关联 issue slug，如 `.worktree/<slug>/`）。
+- 在该 worktree 分支上完成实现 + 自验证，与主工作区、与其它 issue 的 worktree 互不污染——多 issue 可并行各自隔离。
+- 开发完按常规合入，issue 的「裁决」段记录对应 worktree 分支。
+
+纯设计文档调整（只改 index.md / self.md / builtin md，无源码改动）不需要 worktree。
 
 ## 一致性的根
 
