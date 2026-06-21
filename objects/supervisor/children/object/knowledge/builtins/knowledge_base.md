@@ -21,7 +21,7 @@ activates_on:
 
 ### self × executable —— 唯一一个委托型 object method
 
-`open_knowledge`——按 path pin 一篇 knowledge doc 进 context。**纯委托**：经 `ctx.runtime.instantiate('_builtin/knowledge_base/knowledge', args)` 实例化一个 child `knowledge`（args 含 path）并返回其 id，path 解析/校验下放给 child 的 construct。无 `for_ui_access`。
+`open_knowledge`——按 path pin 一篇 knowledge doc 进 context。**纯委托**：经 `ctx.runtime.instantiate('_builtin/knowledge_base/knowledge', args)` 实例化一个 child `knowledge`（args 含 path）并返回其 id，path 解析/校验下放给 child 的 construct。LLM-only object method（无 UI 入口；人机分流移交 visible/server）。
 
 ### self × readable —— 投影成静态身份窗
 

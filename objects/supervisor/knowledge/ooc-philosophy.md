@@ -32,7 +32,7 @@ self.md（声明）/ readable（序列化）/ executable（行为）/ visible（
 裁决"OOC 该不该照传统 OO 做 X"时，先回到这四条：
 
 1. **Observer 是 LLM 不是 CPU**：对象的第一观察者是 LLM。readable 是"给 AI 看的 `toString()`"，compressLevel 是"清晰度档位"。**Object 的接口不只是方法签名（给执行器看），还包括 readable 输出（给推理器看）——两者同等重要。**
-2. **两个外部世界**：传统 OO 的"外部"是统一的（其他对象）；OOC 有两个——其他 Agent（消费 readable + `public` 方法）与人类用户（消费 visible + `for_ui_access` 方法），两者权限模型不同。这是 readable/visible 镜像、以及 method 双可见性轴的设计来源（agent-native parity 公理：任何能力都要回答"人怎么用 / Agent 怎么用"）。
+2. **两个外部世界**：传统 OO 的"外部"是统一的（其他对象）；OOC 有两个——其他 Agent（消费 readable + `public` 方法）与人类用户（消费 visible：tsx UI + `visible/server` for-ui 服务端 API），两者权限模型不同、走两条独立模块（LLM 侧 executable object method / 人类侧 visible/server，ctx 无 thinkloop thread）。这是 readable/visible 镜像、以及人机分流的设计来源（agent-native parity 公理：任何能力都要回答"人怎么用 / Agent 怎么用"）。
 3. **运行时改写自己的类**：传统 OO 类定义编译时确定；OOC 的 Agent 通过 reflectable（含为自身编程，原 programmable）/ visible / 改 self.md 重定义自己——这是设计目标，不是 hack。stone 五件套就是 Agent 的源代码，Agent 是自己的维护者。
 4. **对象图动态涌现**：runtime object 由 thread 按需创建（talk fork 派生子线程、open_file 创建 file），生命周期靠引用计数管理，peer/children 自动注入 context。更像 OS 进程树 + 共享内存，不是静态类图。
 
@@ -44,4 +44,4 @@ self.md（声明）/ readable（序列化）/ executable（行为）/ visible（
 
 Object 定义自己 → 展示自己（readable）→ LLM 阅读 → LLM 操作（method）→ Object 被改后重新展示。这个闭环能跑通、能演化，OOC 的设计目标就达成。
 
-> 仍未收口的 open question（裁决具体取舍时挖深）：readable/visible 耦合、parentClass vs mixin、运行时对象图的引用计数正确性、method 可见性两轴（public / for_ui_access）是否够用。
+> 仍未收口的 open question（裁决具体取舍时挖深）：readable/visible 耦合、parentClass vs mixin、运行时对象图的引用计数正确性、人机分流（LLM 侧 executable object method 的 `public` 轴 / 人类侧 visible/server 模块）是否够用。

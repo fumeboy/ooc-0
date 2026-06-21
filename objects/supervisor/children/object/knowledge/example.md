@@ -161,6 +161,6 @@ export default {
 ```
 
 
-## visible/index.tsx —— UI（可选）
+## visible/index.tsx + visible/server/index.ts —— UI 与 for-ui 服务端 API（可选）
 
-object 经 visible 自定义给系统用户的 UI 界面。UI 可**请求** object 的 object method，但被请求的 method 须标记 **`for_ui_access`**。
+object 经 visible 自定义给系统用户的 UI 界面（`visible/index.tsx`）。UI 经 callMethod 请求的是该 object **`visible/server/index.ts`** 提供的 for-ui server method（独立模块、由 `index.ts` 一并注册；ctx 有 world / session / object-self、**无 thinkloop thread**，改 object data → persistable.save 非版本化）——不是 executable object method（旧 `for_ui_access` 标记退役，人机分流移交 visible/server）。

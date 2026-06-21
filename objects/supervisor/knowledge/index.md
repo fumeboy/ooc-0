@@ -48,12 +48,12 @@ activates_on:
 
 核心契约（详见 [object self.md](../children/object/self.md) 核心 1-10）：
 
-1. 一切是 object；**class 是定义，object 是实例**。class 由 **readable / executable / visible / persistable** 四件套 + **`index.ts`**（装配 `export const Class`，收口后端程序路由）+ **`types.ts`**（定义 object data 结构）构成。
+1. 一切是 object；**class 是定义，object 是实例**。class 由 **readable / executable / visible / persistable** 四件套（visible 含前端 `visible/index.tsx` + **`visible/server/index.ts`** for-ui 服务端 API）+ **`index.ts`**（装配 `export const Class`，收口后端程序路由，含 visible/server）+ **`types.ts`**（定义 object data 结构）构成。
 2. **class 不支持继承**：object 经 `ooc.class` 单跳继承一个 class，但 class 不可再继承 class；复用靠 import 目标 class 导出的函数。
 3. **class 分单例 / 非单例**：非单例是可复用模板、在 `index.ts` 注册 **construct** 且可被继承；单例恰一个实例（object 一旦自定义函数方法即成自身 class 的单例）、不可被继承。
 4. **object 在 LLM 视角投影成 context window**：readable 按视角把 data 动态投影成 window 的 class 与展示内容；window 投影态与 object data 分离。
 5. **object method（executable）vs window method（readable）**：前者改 object data、可产生副作用；后者只动 window 投影态、返回新的不可变 window，不碰 object。
-6. **object method 标 `for_ui_access`** 才可被 visible 的 UI 请求。
+6. **visible 经 `visible/server` 提供 UI 服务端 API**：前端经 callMethod 请求这些 for-ui server method（ctx 无 thinkloop thread，改 data → persistable.save）；人机分流不再靠 executable object method 上的 `for_ui_access` 标记（退役）。
 7. **持久化可自定义**：object 经 persistable 控制序列化目录与方式，未定义则走系统默认。
 8. **children = 命名空间从属、不继承**：children id 以 parent id 为前缀（`parent_id/child_id`），仅命名空间从属。
 9. **agent = object + LLM**：在四件套之上额外具 thinkable / collaborable / reflectable，持 `talk` method（执行即开一条跑 thinkloop 的 thread）；**`self.md` 是 agent 实例独有的身份**，只活在 self 门面窗、不进 thinkloop instructions。
@@ -71,7 +71,7 @@ LLM 看到的世界不是裸 prompt，而是一组 **ContextWindow 对象**—�
 
 ## executable
 
-Object 行动的唯一方式 = 经 **tool 原语**与 context window 交互；tool 原语恒为 3 个：exec（在某 window 上调一条 method）/ close（关窗 = 移除对其对象的一个引用 + honor 结构窗 `closable` 守卫）/ wait（等某窗 IO 结果），compress 是 window method 而非原语。**`active` / `unactive` 是 class 生命周期钩子（引用 0↔1 触发，见 A 区核心 10）、不是新原语——tool 原语恒定 3 个。**可执行的 method 严格分两维——**object method**（改 object 自身 Data、可产副作用，归本维度）与 **window method**（只动展示态，归 readable）；二者经同一 exec 入口按名分派，同 class 内不可重名、注册期 fail-loud。object method 还可声明 `route` 做**填表式渐进执行**（form：refine 补参、submit 提交），并以推导出的 intents 驱动知识激活。实施细节见 [self.md](../children/executable/self.md)。
+Object 行动的唯一方式 = 经 **tool 原语**与 context window 交互；tool 原语恒为 3 个：exec（在某 window 上调一条 method）/ close（关窗 = 移除对其对象的一个引用 + honor 结构窗 `closable` 守卫）/ wait（等某窗 IO 结果），compress 是 window method 而非原语。**`active` / `unactive` 是 class 生命周期钩子（引用 0↔1 触发，见 A 区核心 10）、不是新原语——tool 原语恒定 3 个。**可执行的 method 严格分两维——**object method**（改 object 自身 Data、可产副作用，归本维度）与 **window method**（只动展示态，归 readable）；二者经同一 exec 入口按名分派，同 class 内不可重名、注册期 fail-loud。object method **只管 LLM 侧行动**——`for_ui_access` 标记退役，人机分流移交 visible 维度的 **visible/server 模块**（独立签名、ctx 无 thinkloop thread），不再靠 executable object method 上的标记。object method 还可声明 `route` 做**填表式渐进执行**（form：refine 补参、submit 提交），并以推导出的 intents 驱动知识激活。实施细节见 [self.md](../children/executable/self.md)。
 
 ## readable
 
@@ -91,7 +91,7 @@ reflectable = **自我迭代，不发明新机制**：它把已有设施（colla
 
 ## visible
 
-Object **持有并演化自身 UI 页面**——人类经浏览器看见并与之交互的那一面，与 readable（LLM 侧上下文展示）互为镜像。`ooc://` 原生寻址 1:1 映射控制面 SPA route：stone scope 是跨 session 稳定的单页 `visible/index.tsx`、flow scope 是 session 内多页 `client/pages`。人类经 HTTP `/call_method` 调用 Object 上标了 `for_ui_access` 的方法交互（与 LLM 侧 object method 分流）；tsx 资源与调用通道归 visible。详见 [visible](../children/visible/self.md)。
+Object **持有并演化自身 UI 页面 + 自实现「给 UI 用的服务端 API」**——人类经浏览器看见并与之交互的那一面，与 readable（LLM 侧上下文展示）互为镜像。`ooc://` 原生寻址 1:1 映射控制面 SPA route：stone scope 是跨 session 稳定的单页 `visible/index.tsx`、flow scope 是 session 内多页 `client/pages`。除 tsx UI 外，class 经 **`<ObjectDir>/visible/server/index.ts`** 实现 for-ui 服务端 API（ctx 有 world / session / object-self、**无 thinkloop thread**；改 data → persistable.save 非版本化），由 `index.ts` 与 executable / readable / persistable 一并注册；HTTP `/call_method` dispatch 到此（与 LLM 侧 executable object method 分两条独立签名）。**前端两条编辑通路**：编辑源文件 → app 通用 file-edit 原语（A1，版本化）/ 编辑 data → callMethod 到 class 自写 visible/server（A2，非版本化）。详见 [visible](../children/visible/self.md)。
 
 ## observable
 
@@ -103,7 +103,7 @@ observable 的铁律是**不改变 agent 行为的旁路观测**：只在 thinkl
 
 > **非维度 / 横切模块**：把各维度内核汇成人类面入口，本身不是能力维度。
 
-app 的核心契约是**控制面为显式 runtime orchestration，而非「请求即完成」的同步接口**：建线程、入队 job、轮询、pause-resume、恢复都经 server 的 job 语义串起，进程内状态（pause/debug）也经 HTTP 暴露成可查询、可切换的能力。它由 HTTP 控制面（Elysia，把 stone/pool/flow/runtime 暴露为稳定 API，写 stone 必经 versioning，无 uncommitted 半成品）与 Web 控制面（Vite+React，URL 即单向真相、不持业务状态、只把既有状态翻译成人读界面）两面组成。详见 [app](../children/app/self.md)。
+app 的核心契约是**控制面为显式 runtime orchestration，而非「请求即完成」的同步接口**：建线程、入队 job、轮询、pause-resume、恢复都经 server 的 job 语义串起，进程内状态（pause/debug）也经 HTTP 暴露成可查询、可切换的能力。它由 HTTP 控制面（Elysia，把 stone/pool/flow/runtime 暴露为稳定 API，写 stone 必经 versioning，无 uncommitted 半成品）与 Web 控制面（Vite+React，URL 即单向真相、不持业务状态、只把既有状态翻译成人读界面）两面组成。**源文件编辑收口为单一 file-edit 原语** `PUT /stones/:id/file?path=`（三层 path 防护 + 白名单，经 runVersioned 直 commit main；按文件类型开的 self/readable/executable-source 三 typed 端点退役）——人类控制面直写、豁免 reflectable feat-branch 纪律。详见 [app](../children/app/self.md)。
 
 # C · 内置对象
 
@@ -144,7 +144,7 @@ method 严格分两维但共用同一 **exec-by-name** 入口：object method（
 
 ## reflectable × persistable
 
-reflectable 的自我迭代是把改动落在 persistable 的持久三层级上：pool sediment（memory/relations 等运行时事实）直写 pool——不进 git、不分支、写就生效，下一轮新 thread 即刻看见；stone 变更（身份/身体/seed knowledge）一律走 feat-branch PR——super(Foo) 从 `stones/main` 派生一条 feat 分支 worktree、在其上编辑、commit、开 PR，再合入 canonical main。两通道互斥，判据是「运行时事实 vs stone 变更」。铁律：绝不从 session worktree（`flows/<sid>`）直合 main——它只是派生运行物。PR-Issue 记录、stone git versioning、reviewer 冒泡纯函数等存储层归 persistable，reflectable 只定义「在反思 session 下如何组合」。而 session=flow=worktree 分支这一 persistable 模型，正是 reflectable feat-branch 沉淀的底座。详见 [reflectable](../children/reflectable/self.md) 与 [persistable](../children/persistable/self.md)。
+reflectable 的自我迭代是把改动落在 persistable 的持久三层级上：pool sediment（memory/relations 等运行时事实）直写 pool——不进 git、不分支、写就生效，下一轮新 thread 即刻看见；stone 变更（身份/身体/seed knowledge）一律走 feat-branch PR——super(Foo) 从 `stones/main` 派生一条 feat 分支 worktree、在其上编辑、commit、开 PR，再合入 canonical main。两通道互斥，判据是「运行时事实 vs stone 变更」。铁律：绝不从 session worktree（`flows/<sid>`）直合 main——它只是派生运行物。**铁律主语是 OOC Agent**——「stone 变更走 feat-branch PR」约束的是 **agent 的自我迭代**（须经审核闸）；**人类经 app 的 `PUT /stones/:id/file?path=` 直 commit main 是合理豁免**（人类=canonical 主权者，编辑本身即「已评审」）。PR-Issue 记录、stone git versioning、reviewer 冒泡纯函数等存储层归 persistable，reflectable 只定义「在反思 session 下如何组合」。而 session=flow=worktree 分支这一 persistable 模型，正是 reflectable feat-branch 沉淀的底座。详见 [reflectable](../children/reflectable/self.md) 与 [persistable](../children/persistable/self.md)。
 
 ## collaborable × thinkable
 
@@ -152,7 +152,7 @@ collaborable 的 talk 方法创建 thread，thread 跑 thinkable 的 thinkloop �
 
 ## readable × visible
 
-同一个 Object，两个观众、两条展示线：readable 管 LLM 侧（把 Object 投影成 context XML），visible 管人类侧（tsx 画进浏览器）。两者并列、互为镜像、不互相吞并——readable 面向思考者，visible 面向用户。分流的交汇点是 object method：标 `for_ui_access: true` 的方法经 HTTP `/call_method` 暴露给人类侧（visible），按 `for_ui_access` 过滤，与 LLM 侧 exec-by-name 路径共用同一份 `window.methods` 而分流可见性。「变化的展示」也对称：readable 的投影收放（window method 换 win）对 visible 的 `diff.tsx` / loop_timeline window diff——一个给 context、一个给浏览器。详见 [readable](../children/readable/self.md) 与 [visible](../children/visible/self.md)。
+同一个 Object，两个观众、两条展示线：readable 管 LLM 侧（把 Object 投影成 context XML），visible 管人类侧（tsx 画进浏览器）。两者并列、互为镜像、不互相吞并——readable 面向思考者，visible 面向用户。**人机分流是两条独立模块**：LLM 侧 = executable object method（exec-by-name）；人类侧 = visible（tsx + `visible/server` for-ui 服务端 API，经 HTTP `/call_method`，ctx 无 thinkloop thread，改 data → persistable.save）——不再「共用同一份 `window.methods` 按 `for_ui_access` 过滤」（该标记退役）。「变化的展示」也对称：readable 的投影收放（window method 换 win）对 visible 的 `diff.tsx` / loop_timeline window diff——一个给 context、一个给浏览器。详见 [readable](../children/readable/self.md) 与 [visible](../children/visible/self.md)。
 
 # E · 内置对象 × 维度 交叉
 
@@ -168,7 +168,7 @@ agent = object + LLM：在 object base 标准具备的四维（readable / execut
 
 ## knowledge_base / knowledge
 
-knowledge_base 是单例 object，经 `open_knowledge` 把知识条目接入系统；其 child `knowledge`（class）是知识条目窗（命名空间从属、不继承 parent，对象模型核心 8）。它的故事主要落在 × thinkable：每条 knowledge 持 `activates_on` trigger，thinkloop 构造 context 时对每篇求激活级别，命中即按级别（`show_description` 只露标题描述 / `show_content` 展开正文）激活进 context；这与渐进式执行咬合成"执行到哪、知识激活到哪"，控制每轮 context 体积。knowledge 的双源（seed / sediment）加载与沿祖先 / parentClass 的继承链解析，归 thinkable 的 knowledge 子模块（见 [thinkable](../children/thinkable/self.md)）。
+knowledge_base 是单例 object，经 `open_knowledge` 把知识条目接入系统；其 child `knowledge`（class）是知识条目窗（命名空间从属、不继承 parent，对象模型核心 8）。它的故事主要落在 × thinkable：每条 knowledge 持 `activates_on` trigger，thinkloop 构造 context 时对每篇求激活级别，命中即按级别（`show_description` 只露标题描述 / `show_content` 展开正文）激活进 context；这与渐进式执行咬合成"执行到哪、知识激活到哪"，控制每轮 context 体积。knowledge 的双源（seed / sediment）加载与沿祖先 / parentClass 的继承链解析，归 thinkable 的 knowledge 子模块（见 [thinkable](../children/thinkable/self.md)）。**两源的编辑落点按版本化分**：**seed knowledge**（stone / 进 git）经 app 通用 file-edit 原语 `PUT /stones/:id/file?path=knowledge/x.md`（A1，版本化）；**sediment knowledge**（pool / 不进 git、非版本化）走独立 `/api/pools/` 端点——seed/sediment **不并入同一原语**（A1 只管 stone 版本化文件，pool 不进 git 与「版本化文件编辑」矛盾）。
 
 ## method_exec_form
 
@@ -189,6 +189,8 @@ form 是 object method 填表式渐进执行的载体——× executable：objec
 
 - × executable：各暴露 object method——`filesystem`: grep/glob/open_file/write_file；`terminal`: run；`interpreter`: run。method 改世界、产工具副作用（归 [executable](../children/executable/self.md)）。
 - × readable：各自 children 是结果窗 class——`filesystem` 的 file/search、`terminal` 的 terminal_process、`interpreter` 的 interpreter_process——把工具产出投影成 context window（viewport/transcript 等可调展示态），归 [readable](../children/readable/self.md)。
+
+**filesystem.write_file（agent 侧）vs app file-edit 原语（人类侧）—— 有意分工、互斥不混用**：`filesystem.write_file` 是 **agent 侧写**，强制落 session worktree、进 canonical 走 feat-branch PR，**拒绝裸写 main**；app 的 `PUT /stones/:id/file?path=`（A1）是**人类侧特权直 commit main**。两条永不混用——人类=canonical 主权者直写、agent 自我迭代经审核闸（对齐 `## reflectable × persistable` 铁律主语）。
 
 清单见 [builtins](./builtins.md)。
 

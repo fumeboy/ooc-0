@@ -24,9 +24,9 @@
    **class** 由这几件构成：
    - **`readable`**（`readable.ts` / `readable/index.ts` / `readable.md`）—— 它**作为 context window 怎么向 LLM 展示**：渲染什么内容、按视角算出什么 class、提供哪些 window method。
    - **`executable`**（`executable/index.ts`）—— 它的 **object method**。
-   - **`visible`**（`visible/index.tsx`）—— 它向 OOC 系统用户提供 UI 界面。
+   - **`visible`**（`visible/index.tsx` + `visible/server/index.ts`）—— 它向 OOC 系统用户提供 UI 界面（tsx）+ 「给 UI 用的服务端 API」（visible/server，前端经 callMethod 调用、改 object data）。
    - **`persistable`**（`persistable/index.ts`）—— 它的**自定义持久化逻辑**（缺省走系统默认）。
-   - **`index.ts`** —— class 的**后端程序路由**（不含 visible 前端）：`export const Class = { construct?, executable, readable, persistable }`，把各维度的程序入口收口在一处；非单例 class 在此注册 **construct**（见核心 3）。槽名是 `construct` 不是 `constructor`——JS `Object.prototype.constructor` 会遮蔽后者（`({}).constructor === Object` 恒真），单例就无法被识别。
+   - **`index.ts`** —— class 的**后端程序路由**（不含 visible 前端 tsx）：`export const Class = { construct?, executable, readable, persistable, visibleServer? }`，把各维度的程序入口收口在一处——含 **visible/server** for-ui 服务端 API 模块（前端 tsx 资源除外，那是 visible 自带）；非单例 class 在此注册 **construct**（见核心 3）。槽名是 `construct` 不是 `constructor`——JS `Object.prototype.constructor` 会遮蔽后者（`({}).constructor === Object` 恒真），单例就无法被识别。
    - **`types.ts`** —— 定义该 class 的 **object data 结构**（object 自身运行时数据的类型；**不是** window 投影结构，见核心 4）。
    - 可选 **`common/`** —— 放公用的程序函数。
 
@@ -43,7 +43,7 @@
 
 5. **object method 由 executable 实现**：区别于 window method（核心 4），object method **可改变 object 数据、可产生副作用**。
 
-6. **object 经 visible 自定义 UI 界面**：UI 可**请求** object 的 object method；被请求的 object method 须标记 **`for_ui_access`**。
+6. **object 经 visible 自定义 UI 界面**：visible 除前端 tsx UI 外，还经 **`visible/server/index.ts`** 提供「给 UI 用的服务端 API」——前端经 callMethod 请求这些 for-ui server method（改 object data → persistable.save，非版本化）；其 ctx 有 world / session / object-self、**无 thinkloop thread**，与 executable object method 分两条独立签名。**人机分流不靠 object method 上的标记**（旧 `for_ui_access` 退役）——LLM 侧走 executable object method、人类侧走 visible/server。
 
 7. **持久化可自定义**：object 经自定义 **persistable** 程序控制自己的**序列化目录与序列化方式**；未自定义则走**系统默认**持久化。
 

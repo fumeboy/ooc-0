@@ -24,4 +24,4 @@ ooc:// 是原生寻址 URI，visible 是把它落到"人类看得见的页面"�
 
 ## agent-native parity 缺口（待设计）
 
-ooc:// 让 Agent 能**寻址**自己的 UI 页面，但调用侧仍有 agent-native parity 缺口（`ui_methods` 仅经 HTTP `/call_method` 暴露给前端、agent 端无等价 tool 路径）——权威叙述与技术债定性见 self.md「已知问题」。
+ooc:// 让 Agent 能**寻址**自己的 UI 页面，但调用侧仍有 agent-native parity 缺口（visible/server for-ui method 仅经 HTTP `/call_method` 暴露给前端、agent 端无等价 tool 路径）——权威叙述与技术债定性见 self.md「已知问题」。

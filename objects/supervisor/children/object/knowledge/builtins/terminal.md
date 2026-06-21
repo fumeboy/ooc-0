@@ -21,7 +21,7 @@ activates_on:
 每个维度是 self 的一个**面**。terminal 的特殊形状：Data 为空，故只有 executable / readable 两面有实体，其余皆无或走默认。
 
 ### self × executable —— `run`（委托造 child process）
-跑一段 bash 脚本，schema `{ code: string (required) }`；不改 self、无持久副作用，副作用 = `ctx.runtime.instantiate("_builtin/terminal/terminal_process", {code})` 造一个 child `terminal_process`（首次 exec 已在 child construct 内跑完、结果进其 history），返回创建提示串。runtime 句柄缺失则 fail-loud。未标 `for_ui_access`。
+跑一段 bash 脚本，schema `{ code: string (required) }`；不改 self、无持久副作用，副作用 = `ctx.runtime.instantiate("_builtin/terminal/terminal_process", {code})` 造一个 child `terminal_process`（首次 exec 已在 child construct 内跑完、结果进其 history），返回创建提示串。runtime 句柄缺失则 fail-loud。LLM-only object method（无 UI 入口；人机分流移交 visible/server）。
 
 ### self × readable —— 投影成静态身份窗
 投影成 `class:"terminal"`——渲染一段静态身份/用途文本（方法菜单靠 object method description 撑），window 声明 `object_methods:["run"]`、`window_methods:[]`、不随视角变化。无自定义 window method（无投影态可调）。

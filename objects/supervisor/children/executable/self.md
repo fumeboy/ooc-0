@@ -59,17 +59,19 @@ const appendMethod: ObjectMethod = {
  * - name        : 方法名（dispatch 入口；同 class 内 object/window method 不可重名）
  * - description : LLM 面向的方法描述（必填）
  * - schema      : 可选参数 schema（结构化渲染 + fail-soft 校验）
- * - for_ui_access: 是否可经前端 HTTP API（visible UI）请求（见 object-model 核心 6）
  * - public      : 是否对 peer object 可见可调
  * - for_reflectable: 是否仅在 super flow（反思 session）下 surface
  * - exec        : (ctx, self, args) → 结果文本（或 undefined）；**可改 self、可副作用**
+ *
+ * 注：object method 只管 LLM 侧行动，不再有 `for_ui_access`——人机分流移交 visible 维度的
+ *     visible/server 模块（`<ObjectDir>/visible/server/index.ts`，ctx 无 thinkloop thread），
+ *     由前端经 callMethod 调用，见 visible 维度。
  */
 export interface ObjectMethod<Data = any, Args = any> {
   name: string;
   description: string;
   schema?: MethodCallSchema;
   permission?: (args: Record<string, unknown>) => "allow" | "ask" | "deny";
-  for_ui_access?: boolean;
   public?: boolean;
   for_reflectable?: boolean;
 

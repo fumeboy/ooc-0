@@ -13,6 +13,7 @@
 - 不是"请求即完成"的同步层，而是一层显式 **runtime orchestration**：建线程、入队 job、轮询、恢复、pause/resume 都通过 server 的 job 语义串起来。
 - 组成：bootstrap（启动 + config + 错误模型）/ modules（feature-based 路由：health / runtime / stones / pools / ui / flows / world-config）/ runtime（进程内 job-manager / worker / pause-store / resume / thread-query）。
 - 关键契约：所有写 stone 的 HTTP 操作必经 stone-versioning（worktree → commit → merge），不存在 uncommitted 半成品；service 层错误一律 `throw AppServerError`，由 onError 统一包成 `{error:{code,message,details}}`。
+- **源文件编辑收口为单一 file-edit 原语**：编辑某 Object 的源文件经一个 file-agnostic 的版本化原语 `PUT /api/stones/:id/file?path=<相对路径>`（body=content，经 runVersioned 直 commit main）——替代按文件类型开端点（self / readable / executable-source 三个 typed PUT 退役）。path 经三层防护：`safeKnowledgePath`（拒 NUL/绝对/`..`）+ **白名单**（仅 `self.md` / `readable.md` / `executable/index.ts` / `knowledge/*`，拒绝默认，禁 `package.json` / `.git` / `node_modules` / `types.ts`）+ `ensureInside`（限 stone 目录内）。这是**人类控制面直写**通路（人类=canonical 主权者，直 commit main 是 reflectable feat-branch 纪律的合理豁免；该纪律约束 agent 自我迭代）。
 
 **app.client（Web 控制面，Vite + React）**
 - 最小人工控制面，不持有业务状态——只把 world / thread / runtime 的既有状态翻译成人读界面。
@@ -41,7 +42,7 @@
 
 - 为 `/api/file/read` 加 path 白名单 / 鉴权层，再考虑非本地暴露。
 - 若 world 规模增长，把 `/api/tree` 改节点级懒加载或分页。
-- 把 stone self/readme/data 编辑、loop debug 等纳入 client 前，先在 `web/src/transport/endpoints.ts` 登记对应 endpoint。
+- 把通用 file-edit（`PUT /stones/:id/file`）、loop debug 等纳入 client 前，先在 `web/src/transport/endpoints.ts` 登记对应 endpoint。
 
 ## 名词解释
 
@@ -53,7 +54,7 @@
 - **pause · resume**：pause 是进程内调度开关；resume 是半轮粒度恢复（不重跑模型、重放上次未消费的 LLM 输出，避免重复扣费）。
 - **notifyThreadActivated**：事件源写完 inbox/翻状态后调用的薄通知，转成 `createRunThreadJob`——「状态翻转 → enqueue」的唯一通道。
 - **AppShell**：client 顶层布局组件，URL 即单向真相（从 react-router URL 派生导航字段，导航走 `navigate(toPath(...))` 回流）。
-- **call_method 可调方法**：HTTP `call_method` 只暴露 `window.methods` 里标了 `for_ui_access: true` 的方法（2026-06-11 起独立的 `ui_methods` 维度已废，LLM 侧与人类侧共用同一 `window.methods` 字典、按 `for_ui_access` 过滤分流）。
+- **call_method 可调方法**：HTTP `call_method` dispatch 到 Object **visible/server 模块**（`<ObjectDir>/visible/server/index.ts`）提供的 for-ui 服务端 API（人类侧专路；ctx 有 world / session / object-self、**无 thinkloop thread**，改 data → persistable.save 非版本化）——与 LLM 侧 executable object method 分两条独立签名，不再共用 `window.methods` 按 `for_ui_access` 过滤（`for_ui_access` 标记已退役）。
 - **--world 解析**：world 根解析顺序 flag → `OOC_WORLD_DIR` → `OOC_BASE_DIR` → cwd；启动必须显式 `--world`（否则把源码目录当 world 污染源码树），并归一为绝对路径。
 - **user object**：web session 中人类驱动的被动 flow object（`objectId="user"`），worker 显式跳过调度（`worker.ts:40,46`）。
 

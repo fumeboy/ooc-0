@@ -14,7 +14,7 @@ activates_on:
 | 投影目标 | context 里的 window（投影 class + content） | tsx 页面 / SPA route |
 | 静态自我介绍 | `readable.md`（对外名片，与 self.md 双面身份） | （无独立对应；UI 即自述） |
 | 入口 | class 的 `readable` 模块（`readable` 投影函数 + `window` 投影 class 声明）+ 静态 readable.md | `visible/index.tsx`（stone 单页）/ `client/pages`（flow 多页） |
-| 变化的控制 | window method（动 win、返回新 win，如 set_viewport） | `/call_method`（object method 里 `for_ui_access` 的，人类侧触发） |
+| 变化的控制 | window method（动 win、返回新 win，如 set_viewport） | `/call_method` → `visible/server` for-ui method（人类侧触发，改 data → persistable.save，ctx 无 thinkloop thread） |
 | 寻址 | thinkable context 管线消费投影 | `ooc://client/...` 1:1 映射 SPA route |
 
 **判据**：readable 决定"Object 怎样进入思考者的 context"，visible 决定"Object 怎样进入人类的屏幕"。二者在"变化"这条线上交织——window method 调投影态 win 是变化的控制（readable），visible 的 tsx 是变化的人类侧呈现（visible）——但分工清晰：投影 + 展示态控制 + LLM 渲染归我，浏览器渲染 + 人类交互通道归 visible。

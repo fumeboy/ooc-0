@@ -23,7 +23,7 @@ activates_on:
 
 ### self × executable —— object method（唯一一个，委托类）
 
-- **`create_object`**（**未标 `for_ui_access`** → 仅 LLM 可调）—— scaffold 一个全新 OOC Object 的骨架（`package.json` + `self.md` + `readable.md`[ + `knowledge/`]）落**当前业务 session 的 worktree**。
+- **`create_object`**（**LLM-only object method**，无 UI 入口；人机分流移交 visible/server）—— scaffold 一个全新 OOC Object 的骨架（`package.json` + `self.md` + `readable.md`[ + `knowledge/`]）落**当前业务 session 的 worktree**。
   - **args**：`objectId`(必填) / `selfMd`(必填全文) / `readableMd`(必填全文) / `knowledge`(可选 `{filename→content}`)。
   - **契约**：从 `ctx.thread.persistence` 取 `{baseDir, sessionId, objectId(author)}`；缺 thread / 缺 persistence / 非业务 session（super 或空 session）→ fail-loud 返回 `[create_object] …` 文案，不静默。
   - **副作用边界**：只落 session worktree、**不 commit**；本 session 内当场可用（靠 session-aware 读），main 不变、别 session 读不到。**session 永不合入 main**——进 canonical 走独立 feat-branch PR（reflectable 通道）。
@@ -102,7 +102,7 @@ const createObjectMethod: ObjectMethod<Data> = {
   name: "create_object",
   description:
     "Scaffold a brand-new OOC Object (package.json + self.md + readable.md) in the session worktree.",
-  // 未标 for_ui_access —— 仅 LLM 可调。
+  // LLM-only object method（无 UI 入口；人机分流移交 visible/server）。
   schema: {
     objectId:   { type: "string", required: true,  description: "新对象 id" },
     selfMd:     { type: "string", required: true,  description: "新对象 self.md 全文" },

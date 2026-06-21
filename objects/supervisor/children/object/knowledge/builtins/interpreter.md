@@ -21,7 +21,7 @@ activates_on:
 interpreter 的形状：self 数据为空，故只有 executable / readable 两面有实体，construct/visible/persistable 皆无或走系统默认。
 
 ### self × executable —— `run`（委托造 child process）
-参数 `{ language: "ts"|"js"(enum,required), lang?: 别名, code: string(required) }`；委托 `ctx.runtime.instantiate("_builtin/interpreter/interpreter_process", {language, code})` 造一个 interpreter_process（首段脚本在 child construct 内跑完、结果进 history），返回新进程创建提示文本。不改 self；runtime 缺失则 fail-soft 返回提示。未标 `for_ui_access`。
+参数 `{ language: "ts"|"js"(enum,required), lang?: 别名, code: string(required) }`；委托 `ctx.runtime.instantiate("_builtin/interpreter/interpreter_process", {language, code})` 造一个 interpreter_process（首段脚本在 child construct 内跑完、结果进 history），返回新进程创建提示文本。不改 self；runtime 缺失则 fail-soft 返回提示。LLM-only object method（无 UI 入口；人机分流移交 visible/server）。
 
 ### self × readable —— 投影成静态身份窗
 恒投影成 `class:"interpreter"`、content 极简「解释器」（方法菜单靠 object method description 撑），window 仅声明 `object_methods:["run"]`、不随视角变化。无自定义 window method——无展示投影态（`InterpreterWin = {}`）。

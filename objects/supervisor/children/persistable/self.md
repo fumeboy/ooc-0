@@ -34,6 +34,8 @@
 4. **持久化逻辑可自定义**。OOC Class 可经程序自定义自己的持久化逻辑（自定义持久化文件路径与文件格式）。默认的持久化逻辑是把对象数据写入 `objects/<object_path>/state.json`——其中 `object_path` 可能直接对应 object id，也可能由 object id 映射为含 `/children/` 段的多级路径（id：`parent/child` → path:`parent/children/child`）。**第三态 inline**：运行态自有窗（如 thread）声明 `persistable.mode="inline"`，整窗随所属 thread 的 `thread-context.json` inline 落盘、不写独立 `state.json`。
 
 5. **数据变更由 object 主动报告，runtime 据此触发持久化**。OOC Object 经 Object Method 修改自己的数据；Method 接收一个 `ctx` 参数，`ctx` 具有 `reportDataEdit()` 方法。Object 在 Method 内调用 `ctx.reportDataEdit()` **主动**告诉 runtime 自己的数据已变更，runtime 据此触发该 Object 的（自定义或缺省）持久化程序刷新持久化文件。
+   - **`reportDataEdit` → persistable.save 始终是 flow 内非版本化写**——即便某 class 的 save 把数据落在 stone 路径文件（如 agent 把 `data.self` 写 `self.md`），落的也是该 session 的 worktree 副本（如 git working-tree vs commit），**无版本化承诺、不 commit**。data 编辑一律非版本化（落 flow / state.json，同 pool sediment 直写）。
+   - **两条分离的写路径**：① **人类控制面写**（app 的 `PUT /stones/:id/file?path=`，经 runVersioned httpDirectMainWrite **直 commit main**，版本化）——人类是 canonical 主权者；② **agent data 写**（method 内 `reportDataEdit` → persistable.save，flow 内非版本化）。版本化只归路径 ① 与 reflectable feat-branch PR；高频 data 编辑接 git commit 只会制造噪声、绕过审核闸，故 persistable.save **不经 runVersioned**。
 
 6. **OOC Agent 是一种 OOC Class，可在 session worktree 内改写自己的自定义程序**。OOC Agent 是 OOC 系统的智能单元，具思考 / 执行能力（对齐 object-model 核心 9），并允许改写自己的自定义程序。例：`stones/main` 下的 `objects/agentFoo` 在 `objects/agentFoo/executable/index.ts` 自定义了方法 `MethodFoo`；运行时在 `flows/<sessionId>/`（= `stones/main` 的 worktree 分支）下，该 Agent 可编辑自己的 `objects/agentFoo/executable/index.ts` 来改变自己的行为。
 

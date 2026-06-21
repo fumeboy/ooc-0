@@ -21,7 +21,7 @@ activates_on:
 
 ### self × executable —— object method（四个都是委托类）
 
-四个方法都是**委托类**：自身不改 data、无副作用持久态，经 `ctx.runtime.instantiate(classId, args)` 造出 child 实例，返回提示文本告知 agent 子对象已造出；runtime 缺失则 fail-loud。缺必填参由各 method schema 的 `required` + `description` 引导。均**未标 `for_ui_access`**。
+四个方法都是**委托类**：自身不改 data、无副作用持久态，经 `ctx.runtime.instantiate(classId, args)` 造出 child 实例，返回提示文本告知 agent 子对象已造出；runtime 缺失则 fail-loud。缺必填参由各 method schema 的 `required` + `description` 引导。均是 **LLM-only object method**（无 UI 入口；人机分流移交 visible/server）。
 
 - **`grep`** —— regex 搜内容，委托造 search 子对象（mode=grep）。
 - **`glob`** —— glob 通配搜文件名，委托造 search 子对象（mode=glob）。

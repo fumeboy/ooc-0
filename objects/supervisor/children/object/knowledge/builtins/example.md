@@ -34,7 +34,7 @@ window method **`set_viewport`** 调整投影视口（line / column range）、�
 
 ### self × executable —— object method
 
-**`bump`** —— 累加 `self.bumpCount`、返回 `bumped → N`，演示 object method 三参签名 `(ctx, self, args)` + **可改 self / 可副作用**（无 args schema）。非 `for_ui_access`（LLM-only，无 UI 入口）。
+**`bump`** —— 累加 `self.bumpCount`、返回 `bumped → N`，演示 object method 三参签名 `(ctx, self, args)` + **可改 self / 可副作用**（无 args schema）。LLM-only object method（无 UI 入口；人机分流移交 visible/server）。
 
 ### self × persistable —— 序列化（有自定义）
 
@@ -129,7 +129,7 @@ import type { Data } from "../types.ts";
 const bumpMethod: ObjectMethod<Data> = {
   name: "bump",
   description: "Increment the example object's bump counter.",
-  // 非 for_ui_access：LLM-only，无 UI 入口
+  // LLM-only object method（无 UI 入口；人机分流移交 visible/server）
   exec: (_ctx: ExecutableContext, self: Data) => {
     self.bumpCount = (self.bumpCount ?? 0) + 1;
     return `bumped → ${self.bumpCount}`;

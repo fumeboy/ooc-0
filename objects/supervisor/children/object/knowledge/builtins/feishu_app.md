@@ -28,7 +28,7 @@ feishu_app 的 self 比普通 access-point tool-object 多一整套来自 agent 
 
 ### self × executable —— own access-point 面（open_chat / open_doc）+ 来自 agent 的 agency
 
-own method 均未标 `for_ui_access`（agent 经 thinkloop 调用，非 UI 请求）；不改 self 业务态、经 runtime 实例化子对象、把新 id 记入 self 的运行态 data：
+own method 均是 LLM-only object method（agent 经 thinkloop 调用，无 UI 入口；人机分流移交 visible/server）；不改 self 业务态、经 runtime 实例化子对象、把新 id 记入 self 的运行态 data：
 
 - **`open_chat`** —— 把一个飞书群聊 / 单聊作为 feishu_chat 子对象引入 context。args：`chat_id`(必填)、`chat_name`、`chat_type`(group/p2p/topic)、`tail_count`(默认 30，clamp 1..100)。经 `ctx.runtime.instantiate("_builtin/feishu_app/feishu_chat", …)` 实例化，新 id 记入 `self.openedChatObjectIds`。
 - **`open_doc`** —— 把一个飞书文档作为 feishu_doc 子对象引入 context。args：`doc_token`(必填)、`doc_kind`(doc/docx/sheet/base/wiki/drive_md，默认 docx)、`doc_title`。经 `ctx.runtime.instantiate("_builtin/feishu_app/feishu_doc", …)` 实例化，新 id 记入 `self.openedDocObjectIds`。
