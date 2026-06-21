@@ -67,8 +67,9 @@
 
 ### 对象表与引用（核心 4）—— 运行态 single-source
 
-- **session 对象表**：一个 session（= 内存线程树）内 `objectId → 唯一一个持 data 的对象实例`（identity map）。owner = **runtime handle** 在 job 执行上下文内持有、挂线程树**根** thread、随 job 释放（**非永生全局表**）；= flows 磁盘（独立对象 `data.json` / inline 对象随 thread-context）的运行态镜像，磁盘仍是真相。
-- **context window = 引用**：窗持 `objectRef`（objectId + 注册 class）+ 本窗视角态（status / title / win / closable / createdAt / parentObjectId）；**不持 data 副本**——磁盘只落 ref、内存 `window.object` 解析为**指向表项的共享引用**（`objectDataOf` / `classOf` 经此取值）。同 objectId 多窗 ⇒ 同一表项 ⇒ 读同一份 live data。
+- **两类型分立**：`OocObjectInstance<Data> = { id, class, data }` = **对象本身**（持 data）；`OocObjectRef<Win>` = **context window**（对对象的引用 + 视角态、**不持 data**）。`ContextWindow = OocObjectRef`。
+- **session 对象表**：一个 session（= 内存线程树）内 `objectId → 唯一一个 OocObjectInstance`（identity map）。挂线程树**根** thread、随 job 释放（**非永生全局表**，owner = `runtime/session-object-table.ts`）；= flows 磁盘（独立对象 `data.json` / inline 对象随 thread-context）的运行态镜像，磁盘仍是真相。
+- **context window = 引用**：`OocObjectRef` 持 `id`（=objectId，表 key，窗身份与对象身份 1:1）+ 缓存 `class` + 本窗视角态（status / title / win / closable / createdAt / parentWindowId）；**不持 data**——磁盘只落 ref、内存经 **`objectDataOf(ref, table)`** 从对象表按 `ref.id` 解析 data（`classOf(ref)=ref.class` 缓存免查表）。同 objectId 多窗 ⇒ 同一表项 ⇒ 读同一份 data。
 - **live-ref 作用域**：仅 **in-process 同 job fork 子树**（单 driver 串行推进、无竞争、本轮无锁）改即处处见；cross-job / cross-session / cross-object 各自 `readThread` 独立内存树、走磁盘 last-writer-wins（A **不承诺** live、物理上也做不到，Case A 在该层仍开放——不可笼统说「A 消解 Case A」）。`read_only` 不废、降为未来 cross-actor share 的设计储备。
 - **token 计量**：按**窗**各计其渲染产物——同一 objectId 在不同视角窗渲不同文本、各占预算（核心 9 多视角），**非按 object 去重**；A 的红利是 data 存一份，**不等于** token 计一次。
 - **现状（诚实标注）**：独立对象现每次 open 铸新 id、门面窗 data 空 ⇒ 真实跨窗 data 共享当前稀有（表多 1:1）；本设计先钉「window=ref / 一 objectId 一 instance」的**结构与解析层**，是后续「稳定/去重 objectId」让共享真正生效的地基。

@@ -153,4 +153,15 @@ date: 2026-06-21
 
 并发派 4 验收官（代码 / 文档 / 退潮 / 漂移）对照本 issue 承诺独立核：**代码 verified**（session-object-table + 接线 + 回归网真在，门禁亲跑绿）/ **文档 verified**（index.md↔self.md↔lifecycle.md 成对一致、无过度宣称）/ **退潮 gaps-found→已补**（死 draft 类型，见上）/ **漂移 verified**（无提案外夹带；shared-pointer-vs-字面-pure-ref 取舍已诚实标注；表 1:1/inert 边界陈述属实）。低优记录：① issue 内 P0-a..P3 commit hash 经 rebase 重写已失效——以合入 main 后的 `git log` 为准（不逐一追旧 hash）；② tsc 门禁需前端 node_modules 装好环境复跑（缺 deps 时 .tsx 误红，非 split 引入）。所有 gap 已补、无残留 → **verified**。
 
-> 状态：**B→A verified（P0–P4 + rebase + 验收补缺全 landed）**。窗=ref + session 对象表（一 objectId 一持 data 实例）的**结构与解析层**已钉死、全绿、文档成对回流、验收无残留缺口。**诚实边界**：跨窗 data 真实共享当前稀有（独立对象每 open 新 id、门面窗 data 空 → 表多 1:1），本期是结构地基；让共享真正生效需后续「稳定/去重 objectId」（独立 issue）。**已合入 main**：FF @`8e3be4f5`（合前并发陷阱核查通过〔主工作区 on main / 干净 / 无 MERGE_HEAD〕，merged 主工作区门禁复跑绿〔tsc 非 web 空 / core+thread 757 pass 0 fail / no-deprecated OK〕；8 commit P0a..退潮，base d54dd0b3）。
+## 裁决修正 III（split2，2026-06-22）—— 类型分解扶正：OocObjectInstance=对象 / OocObjectRef=窗
+
+用户看代码发现：先前合入 main 的 P3/P4 把 `OocObjectInstance` 当**窗**、`.object` 内联/共享指针 data，是半吊子——**OocObjectInstance 应是对象本身**。正确分解（用户拍板）：
+
+- `OocObjectInstance<Data> = { id, class, data }`（**对象**，活 session 对象表）；`OocObjectRef<Win>` = **context window**（持 `id`=objectId + 缓存 `class` + 视角态、**不持 data**）；`ContextWindow = OocObjectRef`。`window.object` 退役、改 `objectDataOf(ref, table)` 经表解析。
+- `parentObjectId → parentWindowId`（全树，stone-object 局部变量除外）。
+- 解析：`objectDataOf(ref, table)` 后端 2 参 / 前端经 `service.ts getThread` 预 hydrate 平铺下发；`classOf(ref)=ref.class`（1 参缓存）。`materializeWindow` 收编构造站点。`shareObjectIntoTable`/`objectKeyOf`/`.object` 退役。
+- 坑：`_objectTable`(Map) 误持久化→reload 崩，`stripVolatileForPersist` 剥 runtime 字段 + `instanceof Map` 守卫；cast-hidden 旧形态构造（`object:{class,data} as never/any`）逐个迁。
+
+**机械 ripple ~50 文件经 workflow 6 组修。** gate：tsc 非 web 0 / web 86(基线) / core+thread 757 pass 0 fail / storybook 64/0 / builtins 133/5（5 = main 同有 pre-existing，经基线对比 `8e3be4f5` 确认非回归）/ deprecated + doc-drift OK。文档成对回流（object self.md 核心 4 细节 + lifecycle.md 五 + index.md 核心 4，把 shared-pointer 旧述改正为 split2）。**已合入 main：FF @`2cb19de3`**（合前并发核查通过、merged 主工作区门禁复跑绿）。
+
+> 状态：**verified + split2 扶正已合入 main（@2cb19de3）**。OocObjectInstance=对象 / OocObjectRef=窗（纯 ref，不持 data）/ parentWindowId 全落地、全绿、文档回流到正确分解。**诚实边界不变**：跨窗 data 真实共享当前稀有（表多 1:1），结构地基已钉，让共享生效需后续「稳定/去重 objectId」（独立 issue）。
