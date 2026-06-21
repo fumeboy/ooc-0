@@ -13,7 +13,7 @@ activates_on:
 - **各维度 self.md 面向实施**：本维度核心设计 + 锚定源代码的实施细节。
 - 二者侧重不同、由 design-workflow 保证一致（见 `./design-workflow.md`）；与代码冲突时一律信代码。
 
-**本文 A–E 区每个 `##` 元素 = OOC 设计元素注册表**。任何系统设计调整经 issue → review 流程时，review fan-out 据此清单判定"受影响元素"、为每个受影响元素各派一个 reviewer（外加一个完整性批评官扫全树补漏）。
+**本文 A–E 区每个 `##` 元素 = OOC 设计元素注册表**。任何系统设计调整经 issue → review → 裁决 → 验收 流程时，设计 review fan-out 据此清单判定"受影响元素"、为每个受影响元素各派一个 reviewer（外加一个完整性批评官扫全树补漏）；落地后再过一轮落地验收 review，对照 issue 核文档/代码是否如约改造（`landed` → `verified`）。
 
 **阅读地图**：
 

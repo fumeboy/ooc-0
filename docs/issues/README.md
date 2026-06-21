@@ -8,7 +8,7 @@
 
 ## 状态
 
-frontmatter `status` 字段流转：`draft`（起草中）→ `in-review`（fan-out review 中）→ `decided`（已裁决待落地）→ `landed`（已落地并回流一致性）。
+frontmatter `status` 字段流转：`draft`（起草中）→ `in-review`（fan-out 设计 review 中）→ `decided`（已裁决待落地）→ `landed`（已落地并回流一致性，待验收）→ `verified`（落地验收 review 确认文档/代码如约改造，闭环完成）。
 
 ## 模板
 
@@ -47,4 +47,7 @@ date: YYYY-MM-DD
 
 ## 裁决
 （最终方案 + 落地与一致性回流清单；涉及源代码变更则记录 `.worktree/<slug>` worktree 分支）
+
+## 落地验收
+（`landed` 后由 Supervisor 汇总验收 reviewer 意见：文档/代码是否如约改造、回流是否漏一边、退役是否清干净、有无提案外漂移；缺口补完则标 `verified`）
 ```
