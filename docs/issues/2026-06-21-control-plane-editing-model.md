@@ -128,6 +128,10 @@ return normalizeMethodResult(await entry.exec(ctx, self, args));
 ### 受影响设计元素（A2 重定向后补）
 原列 9 项之外，visible/server 架构新增：`## filesystem`（write_file vs A1 分工，完整性批评官补）；executable 的 for_ui_access **退役**（抽出 executable）；visible 新增**服务端 API 模块**职责（`visible/server/`）；OOC Class/Object Model **核心 6/7** 改写（for_ui_access 不再挂 object method）；`## readable × visible` 分流改（不再「共用 window.methods 按 for_ui_access 过滤」，改为 visible/server 独立模块）。
 
+### 实现进度
+- **A1（通用 stone-file-edit 原语）已实现并全绿**（worktree 分支 feat/control-plane-editing-model）：`PUT /stones/:id/file`(body path+content) 取代 putSelf/putReadable/putServerSource；path 白名单 `[self.md, readable.md, executable/index.ts, visible/index.tsx, knowledge/*.md]`；读端点 + knowledge(pools) 保留；前端无写调用方。test:storybook 64/0、零新增红。
+- **A2（visible/server 模块）待实现**（A1 落绿后另起）。
+
 ### 实现分支
 源代码实现在 `.worktree/control-plane-editing-model`（分支 `feat/control-plane-editing-model`，基于 main e7bf9e33）。设计回流已 push ooc-0(4f0539e)。
 
