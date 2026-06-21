@@ -128,6 +128,9 @@ return normalizeMethodResult(await entry.exec(ctx, self, args));
 ### 受影响设计元素（A2 重定向后补）
 原列 9 项之外，visible/server 架构新增：`## filesystem`（write_file vs A1 分工，完整性批评官补）；executable 的 for_ui_access **退役**（抽出 executable）；visible 新增**服务端 API 模块**职责（`visible/server/`）；OOC Class/Object Model **核心 6/7** 改写（for_ui_access 不再挂 object method）；`## readable × visible` 分流改（不再「共用 window.methods 按 for_ui_access 过滤」，改为 visible/server 独立模块）。
 
+### 实现分支
+源代码实现在 `.worktree/control-plane-editing-model`（分支 `feat/control-plane-editing-model`，基于 main e7bf9e33）。设计回流已 push ooc-0(4f0539e)。
+
 ### 一致性回流清单（落地后）
 - `app/self.md` + `index.md ## app`：源文件编辑收口为单一 file-edit 原语 + path 白名单。
 - `persistable/self.md` 核心 5：补「reportDataEdit→saveObjectData 始终 flow 内非版本化写，即便 class 落 stone 路径（如 self.md）」；补「人类控制面写(httpDirectMainWrite,版本化) 与 agent data 写(reportDataEdit,非版本化) 两条分离写路径」。
