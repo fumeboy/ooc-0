@@ -12,7 +12,8 @@ thinkable 这个维度拆成这些子模块
 
 - **identity**：Object 的双面身份。`self.md` 偏内向（写给自己，定义目标/风格/行为偏好，是自我约束），经 readable **渲为 self 门面窗的 self 视角内容、不进 thinkloop instructions**（身份只活在 self 门面窗这一处）；`readable.md` 偏外向（写给外部世界的名片，让别的 Object/user 理解「我是谁、能做什么、何时找我」，可被动态 `readable.ts` 替代）。两者共同界定 Object 的人格边界。
 - **llm**：对接 OpenAI / Claude provider。
-- **context**：LLM 的 Input，由若干 ContextWindow 组成，ContextWindow 具有 window methods 可以调用。Object 不知道 context 之外的任何事。
+- **context**：LLM 的 Input，由若干 ContextWindow 组成，ContextWindow 具有 window methods 可以调用。Object 不知道 context 之外的任何事。总体设计见 `knowledge/context.md`。
+- **compress**：context 是稀缺资源、有一套专门的信息压缩机制——window 在「怎么压缩」上统一协议、各对象自有实现（三类窗：自我主历史窗 summarizer-fork / 内容窗展示档位 / 派生会话窗 overflow+视口、不折叠）。单一权威见 `knowledge/compress.md`。
 - **knowledge**：Object 持有的知识，具有 `activates_on` 条件，用于在 OOC Object 执行某一意图的行动时触发激活。
 - **thread**：思考过程，可以在思考途中创建 sub threads 创建并行过程。
 - **thinkloop**：单 thread 内一轮「构造 context → 调 LLM → 执行 tool → 写事件」循环。

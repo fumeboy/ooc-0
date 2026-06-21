@@ -67,7 +67,11 @@ activates_on:
 
 ## thinkable
 
-LLM 看到的世界不是裸 prompt，而是一组 **ContextWindow 对象**——Object 在 context 中的形态，自带可调的 window method。在此之上是**渐进式执行伴随的渐进式知识激活**：Object 经 open→refine→submit 渐进暴露要操作的窗口与方法，knowledge 则按 `activates_on` 意图在执行推进时渐进激活，执行到哪、知识激活到哪。思考过程组织成可并行、可恢复的 **Thread Tree**，每个 thread 由 **thinkloop** 驱动——单 thread 一轮「构造 context→调 LLM→执行 tool→写事件」的循环。实施细节见 [self.md](../children/thinkable/self.md)。
+LLM 看到的世界不是裸 prompt，而是一组 **ContextWindow 对象**——Object 在 context 中的形态，自带可调的 window method。在此之上是**渐进式执行伴随的渐进式知识激活**：Object 经 open→refine→submit 渐进暴露要操作的窗口与方法，knowledge 则按 `activates_on` 意图在执行推进时渐进激活，执行到哪、知识激活到哪。思考过程组织成可并行、可恢复的 **Thread Tree**，每个 thread 由 **thinkloop** 驱动——单 thread 一轮「构造 context→调 LLM→执行 tool→写事件」的循环。
+
+**context 是稀缺资源、有一套专门的压缩机制（compress）需注意**——读 thinkable 时易被一句「一组 window」带过、却是承重的一块：window 在「怎么压缩」上是**统一协议、各对象自有实现**（呼应「everything is a window 统一寻址不统一实现」），三类窗各按自身形态压缩——**自我主历史窗**（thread 自己的过程）用 summarizer fork 摘要早期历史、**内容窗**（file/知识/…）调展示详略档位、**派生会话窗**（talk）靠预算 overflow + 视口收放（不折叠）。单一权威见 [compress.md](../children/thinkable/knowledge/compress.md)；context 总体构成、视角投影与预算见 [context.md](../children/thinkable/knowledge/context.md)。
+
+实施细节见 [self.md](../children/thinkable/self.md)。
 
 ## executable
 
