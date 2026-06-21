@@ -1,10 +1,16 @@
 ---
-title: 厘清 runtime↔thread 耦合边界：core 泛型机制 + thread 专属派发位 + compress-v2 policy 归位（slug 含 reconciler 为 legacy，已弃该词）
-status: in-review
+title: 【SUPERSEDED】厘清 runtime↔thread 耦合边界（三轮 review 后判定载荷过重，已收敛拆分）
+status: superseded
 date: 2026-06-21
 ---
 
 # 内核=泛型协调器 + thread 骨架可读规则 + onChildTerminal 钩子抽取
+
+> **⚠️ SUPERSEDED（2026-06-21）**：本 issue 经三轮 review 长成「thread 整体重构」，判定载荷过重，**收敛拆分**为两份：
+> - [[2026-06-21-thread-builtin-business-retreat]] —— compress 退潮 + onChildTerminal 退潮 + say 机制纠正（thread 业务退出 core）。
+> - [[2026-06-21-thread-as-referencable-object]] —— peer-ref 投影 + unactive 通知模型 + refcount 订阅语义（thread 成可引用 object）。
+>
+> 本文三轮 review 记录与裁决**作审计史保留**，所有有效裁决已迁入上述两份。后续推进看两新 issue。
 
 ## 背景 / 动机
 
