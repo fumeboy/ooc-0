@@ -68,7 +68,7 @@ activates_on:
 
 这些不是新增机制，而是上面核心设计**组合后自然涌现**的能力。
 
-- **统一行动入口（exec / close / wait 三原语）**：一切行动都是「在某 window 上 exec 一个 method」（核心 3+5）；`close` 关窗、`wait` 声明等待。`compress`（信息压缩）**不是原语**——它是"调整信息展示"的 **window method**（核心 6，与 file 窗 `set_viewport` 同类），经 `exec(method="compress")` 调。**稳定原语恒为 3 个**：`exec` / `close` / `wait`。
+- **统一行动入口（exec / close / wait 三原语）**：一切行动都是「在某 window 上 exec 一个 method」（核心 3+5）；`close` 关窗、`wait` 声明等待。信息压缩**不是原语**——它是一项 **window method 协议**（核心 6）：`resize`（设展示/压缩档位）+ `compress`（无参折叠意图），各 class 在 readable 自实现、无通用默认，经 `exec(method="resize"|"compress")` 调（详见 `compress.md`）。**稳定原语恒为 3 个**：`exec` / `close` / `wait`。
 
 - **everything is a window**：会话（talk）、子线程、知识、文件、程序、乃至 agent 自身（self），都是 context window（核心 1+2）。context = 一组 window + 历史，没有"窗之外"的特殊结构。
 
@@ -168,13 +168,13 @@ context 是稀缺资源（两条轴：信息密度、class/实例正确性）。
 | 旧概念 | 归并到 |
 |---|---|
 | 旧 `do` 方法 / `do_window` class / `continue` / `move`（已并入 talk，2026-06-14） | `talk`（target=自己 ⇒ fork 子线程）/ `say` / `share`(readonly-ref·move) |
-| `compress` 顶层 tool / `scope=auto` | 已退役——折叠/展开由各 window 自实现，不走中心 exec；稳定原语 3 个（exec/close/wait）|
+| `compress` 顶层 tool / `scope`(windows/events/auto) / `expand` 逆向方法 | 已退役——压缩升为 window method 协议（`resize` 设档位替代 expand + `compress` 无参意图），各 class 自实现、无通用默认表；稳定原语恒 3 个（exec/close/wait）。详见 `compress.md`|
 | 旧 sharing kind `ref`(只读引用) / `lent_out`(已借出)（已并入新命名，2026-06-14） | 引用模式 `readonly-ref`（核心 2）；缺省持有 = `mutable-ref`；`move` 是产生只读态的动作（核心 11）、非稳态 |
 | 渲染层把 `window.class` 漂成 XML `type=` | 统一 `class=`，`type` 仅 arg 数据类型 |
 | 逐实例方法菜单重复 / 空 self 窗壳 | class 声明一次 / **self 身份走 self 门面窗**（self.md 作 self 门面窗 self 视角内容，**非 instructions**） |
 | 自己 thread 的 events + creator 对话裸渲在 `<thread>` 块 / message 流、无预算归属；`isCreatorWindow` 标记 | **已落（2026-06-20）**：收敛为自己视角 **thread 窗**（核心 9/10）——**无独立"creator 窗"概念**，creator 对话是 thread 窗内建的上游通道；XML 只渲 methods、内容进 message 流、一并纳入预算。谓词拆 `isSelfThreadWindow`（自视检测）/ `hasCreatorChannel`（有上游，gate creator affordance） |
 | events compress 折叠态曾停在 **self 门面窗**（`isSelfWindow`、非持久化、靠写盘 inline 后门、stone 冷启动丢窗洞） | **已落（2026-06-20）**：折叠态挂**自己视角 thread 窗**的 win（class=`_builtin/agent/thread`、inline 天然持久化、免后门与冷启动 registry-miss；self-driven root 用空通道 thread 窗承载）；写侧 events-compress 能力归属 thread class。真 LLM 实证 + 跨 job reload e2e gate |
-| transcript（thread event + creator 对话）曾在 `buildInputItems` 预算分配**之后**无条件追加、不计 token 账 | **已落**：transcript token 纳入预算口径（核心 10/3.5，commit 9376ffd8），计入自己视角 thread 窗预算账；逼近上限可 `compress(scope=events)` 折叠 + 越 hard 应急瞬态钳制兜底 |
+| transcript（thread event + creator 对话）曾在 `buildInputItems` 预算分配**之后**无条件追加、不计 token 账 | **已落**：transcript token 纳入预算口径（核心 10/3.5，commit 9376ffd8），计入自己视角 thread 窗预算账；逼近上限可 `compress`（无参意图，框架 fork summarizer 折叠）+ 越 hard force-wait / clamp floor 兜底 |
 
 ---
 
