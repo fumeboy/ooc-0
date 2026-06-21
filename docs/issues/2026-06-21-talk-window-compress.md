@@ -108,3 +108,28 @@ compress v2（resize/compress 协议 + summarizer fork + force-wait/clamp floor�
 - 验证：真 LLM talk 折端到端 + 跨 job reload（talk 窗 summarizedRanges/inFlightCompress inline 持久）+ crash-orphan 回收不死锁。
 
 **框架原则（fan-out 强背书，可独立先回流）**：命名「**单调历史窗 → 持久 summarizer-fold；当前真相窗 → 瞬态 relevance-overflow**」为 compress.md 显式核心原则 + index.md `## thinkable` 成对——它是 transcript-gated 与窗 overflow 正交背后的隐含原则显式化，让新增长窗自归类（退潮、非熵增）。
+
+## 裁决修订（top-view 再审，2026-06-21 —— supersedes 上「部分裁决」的方向 A）
+
+用户「再想 top-view」触发对**方向 A 前提本身**的质疑 + 3-agent code-ground 验证（overflow/viewport 足够性 + reflect_request 性质 + 对抗审查），结论 **ADOPT-PARTIAL 重构**：
+
+**核心翻转：不建 talk-fold。** summarizer-fold 本质是**自我视角**能力（管理 agent 自己那条无界 append-only 主历史 `thread.events`，单写者、index 稳）。talk 窗 transcript 是 `filterTalkMessages` 跨双流 `createdAt` 重排的**派生视图**（index 不稳；且 `harvestSummarizerForks` 从不写 talk 窗）。方向 A 的 4 个 BLOCKER 正是「把自我历史的 fold 硬套派生会话视图」的代价信号——honest 读法是 **cost > value，不建**（与 fan-out 不冲突：BLOCKER 即信号）。
+
+- **talk compress 现在就是死路径（code 实证）**：`harvestSummarizerForks` 只写 `isSelfThreadWindow`；talk 窗的 compressIntent/autoCompressLevel 无人消费。退掉它是**退潮死 flag**，不是丢能力（建 talk-fold 反是净新工作：新 harvest target + per-talk auto-trigger + messages-index fold）。
+- **talk 压缩兜底已足且非破坏**：(i) window-overflow（per-window，护多窗 count 膨胀）+ (ii) transcriptViewport（末 N/区间）+ (iii) inbox/outbox 持久、`set_transcript_window` 可拉回任意早期段。唯一窄缺口=单条长高相关 1:1 talk 窗想「摘要早期留近期」——低频 + 可经 viewport 拉回恢复，不值得为它扛 index 不稳。
+
+**验证纠偏（必守）：**
+1. **只退 talk 投影的 compress/resize**；**thread + reflect_request 保留**——reflect_request 是 `isSelfThreadWindow`、events-based、index 稳，summarizer-fold 完全适用（初版误把它和 talk 同列，纠正）。net：thread+reflect_request 留 `[setTranscriptWindow, compress, resize]`；talk 仅留 `[setTranscriptWindow]`。
+2. **撤 double-fold 论据**：code 证 `threadResize` 写 autoCompressLevel 非 compressLevel，`projectByCompressLevel` 在 thread/talk 投影不触发——double-fold 现不可达。承重论据=index 不稳 + fold 冗余 + 死路径。
+3. **drop index→id 锚点改造**（原待裁决 3 的 b 选项 + 计划项）：其唯一强理由（折派生不稳视图）随 talk-fold 退役而蒸发；幸存 fold 消费者（thread+reflect_request）全 events-index 稳。本身是一次退潮（砍掉计划中机制）。
+4. **待裁决 3（坐标锚点 a/b）作废**（无 talk-fold 即无坐标问题）。
+
+**框架原则（更锋利）**：summarizer-fold = 自我主历史窗（thread/reflect_request，append-only 单流）；展示档位 compressLevel = 内容窗（各自实现，已落）；派生会话视图（talk）= overflow + viewport，**不 fold**。
+
+**落地（须用户裁定「翻 Case E 方向」后，归各维度、paired 回流——是小退潮非耦合大单元）**：
+- readable/thread：talk decl 删 `threadCompress`/`threadResize`（保 `setTranscriptWindowMethod`）；thread + reflect_request decl 不动。
+- 回归 grep：storybook L2 / `resolveWindowClass` / method 发现激活 无别处假设三投影都带 compress/resize。
+- 文档成对回流：compress.md Case E 改「不建 talk-fold + self-view-only fold 原则」+ 撤 index→id follow-up；context.md / index.md 各 `##` 成对。
+- 风险与成本**远低于方向 A**（无 4 BLOCKER、无 summarizer 子系统扩展）。
+
+**待用户拍板**：采纳本重构（翻 Case E：方向 A→不建 talk-fold + 退 talk 惰性方法）即把 Case E 从「耦合大难题」收敛为「一次小退潮 + 一条更锋利原则 + drop 一个计划机制」。
