@@ -1,6 +1,6 @@
 ---
 title: 退役 state.json 与 session 草稿，统一为 object data → 默认落 data.json
-status: landed
+status: verified
 date: 2026-06-21
 ---
 
@@ -143,4 +143,11 @@ date: 2026-06-21
 
 ## 落地验收
 
-（`landed` 后由 Supervisor 汇总验收 reviewer 意见：文档/代码是否如约改造、成对回流是否漏一边、退役是否清干净、有无提案外漂移；缺口补完则标 `verified`）
+4-reviewer 独立验收 fan-out（文档 / 代码 / 退潮 / 漂移），**全 PASS、0 缺口** → `verified`：
+
+- **文档验收 PASS**：persistable/self.md:34,37、index.md:86,167、interpreter.md:51、example.md 逐条如约改；inline「不单独落 data.json」index.md:167 与 self.md:34 两投影措辞一致、成对回流无漏；三个「零回流」元素（persistable×thinkable / reflectable×persistable / OOC Class·Object Model）确认未误改、无 state.json 残留。
+- **代码验收 PASS**：决策1（flow-runtime-object.ts 裸 data + 符号 …ObjectData + stone-bootstrap.ts:73 gitignore data.json + visible-server-dispatch + thread-persist 读侧重组）与决策2（types.ts userData + self.ts getData/setData→userData + construct/exec 双入口 plumbing + flow-data.ts/测试已删）均确在代码；`bun run verify` 710 test 0 fail + 全 gate 绿、`test:storybook` 64 pass；construct setData 依赖「instantiate 不深拷贝」当前成立（window-manager.ts:140/153 按引用），属前瞻提示非缺口。
+- **退潮验收 PASS**：全树 grep 退役符号仅命中两 gate 自身 + 一次性迁移脚本 migrate-state-context-split（已 allow-list、未被 core 运行时调用）；「session 草稿」零命中；check-no-deprecated-symbols 新增 state.json/flowDataFile 等（:86-90）、check:doc-drift 新增 state.json/session 草稿（:109-112），两 gate 皆绿。
+- **漂移验收 PASS**：diff 严格收敛单 commit（peer grep-impl 174d85a2 已排除）；符号自拟命名一致无半改、integration 测试改法（跨 run→thread-local 跨 exec）仍有效非空断言、新增 process.test 真覆盖 userData 回归、userData 经 readable 渲染路径确隔离 history；无裁决外新机制/名词；example 退化诚实记录。
+
+**旁注（非本 issue，可另起轻量清理）**：`scripts/migrate-state-context-split.ts` 头注释「Server bootstrap calls runMigration at startup」是陈旧失真注释（core 实无此 wiring），与本次退役无关。
