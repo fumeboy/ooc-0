@@ -19,7 +19,7 @@
 1. 唯一行动方式 = 通过 tool 原语与 context window 交互。LLM 改变世界的唯一通道，是通过 tool 原语在 context window 上交互。
 2. tool 原语恒为 3 个：
   - exec（在某 window 上调一条 method）
-  - close（关一个 window）
+  - close（关一个 window = 移除对其对象的一个引用；honor 结构窗：`closable===false` 则拒关报错；引用归零触发该对象 `unactive`，机制见 object 模型核心 10）
   - wait（声明等待某个 context window 的 IO 结果）
 3. 可执行的 method 分两类、严格分维：
   - object method 改 object 自身数据、可产副作用（归 executable，本维度）；

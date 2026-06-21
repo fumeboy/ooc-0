@@ -40,3 +40,11 @@
 7. **变更经 reflectable 通道合入 stones/main，绝不从 session worktree 直合**。OOC Agent 经名为 **reflectable** 的自我迭代通道把变更合入 `stones/main`：**不**从 `flows/<sessionId>` 这个 worktree 分支直接合入，而是先从 `stones/main` 派生 `stones/<feat>` 分支、在 feat 分支应用要合入的变更、再发起合入流程。reflectable 流程细节不在本篇（归 reflectable 维度 + sibling `session-worktree-model.md`）。
 
 8. OOC World 目录下具有一个 `.world.json` 配置文件，作为 OOC 系统的配置文件
+
+---
+
+## 扩展点（dormant / 非设计）
+
+> 已识别但**尚未设计落地**的缺口，标注以备后续；当前实现按缺省布局工作，不阻塞。
+
+- **`persistable.delete?` 钩子（phase-2）**：object 生命周期 `unactive` 返回 `{delete:true}`（引用归零自决删除，见 object 模型核心 10）时，当前实现**硬编码删缺省 `objectDir` 布局**；自定义 persistable 把数据写到别处布局者，删不净（残留磁盘文件）。补一条对称的 `persistable.delete?` 钩子让自定义持久化自管删除——**dormant，推 phase-2**（当前无自定义删除布局的消费者）。

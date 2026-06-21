@@ -48,17 +48,16 @@ activates_on:
 
 核心契约（详见 [object self.md](../children/object/self.md) 核心 1-10）：
 
-1. 一切是 object；**class 是定义，object 是实例**。
-2. class 由 **readable / executable / visible / persistable** 四件套 + **`index.ts`**（装配 `export const Class`，收口后端程序路由）+ **`types.ts`**（定义 object data 结构）构成。
-3. **class 不支持继承**：object 经 `ooc.class` 单跳继承一个 class，但 class 不可再继承 class；复用靠 import 目标 class 导出的函数。
-4. **class 分单例 / 非单例**：非单例是可复用模板、在 `index.ts` 注册 **construct** 且可被继承；单例恰一个实例（object 一旦自定义函数方法即成自身 class 的单例）、不可被继承。
-5. **object 在 LLM 视角投影成 context window**：readable 按视角把 data 动态投影成 window 的 class 与展示内容；window 投影态与 object data 分离。
-6. **object method（executable）vs window method（readable）**：前者改 object data、可产生副作用；后者只动 window 投影态、返回新的不可变 window，不碰 object。
-7. **object method 标 `for_ui_access`** 才可被 visible 的 UI 请求。
-8. **持久化可自定义**：object 经 persistable 控制序列化目录与方式，未定义则走系统默认。
-9. **children = 命名空间从属、不继承**：children id 以 parent id 为前缀（`parent_id/child_id`），仅命名空间从属。
-10. **agent = object + LLM**：在四件套之上额外具 thinkable / collaborable / reflectable，持 `talk` method（执行即开一条跑 thinkloop 的 thread）；**`self.md` 是 agent 实例独有的身份**，只活在 self 门面窗、不进 thinkloop instructions。
-11. **生命周期**：`construct` 诞生 → `active` / `unactive` 按引用计数停启（**context window 即引用，close 即移除一个引用**，归零触发 `unactive`）→ **无独立 destruct**（删除是 `unactive` 返回 `{ delete? }` 的引用归零自决）。
+1. 一切是 object；**class 是定义，object 是实例**。class 由 **readable / executable / visible / persistable** 四件套 + **`index.ts`**（装配 `export const Class`，收口后端程序路由）+ **`types.ts`**（定义 object data 结构）构成。
+2. **class 不支持继承**：object 经 `ooc.class` 单跳继承一个 class，但 class 不可再继承 class；复用靠 import 目标 class 导出的函数。
+3. **class 分单例 / 非单例**：非单例是可复用模板、在 `index.ts` 注册 **construct** 且可被继承；单例恰一个实例（object 一旦自定义函数方法即成自身 class 的单例）、不可被继承。
+4. **object 在 LLM 视角投影成 context window**：readable 按视角把 data 动态投影成 window 的 class 与展示内容；window 投影态与 object data 分离。
+5. **object method（executable）vs window method（readable）**：前者改 object data、可产生副作用；后者只动 window 投影态、返回新的不可变 window，不碰 object。
+6. **object method 标 `for_ui_access`** 才可被 visible 的 UI 请求。
+7. **持久化可自定义**：object 经 persistable 控制序列化目录与方式，未定义则走系统默认。
+8. **children = 命名空间从属、不继承**：children id 以 parent id 为前缀（`parent_id/child_id`），仅命名空间从属。
+9. **agent = object + LLM**：在四件套之上额外具 thinkable / collaborable / reflectable，持 `talk` method（执行即开一条跑 thinkloop 的 thread）；**`self.md` 是 agent 实例独有的身份**，只活在 self 门面窗、不进 thinkloop instructions。
+10. **生命周期**：`construct` 诞生 → `active` / `unactive` 按引用计数停启（**context window 即引用，close 即移除一个引用**，归零触发 `unactive`）→ **无独立 destruct**（删除是 `unactive` 返回 `{ delete? }` 的引用归零自决）。
 
 > 单一权威见 [object self.md](../children/object/self.md)；builtin class/object 清单见 `./builtins.md`。
 
@@ -72,7 +71,7 @@ LLM 看到的世界不是裸 prompt，而是一组 **ContextWindow 对象**—�
 
 ## executable
 
-Object 行动的唯一方式 = 经 **tool 原语**与 context window 交互；tool 原语恒为 3 个：exec（在某 window 上调一条 method）/ close（关窗）/ wait（等某窗 IO 结果），compress 是 window method 而非原语。可执行的 method 严格分两维——**object method**（改 object 自身 Data、可产副作用，归本维度）与 **window method**（只动展示态，归 readable）；二者经同一 exec 入口按名分派，同 class 内不可重名、注册期 fail-loud。object method 还可声明 `route` 做**填表式渐进执行**（form：refine 补参、submit 提交），并以推导出的 intents 驱动知识激活。实施细节见 [self.md](../children/executable/self.md)。
+Object 行动的唯一方式 = 经 **tool 原语**与 context window 交互；tool 原语恒为 3 个：exec（在某 window 上调一条 method）/ close（关窗 = 移除对其对象的一个引用 + honor 结构窗 `closable` 守卫）/ wait（等某窗 IO 结果），compress 是 window method 而非原语。**`active` / `unactive` 是 class 生命周期钩子（引用 0↔1 触发，见 A 区核心 10）、不是新原语——tool 原语恒定 3 个。**可执行的 method 严格分两维——**object method**（改 object 自身 Data、可产副作用，归本维度）与 **window method**（只动展示态，归 readable）；二者经同一 exec 入口按名分派，同 class 内不可重名、注册期 fail-loud。object method 还可声明 `route` 做**填表式渐进执行**（form：refine 补参、submit 提交），并以推导出的 intents 驱动知识激活。实施细节见 [self.md](../children/executable/self.md)。
 
 ## readable
 
@@ -161,7 +160,7 @@ collaborable 的 talk 方法创建 thread，thread 跑 thinkable 的 thinkloop �
 
 ## thread
 
-thread 是 agent 一次智能运行的载体——`talk` 创建它、thinkloop 在其上运行——也是 builtin 里跨维度最密的对象，一身横跨四维。× thinkable：thinkloop 跑在 thread 上，thread 派生 sub thread 织成 Thread Tree，构成可并行、可恢复的思考底座（见 [thinkable](../children/thinkable/self.md)）。× collaborable：每个 thread 持 inbox/outbox，`say` 写入自己 outbox 并派送到对端 thread 的 inbox。× readable：**同一个 thread 实例按视角投影成三种 window class**——thread（自己视角，过程 event + 与 creator 的对话通道）、talk（与 peer/sub 的会话）、reflect_request（super flow POV）。× persistable：thread 声明 `mode="inline"`，整窗随所属 thread 的 `thread-context.json` 落盘，不写独立 `state.json`。
+thread 是 agent 一次智能运行的载体——`talk` 创建它、thinkloop 在其上运行——也是 builtin 里跨维度最密的对象，一身横跨四维。× thinkable：thinkloop 跑在 thread 上，thread 派生 sub thread 织成 Thread Tree，构成可并行、可恢复的思考底座（见 [thinkable](../children/thinkable/self.md)）。× collaborable：每个 thread 持 inbox/outbox，`say` 写入自己 outbox 并派送到对端 thread 的 inbox。× readable：**同一个 thread 实例按视角投影成三种 window class**——thread（自己视角，过程 event + 与 creator 的对话通道）、talk（与 peer/sub 的会话）、reflect_request（super flow POV）。× persistable：thread 声明 `mode="inline"`，整窗随所属 thread 的 `thread-context.json` 落盘，不写独立 `state.json`。**生命周期**：会话窗即对该 thread 对象的一个引用、关一个 fork 窗 → 该子线程级联 `canceled`、即时落盘（reload 不复活）、`canceled` 与 `done` / `failed` 同为退出态、结构窗（thread / creator 门面窗）不可关；引用计数停启机制见 A 区核心 10 与 [object self.md](../children/object/self.md)。
 
 ## agent
 

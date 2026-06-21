@@ -26,17 +26,19 @@ activates_on:
    - **context** —— 一组 **context window**，即 LLM 的输入（构造见 context.md）。
    - **inbox / outbox** —— 收 / 发的消息数据。
    - **events** —— 过程轨迹（这条 thread 经历过什么：tool call、状态变化、收消息…）。
-   - **status** —— `running` / `waiting` / `done` / `failed` / `paused`。
+   - **status** —— `running` / `waiting` / `done` / `failed` / `paused` / `canceled`。
    - **identity** —— 自己的 thread id + `creator`  thread 引用（它从属于谁、向谁负责）。
 
 3. **thread 的 object method**（它能做什么）：
    - **`say`** —— 向对端发消息（按视角双实现：自己视角 = 向对方发，对方视角 = 向自己发）。
    - **`end`** —— 归档本 thread。
-   - （`wait` / `close` 是 tool 原语、作用于窗，不是 thread 的 object method；wait 语义见 thinkloop.md。）
+   - （`wait` / `close` 是 tool 原语、作用于窗，不是 thread 的 object method；wait 语义见 thinkloop.md。）关一个会话窗 = 撤回对其对象的一次引用；关一个 fork 子线程的会话窗 → 该子线程及其随之无人引用的子树一并 **canceled**（停用、保留在盘可观测，同 done / failed）；thread 与 creator 的自我门面窗是恒在通道、不可关。
 
 4. **一个 agent 可并行持多条 thread**：与不同对端对话、跑并行子任务，彼此 context 独立。thread 之间可通过（`talk(target=自己)` ）派生形成一棵 **Thread Tree**。
 
 5. ooc agent 的 talk 函数，在构造 thread 时，可以提供初始的 context 成员，例如初始 thread context 具有 terminal、filesystem 等 object
+
+6. **thread 的生命周期**：一条 thread 诞生→承载一次运行→在不再被引用时停用为 **canceled**。`canceled` 与 `done` / `failed` 同属终态：thread 走到终态后不再运行，但记录保留在盘、仍可观测。停用是即时落盘的——reload 不会让已 canceled 的 thread 复活；父线程会经 child-end 通知被唤醒、看见子线程已退出。
 
 ---
 
