@@ -13,7 +13,7 @@
 - 不是"请求即完成"的同步层，而是一层显式 **runtime orchestration**：建线程、入队 job、轮询、恢复、pause/resume 都通过 server 的 job 语义串起来。
 - 组成：bootstrap（启动 + config + 错误模型）/ modules（feature-based 路由：health / runtime / stones / pools / ui / flows / world-config）/ runtime（进程内 job-manager / worker / pause-store / resume / thread-query）。
 - 关键契约：所有写 stone 的 HTTP 操作必经 stone-versioning（worktree → commit → merge），不存在 uncommitted 半成品；service 层错误一律 `throw AppServerError`，由 onError 统一包成 `{error:{code,message,details}}`。
-- **源文件编辑收口为单一 file-edit 原语**：编辑某 Object 的源文件经一个 file-agnostic 的版本化原语 `PUT /api/stones/:id/file?path=<相对路径>`（body=content，经 runVersioned 直 commit main）——替代按文件类型开端点（self / readable / executable-source 三个 typed PUT 退役）。path 经三层防护：`safeKnowledgePath`（拒 NUL/绝对/`..`）+ **白名单**（仅 `self.md` / `readable.md` / `executable/index.ts` / `knowledge/*`，拒绝默认，禁 `package.json` / `.git` / `node_modules` / `types.ts`）+ `ensureInside`（限 stone 目录内）。这是**人类控制面直写**通路（人类=canonical 主权者，直 commit main 是 reflectable feat-branch 纪律的合理豁免；该纪律约束 agent 自我迭代）。
+- **源文件编辑收口为单一 file-edit 原语**：编辑某 Object 的源文件经一个 file-agnostic 的版本化原语 `PUT /api/stones/:id/file?path=<相对路径>`（body=content，经 runVersioned 直 commit main）——替代按文件类型开端点（self / readable / executable-source 三个 typed PUT 退役）。path 经三层防护：`safeKnowledgePath`（拒 NUL/绝对/`..`）+ **白名单**（仅 `self.md` / `readable.md` / `executable/index.ts` / `visible/index.tsx` / `knowledge/*.md`，拒绝默认，禁 `package.json` / `.git` / `node_modules` / `types.ts`）+ `ensureInside`（限 stone 目录内）。这是**人类控制面直写**通路（人类=canonical 主权者，直 commit main 是 reflectable feat-branch 纪律的合理豁免；该纪律约束 agent 自我迭代）。
 
 **app.client（Web 控制面，Vite + React）**
 - 最小人工控制面，不持有业务状态——只把 world / thread / runtime 的既有状态翻译成人读界面。

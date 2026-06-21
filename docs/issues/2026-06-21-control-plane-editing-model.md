@@ -1,6 +1,6 @@
 ---
 title: OOC 控制面编辑模型 —— 通用 stone-file-edit 原语 + class visible 改 data
-status: landed
+status: verified
 date: 2026-06-21
 ---
 

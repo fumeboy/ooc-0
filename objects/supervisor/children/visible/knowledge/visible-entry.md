@@ -31,7 +31,7 @@ Object 的 UI 页面有两类入口：
 
 UI 经 HTTP `POST /call_method` dispatch 到 Object **`<ObjectDir>/visible/server/index.ts`** 提供的 for-ui 服务端 API——这是**人类侧专路**，与 LLM 侧路径（executable object method）分流。两者是**两条独立签名的模块**：for-ui server method 的 ctx 有 **world / session（目标 flow）/ object-self（data）、无 current thinkloop thread**，改 object data → persistable.save（非版本化、flow 层）。`visible/server` 由 `<ObjectDir>/index.ts` 与 executable / readable / persistable **一并注册**。
 
-> **目标设计（代码尚未实现）**：取代旧「executable `window.methods` 里标 `for_ui_access: true` 的方法经 callMethod 暴露」——`for_ui_access` 标记退役，人机分流移交独立 visible/server 模块；因 ctx 无 thinkloop thread，天然不写依赖 thread 的操作（旧「guard 降级 vs 新标注」的复杂度消解）。
+> 取代旧「executable `window.methods` 里标 `for_ui_access: true` 的方法经 callMethod 暴露」——`for_ui_access` 标记已退役，人机分流移交独立 visible/server 模块；因 ctx 无 thinkloop thread，天然不写依赖 thread 的操作。
 
 - 服务端：callMethod 服务在 `packages/@ooc/core/app/server/modules/stones/service.ts`（+ `modules/flows/service.ts` 对端，stones+flows 两路同接），dispatch 到 visible/server for-ui method，注入 ctx + method 改 data 后触发 persistable.save。HTTP 入口 `modules/stones/api.call-method.ts`（`POST /api/stones/:id/call_method`）。
 - 前端入口：`packages/@ooc/web/src/transport/endpoints.ts` `stoneCallMethod` / `flowCallMethod`；`ObjectClientRenderer.tsx` `callMethodFor` 合成 callMethod prop。
