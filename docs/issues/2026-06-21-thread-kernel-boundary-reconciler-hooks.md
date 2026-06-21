@@ -1,5 +1,5 @@
 ---
-title: 内核=泛型协调器 + thread 骨架可读规则 + onChildTerminal 钩子抽取（厘清 runtime↔thread 耦合边界）
+title: 厘清 runtime↔thread 耦合边界：core 泛型机制 + thread 专属派发位 + compress-v2 policy 归位（slug 含 reconciler 为 legacy，已弃该词）
 status: decided
 date: 2026-06-21
 ---
@@ -134,6 +134,108 @@ OOC 朝 OOP 哲学推进——「Object 自己编程控制自己的 executable/r
 - `## persistable` / `## observable` / `## visible`：按裁决 8 各补确认句。
 
 **源代码变更**（`packages/@ooc/core/thinkable/scheduler.ts` + thread builtin executable/readable/persistable）落地时在源码仓 `.worktree/thread-kernel-boundary` 新建 worktree 分支隔离开发；中间增量坏测试只登记账本、全改完统一修跑绿（对齐 [[feedback_refactor_defer_test_fixes]]）。
+
+## 范围扩展（用户裁定 A，2026-06-21）—— compress-v2 整体 core/builtin 归位
+
+第一轮裁决落地前的核查发现：**scheduler 的 harvest 只是 compress-v2 机制的 1/4 个触碰 thread 业务字段的点**，其余三点散在 `core/thinkable/context/`（由 thinkloop 调，非 scheduler）。把 harvest 单拎出来改、其余留 core 是人为割裂同一机制。用户裁定 **A：扩本 issue 为「thread compress-v2 业务整体归 thread builtin，core thinkable 只留框架」**。
+
+**compress-v2 的四个 thread-业务触碰点（harvest 是其一）**：
+
+| # | 动作 | 位置 | 谁调 | 性质 |
+|---|---|---|---|---|
+| 1 | 触发判定（autoCompressLevel→未总结 transcript token 阈值） | `context/compress-trigger.ts`、`compress-fork.ts:115 maybeAutoCompress` | thinkloop（buildInputItems 后、LLM call 前） | thread policy 寄居 core |
+| 2 | spawn summarizer fork + 算待折区段 + 写 `inFlightCompress`/清 `compressIntent` + force-wait | `context/compress-fork.ts`（spawnSummarizerFork/maybeAutoCompress/maybeForceWaitForCompress/buildSummarizerSeed/KEEP_TAIL_EVENTS） | thinkloop（`thinkloop.ts:6` import） | thread policy 寄居 core |
+| 3 | harvest 摘要→写 `summarizedRanges` + 清 inFlightCompress + force-wait 唤醒 | `scheduler.ts:151 harvestSummarizerForks` | scheduler tick | thread policy 寄居 core（第一轮裁决已覆盖） |
+| 4 | 渲染期折叠（读 summarizedRanges 折 events 成 summary 占位） | `context/index.ts:356 snapRangesToToolPairs`、`:429-439` | context builder（buildInputItems） | thread readable 投影寄居 core **且重复** |
+
+**两处确凿指纹**：
+- `compress-fork.ts:22-28` —— core 留了个 loose 本地接口 `CompressV2Win`，注释自承「**权威定义在 builtins ThreadWin**」，却在 core 直接 mutate `summarizedRanges`/`inFlightCompress`/`compressIntent`/`autoCompressLevel`。这是「core 拿 thread win 的影子结构改 thread 业务态」的典型漏点。
+- `context/index.ts:356` 自定义 `snapRangesToToolPairs` 折叠投影，**未复用** thread builtin readable 已有的 `projectSummarizedRanges`（`compress-events.ts`）——同一份折叠投影逻辑劈在 core context builder 与 thread builtin readable 两处。
+
+**已对的一半（不要误伤）**：fork **构造**已经走对——`compress-fork.ts:9-10/76-80` 经 `builtinRegistry` + `WindowManager.instantiate(THREAD_CLASS_ID)` 桥接，**无 core→builtins 直接 import**（registry 解析）。`writeThread` import 是核心 7 授权（sched/compress-fork 同模式）。这些是**框架**、留 core。
+
+**扩展后的边界原则（比第一轮更宽）**：
+> core thinkable **框架**（scheduler + context builder 两者）只读 thread **骨架**结构字段 + 经接口/registry 调 thread 的 **compress policy**；**thread builtin 拥有整条 compress loop 的业务**（触发判定 / spawn 区段算法 / seed 构造 / harvest 折叠 / 渲染折叠投影 / force-wait 语义 / `CompressV2Win` 权威字段）。core 留下的 compress 框架仅：token 计数（`budget.ts`）、fork 原语（`WindowManager.instantiate`，已 registry 桥接）、thinkloop/scheduler 里**调用 thread policy 的 hook 点**（不内联 thread 业务字段读写）。
+
+**新增受影响设计元素**（在第一轮基础上追加，驱动第二轮 review fan-out）：
+- `## readable`（B 区）—— 折叠投影（snapRangesToToolPairs）归属与 `projectSummarizedRanges` 去重；折叠是否纯 readable 投影、该不该整段移进 thread builtin readable。
+- `## thinkable`（B 区，深化）—— 第一轮只审了 scheduler；本轮深入 context builder 的 compress 机制（compress-fork/compress-trigger 由 thinkloop 调）：哪些是框架（token 计数 / fork 原语 / hook 点）、哪些是 thread policy 该迁出。
+- `## readable × thinkable`（D 区）—— 折叠投影被 context pipeline 消费的契约（thread readable 出折叠投影、thinkable 渲染管线消费）。
+- `## thread`（E 区，深化）—— `CompressV2Win` 权威字段 + 整条 compress loop policy 收归 thread builtin。
+
+**第一轮裁决的 10 条对 scheduler 端仍成立**，但 #1 方向、#6 边界规则、#9 退役清单的**主语从「scheduler」扩为「core thinkable 框架（含 context builder）」**；#3 的「harvest/notify 两 policy」扩为「compress loop 全套 policy（触发/spawn/harvest/折叠/force-wait）+ notify」。最终裁决待第二轮 review 后重定。
+
+## review 记录（第二轮 —— 扩展面）
+
+4 reviewer fan-out（readable / thinkable-context-builder / readable×thinkable / 完整性批评官）。**最重要的结果是证伪了扩展节的核心论据。**
+
+**【证伪 · 指纹 #2 事实错误】**（readable / readable×thinkable / 完整性批评官 三方独立 grep 确认）：`projectSummarizedRanges` 活在 `core/_shared/utils/summarized-ranges.ts`（跨维共享 helper），**不在** thread builtin `compress-events.ts`（后者只导出 `threadCompress`/`threadResize` 两个 window method）。`context/index.ts:436` **已经在复用** 这个共享 helper，peer 视角 `conversation-render.ts:63` 也调同一个——**折叠投影本体单一来源、两视角共用，零重复**。`snapRangesToToolPairs`（index.ts:356）是职责完全不同的函数（LLM function_call/output **tool-pair 对齐安全**，self 视角专用），不是折叠投影的第二实现。**「折叠投影劈两处该去重」前提塌陷，#4 渲染折叠侧无漏点可迁。**
+
+**【红线】snapRangesToToolPairs 必须留 thinkable**（thinkable / readable×thinkable）：它修的是 claude-transport 不 sanitize 孤儿 tool 块的 provider 协议约束，是 thinkable↔llm transport 适配，非 thread 投影。搬进 thread builtin 会让 thread 反向 import thinkable 的 events→LlmInputItem 转换模型（processEventToItems）+ tool-pair 概念——逆向耦合，比现状更糟。
+
+**【真漏点收窄】** 真正寄居 core 的 thread compress 业务只在 **WRITE/POLICY 侧**：指纹 #1（`compress-fork.ts:22 CompressV2Win` loose 影子接口 + core 直 mutate `summarizedRanges`/`inFlightCompress`/`compressIntent`/`autoCompressLevel`；harvest 端 scheduler.ts 还散了第三份行内影子）。READ/渲染侧（#4）已对。
+
+**【thinkable 切分细化】**（thinkable reviewer）：
+- `isSummarizer` 的 thinkloop **执行特化**（无工具 thinkloop.ts:396 / 单轮 / 首文本即 endSummary :441-446）= thinkable 框架，**别随 spawn 搬走**。
+- `buildSummarizerSeed`（events→文本）= readable 投影，归 thread builtin readable（非 thinkable 框架）。
+- **force-wait 切 `thread.status` 属调度**：policy 只返「需 force-wait + forkId」意图，由 thinkloop 框架翻译成 `status="waiting"` 三件套写入（与第一轮「wakeup 留内核 / status 是调度态」对称）。
+- thinkloop↔thread policy 调用契约草案：框架算 `transcriptTokens`(budget.ts) 喂 policy → `policy.maybeCompress(thread, tok)`（spawn/置 inFlight/清 intent，改自己业务字段）+ `policy.compressWaitIntent(thread, tok)→{forkId}|null`（纯查询）→ 框架据意图切 waiting 并 return 本轮。
+- 纯阈值判定 `shouldAutoCompress`/`autoCompressThreshold`（compress-trigger.ts）不碰业务字段、是纯函数，留 core 框架。
+
+**【compress.md 单一权威不拆】**（thinkable / 完整性批评官）：compress 是跨三类 window class 的协议（内容窗 / 自我主历史窗 / 派生会话视图），**设计权威单一留 compress.md（thinkable）**；thread builtin 只承「**自我主历史窗类**的 compress policy 实施」、锚回 compress.md、**不复制设计**。否则违 compress.md 单一权威 + 设计-实施越界。compress.md「核心设计」补一句边界声明（policy 在 thread builtin、框架在 thinkable）。
+
+**【补元素 / 确认句 / 降级】**（完整性批评官 + readable）：
+- 补 `## persistable × thinkable`（`compress-fork.ts:105` spawn-时 writeThread = thinkable 框架调 persistable，落盘时机拥有者迁移）。
+- 确认句：`## readable × visible`（折叠产物是 LLM-input-only `events_summary` system message，不触 visible 镜像→零波及）；`## observable` 确认范围从「事件 kind 稳定」扩到「status 转换观测点稳定」。
+- `## readable` 从「主受影响元素」**降级**为「× thinkable 边界澄清一句」（折叠投影本体零迁、win 书写权威已在 thread builtin readable 的 window method）。
+- `## readable × thinkable` 补「双通道」边界：① 窗投影经 `ReadableProjection`（含 peer-messages 折叠）；② self 视角 transcript 经 thinkable events→LlmInputItem 通道（读 win `summarizedRanges` 折叠、tool-pair snap 属 transport），与 `ReadableProjection` 平行。**events 折叠迁移对 `ReadableProjection` 三字段契约零影响。**
+
+**【与第一轮裁决须重定的张力】**（完整性批评官）：
+- 裁决 #6 的 check 规则扫描文件清单须从 `scheduler.ts` 扩到 `context/compress-fork.ts` + `compress-trigger.ts` + `context/index.ts`，否则退潮闸门漏 3/4 触碰点。
+- force-wait 唤醒拆分：内核留 **inbox-增长泛型 wakeup**（wakeWaitingThreadsOnInbox，结构字段）；compress 的 `waitingOn` `compress:` 前缀唤醒（scheduler.ts:195）是 compress policy 一部分、随 harvest 迁出。第一轮「wakeup 留内核」不可读成「所有 waiting→running 留内核」。
+
+**【断言修正】**：「无 core→builtins 直接 import」仅对 fork **构造**成立；`compress-fork.ts:16 writeThread` 是核心 7 授权的直 import（文件级仍有直 import）。
+
+## 裁决（第二轮 —— 重定为最终）
+
+**先撤回**：扩展节指纹 #2（折叠投影劈两处）证伪作废；#4 渲染折叠侧无漏点。真漏点收窄到 compress 的 **WRITE/POLICY 侧 + CompressV2Win 影子结构**。
+
+**最终「框架 vs thread compress policy」切分：**
+
+| 留 core thinkable 框架 | 迁 thread builtin（compress policy / readable） |
+|---|---|
+| token 计数 `budget.ts` | 触发判定（`maybeAutoCompress` 读 win 业务字段那段） |
+| fork 原语 `WindowManager.instantiate`（registry 桥接） | spawn 区段算法（fromIdx/toIdx/`KEEP_TAIL_EVENTS`） |
+| `isSummarizer` thinkloop 执行特化（无工具·单轮·首文本→endSummary） | `buildSummarizerSeed`（events→文本，归 thread readable） |
+| `snapRangesToToolPairs`（LLM tool-pair transport 安全） | harvest 折叠写入（写 `summarizedRanges`/清 inFlightCompress） |
+| `projectSummarizedRanges`（`_shared` 共享折叠 helper） | force-wait **意图**（返回 {forkId}，不自己切 status） |
+| status 写入（切 waiting/running 都框架做） | `CompressV2Win` 权威字段（改用 builtins `ThreadWin`，删 core 影子） |
+| 纯阈值判定 `shouldAutoCompress`/`autoCompressThreshold` | compress 的 `waitingOn` `compress:` 唤醒（随 harvest） |
+| thinkloop/scheduler 的 hook 点 | |
+
+**thinkloop↔thread policy 调用契约**（采纳 thinkable reviewer 草案）：框架算 `transcriptTokens` 喂 policy；`policy.maybeCompress(thread, tok)` 改自己业务字段；`policy.compressWaitIntent(thread, tok)→{forkId}|null` 纯查询；框架据意图切 status（status 写入留框架，与 wakeup 留内核对称）。
+
+**承前（第一轮裁决仍有效，主语扩展）**：
+- #2 撤回「生命周期钩子家族成员」仍立 —— onChildTerminal/harvest/compress policy 都是 thread 专属派发位，不进通用 `OocClass` 钩子接口，核心 10 不动。
+- #6 内核/框架可读边界规则扩为「core thinkable 框架（scheduler + context builder）只读骨架结构字段（逐字段白名单）、不读/不 mutate thread 业务字段」；**check 规则 FORBIDDEN_PATTERNS 扫描文件清单 = `scheduler.ts` + `context/compress-fork.ts` + `context/compress-trigger.ts` + `context/index.ts`**，禁业务符号 `endSummary`/`endReason`/`isSummarizer`/`summarizedRanges`/`inFlightCompress`/`autoCompressLevel`/`compressIntent`。
+- 触发模型锁 level-triggered；inbox-增长 wakeup 留内核；compress force-wait 唤醒随 harvest policy 迁出（两个 wakeup 拆开）。
+
+**compress.md 单一权威不拆**：设计权威单一留 compress.md（跨三类窗协议）；thread builtin 只承「自我主历史窗类 compress policy 实施」、锚回不复制；compress.md 核心设计补边界声明句。
+
+**最终受影响元素全集**：第一轮 thread / thinkable / executable / collaborable / OOC Class-Object Model（确认不动）/ collaborable×thinkable ＋ persistable / observable / visible ＋第二轮 readable（降级为边界澄清）/ readable×thinkable / **persistable×thinkable（新补）**。正确排除：agent / method_exec_form。
+
+**断言修正纳入**：「无 core→builtins 直接 import」仅 fork 构造成立（writeThread 核心 7 授权直 import）；snapRangesToToolPairs 留 thinkable。
+
+**一致性回流清单（在第一轮基础上增补）**：
+- `## thinkable` self.md（self.md:16 compress 节 + self.md:27 预算节）+ compress.md 核心设计：补「compress policy 在 thread builtin、框架（token 计数/fork 原语/isSummarizer 执行/tool-pair snap/hook 点/status 写入）在 thinkable」边界声明；compress.md 不拆、只追认 policy 实施归属。
+- `## readable × thinkable`（index.md:137-139）：补「双通道」分流句。
+- `## persistable × thinkable`（index.md:141）：补 compress spawn-时 writeThread 落盘时机的拥有者。
+- `## readable`（index.md L82 / self.md）：**不动核心**，至多「× thinkable 边界澄清一句」（折叠投影本体零迁）。
+- `## thread`（E 区）+ thread builtin md：CompressV2Win 权威字段（builtins ThreadWin）+ compress loop policy 收归 + 锚回 compress.md。
+
+**退役**：删 `CompressV2Win` core 影子接口（权威 ThreadWin）；compress-fork.ts 内容迁 thread builtin 后 core 零残留；title 收敛弃「reconciler」（对齐第一轮裁决 #7，slug 文件名 legacy 保留）。
+
+**幂等/恢复硬验收（承前增补）**：real-compress-v2 e2e 绿（orphan/force-wait floor 不丢）；新增「child 终态期父 inbox child-end 计数=1」+「tick 中途崩溃重扫」恢复测试；**MEMORY `feedback_e2e_observation_drift` 警示**：迁 producer 时 visible/observation helper 读死 event kind 极易静默漂移，列入落地验收硬约束。
 
 ## 落地验收
 
