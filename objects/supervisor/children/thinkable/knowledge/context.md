@@ -70,7 +70,7 @@ activates_on:
 
 - **统一行动入口（exec / close / wait 三原语）**：一切行动都是「在某 window 上 exec 一个 method」（核心 3+5）；`close` 关窗、`wait` 声明等待。信息压缩**不是原语**——它是一项 **window method 协议**（核心 6）：`resize`（设展示/压缩档位）+ `compress`（无参折叠意图），各 class 在 readable 自实现、无通用默认，经 `exec(method="resize"|"compress")` 调（详见 `compress.md`）。**稳定原语恒为 3 个**：`exec` / `close` / `wait`。
 
-- **everything is a window**：会话（talk）、子线程、知识、文件、程序、乃至 agent 自身（self），都是 context window（核心 1+2）。context = 一组 window + 历史，没有"窗之外"的特殊结构。
+- **everything is a window（统一协议、各对象自有实现）**：会话（talk）、子线程、知识、文件、程序、乃至 agent 自身（self），都是 context window（核心 1+2）。context = 一组 window + 历史，没有"窗之外"的特殊结构。**「都是 window」统一的是协议/接口，不是实现**——统一的引用面（每窗一个 id）、统一的交互入口（exec/close/wait + window method）、统一的构造（readable 投影）；至于每个窗内部怎么做，**同一协议下不同对象各有自己独特的设计与关注的细节**：自己视角的 thread 窗折自己那条主历史、talk 窗调与对端会话的展示、file 窗调展示详略，各按自身内容形态实现、互不强求一致。这正是高内聚低耦合 + 接口原则——协议把分界画好，实现的自由留给各对象；**别把某一种窗的做法，当成所有窗的普遍约定**。
 
 - **object 自塑展示（readable）**：核心 8 ⇒ 每个 object 决定自己在 LLM 眼中的样子（名片正文 + window method），无需框架硬编码各类型渲染。
 
