@@ -154,3 +154,10 @@ return normalizeMethodResult(await entry.exec(ctx, self, args));
 - `index.md`：`## filesystem` 补 A1(人类直写) vs write_file(agent worktree+PR) 互斥分工。
 - `## knowledge_base/knowledge`：seed→A1 / sediment→pool 端点 落点切分。
 - **builtin md**：`thread` 的 say 从 executable for_ui_access 迁 thread `visible/server`；现存 `for_ui_access` 符号全树退役回流（builtin md + 各 self.md）。
+
+
+### 后续裁决：stone scope 无 object-program-call（用户 2026-06-21 拍板）
+**所有运行时功能由 flow session 承接；不存在、也不该为 stone scope 设计「调 object 自定义程序」的路径**。stone scope = 静态源码（git 版本化身份/程序定义），无 runtime data。故：
+- stone scope **无 visible/server data 落点**（A2 v1 仅 flow scope 的悬而未决问题，**裁定为不需要**）。
+- stones `/call_method`（对象程序调用）应**移除**——stone client（`visible/index.tsx` 主页）是只读展示，交互（改 data）经 flow scope。
+- 前端 ObjectClientRenderer 的 stone-scope callMethod 路径移除；flow client 才调 visible/server method。
