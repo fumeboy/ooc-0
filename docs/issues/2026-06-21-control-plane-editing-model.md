@@ -1,6 +1,6 @@
 ---
 title: OOC 控制面编辑模型 —— 通用 stone-file-edit 原语 + class visible 改 data
-status: decided
+status: landed
 date: 2026-06-21
 ---
 
@@ -135,6 +135,7 @@ return normalizeMethodResult(await entry.exec(ctx, self, args));
 - A2=建机制(无现成 for_ui_access 方法可迁,全树仅 say)+demonstrator(给 todo 加 visible/server 方法验证)。
 
 ### 实现进度
+- **A1+A2 已合入 main**（commit 42e2c059，A1=PUT /stones/:id/file + A2=visible/server 模块）。worktree/分支已清。CI gate 64/0、零新增红。
 - **A1（通用 stone-file-edit 原语）已实现并全绿**（worktree 分支 feat/control-plane-editing-model）：`PUT /stones/:id/file`(body path+content) 取代 putSelf/putReadable/putServerSource；path 白名单 `[self.md, readable.md, executable/index.ts, visible/index.tsx, knowledge/*.md]`；读端点 + knowledge(pools) 保留；前端无写调用方。test:storybook 64/0、零新增红。
 - **A2（visible/server 模块）已实现并全绿**：新增 visibleServer 模块机制(契约 `_shared/types/visible-server.ts` ctx=world/session/object-self 无 thread)+registry resolveVisibleServer+dispatch helper(load data→exec→reportDataEdit persistable.save/系统默认 state.json)+flows/stones callMethod 改 dispatch;退役 ObjectMethod.for_ui_access(整删死代码 filterMethodsByVisibility/say 去标记);demonstrator=todo visibleServer(set_content/toggle_done)+TC-VIS-06 验闭环;6 旧 for_ui_access story 迁 visibleServer。say 不迁(人类聊天走 deliverTalkMessage(source=user) 既有专路)。test:storybook 64/0,for_ui_access 0 live 残留,全量零新增红。
 
