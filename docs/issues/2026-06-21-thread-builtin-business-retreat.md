@@ -139,6 +139,15 @@ OOC 朝 OOP 推进，系统概念以 builtin class/object 表示在 `packages/@o
 - 内核可读边界 check 规则（扫 scheduler.ts + context/compress-*，豁免框架合法点）；compress.md 单一权威不拆、补边界声明句；core 10/lifecycle 回流（unactive 通知 + canceled 退役，协调 landed lifecycle issue）。
 - 测试纪律：中间增量坏测试只登账本、全改完统一跑绿（[[feedback_refactor_defer_test_fixes]]）。
 
+## 落地进度（worktree `feat/thread-builtin-retreat`）
+
+源码仓 worktree `.worktree/thread-builtin-retreat`（分支 `feat/thread-builtin-retreat`）隔离开发，账本见该 worktree `LEDGER.md`。
+
+- **E. unactive 改通知 + canceled 退役 —— 已落地**（commit `8199afe2`，check:tsc 绿 / thread+lifecycle 64 pass）：thread.unactive non-terminal→发 inbox「无订阅者」通知不 cancel、terminal 仅停用；退役 canceled 全树 + cancelSubtree；refcount 保持统一计数（差异挪到 unactive policy）；fork-unactive.test 重写为通知行为。**实现期裁决**：不加 `canceled` 进 check:deprecated-symbols FORBIDDEN_PATTERNS（词太通用易长期误报，靠 ThreadStatus 类型防回归）。
+- **B. onChildTerminal 退潮 / C-写侧. say inline status 删+enqueue / A. compress 退潮 —— 待续**（精确续作计划见 worktree LEDGER.md；三者共享待建的 `enqueueThread`〔runtime，泛化 notifyThreadActivated〕+ `resolveOnChildTerminal`/`resolveCompressPolicy`〔新 OocClass 槽〕+ scheduler/thread 共享文件，须顺序做）。
+
+整批合入 main 后再走文档成对回流（core 10 unactive 通知 + canceled 退役，协调 landed lifecycle issue）+ 落地验收 review，issue 方转 `landed`/`verified`。当前 issue 维持 `decided`（部分增量已落 worktree、未合 main）。
+
 ## 落地验收
 
-（`landed` 后核对）
+（整批合入后核对）
