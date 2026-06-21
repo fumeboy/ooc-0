@@ -1,6 +1,6 @@
 ---
 title: example 自定义 persistable 给一个有真实差异的示范（落人类可读 example.md）
-status: landed
+status: verified
 date: 2026-06-21
 ---
 
@@ -56,4 +56,10 @@ example 的自定义 persistable 改为**落人类可读的 `ctx.dir/example.md`
 
 ## 落地验收
 
-（landed 后填）
+独立验收（文档+代码+漂移合一，小改动）**PASS、0 缺口** → `verified`：
+- 代码：example/persistable save/load 确落人类可读 `example.md`（`bumpCount: N\n\n<msg>\n`）、不写 JSON；多行 round-trip 经推演 + 测试双证对称；空 message 边界亦 round-trip 回 `""`。
+- 测试：round-trip 测试三类断言齐全非空；`bun test example` 5 pass。
+- migrate 注释订正到位；`grep runMigration packages/@ooc/core` 零命中印证 core 确无 bootstrap wiring。
+- 对象树 example.md 四处（头注/self×persistable 节/骨架代码/布局注释）与源码一致、同构。
+- gitignore 教学点经 `stone-bootstrap.ts:73` 实证准确（黑名单确不含 example.md）。
+- `bun run verify` exit 0、全 gate 绿。
