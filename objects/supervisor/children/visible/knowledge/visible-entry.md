@@ -33,7 +33,7 @@ UI 经 HTTP `POST /call_method` dispatch 到 Object **`<ObjectDir>/visible/serve
 
 > 取代旧「executable `window.methods` 里标 `for_ui_access: true` 的方法经 callMethod 暴露」——`for_ui_access` 标记已退役，人机分流移交独立 visible/server 模块；因 ctx 无 thinkloop thread，天然不写依赖 thread 的操作。
 
-- 服务端：callMethod 服务在 `packages/@ooc/core/app/server/modules/flows/service.ts`，dispatch 到 visible/server for-ui method，注入 ctx + method 改 data 后触发 persistable.save。HTTP 入口 `modules/flows/api.call-method.ts`（`POST /api/flows/:sid/:oid/call_method`）。**裁定：callMethod flows-only**——stone scope 不调 object 程序，stones `/call_method` 应移除。
+- 服务端：callMethod 服务在 `packages/@ooc/core/app/server/modules/flows/service.ts`，dispatch 到 visible/server for-ui method，注入 ctx + method 改 data 后触发 persistable.save。HTTP 入口 `modules/flows/api.call-method.ts`（`POST /api/flows/:sid/:oid/call_method`）。**裁定：callMethod flows-only**——stone scope 不调 object 程序，stones `/call_method` 已移除。
 - 前端入口：`packages/@ooc/web/src/transport/endpoints.ts` `flowCallMethod`；`ObjectClientRenderer.tsx` `callMethodFor` 合成 callMethod prop。**裁定后 stone client 只读、不注入 callMethod**。
 
 **边界**：visible 管 UI 资源（tsx）+ visible/server for-ui 服务端 API 模块 + 调用通道。**编辑源文件（self.md / readable.md / executable 源码 / seed knowledge）不走 callMethod**，走 app 的通用 file-edit 原语 `PUT /stones/:id/file?path=`（版本化）+ 控制面通用文件编辑器。
