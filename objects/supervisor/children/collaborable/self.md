@@ -23,8 +23,8 @@
 1. OOC Agent 之间可以通过对话进行协作
 2. OOC Agent 具有 名为 talk 的 Object Method, 执行 OOC Agent 的 talk 方法会创建一个 thread 对象， thread 对象会运行 LLM 的 thinkloop 来处理对话
 3. 在 thread 过程中，OOC Agent 可以继续和其他 Agent 进行对话，派生出 thread tree
-4. thread 具有 context，即当前对话的上下文, context 中会以 context window 的形式展示两类对话窗口 (context window 的详细定义在 thinkable 维度的文档说明):
-  - 自己作为 callee 与 caller 的对话: 自己当前的 thread 会以 thread window 的形式展示在自己的 context 中，这个 window 具有 say 方法，调用这个 say 方法会发送消息给 caller (这个 thread 的 creator)
-  - 自己作为 caller 与 callee 的对话: 自己作为 caller 时，会在自己的 context 中以 thread window 的形式展示自己的对话，这个 window 也具有 say 方法，调用这个 say 方法会发送消息给 callee (这个 thread 的 target)
+4. thread 的 context 里以 context window 的形式展示对话窗口，按**视角**分两类 window class（context window 详细定义见 thinkable 维度）:
+  - **自己视角 = thread window**（每条 thread 恰一个）: 承载自己的过程 event + 自己与 creator 的对话；其 say 方法发消息给 caller (这个 thread 的 creator)
+  - **与 peer / sub 的会话 = talk window**（每个对端各一个）: 自己作为 caller 与某个 callee 对话时，该对话呈现为一个 talk window；其 say 方法发消息给 callee (这个 thread 的 target)
 5. 特殊而又不特殊地，OOC Agent 可以执行自己的 talk 方法，这样等同于创建自己的 sub agent thread
 6. 每个 thread 持有 inbox/outbox 数据：**thread 自己执行 say 写入自己的 outbox、并派送到对端 thread 的 inbox**——即对单个 thread 而言 inbox=收到的消息、outbox=发出的消息（与 caller/callee 身份无关）

@@ -25,15 +25,15 @@ date: YYYY-MM-DD
 为什么要改。
 
 ## 现状
-当前设计怎么说的（锚 `knowledge/index.md` 对应 `#` 节 / 对应维度 self.md）。
+当前设计怎么说的（锚 `knowledge/index.md` 对应 `##` 节 / 对应维度 self.md）。
 
 ## 改动提案
 要改成什么。
 
 ## 受影响设计元素
-对照 `knowledge/index.md` 的 `#` 清单，逐一列出本次改动触及的设计元素——这份清单驱动 review fan-out。
+对照 `knowledge/index.md` 的 `##` 元素清单，逐一列出本次改动触及的设计元素——这份清单驱动 review fan-out。
 
-- `# <元素>` —— 受影响点
+- `## <元素>` —— 受影响点
 - ...
 
 ## 风险与权衡
