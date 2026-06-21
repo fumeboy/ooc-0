@@ -90,9 +90,10 @@ date: 2026-06-21
 - [x] **P1** 独立对象窗自描述 `objectRef` + `referencedObjectId` 双读（= lifecycle phase-2「扩到 member 窗」合并；additive+adapter 兼容；行为安全：无 member active/unactive body→fast-path）。gate：tsc core+thread 0 / split-invariants+object-lifecycle+thread 42/0 / storybook 64/0（7876260a）。
 - [x] **P2a** `objectDataOf`/`classOf` accessor —— 读者取 object data/class 的收敛点（worktree f7a48181，零行为）。
 - [x] **P2b** 29 文件读者迁移到 accessor（bdbd0463，纯路由零行为；WindowManager seam / hydrate / mutation alias 正确未迁；tsc 无新错 / 773 测 / storybook 64/0）。
-- [ ] **P3（flip，crux）—— 设计已定（option c）**：内存里每个窗持 `.object: OocObject`（inline 窗自有；ref 窗经 `WindowManager.objectCache: Map<objectId,OocObject>` 共享同一指针、hydrate/instantiate 时设）。`objectDataOf(w)=w.object.data` / `classOf(w)=w.object.class` 统一单参、read 期不查 cache。窗顶层去掉 `data`/`class`（移入 `.object`）= 「剥离」那一刀。WindowManager dispatch（self=`instance.object.data`）/ instantiate / hydrate seam 重写。删 self 门面窗 `class:objectId` 疤痕。
-  - **id 二元已解**：thread 一条只一个 inline 窗（self/thread 窗，内联 thread object）；talk/reflect_request 是渲染期投影、非独立存窗——故无 inline 窗 id vs 对象 id 冲突。ref 窗 id=objectId（现 1:1）。
-  - gate：split-invariants（尤其 round-trip 不丢 win）+ object-lifecycle + thread + storybook + 跨 reload；在隔离 worktree 分支、未合，broken 不污染 main。
-- [ ] **P4** 删 OocObjectInstance 别名 + 文档回流（index.md 核心 4/10 + object/persistable/readable self.md + thread.md）。
+- [x] **P3（struct flip，crux）—— landed**（worktree 4bdcbed5）：**对象身份 `data`/`class` 从窗信封顶层收进 `object:{class,data}` 子对象**，与窗视角态（id/title/status/createdAt/parentObjectId/win/closable/objectRef 留顶层）结构分离 = 用户「剥离」那一刀。`objectDataOf(w)=w.object.data` / `classOf(w)=w.object.class`，29 读者站点不动。**磁盘格式不变**：thread-context.json inline entry / 独立对象 state.json 仍平铺 `{class,data}`，buildEntries 写盘 `.object`→平铺、hydrate 读盘平铺→`.object`，翻译于持久边界；新增显式 `InlineThreadContextEntry` 磁盘类型。**零行为**：每窗各持自己 `.object` 副本。捎带修 `hasCreatorChannel` 潜伏 bug（原读裸 `w.data`，flip 后恒 undefined→恒 false）。
+  - **决策：语义变更拆出 P3**。原 P3「option c：objectCache 让 ref 窗共享同一 `.object` 指针」会改 mutation 可见性 + token 计量（**语义变更**），与「剥离」（纯结构）不同质——拆到 P4 单独验证（勿过度机制化：split 目标不依赖共享）。
+  - **id 二元已解**：thread 一条只一个 inline 窗；talk/reflect_request 渲染期投影、非独立存窗。ref 窗 id=objectId（现 1:1）。
+  - 独立验收：4 门禁绿（tsc 无新错 / core+thread 773 / storybook 64 / no-deprecated）+ 全 cast-hidden 站点（flow-runtime-object/window-hash/talk-delivery/wait/grep-impl）逐一核为 accessor-safe + 磁盘平铺写读两端一致。
+- [ ] **P4（拆出的语义增量 + 退潮 + 回流，可独立成 issue）**：① objectCache 让多 ref 窗共享同一 `.object`（=「共享=第二个 view」，须验 mutation 可见性 + BudgetManager token 按 object 计一次）；② 删 self 门面窗 `class:objectId` 疤痕；③ 评估删 `ContextWindow=OocObjectInstance` 别名（按现结构别名仍语义正确，未必需删）；④ 文档回流（index.md 核心 4/10 + object/persistable/readable self.md + thread.md：陈述「对象身份收进 `.object`、磁盘平铺翻译」实施细节——设计层 object↔window 分离的**概念**未变，仅实施落形）。
 
-> 状态 `decided`：设计已定、落地分期进行中；全部 P0-P4 落完 + 一致性回流（index.md 核心 4/10 + object/persistable/readable self.md）后转 `landed`。
+> 状态：P0–P3 已落（结构剥离达成）。**P3 即用户原始诉求「OocObjectInstance 剥离 window 状态」的核心交付**。P4 是拆出的语义增量（objectCache 共享）+ 退潮（scar/别名）+ 文档回流，与「剥离」不同质、不阻塞 split 目标，待裁决是否本轮续做或独立成 issue。
