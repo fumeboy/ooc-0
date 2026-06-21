@@ -47,6 +47,12 @@ feishu_app / runtime / supervisor / user / example / _shared
 - **受影响设计元素**：`## readable`（viewport 纯 helper 的承载从「core 共享 canonical」改为「各 class 自有」；set_viewport 四参契约/语义不变）、`## builtins`（builtin 形态自我闭环延续）、`## filesystem / terminal / interpreter`（file/search/process 家族）、`## thread`（thread transcript viewport 自有）、`## knowledge_base / knowledge`。**不触** window method 契约 / viewport 协议语义 / 渲染输出。
 - **裁决**：✅ 已实现（详见下方裁决段）。core 经「冗余预填」清理彻底脱离 viewport（额外退潮红利）。2D→file/knowledge/example 各 `readable/viewport.ts`；transcript→thread 根 `transcript-viewport.ts` + search/process 各自 `transcript-viewport.ts`，按用量裁剪。退役 `core/_shared/utils/viewport.ts` + barrel + `ViewportArgs`/`hasAnyViewportField`/`TranscriptViewportArgs`/`sliceColumn`(内部化)；两单测搬到承载 class。**张力记录**：viewport 是纯通用算法（非 class 身份），全拆 ≈680 行复制 7 份是「克制熵增」的张力点；用户知情下裁定全拆贯彻自我闭环。
 
+### [3] search：`grep-impl.ts` 收进 `executable/`（类内归位）
+
+- **现状/提案**：search 的 grep runner（rg 驱动 + JS fallback）`grep-impl.ts` 放在 class 根，但它是执行细节（被 `index.ts` 的 `Class.construct` 调用）。收进 `executable/grep-impl.ts`，让执行逻辑聚在 executable 维度目录下。
+- **受影响设计元素**：无（纯类内文件归位，零契约/符号/语义变更，不触任何设计元素）。严格说不属系统设计调整，但作为本泛化过程的一条记于此保持连续。
+- **裁决**：✅ 已实现。`git mv grep-impl.ts executable/grep-impl.ts`；`index.ts` import `./grep-impl.js`→`./executable/grep-impl.js` + 文档注释路径同步；core 测试 `fs-search.test.ts` import 加 `/executable/`。tsc 干净 · search+fs-search 41 pass。对象树无引用、无需回流。
+
 ## 受影响设计元素
 
 对照 `knowledge/index.md` `##` 清单。容器级始终触及：
