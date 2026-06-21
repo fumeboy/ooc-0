@@ -43,11 +43,11 @@ children 从属于 terminal 命名空间（id 以 `_builtin/terminal/` 为前缀
 bash 进程窗——`terminal.run` 造出的结果对象，一个 world 可有多个。
 
 - **construct**：即 parent `run` 委托的目标——schema `{ code: string (required) }`；取 `ctx.thread` 必需、空 code fail-loud，跑一遍 bash、把结果作为 history 首条产出 `{ history: [record] }`。
-- **Data**：`{ history: ProcessExecRecord[] }`——每次 exec 一段 bash 追加一条记录（`{ execId, language:"shell", code, output, ok, startedAt }`，类型 + 输出格式化共用 `_shared/executable/process-record.ts`，与 interpreter_process 同源）。
+- **Data**：`{ history: ProcessExecRecord[] }`——每次 exec 一段 bash 追加一条记录（`{ execId, language:"shell", code, output, ok, startedAt }`，类型 + 输出格式化是本 class 自有：`types.ts` 定义 `ProcessExecRecord`、`executable/exec-record.ts` 出 `formatShellResult` 等；与 interpreter_process 结构同构但各自独立，不再共享代码）。
 - **object method**：`exec`（再跑一段 bash，追加 history 并 `ctx.reportDataEdit()` 上报 data edit）、`close`（关窗）。
-- **window method**：`set_history_window`（`history_tail` / `history_start` / `history_end` 调 history 渲染视口——只动投影态 `ProcessWin`（historyViewport）、不碰 Data），由 `_shared/executable/process-readable.ts` 工厂产出，与 interpreter_process 同源；默认末 10 次 exec。
+- **window method**：`set_history_window`（`history_tail` / `history_start` / `history_end` 调 history 渲染视口——只动投影态 `ProcessWin`（historyViewport）、不碰 Data），实现在本 class 的 `readable/history.ts`；默认末 10 次 exec。
 - **投影**：`class:"terminal_process"`，content = history 摘要按视口截取 + 最近一条 full output。
-- **visible**：自定义详情面板 + diff，复用 `_shared/visible/process-*`。**persistable**：无自定义（history 是纯 JSON，系统默认）。
+- **visible**：自定义详情面板 + diff（本 class 自有 `visible/index.tsx` / `visible/diff.tsx`）。**persistable**：无自定义（history 是纯 JSON，系统默认）。
 - **bash 执行**：经 bash 子进程跑 `code`，cwd=进程 cwd、有 timeout，stdout/stderr/exitCode 格式化后入 history；env 透出 `OOC_SELF_DIR`（指向 session worktree 的 object 目录，让脚本可稳定定位 stone 目录）。
 
 ## 程序骨架（示意）
@@ -120,8 +120,8 @@ terminal/children/terminal_process/
 ```
 
 ```ts
-// types.ts
-import type { ProcessExecRecord } from "@ooc/builtins/_shared/executable/process-record.js"
+// types.ts —— ProcessExecRecord 本 class 自有（与 interpreter_process 各自独立）
+export interface ProcessExecRecord { execId: string; language: "shell"; code?: string; output: string; ok: boolean; startedAt: number }
 export interface Data { history: ProcessExecRecord[] }
 ```
 
@@ -164,5 +164,5 @@ export default {
   readable: (_ctx, self, win) => ({ class: "terminal_process", content: renderHistory(self.history, win) }),
   window: [{ class: "terminal_process", object_methods: ["exec", "close"], window_methods: [setHistoryWindowMethod] }],
 }
-// setHistoryWindowMethod 由 _shared/executable/process-readable.ts 工厂产出，与 interpreter_process 同源
+// setHistoryWindowMethod + renderHistory 实现在本 class 的 readable/history.ts（与 interpreter_process 结构同构但各自独立）
 ```

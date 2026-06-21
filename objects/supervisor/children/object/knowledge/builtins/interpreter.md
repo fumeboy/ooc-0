@@ -43,11 +43,11 @@ children 从属于 interpreter 命名空间（id 以 `_builtin/interpreter/` 为
 一段 ts/js 解释进程窗——`interpreter.run` 造出的结果对象，一个 world 可有多个。
 
 - **construct**：即 parent `run` 委托的目标——取 `ctx.thread` 必需、`normLang(args)` + `code` 必需，跑首段脚本，返回 `{ history: [首条 record] }`；缺 thread context 或缺 language/code 则 fail-loud。
-- **data**：`Data = { history: ProcessExecRecord[] }`（每次 exec 一条）。`ProcessExecRecord`（execId/language/code/output/ok/startedAt）与 terminal_process 共用，收在 `@ooc/builtins/_shared/executable/process-record.ts`。
+- **data**：`Data = { history: ProcessExecRecord[] }`（每次 exec 一条）。`ProcessExecRecord`（execId/language:"ts"|"js"/code/output/ok/startedAt）本 class 自有，定义在 `types.ts`；与 terminal_process 结构同构但各自独立，不再共享代码。
 - **object method**：`exec`（在已开窗的进程内再跑一段 ts/js，结果 push 进 `self.history` 并 `ctx.reportDataEdit()` 通知重持久化）、`close`（关窗，无副作用、由 runtime 处置信封 status）。
-- **window method**：`set_history_window`——调 history 视口（tail N / 固定 range），返回新 ProcessWin、不碰 data；与 terminal_process 复用 `_shared` 的 history viewport（`makeSetHistoryWindowMethod`），默认末 10 次 exec。
+- **window method**：`set_history_window`——调 history 视口（tail N / 固定 range），返回新 ProcessWin、不碰 data；实现在本 class 的 `readable/history.ts`（与 terminal_process 同构但独立），默认末 10 次 exec。
 - **投影**：`class:"interpreter_process"`，content 渲染 history 摘要（经 viewport 切片）+ 最近一条 full output（`renderProcessHistory`）。
-- **visible**：自定义详情面板 + diff（复用 `_shared/visible/process-detail` / `process-diff`）。**persistable**：无自定义，系统默认（history 是纯 JSON）。
+- **visible**：自定义详情面板 + diff（本 class 自有 `visible/index.tsx` / `visible/diff.tsx`）。**persistable**：无自定义，系统默认（history 是纯 JSON）。
 - **sandbox 与注入的 `self`**：ts/js 写 tmp `.mjs` → in-process import 执行，console 进 stdout、`_result_` 进 returnValue。脚本内注入的 `self`（`createInterpreterSelf`，`executable/self.ts`）可 `callMethod`（经 `ctx.runtime.callMethod` 跨窗调当前 thread 内任意 object method）/ `getData`/`setData`（flow 级 `data.json`）/ `getThreadLocal`/`setThreadLocal`（线程内跨 exec 共享、不持久化）；无 persistence / 无 runtime 时对应能力降级或 fail-loud。
 
 ## 程序骨架（示意）
@@ -153,7 +153,7 @@ export default {
   window: [{
     class: "interpreter_process",
     object_methods: ["exec", "close"],
-    window_methods: [makeSetHistoryWindowMethod("interpreter_process")], // tail N / 固定 range
+    window_methods: [setHistoryWindowMethod], // 本 class readable/history.ts 自有；tail N / 固定 range
   }],
 };
 ```
