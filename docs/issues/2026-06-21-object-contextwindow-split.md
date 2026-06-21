@@ -1,6 +1,6 @@
 ---
 title: OocObjectInstance 剥离 window 状态 —— object 与 context window（= object ref）分离
-status: draft
+status: decided
 date: 2026-06-21
 ---
 
@@ -66,8 +66,28 @@ date: 2026-06-21
 
 ## review 记录
 
-（待 fan-out：每个受影响设计元素各派 reviewer + 完整性批评官；本 issue 触动核心元素 + 大重构面，review 应重点压「拆分形状是否自洽」「内存对象解析模型」「与 compress-v2 排序」「是否吃掉 buffer/view doc」。）
+经 design-decision workflow（兼任 review fan-out）：两个结构方案（A session 全局 object 表 / B inline-vs-ref 对齐持久）+ 排序分期 + 受影响元素契约影响 + 完整性批评，全部锚 worktree `feat/object-contextwindow-split`（=main）真实代码核验。**无真冲突**。提案路径漂移已勘误：`thread-persist`/`flow-thread-context` 在 `builtins/agent/children/thread/persistable/`（非 core/persistable）。实测面：`OocObjectInstance` 32 文件、`ContextWindow/contextWindows` 61 文件（含 web）。
 
 ## 裁决
 
-（待 Supervisor 汇总裁决）
+**结构：方案 B（inline-vs-ref 对齐持久）**——`OocObject {id,class,data}`（持久身份）+ `ContextWindow = InlineWindow | RefWindow`（InlineWindow 内联 object / RefWindow 仅持 objectRef）。`closable/status/title/win/createdAt/parentObjectId` 归 **window 侧**；`id/class/data` 归 **object 侧**。**投影 class 渲染期算、不入窗结构**（待裁决 #3：不并入本 issue）。
+
+**内存解析（一锤定音）**：thread-scoped，**不引入全局/session object 表**。inline 窗 data 原地（`window.object.data`）；ref 窗经 `WindowManager.objectCache: Map<objectId,{class,data}>` 解析，多 ref 窗共享同一 data 引用（落实「共享=第二个 view」），close 末 ref evict。
+
+**分期**：P0 并行类型(additive 零行为)+回归网 → P1 WindowManager(object/view-update 拆分 + referencedObjectId 双读 objectRef.objectId，adapter 锁 blast radius) → P2 真 objectCache + 读者迁移 + 删 self 门面窗 `class:objectId` 疤痕 → P3 持久对齐 + dogfooding 迁移 → P4 删别名/退潮/文档回流。每期独立可合入+绿。
+
+**排序**：**现在可做**——compress-v2 已 landed、全活在 `win`（view 侧，拆分几乎不动它）。**唯一硬约束：冻结 `isSelfThreadWindow` / `w_creator_<threadId>` id 约定**（compress + lifecycle 双承重，改它无编译错静默打断）。
+
+**closable/win/refcount 迁移**：随拆分落 window 结构；`referencedObjectId` 升级读 `objectRef.objectId`——这恰是 lifecycle phase-2「referencedObjectId 扩 member/peer」的合并项。
+
+**buffer/view doc（2026-06-12）部分 supersede**：P1（删 SharingState[已无 live]/isSelfWindow 绕过 + struct 服从 glossary）由本 issue 接管；P2（开放类型轴）已先落；P3（builtin 三角色）+ §7 约束（HOLD tiling/不增 buffer 名词/不动 4 原语）留存、本 issue 继承。
+
+**受影响清单补漏（completeness）**：observable/window-hash（哈希输入变 object+view 两源）、**BudgetManager token 计量新契约缺口**（一 object 多 view→token 按 object 计一次 / view 各计自己）、visible/web ~20 文件、lifecycle phase-2 耦合、collaborable、isInlinePersisted 判据。
+
+**落地进度**：
+- [x] **P0-a** 并行 draft 类型（`OocObject`/`WindowView`/`InlineWindow`/`RefWindow`/`ContextWindowSplit`，additive 未启用、alias 不动，tsc 绿）—— `context-window.ts`。
+- [ ] P0-b 回归网（refcount e2e 扩断言 + window-hash content-sensitivity + compress win-lookup no-op seam）—— **先于 P1**。
+- [ ] P1 WindowManager 承重墙改造（见分期）。
+- [ ] P2 / P3 / P4。
+
+> 状态 `decided`：设计已定、落地分期进行中；全部 P0-P4 落完 + 一致性回流（index.md 核心 4/10 + object/persistable/readable self.md）后转 `landed`。
