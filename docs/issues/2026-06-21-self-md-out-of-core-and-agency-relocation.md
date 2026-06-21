@@ -1,6 +1,6 @@
 ---
 title: self.md 持久化逻辑出 core 归 agent builtin + end/todo agency 迁 thread
-status: decided
+status: landed
 date: 2026-06-21
 ---
 

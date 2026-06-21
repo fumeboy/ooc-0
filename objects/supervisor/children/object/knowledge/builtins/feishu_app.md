@@ -155,7 +155,7 @@ const openDoc: ObjectMethod<Data> = {
   },
 }
 
-// agent 的 talk/plan/todo/end agency 不在此重复声明——来自 ooc.class=_builtin/agent。
+// agent 的 talk/plan agency 不在此重复声明——来自 ooc.class=_builtin/agent。
 export default { methods: [openChat, openDoc] }
 ```
 

@@ -118,7 +118,7 @@ OOC 系统自带、实现基础系统功能的一组 builtin class/object。对�
 - **实例 object**：`supervisor`（顶层 agent 实例，统筹各维度子对象，唯一保留静态 self.md 的预置 agent）、`user`（被动 object，不跑 thinkloop，是 agent `talk` 的对端）。
 - **样板**：`example`（建 class 时照抄的样板，非真实功能对象）。
 
-两条命名空间约定：children id 以 parent id 为前缀 `_builtin/<parent>/<child>`，物理在 `<parent>/children/<child>/`；children 不继承 parent，仅命名空间从属。`self.md` 只属 ooc agent 实例，故除 supervisor 外的 builtin 都无 self.md。
+两条命名空间约定：children id 以 parent id 为前缀 `_builtin/<parent>/<child>`，物理在 `<parent>/children/<child>/`；children 不继承 parent，仅命名空间从属。`self.md` 只属 ooc agent 实例——只有 `class=_builtin/agent` 的实例才有 self.md；非 agent object（工具 object、class 定义）无 self.md。
 
 kind 口径：`class`=定义，`object`=实例。
 
@@ -132,11 +132,11 @@ thinkable 构造 context，executable 定义 context 里的 method 能做什么�
 
 ## readable × thinkable
 
-Object 经 readable 投影成 context window，进入 thinkable 构造的 context——thinkable 的 context 渲染管线消费 readable 的 `ReadableProjection{class, content, consumedMessageIds}`：投影 class、展示内容、本窗已收纳消息 id。身份双面也在此交汇：`self.md`（偏内向，进 self 门面窗 / LLM `instructions`，权重高于 system message）与 `readable.md`（偏外向名片），由 thinkable 的 identity 子模块组织进 context，readable 只负责名片作为投影最低优先级回退。「信息只渲一次」是两维的协作：readable 会话窗把归属消息收进 transcript 并报告 `consumedMessageIds`，thinkable 渲染器据此从顶层 inbox/outbox 兜底剔除。详见 [readable](../children/readable/self.md) 与 [thinkable](../children/thinkable/self.md)。
+Object 经 readable 投影成 context window，进入 thinkable 构造的 context——thinkable 的 context 渲染管线消费 readable 的 `ReadableProjection{class, content, consumedMessageIds}`：投影 class、展示内容、本窗已收纳消息 id。身份双面也在此交汇：`self.md`（偏内向，经 readable 投影进 self 门面窗 self 视角内容——agent 自定义 readable 渲 `data.self`，**不进 thinkloop instructions**）与 `readable.md`（偏外向名片，作投影最低优先级回退）。「信息只渲一次」是两维的协作：readable 会话窗把归属消息收进 transcript 并报告 `consumedMessageIds`，thinkable 渲染器据此从顶层 inbox/outbox 兜底剔除。详见 [readable](../children/readable/self.md) 与 [thinkable](../children/thinkable/self.md)。
 
 ## persistable × thinkable
 
-thinkable 的 knowledge 双源——seed（stone `knowledge/` 进 git）与 sediment（pool `knowledge/` 不进 git、同名覆盖 seed）——其磁盘路径由 persistable 提供，thinkable 只读 ref、不拥有这套 stone/flows/pools 三层结构。stone/pool/flow 三子树路径经 buildPathsItem 合成进 context 的环境 system message（world_root / object_stone_dir / object_flow_dir / session 等），其中 flow=session 落 `flows/<sid>/objects/<id>/`。身份 self.md 的读取也跨两维：按视角解析 stone identity——business session 读自己的 worktree 副本、super flow / 控制面读 canonical main——由 persistable 的 stone 寻址决定，thinkable 据此 loadSelfInstructions。详见 [persistable](../children/persistable/self.md) 与 [thinkable](../children/thinkable/self.md)。
+thinkable 的 knowledge 双源——seed（stone `knowledge/` 进 git）与 sediment（pool `knowledge/` 不进 git、同名覆盖 seed）——其磁盘路径由 persistable 提供，thinkable 只读 ref、不拥有这套 stone/flows/pools 三层结构。stone/pool/flow 三子树路径经 buildPathsItem 合成进 context 的环境 system message（world_root / object_stone_dir / object_flow_dir / session 等），其中 flow=session 落 `flows/<sid>/objects/<id>/`。身份 self.md 的读取也跨两维：readable 的 `resolveProjection` 据 stone 寻址路由读 self.md 渲入 self 门面窗——按视角解析 stone identity（business session 读自己的 worktree 副本、super flow / 控制面读 canonical main）由 persistable 的 stone 寻址决定；P3 后经 agent persistable 的 `load` + agent readable 投影，不再直接 readSelf。详见 [persistable](../children/persistable/self.md) 与 [thinkable](../children/thinkable/self.md)。
 
 ## executable × readable
 
@@ -164,7 +164,7 @@ thread 是 agent 一次智能运行的载体——`talk` 创建它、thinkloop �
 
 ## agent
 
-agent = object + LLM：在 object base 标准具备的四维（readable / executable / visible / persistable）之上叠加 thinkable / collaborable / reflectable 三维，即成 agent 实例（对象模型核心 9，见 [object self.md](../children/object/self.md)）。它持 `talk`/`plan`/`todo`/`end` 等 agency——`talk` 执行即创建一条 thread 并跑 thinkloop。它的 data 含 `self` 身份字段：由 persistable 写入/读回实例目录的 `self.md`，并渲为该 agent **self 门面窗的 self 视角内容**（他者视角渲 `readable.md`），身份只活在这一处、不进 thinkloop instructions。任何 object 经 `ooc.class=_builtin/agent` 继承它，即成 agent 实例。
+agent = object + LLM：在 object base 标准具备的四维（readable / executable / visible / persistable）之上叠加 thinkable / collaborable / reflectable 三维，即成 agent 实例（对象模型核心 9，见 [object self.md](../children/object/self.md)）。它持 `talk` / `plan` agency——`talk` 执行即创建一条 thread 并跑 thinkloop；`end` / `todo` 迁 thread（thread 作用域操作，见 `## thread`）。它的 data 含 `self` 身份字段：由 **agent builtin 的 persistable** 写入/读回实例目录的 `self.md`，经 **agent 自定义 readable** 渲为该 agent **self 门面窗的 self 视角内容**（他者视角渲 `readable.md`），身份只活在这一处、不进 thinkloop instructions。任何 object 经 `ooc.class=_builtin/agent` 继承它，即成 agent 实例。
 
 ## knowledge_base / knowledge
 

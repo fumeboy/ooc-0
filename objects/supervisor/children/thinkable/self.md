@@ -10,7 +10,7 @@ OOC 的核心设计：LLM 看到的世界不是裸 prompt，而是一组 **Conte
 
 thinkable 这个维度拆成这些子模块
 
-- **identity**：Object 的双面身份。`self.md` 偏内向（写给自己，进 LLM `instructions` 字段、权重高于 system message，定义目标/风格/行为偏好，是自我约束）；`readable.md` 偏外向（写给外部世界的名片，让别的 Object/user 理解「我是谁、能做什么、何时找我」，可被动态 `readable.ts` 替代）。两者共同界定 Object 的人格边界。注意 XML 里只放 `<self object_id/>` 对外标记，详细身份正文走 instructions——两层互补、不重复塞进 XML。
+- **identity**：Object 的双面身份。`self.md` 偏内向（写给自己，定义目标/风格/行为偏好，是自我约束），经 readable **渲为 self 门面窗的 self 视角内容、不进 thinkloop instructions**（身份只活在 self 门面窗这一处）；`readable.md` 偏外向（写给外部世界的名片，让别的 Object/user 理解「我是谁、能做什么、何时找我」，可被动态 `readable.ts` 替代）。两者共同界定 Object 的人格边界。
 - **llm**：对接 OpenAI / Claude provider。
 - **context**：LLM 的 Input，由若干 ContextWindow 组成，ContextWindow 具有 window methods 可以调用。Object 不知道 context 之外的任何事。
 - **knowledge**：Object 持有的知识，具有 `activates_on` 条件，用于在 OOC Object 执行某一意图的行动时触发激活。
@@ -20,8 +20,8 @@ thinkable 这个维度拆成这些子模块
 ## 当前设计
 
 - LLM 入口收敛在 `createLlmClient()`（`packages/@ooc/core/thinkable/llm/client.ts:8`），统一 provider 工厂；超时由 `withLlmTimeout` 兜底（任务级 timeoutMs > `OOC_LLM_TIMEOUT_MS` > 120s）。
-- 每轮由 `buildInputItems()`（`packages/@ooc/core/thinkable/context/index.ts:358`）把 ThreadContext 合成 LLM 输入：窗口快照 + instructions + knowledge + `[ooc:paths]`。
-- 身份注入：`loadSelfInstructions()`（`context/index.ts:464`）经 `resolveStoneIdentityRef(..,"read")` 解析 stone/worktree 路径读 `self.md`（business session 读自己 worktree 副本、super flow/控制面读 canonical main）；`buildPathsItem()`（`context/index.ts:430`）合成环境路径 system message（world_root / object_id / object_stone_dir / object_flow_dir / session / thread），其中 object_flow_dir 落 `flows/<sid>/objects/<id>/`。
+- 每轮由 `buildInputItems()`（`packages/@ooc/core/thinkable/context/index.ts:406`）把 ThreadContext 合成 LLM 输入：窗口快照 + knowledge + `[ooc:paths]`。
+- 身份渲染：self.md **不单独灌进 system instructions**——它作为 self 门面窗的 self 视角内容经 readable 渲进 context（`context/index.ts:456-457`；resolveProjection 据 stone 寻址按视角读 self.md：business session 读自己 worktree 副本、super flow/控制面读 canonical main）。`buildPathsItem()`（`context/index.ts:531`）合成环境路径 system message（world_root / object_id / object_stone_dir / object_flow_dir / session / thread），其中 object_flow_dir 落 `flows/<sid>/objects/<id>/`。
 - context 渲染走管线 `createDefaultPipeline()`（`context/pipeline.ts:69`），串接 activator / protocol / peer / knowledge 等 processor 产出 derived 窗口。
 - 预算：`loadBudgetThresholds()`（`context/budget.ts:58`）只保留软硬阈值；窗口自动衰减已退役，预算改由 `BudgetManager.allocate` 排序纳入/排除窗口实施，compressLevel 仅由显式 `resize`（内容窗 opt-in `displayResize`）与渲染器消费；thread 窗自动压缩走 summarizer fork（autoCompressLevel 阈值 → auto-trigger，见 `knowledge/compress.md`），超 hard 由 force-wait + transcript clamp floor 兜底。
 - knowledge 加载：`loadKnowledgeIndex()`（`knowledge/loader.ts:56`）双源（stone seed + pool sediment）+ 沿祖先 / parentClass 继承链。激活：`computeActivations()`（`knowledge/activator.ts:26`）对每篇求激活级别；`evaluateTrigger()`（`knowledge/activator.expr.ts:176`）纯函数求值 `activates_on`（object / method / objectId / super / intent 五类 kind）。出厂身份作废声明「身份只由 self.md 定义」经 protocol processor 注入（`builtins/root/knowledge/interaction-core.md`）。

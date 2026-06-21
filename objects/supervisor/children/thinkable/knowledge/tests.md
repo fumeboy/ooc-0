@@ -16,7 +16,7 @@ activates_on:
 每条都是确定性断言，过 `app.handle()` 不打真 LLM：
 
 - **TC-THINK-01**：seed knowledge（含 `activates_on: {"object::root": "show_content"}`）经 `loadKnowledgeIndex` 被加载、可被 root trigger 激活。
-- **TC-THINK-02**：Object `self.md` 作为身份被 `readSelf` 加载（→ 进 LLM instructions）。
+- **TC-THINK-02**：Object `self.md` 作为身份被加载，**渲为 self 门面窗的 self 视角内容、非 LLM instructions**（与 storybook story 实现一致）。
 - **TC-THINK-03**：LLM input 的 `<methods>` 节点渲染 method 的**语义 description**（取自 `*_BASIC` 知识，经 `extractBasicDescription`），而非仅 method 名 / paths。这是回归守卫——曾经只渲 `paths.join(",")`（≈ 方法名），LLM 看不懂每个 command 的含义；退回该行为则本 TC 变红。
 
 ### context 核心设计判据（权威 `knowledge/context.md` 11 条）

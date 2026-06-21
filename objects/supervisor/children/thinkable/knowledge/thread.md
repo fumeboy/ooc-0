@@ -31,7 +31,9 @@ activates_on:
 
 3. **thread 的 object method**（它能做什么）：
    - **`say`** —— 向对端发消息（按视角双实现：自己视角 = 向对方发，对方视角 = 向自己发）。
-   - **`end`** —— 归档本 thread。
+   - **`end`** —— 结束本 thread（标记 done、记 endReason/endSummary，可选 result 经 creator 窗 say 回报父级）。从 agent agency 迁入——thread 作用域操作，**改 thread 自身 Data**（status→done）。
+   - **`todo`** —— 在**当前 thread context 内登记一个 todo 子对象**。从 agent agency 迁入——thread 作用域操作；**不改 thread 自身 Data**，而是造 `_builtin/agent/todo` 子对象进入本 thread 的 context（与 `end` 改 Data 区分）。
+   - **`new_feat_branch`** / **`create_pr_and_invite_reviewers`** —— 两条 reflectable 沉淀 method（仅在 super 反思 session 的 `reflect_request` 投影窗 surface）。详见 reflectable `self.md`。
    - （`wait` / `close` 是 tool 原语、作用于窗，不是 thread 的 object method；wait 语义见 thinkloop.md。）关一个会话窗 = 撤回对其对象的一次引用；关一个 fork 子线程的会话窗 → 该子线程及其随之无人引用的子树一并 **canceled**（停用、保留在盘可观测，同 done / failed）；thread 与 creator 的自我门面窗是恒在通道、不可关。
 
 4. **一个 agent 可并行持多条 thread**：与不同对端对话、跑并行子任务，彼此 context 独立。thread 之间可通过（`talk(target=自己)` ）派生形成一棵 **Thread Tree**。
