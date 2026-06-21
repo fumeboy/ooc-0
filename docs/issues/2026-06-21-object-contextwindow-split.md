@@ -85,9 +85,10 @@ date: 2026-06-21
 **受影响清单补漏（completeness）**：observable/window-hash（哈希输入变 object+view 两源）、**BudgetManager token 计量新契约缺口**（一 object 多 view→token 按 object 计一次 / view 各计自己）、visible/web ~20 文件、lifecycle phase-2 耦合、collaborable、isInlinePersisted 判据。
 
 **落地进度**：
-- [x] **P0-a** 并行 draft 类型（`OocObject`/`WindowView`/`InlineWindow`/`RefWindow`/`ContextWindowSplit`，additive 未启用、alias 不动，tsc 绿）—— `context-window.ts`。
-- [ ] P0-b 回归网（refcount e2e 扩断言 + window-hash content-sensitivity + compress win-lookup no-op seam）—— **先于 P1**。
-- [ ] P1 WindowManager 承重墙改造（见分期）。
-- [ ] P2 / P3 / P4。
+- [x] **P0-a** 并行 draft 类型（`OocObject`/`WindowView`/`InlineWindow`/`RefWindow`/`ContextWindowSplit`，additive 未启用、alias 不动，tsc 绿）—— `context-window.ts`（worktree 520e62ef）。
+- [x] **P0-b** 回归网 `split-invariants.test.ts`（refcount / window-hash content-sensitivity / WindowManager round-trip 不丢 win，4 绿）（79bbed85）。
+- [x] **P1** 独立对象窗自描述 `objectRef` + `referencedObjectId` 双读（= lifecycle phase-2「扩到 member 窗」合并；additive+adapter 兼容；行为安全：无 member active/unactive body→fast-path）。gate：tsc core+thread 0 / split-invariants+object-lifecycle+thread 42/0 / storybook 64/0（7876260a）。
+- [ ] **P2** 真 `objectCache`（ref 窗 data 经 cache 解析、多 ref 窗共享同一 object=「共享=第二个 view」）+ `ContextWindow` 切 union + 读者经 `objectOf()` helper 渐进迁移（RefWindow 暂留 cached data 副本保 readers 绿）+ 删 self 门面窗 `class:objectId` 疤痕。
+- [ ] **P3** 持久对齐 + dogfooding 迁移；**P4** 删 OocObjectInstance 别名 + 删 RefWindow cached 副本 + 文档回流（index.md 核心 4/10 + object/persistable/readable self.md）。
 
 > 状态 `decided`：设计已定、落地分期进行中；全部 P0-P4 落完 + 一致性回流（index.md 核心 4/10 + object/persistable/readable self.md）后转 `landed`。
