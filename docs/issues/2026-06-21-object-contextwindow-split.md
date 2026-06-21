@@ -107,6 +107,30 @@ date: 2026-06-21
 3. **inline 对象归宿**：thread 自身这种「随 thread-context 整存」对象，在对象表模型里是表项 + 内联持久，还是特例。
 4. **过渡分期**：P3 的 `window.object` → `objectRef` 怎么分阶段（含 web/visible ~20 文件、collaborable）。
 
+## 裁决修正 II（review fan-out 汇总，2026-06-21）
+
+7 元素 reviewer 全判 `sound-with-conditions`、完整性批评官判 `approve-with-conditions`——**B→A 反转批准**（否 A 的「行为熵增」在统一 ref + 单 instance + 与 session-scoped refcount 同构下确实反转为净降熵；disk 早已是 A 形态 `flows/{session}/{objectId}/`，A 只是把内存对齐 disk 既有 single-owner）。三上游决议拍定、两处裁决文字纠错、四个漏列元素补登：
+
+**三上游决议（拍定）**：
+1. **snapshot vs live-ref = 按作用域二分**（锚真实并发模型：worker `Promise.all` 并发 job 各自 `readThread` 独立内存树、互不共享内存 instance）：
+   - **同 job fork 子树内存树 = live-ref**（多窗 ref→同一 instance、改即可见）。单 job = 单 driver 串行推进 → **无数据竞争、本轮不引入任何锁**。这是「改一处处处见」唯一真能 fire 的地方。
+   - **cross-job / cross-session / cross-object = 维持磁盘 last-writer-wins**，A 不承诺 live、物理上也做不到（两 job 各 readThread 两份内存）。**Case A 在该层仍开放**。
+   - **严禁笼统宣布「A 消解 Case A」**（collaborable「作用域错配陷阱」：同 session「看起来 live」会给 cross-object 仍 last-writer-wins 制造虚假安全感）。
+2. **对象表 owner = session 级 runtime handle（归 `## runtime` 元素）**。WindowManager 出局（per-call/per-thread、寿命/作用域都不够）；persistable 出局（磁盘层、协作非归属）；runtime 胜出（已是系统级对象操作 + create_object 入口 + refcount/lifecycle 落点）。**非永生全局表**：随单个 job 执行上下文存在、job 结束释放（化解「无限增长无 GC」）；= 磁盘 `flows/` 的运行态镜像/解析缓存，磁盘仍是真相。
+3. **inline 对象（thread/todo）进表作运行态 data residence + buildEntries 仍整窗 inline 落盘**（磁盘格式冻结、option a）。thread 双角色（既 inline 会话窗、又容器自持 save/load）由 **`## thread` 元素**主人单独裁。
+
+**两处裁决文字纠错（必修）**：
+1. **token 计量**：删去「token 按 object 计一次免费成立」——**错**。批评官裁定 collaborable 对：同一 objectId 在 thread/talk 两视角渲**不同文本**（core 9 多视角投影），两份都真占 LLM context 预算、**必须按窗各计**。正确口径＝「**data 存一份（A 的真红利）但 token 仍按窗各计其渲染产物**」（budget 语义不变、改造最小：`estimateWindowTokens` 序列化「窗 ref + 经表 hydrate 的 data 投影」按窗各计、不去重）。
+2. **Case A**：按上游决议 #1 作用域二分，不笼统消解。
+
+**漏列受影响元素补登**（index.md 注册表 + self.md 成对回流）：`## runtime`（对象表 owner，本轮真漏的主人）、`## thread`（inline 归宿主人）、`## visible/web`（窗降纯 ref 后前端拿不到 data，须后端预 hydrate 下发——不可把对象表暴露到 HTTP）、`## executable × readable` 交叉契约（dispatch `self` = 对象表共享 data 引用〔object method〕/ `before_win` 仍取本窗 win〔window method〕，须显式重述防 win 误挪进表断 compress v2）。**index.md 实测零登记「对象表」——P4 落地须新增条目**。
+
+**其他裁定**：`read_only` 不废除、降格为「未来 cross-actor share 的设计储备」（本轮只声明 in-process live-ref）；冻结点 `isSelfThreadWindow`/`w_creator_<threadId>` 全程不动；`win` 留窗侧不入表（compress v2 承重）；核心 1/4/10 **句子不改**（A 是其兑现非修订），改动落细节补充层（新增「对象表 = 实例 session 级 single-source / ContextWindow = 该实例 ref」+ self.md:71 `OocObjectInstance.closable` 改述为 window 侧字段）。
+
+**落地前置（并发 peer 陷阱已显形）**：worktree `feat/object-contextwindow-split` 现 **6 ahead / 27 behind main**；main 已落 `ba02c165 退役 state.json → 裸 data.json`（动我 P3 改过的持久层）+ A1/A2 前端 + stone-scope。**P4 须从 rebase 到当前 main 的基线开工**（吸收 state.json→data.json，P3 的 `flow-runtime-object` state.json 翻译随之简化/作废），否则持久层冲突 + review 的 state.json 行号锚失效。
+
+**分期（refined）**：rebase worktree→main → **P4a** runtime session 对象表 + 窗降 `objectRef` + `objectDataOf`/`classOf` 改读表（内存单点、磁盘冻结、行为安全）→ **P4b** 末-ref-evict 并进 `dispatchUnactiveIfZero` 的 `{delete}` 钩子 + 补 active init seam（lifecycle phase-2 合并）+ budget/window-hash「按窗各计」回归网先红后绿（防 ref 窗 token 塌零静默失效）→ **P4c** 退潮删别名/门面窗 `class:objectId` 疤痕 + 全树文档成对回流。每期独立绿（tsc core+thread / split-invariants / object-lifecycle / storybook 四门禁）。
+
 **落地进度**：
 - [x] **P0-a** 并行 draft 类型（`OocObject`/`WindowView`/`InlineWindow`/`RefWindow`/`ContextWindowSplit`，additive 未启用、alias 不动，tsc 绿）—— `context-window.ts`（worktree 520e62ef）。
 - [x] **P0-b** 回归网 `split-invariants.test.ts`（refcount / window-hash content-sensitivity / WindowManager round-trip 不丢 win，4 绿）（79bbed85）。
