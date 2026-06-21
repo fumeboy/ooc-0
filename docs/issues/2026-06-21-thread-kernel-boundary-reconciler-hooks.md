@@ -1,6 +1,6 @@
 ---
 title: 厘清 runtime↔thread 耦合边界：core 泛型机制 + thread 专属派发位 + compress-v2 policy 归位（slug 含 reconciler 为 legacy，已弃该词）
-status: decided
+status: in-review
 date: 2026-06-21
 ---
 
@@ -236,6 +236,83 @@ OOC 朝 OOP 哲学推进——「Object 自己编程控制自己的 executable/r
 **退役**：删 `CompressV2Win` core 影子接口（权威 ThreadWin）；compress-fork.ts 内容迁 thread builtin 后 core 零残留；title 收敛弃「reconciler」（对齐第一轮裁决 #7，slug 文件名 legacy 保留）。
 
 **幂等/恢复硬验收（承前增补）**：real-compress-v2 e2e 绿（orphan/force-wait floor 不丢）；新增「child 终态期父 inbox child-end 计数=1」+「tick 中途崩溃重扫」恢复测试；**MEMORY `feedback_e2e_observation_drift` 警示**：迁 producer 时 visible/observation helper 读死 event kind 极易静默漂移，列入落地验收硬约束。
+
+## thread 模型澄清（say 单写 + 调度重投影统一模型）—— 2026-06-21（用户拍板）
+
+第二轮裁决后，用户陈述了期望的 say 交互模型，核查发现它**正是 `## thread` / `## collaborable` 已文档化设计的忠实实现，而当前代码是偏离**。它还反向改进了已裁决的 onChildTerminal。
+
+**模型（单一真相源）**：一场对话 = **一个 thread 实例**（callee 的 thread）。它同时持 `inbox`（caller→callee）+ `outbox`（callee→caller）。caller **不留自己的副本**——caller 通过一个指向 callee thread 的会话窗（**ref**，`referencedObjectId`）在构造 context 时**投影**它（peer-POV，翻转 in/out：callee.inbox=「我发出的」、callee.outbox=「我收到的」）。这正是 `## thread`「同一 thread 实例按视角投成三种 window class」+ `## collaborable`「window class POV 轴 × 消息方向轴正交」的兑现。
+
+**当前代码的偏离（双写）**：`talk-delivery.ts:198-199` 同时写 `callerThread.outbox += msg` **和** `calleeThread.inbox += msg`——两个 thread 各存一份镜像。本模型删 caller 侧副本，回到单一真相源。
+
+**统一规则（say 与 onChildTerminal 收敛成一条）**：
+
+> **callee/child 产出（say outbox / end summary）或终态 → 调度 creator → creator 下一轮重投影它引用的 thread，零副本。**
+
+- **say 单写**：写 callee thread 的 inbox（caller→callee）或 outbox（callee→caller）一份 + 触发对端调度。**删 caller 侧 outbox 副本** + **删第二轮遗留的「say inline 写 peer.status」**（改「调度」，status 写入归框架，与 compress force-wait 裁决对齐）。
+- **onChildTerminal 改写**：从第一/二轮的「往父 inbox 写 child-end marker（副本 + marker 幂等）」改为「**只调度 creator + creator 重投影子 thread**（自然看见其终态 + endSummary/outbox）」。**零副本 → 无 marker 幂等负担**，简化第一轮裁决。
+
+**唤醒机制（两源并存）**：
+- **callee 方向**：caller→callee 写 callee.inbox → callee 自身 inbox 增长 → 框架泛型 `wakeWaitingThreadsOnInbox` 唤醒（第一轮裁决「留内核」，不变）。
+- **caller 方向**：callee→caller 写 callee.outbox，**caller 自身 inbox 不增长** → 泛型唤醒不触发 → 需**显式「调度 creator」**：callee thread 持 `creatorThreadId`/`creatorSessionId`，据此 enqueue caller（跨 session 经 creatorSessionId）。这是框架新增的调度能力（「enqueue 某 thread」），取代「往 creator inbox 写副本再靠 inbox-增长唤醒」。
+
+**依赖耦合**：caller 的会话窗须是**纯 ref**（`referencedObjectId` → callee thread，投影期渲染）——即 [[2026-06-21-object-contextwindow-split]] 的 **P0（inline vs ref）**。本 issue 的单写模型落地**依赖该 split**；两 issue 须协调推进（建议：object-contextwindow-split P0 先行/并行，本 issue 的 say 单写在其 referencedObjectId 落地后接入）。
+
+**跨 session（de-risk）**：默认 callee thread 派进 **caller 自身 session**（`talk-delivery.ts:100,115`）→ 同 session 本地投影读，无跨 session 成本；仅 super-alias / reflectable 跨 session 回报需经 `creatorSessionId` 路由（已特殊处理）。
+
+### 落地接口规格（三表 —— landing spec）
+
+**表 A · core 表露的 API（框架）**
+
+| 类别 | API | 备注 |
+|---|---|---|
+| 派发面（registry，零 builtin import） | `resolveReadable`/`resolveObjectMethod(s)`/`resolveWindowMethod`/`resolveWindowClass`/`resolveConstructor`/`resolveActive`/`resolveUnactive`/`resolvePersistable`/`isInlinePersist` ＋新增 `resolveOnChildTerminal`/`resolveCompressPolicy`（同机制：可选槽，缺槽 fast-path 跳） | 沿继承链解析 |
+| 思考框架 | `think(thread,llm)` / `getAvailableTools`(恒 3 原语) / `dispatchToolCall`(exec-by-name) / `isSummarizer` 执行特化(无工具·单轮·首文本→endSummary) | |
+| context 框架 | `buildInputItems` / `processEventToItems` / `snapRangesToToolPairs`(tool-pair transport,**留框架**) / `projectSummarizedRanges`(`_shared` 共享) / `budget` / pipeline processors(protocol/activator/peer/member 注入) | thread 出投影、框架消费 |
+| 知识框架 | `computeActivations`/`loadKnowledgeIndex`/`evaluateTrigger`(纯函数,读 thread 结构态) | 不碰业务字段 |
+| 实例化/引用框架 | `WindowManager.instantiate`(造任意 class,registry→construct,**talk/compress 共用**) / `countSessionReferences`+`dispatchActive/UnactiveIfZero`(refcount→生命周期) / `close` 原语 | |
+| 调度框架 | `collectRunningThreads`/`selectNextThread` / `wakeWaitingThreadsOnInbox`(inbox-增长泛型唤醒) / **`enqueueThread`(新增：显式调度某 thread，caller-wake + onChildTerminal 共用，跨 session 经 creatorSessionId)** | compress 的 `compress:` 唤醒随 harvest policy |
+| 持久化框架 | `writeThread`/`readThread`(核心 7 授权) / persistable `save`/`load` / inline mode | |
+
+**表 B · thread builtin 注册的 hook**
+
+| 槽 | thread 实现 | 类型 |
+|---|---|---|
+| `construct` | `talkConstructor`：target=自己→`execFork`；target=别的/`user`→peer 会话（校验 target stone） | 标准 OocClass |
+| `readable` | `readable(ctx,data,win)→ReadableProjection{class,content,consumedMessageIds}`：POV 投 thread/talk/reflect_request；`window[]`（含 window method `set_transcript_window`/`threadCompress`/`threadResize`） | 标准 |
+| `executable` | `methods[]`：`say`(单写 callee thread + 触发对端调度) / `close` / `share` / `new_feat_branch` / `create_pr_and_invite_reviewers` / `end` / `todo` | 标准 |
+| `persistable` | `mode:"inline"` + `save=saveThread`/`load=loadThread`；inbox/outbox append-only 存储 | 标准 |
+| `unactive` | `cancelSubtree`(refcount→0：级联子线程 canceled) | 标准 |
+| `onChildTerminal` | child→终态 → **调度 creator**（不写副本）；creator 重投影子 thread 见终态/endSummary | 新·thread 专属派发位 |
+| `compress.maybeCompress(thread,tok)` | 触发判定 + spawn 区段算法 + 经 `WindowManager.instantiate` spawn summarizer fork + 置 inFlightCompress/清 compressIntent | 新 |
+| `compress.compressWaitIntent(thread,tok)→{forkId}\|null` | force-wait **纯查询**（返意图，不切 status；框架据此 enterWaiting） | 新 |
+| `compress.harvest(parent,child)` | 读 child.endSummary → 写父窗 summarizedRanges + 清 inFlightCompress + 发 compress 唤醒意图；done/failed/orphan 三分支 | 新 |
+| `buildSummarizerSeed`（归 readable） | events→文本 seed 投影 | 新 |
+
+权威字段：`CompressV2Win` core 影子删 → 用 builtins `ThreadWin`。派发机制：新 hook 走可选槽 + registry 泛型 resolve（零 builtin import / 零 thread 特判），**语义上不进生命周期钩子家族**（核心 10 不动）。
+
+**表 C · core 框架「只读骨架」契约**
+
+| 可读（结构/调度/执行-模式字段） | 绝不读（thread 业务，经 hook） |
+|---|---|
+| `id`/`status`/父子链/`lastExecutedAt`/`inboxSnapshotAtWait`/`waitingOn`/`contextWindows`(引用计数的引用集)/`events`(thinkloop 写·activator+builder 读)/`inbox`·`outbox`/**`isSummarizer`(框架执行-模式标记)** | `endSummary`/`endReason`/`summarizedRanges`/`inFlightCompress`/`autoCompressLevel`/`compressIntent` |
+
+**⚠️ 修正第一/二轮裁决**：`isSummarizer` 应从「禁读业务符号」移到「框架可读」——`thinkloop.ts:120/396` 合法读它定执行模式（它是「这是一条框架 spawn 的 summarizer run」的标记，非 compress 业务语义）。FORBIDDEN_PATTERNS **不含** `isSummarizer`；只含 endSummary/endReason/summarizedRanges/inFlightCompress/autoCompressLevel/compressIntent。
+
+### 受影响元素增补（第三轮）
+
+- `## collaborable`（**升为核心**）：say 单写模型（一份消息存 callee thread + 调度对端，删 caller 副本 + 删 inline 写 peer.status）。
+- `## collaborable × thinkable`（**改写**）：child→终态 / callee→caller 回报统一为「调度 creator + 重投影」，取代第一轮的「写 marker 唤醒」链。
+- `## thread`（E 区）：对话=一个 thread 实例双 POV 投影、单写 inbox/outbox、onChildTerminal 改调度重投影。
+- `## OOC Class/Object Model` × [[2026-06-21-object-contextwindow-split]]：caller 会话窗=纯 ref（referencedObjectId），依赖 P0 inline-vs-ref split——**跨 issue 耦合，须协调**。
+
+## review 记录（第三轮 —— thread 模型）
+
+（对 collaborable / collaborable×thinkable / thread×object-contextwindow-split 耦合 fan-out 后由 Supervisor 汇总）
+
+## 裁决（第三轮 —— 最终收口）
+
+（第三轮 review 后收口最终方案 + 一致性回流清单）
 
 ## 落地验收
 
