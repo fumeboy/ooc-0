@@ -1,6 +1,6 @@
 ---
-title: thread builtin 业务退出 core——compress 退潮 + onChildTerminal 退潮 + say 机制纠正
-status: in-review
+title: thread builtin 业务退出 core——compress 退潮 + onChildTerminal 退潮 + say 机制纠正 + unactive 通知
+status: decided
 date: 2026-06-21
 ---
 
@@ -57,11 +57,16 @@ OOC 朝 OOP 推进，系统概念以 builtin class/object 表示在 `packages/@o
 
 **C. say 机制纠正**
 
-- **单写**：一场对话存 callee thread 一份（inbox=caller→callee / outbox=callee→caller），**删 caller 侧 outbox 副本**。
-- **唤醒归框架**：删两条 say 路径的 inline 写 peer.status（talk-delivery.ts:206 + session-methods.ts:101-109），status 写入归框架（与 compress force-wait「policy 返意图、框架切 status」对称）。
-- **1 写律 + 2 唤醒律**：写一份 on callee thread；say→**对话对端**（talkWindow 解析；peer callee 非 caller 的 child）、onChildTerminal→**树 creator**（creatorThreadId），共用 `enqueueThread` 原语但**目标解析分两套**。
-- **`enqueueThread` 归 runtime**：泛化/复用已有 `notifyThreadActivated`（从 thread builtin talk-delivery 上提 runtime），同 session=内存唤醒 / 跨 session=持久调度信号（调度元数据、非消息副本）；保留终态复活语义（waiting/done/failed caller→running，否则回报石沉大海）；scheduler（thinkable）的 inbox-增长泛型 wakeup 是同 session 消费方、留内核。
-- **依赖**：caller 单写后经 **peer-ref 投影** callee thread（读侧）由 [[2026-06-21-thread-as-referencable-object]] 交付（`referencedObjectId` 现对 peer 窗返 undefined）；本 issue 的 say 写侧 + 唤醒可设计，**完整落地须 substrate issue 的 peer-ref 先到**（落地顺序：substrate 先/并行）。
+> **「单写」= 每条消息只存一份**（在会话/callee thread 上），**不再 caller/callee 各存一份镜像**。会话 thread **保留完整 inbox+outbox 两方向**（inbox=caller→callee / outbox=callee→caller）——「单写」删的是 **caller 侧的镜像副本**，**不是删 say 的 outbox 写语义**。collaborable 核心条 6「say 写自己 outbox / 派对端 inbox」按角色**取其一**（拥有会话 thread 者回复=写自己 outbox；引用者发起=派对端 inbox），不再「同一 say 两个落点」。另一方经 ref 投影读、零副本。
+
+本 issue 可**独立落地**的写侧/唤醒（不依赖 substrate）：
+- **删两条 say 路径的 inline 写对端 status**（talk-delivery.ts:206-210 + **session-methods.ts:104-109**，注意 :101-102 是要保留的 fork 派送本体、勿删），唤醒归框架（与 compress force-wait「policy 返意图、框架切 status」对称）。
+- **1 写律 + 2 唤醒律**：写一份 on 会话 thread；say→**对话对端**（talkWindow 解析；peer callee 非 caller 的 child）、onChildTerminal→**树 creator**（creatorThreadId），共用 `enqueueThread` 但**目标解析分两套**。
+- **`enqueueThread` 归 runtime**：泛化/复用已有 `notifyThreadActivated`（实锚 **`core/observable/index.ts:53`**，由 talk-delivery import；上提/暴露到 runtime），同 session=内存唤醒 / 跨 session=持久调度信号（调度元数据、非消息副本）；保留终态复活语义（waiting/done/failed caller→running）；scheduler 的 inbox-增长泛型 wakeup 是同 session 消费方、留内核。
+
+**必须与 substrate 同批落地**（读侧原子对，**不得在本 issue 内单独先删**）：
+- **删 caller 侧 outbox 镜像副本** —— 它与 caller 经 **peer-ref 投影 callee thread**（[[2026-06-21-thread-as-referencable-object]] 交付，`referencedObjectId` 现对 peer 窗返 undefined）是同一读侧切换的两端；单删副本而 peer-ref 未到，caller 对话窗变空。
+- 同理 worker.ts:263-348 跨 object callee→caller 回报的「可见」替代是 peer-ref（substrate），其退役须与 substrate 同批。
 
 **D. 内核可读边界规则（可检查）**
 
@@ -69,6 +74,16 @@ OOC 朝 OOP 推进，系统概念以 builtin class/object 表示在 `packages/@o
 - 绝不读业务字段：`endSummary`/`endReason`/`summarizedRanges`/`inFlightCompress`/`autoCompressLevel`/`compressIntent`。
 - check 规则 FORBIDDEN_PATTERNS 扫 `scheduler.ts` + `context/compress-fork.ts` + `context/compress-trigger.ts` + `context/index.ts` 禁读/import 上述业务符号。
 - 新增 `resolveOnChildTerminal`/`resolveCompressPolicy` 槽照抄 active/unactive 已验证模式，落地须同步 `register`/`seedFrom` 两处显式 merge（object-registry.ts:115-122/296-303）。
+
+**E. unactive 改通知语义（折入本批落地——不依赖 peer-ref，是纯 thread-class policy 改动）**
+
+- refcount **保持统一**（peer 窗照样计数）；差异从「算不算引用」挪到「unactive 做什么」：
+  - **non-terminal（running/paused/waiting）refcount→0**：thread.unactive **不再 cancelSubtree/切 canceled**，改往**该 thread 自己 inbox** 发系统消息「creator 已关闭对话窗口，当前已无消息订阅者」（refcount=0=无订阅者）。thread 下一轮自决（通常优雅 `end`）；waiting 因 inbox 增长被泛型 wakeup 自然唤醒。
+  - **terminal（done/failed）refcount→0**：仅清理 + `{delete?}` 自决。
+- **退役 `canceled` + `cancelSubtree`**：改通知后 `canceled` 无产生者（唯一产生点 thread/index.ts:214），全树退役（ThreadStatus union / TERMINAL / scheduler.ts:75 / worker.ts:303 / flows model.ts:71 / thread index.ts）；thread 终结一律走 `end`（done）。
+- 分层：core 泛型 refcount→派发 unactive 机制**不动**，只改 **thread class unactive policy body**（cancelSubtree → 发通知）。peer 平等天然保住、契合「无强制 destruct」。
+- 接受「running 但 refcount=0、无观众」宽限态（无强制兜底）。
+- **改 landed 的 lifecycle issue（`2026-06-21-object-activation-lifecycle`）close→cancel→级联契约**——回流 object 核心 10 + 协调（unactive 通知不依赖 peer-ref，可与 A/B/C-写侧同批落地；substrate 只剩 peer-ref 投影读侧）。
 
 ## 受影响设计元素
 
@@ -82,7 +97,9 @@ OOC 朝 OOP 推进，系统概念以 builtin class/object 表示在 `packages/@o
 - `## observable`：onChildTerminal 删 marker → 不再 push `inbox_message_arrived`（事件产出删除，非 producer 移位）——见待裁决 R1。
 - `## visible` / `## runtime`：会话窗渲染源；`enqueueThread` 归 runtime。
 
-正确排除：`## OOC Class/Object Model` 核心 10 / `agent` / `method_exec_form`（onChildTerminal 非生命周期家族成员，核心 10 不动）。**core 10 + lifecycle 的改动（unactive 通知 / refcount / canceled 退役）全部归 substrate issue。**
+- `## OOC Class/Object Model` 核心 10 + `2026-06-21-object-activation-lifecycle`（landed）：unactive 改通知语义 + `canceled`/`cancelSubtree` 退役（E 折入）；但**钩子家族不扩**（onChildTerminal 是 thread 专属派发位、非生命周期家族成员，核心 10 的 construct/active/unactive 三钩子不变）。
+
+正确排除：`agent` / `method_exec_form`。**仅 peer-ref 投影 + say 读侧归 substrate issue（unactive/refcount 已折入本 issue）。**
 
 ## 风险与权衡
 
@@ -100,15 +117,27 @@ OOC 朝 OOP 推进，系统概念以 builtin class/object 表示在 `packages/@o
 
 ## 退役清单
 
-`emitChildEndNotifications` / `harvestSummarizerForks` / `iterateThreads` / `makeSystemMessage`（scheduler.ts:44/66/151）+ import（isSelfThreadWindow/addSummarizedRange/SummarizedRange）+ `CompressV2Win` core 影子接口 + `worker.ts:263-348 syncCrossObjectCalleeEnds`（第三处 marker 写入）+ 两条 say inline-status 路径。retain `collectRunningThreads`/`selectNextThread`/`writeThread`/`wakeWaitingThreadsOnInbox`。
+`emitChildEndNotifications` / `harvestSummarizerForks` / `iterateThreads` / `makeSystemMessage`（scheduler.ts:44/66/151）+ scheduler/compress-fork 侧 import（isSelfThreadWindow/addSummarizedRange/SummarizedRange——**index.ts:433 投影侧 isSelfThreadWindow 保留**）+ `CompressV2Win` core 影子接口 + `worker.ts:263-348 syncCrossObjectCalleeEnds`（与 substrate 同批）+ 两条 say inline-status（talk-delivery.ts:206-210 + session-methods.ts:104-109）+ **`canceled` 状态全树 + `cancelSubtree`（thread/index.ts:210）** + 术语清理（self.md/index.md 残留 GC roots/reconciler/runtime frame）。retain `collectRunningThreads`/`selectNextThread`/`writeThread`/`wakeWaitingThreadsOnInbox`；check 规则豁免框架合法点（endSummary 写于 thinkloop:442、isSelfThreadWindow 读于 index.ts:433）。
 
 ## review 记录
 
-（fan-out 后由 Supervisor 汇总）
+收敛后 3 reviewer（thinkable / collaborable·collaborable×thinkable / 收敛拆分完整性批评官）+ 含 unactive 折入。判定**拆分干净、可立**。折入的修正：
+- **「单写」精确化**（collaborable）：会话 thread **保留完整 inbox+outbox 两方向**；删的是 **caller 镜像副本**、**非 say outbox 写语义**；核心条 6 按角色取其一（拥有者写自己 outbox / 引用者派对端 inbox）。**勿误删 self.md:30 / index.md 90·155 的 say 写语义**（substrate peer-POV 投影依赖会话 thread 有完整两方向）。
+- **say 写侧 vs 读侧拆分**（collaborable）：删 inline 写 status（talk-delivery.ts:206-210 + session-methods.ts:**104-109**，:101-102 fork 派送本体保留）+ enqueue 唤醒 = 本 issue 独立落；**删 caller outbox 镜像 + worker.ts:263 退役 = 与 substrate peer-ref 同批**（读侧原子对，不得单删）。
+- `notifyThreadActivated` 实锚 **core/observable/index.ts:53**（非 talk-delivery）；enqueueThread = runtime 对它的语义化封装/重命名（含终态复活 + 跨/同 session 分流）。
+- **A/B/E 不依赖 substrate**（compress fork-ref / onChildTerminal fork-ref / unactive refcount 均不需 peer-ref），可独立落；仅 **C 的读侧** 待 substrate。
+- compress 切分表补 **`projectByCompressLevel`/内容窗 compressLevel 读出投影 → 留 thinkable renderer（display 折叠、非业务、不退潮）**（xml.ts:253/360）。
+- check 规则豁免框架合法点（endSummary 写 thinkloop:442 / isSelfThreadWindow 读 index.ts:433 留 core）。
+- **review 序 ≠ 落地序（非循环）**：review 序 retreat 先收口（定写侧+框架+unactive）；落地序 A/B/E + C-写侧 可先落，C-读侧（caller 投影）须等 substrate peer-ref。
+- substrate（referencable-object）收窄为 **peer-ref 投影 + say 读侧**（unactive/refcount 折入本 issue）；其 backlog 认领收窄为「扩 **peer**」（member 已由 split P1 落地）。
 
-## 裁决
+## 裁决（decided）
 
-（review 后收口）
+采纳收敛 + 折入 unactive，按 review 修正。**落地批次（worktree `.worktree/thread-builtin-retreat`）**：
+- **本批落地（A/B/E + C-写侧）**：A compress policy 归 thread builtin（framework 留 core）；B scheduler harvest/notify→thread onChildTerminal policy（fork-ref 重投影 + 瘦身持久消费游标 + level-triggered）；E unactive 改通知（退役 canceled/cancelSubtree）；C-写侧（删 inline status + enqueueThread 归 runtime）。
+- **延后（substrate 同批）**：C-读侧（删 caller outbox 镜像 + caller peer-ref 投影 callee）+ worker.ts:263 退役 → [[2026-06-21-thread-as-referencable-object]]。
+- 内核可读边界 check 规则（扫 scheduler.ts + context/compress-*，豁免框架合法点）；compress.md 单一权威不拆、补边界声明句；core 10/lifecycle 回流（unactive 通知 + canceled 退役，协调 landed lifecycle issue）。
+- 测试纪律：中间增量坏测试只登账本、全改完统一跑绿（[[feedback_refactor_defer_test_fixes]]）。
 
 ## 落地验收
 

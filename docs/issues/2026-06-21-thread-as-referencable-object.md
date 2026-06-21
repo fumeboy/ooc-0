@@ -6,7 +6,9 @@ date: 2026-06-21
 
 # thread 成为一等可引用 object
 
-> 从 `2026-06-21-thread-kernel-boundary-reconciler-hooks`（收敛重建为 [[2026-06-21-thread-builtin-business-retreat]]）**拆出**的 substrate 主题：让 thread 像任何 object 一样被「context window 即 ref」引用、被投影、被引用计数管理。它是 say 单写「读侧」的底座，触及 object 核心 10 / lifecycle / split 三处，故独立成 issue。本文已含两条**前序 issue 已裁决**的内容（unactive 通知模型 R3 已定），其余待 review。
+> 从 `2026-06-21-thread-kernel-boundary-reconciler-hooks`（收敛重建为 [[2026-06-21-thread-builtin-business-retreat]]）**拆出**的 substrate 主题：让 caller 像引用任何 object 一样**引用并投影 callee thread**（say 单写「读侧」的底座）。
+>
+> **⚠️ 范围收窄（2026-06-21）**：unactive 通知模型（原 B）+ refcount 订阅语义（原 C）**已折入 retreat issue 本批落地**（它们不依赖 peer-ref、是纯 thread-class policy + 生命周期改动）。本 issue **只剩 A（peer-ref 投影 + say 读侧：caller 投影 callee thread + 删 caller outbox 镜像 + worker.ts:263 退役）**。下方 B/C 节作背景保留，实施归 retreat。backlog 认领收窄为「扩 **peer**」（member 已由 split P1 落地）。
 
 ## 背景 / 动机
 
