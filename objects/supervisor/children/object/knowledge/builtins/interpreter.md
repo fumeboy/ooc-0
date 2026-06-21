@@ -8,7 +8,7 @@ activates_on:
 # interpreter
 
 > ts/js 解释器 tool-object 家族：parent `interpreter` 的 self 把「跑 ts/js 脚本」收成一个 `run` 方法面，委托造 child `interpreter_process`（一段 sandbox 进程 + exec history）。
-> 同形姊妹 `terminal`（`_builtin/terminal`，跑 bash 子进程）几乎完全同构——本文不复述共享机制，进程窗 history 结构/渲染/viewport 复用 `_shared`，见 terminal.md。对象模型（class/object、单例/非单例、construct、组合持有、children 命名空间）见 object 维度 `self.md`（《OOC 对象模型》），本文不复述。
+> 同形姊妹 `terminal`（`_builtin/terminal`，跑 bash 子进程）几乎完全同构——进程窗 history 结构/渲染/viewport 两者结构同构但各自独立（已不再共享 `_shared`，各 class 自带 `readable/history.ts` + `transcript-viewport.ts` + `executable/exec-record.ts`），见 terminal.md。对象模型（class/object、单例/非单例、construct、组合持有、children 命名空间）见 object 维度 `self.md`（《OOC 对象模型》），本文不复述。
 
 ## 一、self（身份 / data）
 

@@ -26,7 +26,7 @@ window method 与 object method 并列，但签名与归属不同（`WindowMetho
 - file / knowledge `set_viewport`（调行列视口）。
 - 会话窗（thread 投影成 thread/talk/reflect_request）`set_transcript_window`（调 transcript 渲染区间）。
 
-viewport 类 window method 不再走集中执行体——各 class 的 readable 自装 set_viewport，复用纯 helper `mergeViewport` / `applyViewport`（canonical 在 `packages/@ooc/core/_shared/utils/viewport.ts`）：读 `before_win.viewport`、校验合并、返回 `{ viewport: 合并后 }` 作为新 win。
+viewport 类 window method 不再走集中执行体——各 class 的 readable 自装 set_viewport + 自带 viewport 纯 helper `mergeViewport` / `applyViewport`：读 `before_win.viewport`、校验合并、返回 `{ viewport: 合并后 }` 作为新 win。helper 原收在 `core/_shared/utils/viewport.ts` 共享，现已拆解进各 class 内部（file/knowledge/example 的 `readable/viewport.ts` 二维行列；thread/search/process 的 `transcript-viewport.ts` tail/range），各自闭环、容忍重复。
 
 ## 与 object method 的边界
 

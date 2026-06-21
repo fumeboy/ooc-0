@@ -57,7 +57,7 @@
 - **装配与注册**：各 class 的 `index.ts` 一处 `export const Class = { construct?, executable, readable, persistable }`（`packages/@ooc/core/runtime/ooc-class.ts:47`）；经单入口 `register(classId, Class, { parentClass })` 注册进 registry（`packages/@ooc/core/runtime/object-registry.ts:103`）。注册期校验 object↔window method 不同名（`object-registry.ts:53`）。
 - **投影态与业务数据分离落盘**：runtime 实例信封 `OocObjectInstance = { id, class, …, data, win }`（`ooc-class.ts:75`）把身份信封、业务 Data、投影态 win 三者显式分离；win 随实例持久化，readable 渲染期读它。
 - **投影解析与回退**：渲染器对每个实例先 `resolveReadable(inst.class)?.readable(ctx, inst.data, inst.win)` 取投影；无 Class.readable 时回退读盘 `readable.md`；都无落 placeholder（`packages/@ooc/core/thinkable/context/renderers/xml.ts:239`，回退链锚点见 `:251/:268/:284`）。静态名片读写在 `packages/@ooc/core/persistable/stone-readable.ts:17`（`readReadable`）。
-- **viewport 纯 helper**：viewport 类 window method 不再走集中执行体，各 class readable 自装 set_viewport，复用纯 helper `mergeViewport` / `applyViewport`（canonical 在 `packages/@ooc/core/_shared/utils/viewport.ts`）。
+- **viewport 纯 helper**：viewport 类 window method 不再走集中执行体，各 class readable 自装 set_viewport + 自带 viewport 纯 helper（`mergeViewport` / `applyViewport`）。曾收在 `core/_shared/utils/viewport.ts` 共享，现已拆解进各 class 内部（自我闭环、容忍重复）：file/knowledge/example 各有 `readable/viewport.ts`（二维行列）；thread/search/process 各有 `transcript-viewport.ts`（tail/range）。
 - **样板**：投影 + window method 的标准样板见 `packages/@ooc/builtins/knowledge_base/children/knowledge/readable/index.ts`（set_viewport + Data 投影）；会话窗"一个实例多视角投影成多 class"见 `packages/@ooc/builtins/agent/children/thread/readable/index.ts`（thread 投影成 thread/talk/reflect_request 三 class）；最小对象样板 `packages/@ooc/builtins/example/`（types/executable/readable/persistable 分文件 + index.ts 一处装配）。
 
 ---
@@ -82,6 +82,6 @@
 | `WindowDisplayState` / `window.state` / `windowState` 快照 | 投影态 `win`（与 Data 分离，`ooc-class.ts:75`）；window method 返回新 win |
 | `WindowMethodOutcome`（旧 `{ok,state,result}` 返回） | 已退役；window method 直接返回新 win，出错 throw（`contract.ts:51`） |
 | `compressView` / `CompressViewHook` / `onClose` / `mergeExistingDefinition` | 已退役（Wave4 readable 契约不再含这些 deferred hook）；展示程度收放靠 window method 换 win |
-| `windowSetViewport`（旧集中执行体，`executable/windows/_shared`） | 已删；各 class readable 自装 set_viewport，复用纯 helper `mergeViewport`/`applyViewport`（`_shared/utils/viewport.ts`） |
+| `windowSetViewport`（旧集中执行体，`executable/windows/_shared`） | 已删；各 class readable 自装 set_viewport + 自带 viewport 纯 helper `mergeViewport`/`applyViewport`（拆解进各 class，不再共享 `core/_shared/utils/viewport.ts`） |
 | `_shared/types/window-method.ts` / `window-state.ts` / `registry.ts(ObjectDefinition)`（旧文件） | 均已删；契约统一在 `readable/contract.ts` |
 | **programmable**（曾为独立维度，"Object 自写 readable 的形态/热更"） | 已并入 reflectable（"改身体 = 为自身编程"） |
