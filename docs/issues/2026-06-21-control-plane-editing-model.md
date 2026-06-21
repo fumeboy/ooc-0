@@ -1,6 +1,6 @@
 ---
 title: OOC 控制面编辑模型 —— 通用 stone-file-edit 原语 + class visible 改 data
-status: draft
+status: decided
 date: 2026-06-21
 ---
 
@@ -83,8 +83,60 @@ return normalizeMethodResult(await entry.exec(ctx, self, args));
 
 ## review 记录
 
-（fan-out 后由 Supervisor 汇总各 reviewer + 完整性批评官意见）
+7 reviewer（app · visible · executable · persistable · agent · knowledge_base · 完整性批评官）fan-out，**5 待裁决点强收敛**：
+
+**#1 self.md 二象性** —— 一致 **A1 only**：
+- agent：A1 主、**A2 禁碰 data.self 当"身份编辑"**。关键——`persistable.save` 写的是 **session worktree 副本**（`resolveStoneIdentityRef` business session 落 `flows/<sid>/`），非 canonical main、本就无版本化承诺，这是**对的**（如 git working-tree vs commit）。三条路写三个不同位置：persistable.save→flow 副本(非版本化) / A1→stones main(commit) / reflectable feat-branch→PR——零冲突。
+- visible：走 A1。A2 改 data.self 当身份编辑是"语义欺骗"（人类以为版本化了、实际只写 worktree 副本）。
+- persistable：接受「A1 版本化 / A2 不版本化」二分，**拒绝让 persistable.save 经 runVersioned**（高频 reportDataEdit 接 git commit 会制造 commit 噪声、绕过 feat-branch 审核闸）。
+- executable：版本化是 persistable 关切，method 只 `self.x=v` + reportDataEdit，存储自决。
+
+**#2 data 版本化** —— 一致：A2 data 编辑**一律非版本化**（flow/state.json，如 pools sediment）；版本化只归 A1 或 reflectable PR。
+
+**#3 typed 端点** —— 一致：**直接退役不留 alias**（前端无编辑 UI、backward-compat 约束为零）。A1=`PUT /stones/:id/file?path=`，path 防护三层：`safeKnowledgePath`（NUL/绝对/`..`，service.ts:32）+ 新增**白名单** `[self.md, readable.md, executable/index.ts]`（拒绝默认，禁 package.json/.git/node_modules/types.ts）+ `ensureInside`（service.ts:43）。intent=`http:putFile <id> <path>`。
+
+**#4 直 commit main** —— 一致：**人类控制面 A1 直 commit main = 合理豁免**。`## reflectable × persistable` 铁律主语是 **OOC Agent**（约束 agent 自我迭代须经审核），人类=canonical 主权者、编辑本身即"已评审"（httpDirectMainWrite 注释已有此语义）。
+
+**#5 knowledge** —— 一致：**不并入 A1**。按落点分：seed knowledge（stone/git）→ A1（`?path=knowledge/x.md`）；sediment knowledge（pool/非版本化）→ 独立 `/api/pools/` 端点。A1 只管 stone 版本化文件。
+
+**完整性批评官挖出 3 个漏点：**
+- 🔴 **`## filesystem` 漏列**：`filesystem.write_file`（agent 侧，强制 worktree+PR、**拒绝裸写 main**——`builtins/filesystem/children/file/executable/construct.ts:104-108`"控制面写请走 HTTP versioning endpoint"）是 A1（人类侧直 commit main）的**有意分工镜像**。须 doc 锁死：A1=人类特权直写 / write_file=agent worktree+PR / 永不混用。并发写冲突场景（A1 commit main 时 reflectable feat-branch 持同文件改动）issue 未提。
+- 🔴 **A2 method 粒度**：非所有 for_ui_access method 可 A2——`thread.say` 依赖 ctx.thread、`form.submit/refine` 依赖 ctx.runtime（HTTP 侧 crash/throw）。需 guard 降级（`ctx.thread?.`）or 新标注 `for_ui_data_edit`。
+- 🔴 **flows callMethod 同缺口**：`flows/service.ts:906` callMethod 同样缺 reportDataEdit（且 self 传空 `{}`）。A2 须 stones+flows 两处同修，否则不对称。
+- 轻：observable（A1 无观测点/可 emit 事件）；行号偏移（stones callMethod 实 L318 非 364）。
+
+现状 6 条断言经完整性批评官逐条核验**与代码一致**。
 
 ## 裁决
 
-（最终方案 + 落地与一致性回流清单）
+**总方向（据强收敛，确认）**：A1 与 A2 是两条正交的编辑通路，按「编辑源文件 vs 编辑 data」「版本化 vs 非版本化」「人类主权直写 vs agent 审核沉淀」三轴分清，**self.md 不二写**。
+
+1. **A1 = 通用 stone 版本化文件编辑原语**：`PUT /stones/:id/file?path=`，三层 path 防护 + 白名单，经 runVersioned 直 commit main。退役 putSelf/putReadable/putServerSource。**只管 stone 版本化文件**（含 seed knowledge）。
+2. **A2 = visible 服务端模块（用户 2026-06-21 重定向，取代「for_ui_access 挂 executable object method」）**：
+   - `for_ui_access` 从 executable **抽出**——for-ui 方法不再是 executable object method、不再共用 `(ctx, self, args)` 签名（其 ctx 拿不到也不应拿当前 thinkloop thread）。
+   - OOC class 的 **visible 维度**除 react UI 组件外，**还实现「给 UI 用的服务端 API」**，约定编程路径 `<ObjectDir>/visible/server/index.ts`，由 `<ObjectDir>/index.ts` 与 executable/readable/persistable **一并注册**。
+   - **for-ui server method 的 ctx**：有 **world / session（目标 flow）/ object-self（data）**，**无 current thinkloop thread**。改 object data → 经 persistable.save 持久化（**非版本化**，flow 层）。因是独立目的模块，天然不写依赖 thinkloop thread 的操作——「guard vs 新标注」的复杂度消失。
+   - **control 面 callMethod** dispatch 到 visible/server 模块（非 executable for_ui_access），stones+flows 两路同接。
+   - **现有迁移面极小**：全 builtins 当前仅 `thread.say` 标 for_ui_access（`session-methods.ts:120`，人类发聊天）。thread.say 是 session 绑定（发给目标 flow 的 thread）——经 ctx 的 **session 信息**解析目标 flow/thread 派送（用「目标 session」而非「current thinkloop thread」），迁为 thread 的 visible/server method。
+   - **影响 core 7**：「object method 标 for_ui_access 才可被 visible 请求」→ 改为「visible 模块经 `visible/server/` 提供 UI 服务端 API；人机分流不再靠 executable 上的 for_ui_access 标记」。
+3. **self.md = A1 only**：人类编辑身份走 A1；A2 不接管 self.md。`persistable.save` 维持非版本化 worktree 副本（不改）。
+4. **#4 豁免确认**：人类 A1 直 commit main；agent 改 stone 仍走 reflectable feat-branch PR。
+5. **knowledge 按落点分**：seed→A1 / sediment→/api/pools/（不并入）。
+6. **filesystem.write_file vs A1 doc 锁死**：人类特权直写 / agent worktree+PR，互斥不混用。
+7. **A2 method 粒度（用户已定，否掉 guard/标注）**：见裁决 2——`for_ui_access` 抽出 executable、归 visible/server 独立模块（ctx 无 thread），问题在架构层消解，不需 guard 也不需新标注。
+
+### 受影响设计元素（A2 重定向后补）
+原列 9 项之外，visible/server 架构新增：`## filesystem`（write_file vs A1 分工，完整性批评官补）；executable 的 for_ui_access **退役**（抽出 executable）；visible 新增**服务端 API 模块**职责（`visible/server/`）；OOC Class/Object Model **核心 6/7** 改写（for_ui_access 不再挂 object method）；`## readable × visible` 分流改（不再「共用 window.methods 按 for_ui_access 过滤」，改为 visible/server 独立模块）。
+
+### 一致性回流清单（落地后）
+- `app/self.md` + `index.md ## app`：源文件编辑收口为单一 file-edit 原语 + path 白名单。
+- `persistable/self.md` 核心 5：补「reportDataEdit→saveObjectData 始终 flow 内非版本化写，即便 class 落 stone 路径（如 self.md）」；补「人类控制面写(httpDirectMainWrite,版本化) 与 agent data 写(reportDataEdit,非版本化) 两条分离写路径」。
+- `index.md ## reflectable × persistable`：主语精确化「人类经 A1 直 commit main 豁免，铁律约束 agent」。
+- `agent.md self×persistable`：补「版本化归属三条路」说明（persistable.save=worktree 副本无版本化 / A1=人类 commit / feat-branch PR=agent）。
+- **`visible/self.md` + `index.md ## visible`**：新增**服务端 API 模块**职责——visible 除 tsx UI 外，经 `<ObjectDir>/visible/server/index.ts` 实现 for-ui server method（ctx: world/session/object-self，无 thread；改 data→persistable.save）；由 index.ts 一并注册；callMethod dispatch 此处。补 A1(源文件)/A2(data) 前端分工。
+- **`executable/self.md` + `index.md ## executable`**：for_ui_access **退役**——人机分流不再靠 executable object method 上的 for_ui_access 标记，移交 visible/server 模块（独立签名、ctx 无 thread）。
+- **`object/self.md` 核心 6/7 + `index.md ## OOC Class/Object Model`**：核心 7 改写（visible 经 visible/server 提供 UI 服务端 API，非 for_ui_access 挂 object method）；class 模块集补 visible/server。
+- `index.md ## readable × visible`：分流点从「共用 window.methods 按 for_ui_access 过滤」改为「executable=LLM 侧 object method / visible(+visible/server)=人类侧」。
+- `index.md`：`## filesystem` 补 A1(人类直写) vs write_file(agent worktree+PR) 互斥分工。
+- `## knowledge_base/knowledge`：seed→A1 / sediment→pool 端点 落点切分。
+- **builtin md**：`thread` 的 say 从 executable for_ui_access 迁 thread `visible/server`；现存 `for_ui_access` 符号全树退役回流（builtin md + 各 self.md）。
