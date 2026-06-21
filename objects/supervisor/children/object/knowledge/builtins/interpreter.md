@@ -48,7 +48,7 @@ children 从属于 interpreter 命名空间（id 以 `_builtin/interpreter/` 为
 - **window method**：`set_history_window`——调 history 视口（tail N / 固定 range），返回新 ProcessWin、不碰 data；实现在本 class 的 `readable/history.ts`（与 terminal_process 同构但独立），默认末 10 次 exec。
 - **投影**：`class:"interpreter_process"`，content 渲染 history 摘要（经 viewport 切片）+ 最近一条 full output（`renderProcessHistory`）。
 - **visible**：自定义详情面板 + diff（本 class 自有 `visible/index.tsx` / `visible/diff.tsx`）。**persistable**：无自定义，系统默认（history 是纯 JSON）。
-- **sandbox 与注入的 `self`**：ts/js 写 tmp `.mjs` → in-process import 执行，console 进 stdout、`_result_` 进 returnValue。脚本内注入的 `self`（`createInterpreterSelf`，`executable/self.ts`）可 `callMethod`（经 `ctx.runtime.callMethod` 跨窗调当前 thread 内任意 object method）/ `getData`/`setData`（flow 级 `data.json`）/ `getThreadLocal`/`setThreadLocal`（线程内跨 exec 共享、不持久化）；无 persistence / 无 runtime 时对应能力降级或 fail-loud。
+- **sandbox 与注入的 `self`**：ts/js 写 tmp `.mjs` → in-process import 执行，console 进 stdout、`_result_` 进 returnValue。脚本内注入的 `self`（`createInterpreterSelf`，`executable/self.ts`）可 `callMethod`（经 `ctx.runtime.callMethod` 跨窗调当前 thread 内任意 object method）/ `getData`/`setData`（读写本 interpreter_process 实例自身 data 的 `userData` 子字段，随默认 `data.json` 落盘、**同 process 跨 exec 持久**）/ `getThreadLocal`/`setThreadLocal`（线程内跨 exec 共享、**不持久化**）；无 persistence / 无 runtime 时对应能力降级或 fail-loud。
 
 ## 程序骨架（示意）
 

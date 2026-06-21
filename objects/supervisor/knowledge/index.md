@@ -83,7 +83,7 @@ Object 行动的唯一方式 = 经 **tool 原语**与 context window 交互；to
 
 ## persistable
 
-**OOC World = 一个持久化目录**，承载系统全部配置与运行时数据。持久层分三个自然命名的子目录：**stones**（静，长期身份+设计源码，git 版本管理）/ **flows**（动，每个 session 一份、作为派生自 stones/main 的 git worktree 分支）/ **pools**（积，跨 session 沉淀的事实，不进 git）。持久化逻辑可自定义——缺省把 Data 写入 `state.json`，第三态 inline 让运行态自有窗随所属 thread 整窗落盘。数据变更由 object 经 `ctx.reportDataEdit()` 主动报告、runtime 据此触发持久化；变更经 **reflectable** feat-branch 通道合入 stones/main，绝不从 session worktree 直合。实施细节见 [self.md](../children/persistable/self.md)。
+**OOC World = 一个持久化目录**，承载系统全部配置与运行时数据。持久层分三个自然命名的子目录：**stones**（静，长期身份+设计源码，git 版本管理）/ **flows**（动，每个 session 一份、作为派生自 stones/main 的 git worktree 分支）/ **pools**（积，跨 session 沉淀的事实，不进 git）。持久化逻辑可自定义——缺省把 Data（**裸 data**，class 由同目录 `.flow.json` 承载）写入 `data.json`，第三态 inline 让运行态自有窗随所属 thread 整窗落盘（不单独落 `data.json`）。数据变更由 object 经 `ctx.reportDataEdit()` 主动报告、runtime 据此触发持久化；变更经 **reflectable** feat-branch 通道合入 stones/main，绝不从 session worktree 直合。实施细节见 [self.md](../children/persistable/self.md)。
 
 ## collaborable
 
@@ -164,7 +164,7 @@ collaborable 的 talk 方法创建 thread，thread 跑 thinkable 的 thinkloop �
 
 ## thread
 
-thread 是 agent 一次智能运行的载体——`talk` 创建它、thinkloop 在其上运行——也是 builtin 里跨维度最密的对象，一身横跨四维。× thinkable：thinkloop 跑在 thread 上，thread 派生 sub thread 织成 Thread Tree，构成可并行、可恢复的思考底座（见 [thinkable](../children/thinkable/self.md)）。× collaborable：每个 thread 持 inbox/outbox，`say` 写入自己 outbox 并派送到对端 thread 的 inbox。× readable：**同一个 thread 实例按视角投影成三种 window class**——thread（自己视角，过程 event + 与 creator 的对话通道）、talk（与 peer/sub 的会话）、reflect_request（super flow POV）。× persistable：thread 声明 `mode="inline"`，整窗随所属 thread 的 `thread-context.json` 落盘，不写独立 `state.json`。**生命周期**：会话窗即对该 thread 对象的一个引用、关一个 fork 窗 → 该子线程级联 `canceled`、即时落盘（reload 不复活）、`canceled` 与 `done` / `failed` 同为退出态、结构窗（thread / creator 门面窗）不可关；引用计数停启机制见 A 区核心 10 与 [object self.md](../children/object/self.md)。
+thread 是 agent 一次智能运行的载体——`talk` 创建它、thinkloop 在其上运行——也是 builtin 里跨维度最密的对象，一身横跨四维。× thinkable：thinkloop 跑在 thread 上，thread 派生 sub thread 织成 Thread Tree，构成可并行、可恢复的思考底座（见 [thinkable](../children/thinkable/self.md)）。× collaborable：每个 thread 持 inbox/outbox，`say` 写入自己 outbox 并派送到对端 thread 的 inbox。× readable：**同一个 thread 实例按视角投影成三种 window class**——thread（自己视角，过程 event + 与 creator 的对话通道）、talk（与 peer/sub 的会话）、reflect_request（super flow POV）。× persistable：thread 声明 `mode="inline"`，整窗随所属 thread 的 `thread-context.json` 落盘，不单独落 `data.json`。**生命周期**：会话窗即对该 thread 对象的一个引用、关一个 fork 窗 → 该子线程级联 `canceled`、即时落盘（reload 不复活）、`canceled` 与 `done` / `failed` 同为退出态、结构窗（thread / creator 门面窗）不可关；引用计数停启机制见 A 区核心 10 与 [object self.md](../children/object/self.md)。
 
 ## agent
 

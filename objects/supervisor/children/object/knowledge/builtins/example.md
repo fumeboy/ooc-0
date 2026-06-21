@@ -1,6 +1,6 @@
 ---
 title: _builtin/example — 建 class 时照抄的最小样板 class（construct / object method / readable / persistable）
-description: example 家族单一权威——以 self × 各维度透视：data={message,bumpCount} 的 self、readable 投影成单一 example 窗、executable 的 bump method、自定义 persistable 落 JSON、无 visible、非单例有 construct；它以最小代码量演示「身为 class 就有的四张 facet + construct」五处可自定义点，是 sibling example.md 逐文件骨架的可运行对照
+description: example 家族单一权威——以 self × 各维度透视：data={message,bumpCount} 的 self、readable 投影成单一 example 窗、executable 的 bump method、自定义 persistable 接管 save/load、无 visible、非单例有 construct；它以最小代码量演示「身为 class 就有的四张 facet + construct」五处可自定义点，是 sibling example.md 逐文件骨架的可运行对照
 activates_on:
   "object::root": "show_description"
 ---
@@ -38,7 +38,7 @@ window method **`set_viewport`** 调整投影视口（line / column range）、�
 
 ### self × persistable —— 序列化（有自定义）
 
-**有自定义**——`save` / `load` 把 data 以 JSON 落在系统解析好的实例目录 `ctx.dir/data.json`，作「自定义序列化」最小参照；不写此面则走系统默认持久化。落盘布局 / session-aware 路由权威归 persistable 维度，example 只演示「我接管自己的序列化目录与格式」。
+**有自定义**——`save` / `load` 把 data 以裸 JSON 落在系统解析好的实例目录 `ctx.dir/data.json`，作「class 自己接管 save/load」最小参照；不写此面则走系统默认持久化（默认亦写裸 data 到同一 `data.json`）。**注意**：统一持久化后默认与本样例**同名同目录同格式**——所以本最小样例的自定义 save/load 与默认*同效*，它演示的是**自定义接入点的接线本身**（class 如何声明并接管 `save`/`load`），而非某个差异；真实自定义会改**格式或落盘目标**（如落 YAML、或 `load` 做缺字段迁移）。落盘布局 / session-aware 路由权威归 persistable 维度。
 
 ### self × visible —— 无自定义
 
@@ -189,7 +189,7 @@ import type { Data } from "../types.ts";
 
 export default {
   save: async (ctx: PersistableContext, data: Data) => {
-    // 自定义序列化目录与格式：把 Data 以 JSON 落在系统解析好的实例目录
+    // 接管 save/load：把 Data 以裸 JSON 落系统解析好的实例目录（本样例与默认同效；真实自定义会改格式/落盘目标）
     await writeFile(join(ctx.dir, "data.json"), JSON.stringify(data, null, 2), "utf8");
   },
   load: async (ctx: PersistableContext): Promise<Data | undefined> => {

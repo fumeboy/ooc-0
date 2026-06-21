@@ -1,6 +1,6 @@
 ---
 title: 退役 state.json 与 session 草稿，统一为 object data → 默认落 data.json
-status: decided
+status: landed
 date: 2026-06-21
 ---
 
@@ -132,6 +132,14 @@ date: 2026-06-21
 - [ ] review 记录里两交叉元素（persistable×thinkable / reflectable×persistable）+ `## OOC Class/Object Model` 标「已核验无影响」、不动。
 
 **worktree 分支**：`.worktree/persistable-unify-object-data-json`（源码仓根）。
+
+## 落地
+
+**源码**（worktree `.worktree/persistable-unify-object-data-json` → 分支 `feat/persistable-unify-object-data-json`，merge 进 main `8e7a219c`）：37 文件。决策1（state.json→裸 data.json + 符号改名 + gitignore + 读侧重组 + visible-server-dispatch）、决策2（getData/setData→process userData + 删 flow-data.ts/测试 + plumbing 串 userData/reportDataEdit 进 createInterpreterSelf）、测试统一、退潮 gate（check-no-deprecated-symbols 加 state.json/flowDataFile 等；check:doc-drift 加 state.json/「session 草稿」精确模式 + 迁移脚本白名单）全落。主仓 `bun run verify` = 710 test 0 fail + 全 gate 绿；`test:storybook` 64 pass。
+
+**对象树回流**（成对）：`children/persistable/self.md:34`（默认裸 data→data.json + inline「不单独落 data.json」）/`:37`（去文件名化）、`index.md:86`（`## persistable`）/`:167`（`## thread` inline）、`children/object/knowledge/builtins/interpreter.md:51`（getData/setData→process userData）、`example.md`（示范要点迁离格式/目录轴→「接管 save/load 接入点本身」，6 处）。源码树 builtin md `three-fold-persistence.md`/`thread TODO.md` 由实现 agent 就地清。两交叉元素（persistable×thinkable / reflectable×persistable）+ `## OOC Class/Object Model` 经核验无 state.json 字面、零回流。
+
+**已知 follow-up（不在本轮）**：默认与 example 现同名同目录同格式 → example 的 persistable 自定义示范退化为「同效」，已在 example.md 注明「真实自定义改格式/目标」；是否给 example 换一个有真实差异的自定义示范（如 YAML / load 迁移）可另起轻量 issue。
 
 ## 落地验收
 
