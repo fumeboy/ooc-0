@@ -1,6 +1,6 @@
 ---
 title: OocObjectInstance 剥离 window 状态 —— object 与 context window（= object ref）分离
-status: decided
+status: landed
 date: 2026-06-21
 ---
 
@@ -141,6 +141,10 @@ date: 2026-06-21
   - **决策：语义变更拆出 P3**。原 P3「option c：objectCache 让 ref 窗共享同一 `.object` 指针」会改 mutation 可见性 + token 计量（**语义变更**），与「剥离」（纯结构）不同质——拆到 P4 单独验证（勿过度机制化：split 目标不依赖共享）。
   - **id 二元已解**：thread 一条只一个 inline 窗；talk/reflect_request 渲染期投影、非独立存窗。ref 窗 id=objectId（现 1:1）。
   - 独立验收：4 门禁绿（tsc 无新错 / core+thread 773 / storybook 64 / no-deprecated）+ 全 cast-hidden 站点（flow-runtime-object/window-hash/talk-delivery/wait/grep-impl）逐一核为 accessor-safe + 磁盘平铺写读两端一致。
-- [ ] **P4（重定义为目标落地：统一 ref + session 对象表）—— 待 review fan-out 定细节 + 分期**：把 object data 从窗（P3 过渡态 `window.object`）移到 **session 对象表**，窗降为纯 `objectRef`；对象表 = refcount/active-unactive 落点（与 lifecycle 合一）；「改一处处处见」「token 按 object 计一次」自然成立；裁定 snapshot vs live-ref（Case A/B）。捎带退潮：删 self 门面窗 `class:objectId` 疤痕、评估别名。文档回流：index.md 核心 + object/persistable/thinkable/executable/collaborable self.md。
+- [x] **rebase → 当前 main**（worktree 6 ahead/0 behind，base 32c0a72e）：吸收 `ba02c165 state.json→data.json` + A1/A2 + stone-scope；冲突解 8 文件（模式=main 结构 + 我的 accessor 路由）；门禁全绿（详见 memory）。安全网 `backup/split-pre-rebase`。
+- [x] **P4a（session 对象表，B→A 核心）—— landed**（worktree 1d9083b7）：`core/runtime/session-object-table.ts`——一个 session（内存线程树）内 `objectId → 唯一持 data 实例`（identity map，挂根 thread `_objectTable`，runtime-only/job-scoped/非永生）；ContextWindow=对它的引用，内存 `window.object` 解析为指向表项的共享引用、磁盘仍持 `objectRef`（持久格式不变）。`WindowManager.fromThread`+`instantiate` 收敛窗 object 到表单一实例；`removeObjectFromSession` 末-ref-evict 删表项（核心 10 无悬空引用）。**工程取舍**：`.object` 留内存（共享指针）→ `objectDataOf`/budget/window-hash/persistence/29 读者**全不变**，批评官两高危项（ref 窗 token 塌零/hash 丢内容敏感）自动不发生。回归网 `session-object-table.test.ts`（5 pass：共享/live-ref/不误共享/evict/objectKeyOf）。gate：tsc 非 web 空/core+thread 757 pass 0 fail/storybook 64/0。
+- [x] **P4b —— 并入 P4a（无新代码）**：末-ref-evict 已在 P4a；budget/window-hash 在共享指针下「按窗各计」即现状语义、无需改（裁决 II 纠错已确认 token 按窗各计、非去重）；**active init seam dormant**（无 facade class 有 active body，fast-path no-op，延后到首个 active body 出现）。
+- [x] **P4c 文档成对回流 —— landed**（ooc-0）：index.md 核心 4（新增 session 对象表 single-source + window=ref）+ `## runtime`（对象表 owner 登记）；object self.md 新增「### 对象表与引用（核心 4）」细节补充（含 live-ref 作用域二分 / token 按窗各计 / read_only 降储备 / **现状诚实：表多 1:1 待 objectId 去重**）；`knowledge/lifecycle.md` 新增「五、session 对象表」实施走查。doc-drift + no-deprecated 门禁绿。
+  - **本期退役/别名/scar 暂留**（非阻塞、harmless）：`ContextWindow=OocObjectInstance` 别名按现结构语义正确未删；self 门面窗 `class:objectId` 在单例 object=class 模型下正确、未删；均记为后续独立退潮。
 
-> 状态：**裁决修正中（B→A：统一 ref + session 对象表）**。P0–P3 已落（结构剥离达成，`window.object` 为过渡态）。P4 重定义为目标落地，正派 review fan-out 压契约冲击 + 解 snapshot/live-ref 上游问题，再定稿分期。
+> 状态：**B→A 落地完成（P0–P4 landed）**。窗=ref + session 对象表（一 objectId 一持 data 实例）的**结构与解析层**已钉死、全绿、文档成对回流。**诚实边界**：跨窗 data 真实共享当前稀有（独立对象每 open 新 id、门面窗 data 空 → 表多 1:1），本期是结构地基；让共享真正生效需后续「稳定/去重 objectId」（独立 issue）。剩余：worktree 合入 main（承重墙改动，合前核 branch+MERGE_HEAD 并发陷阱）。

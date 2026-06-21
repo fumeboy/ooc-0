@@ -57,7 +57,18 @@ activates_on:
 - `scheduler.emitChildEndNotifications`（`core/thinkable/scheduler.ts:73`）把 `done/failed` 终态判定纳入 `canceled`——canceled 子线程给父发 child-end marker（唤醒等待父 + 让父看见子含级联被取消），与 done/failed 一致、复用同一可见性通道（不另造 cancel event）。
 - worker 跨对象 end-sync（`core/app/server/runtime/worker.ts`）亦纳 canceled 为终态。
 
-## 五、边界与现状（v1）
+## 五、session 对象表（B→A，核心 4）—— `core/runtime/session-object-table.ts`
+
+「window=ref / 一 objectId 一持 data 实例」的运行态落点（issue `2026-06-21-object-contextwindow-split` 裁决 II）：
+
+- **表**：`getSessionObjectTable(thread)` 走 `_parentThreadRef` 到内存线程树根、惰性建 `root._objectTable: Map<objectId,{class,data}>`（runtime-only、never persisted、随 job 释放、**非永生全局表**；owner = runtime handle 在 job 执行上下文内）。
+- **收敛**：`shareObjectIntoTable(thread, w)` 以 `objectKeyOf(w)=w.objectRef?.objectId ?? w.id` 为键——表已有则令 `w.object` 指向表项（共享引用），否则以本窗 object 首登记 canonical。接线点：`WindowManager.fromThread`（每窗收敛）+ `instantiate`（新实例登记），见 `core/runtime/window-manager.ts`。
+- **末-ref-evict**：`object-lifecycle.removeObjectFromSession` 删持久化 + 过滤窗后 `evictObjectFromTable(thread, targetId)`——杜绝残窗解析到悬空共享引用（核心 10）。
+- **不变更**：`.object` 留内存（共享指针）→ `objectDataOf`/`classOf`、`budget.estimateWindowTokens`、`observable/window-hash`、thread-persist 写盘、29 读者站点**全不变**；批评官两高危项（ref 窗 token 塌零 / hash 丢内容敏感）的前提是「窗内存无 data」，共享指针下不成立 → 不发生。token 按窗各计（核心 9 多视角不同文本各占预算），非按 object 去重。
+- **回归网**：`core/runtime/__tests__/session-object-table.test.ts`（共享同一引用 / live-ref 改即处处见 / 不同 objectId 不误共享 / evict 移表项 / objectKeyOf）。
+- **现状诚实**：独立对象每 open 新 id、门面窗 data 空 → 真实跨窗 data 共享稀有（表多 1:1）；本期钉结构 + 解析层，是后续「稳定/去重 objectId」让共享真正生效的地基。active init seam（init 注入的 facade 引用补 active 派发）仍 dormant（无 facade class 有 active body）。
+
+## 六、边界与现状（v1）
 
 - **v1 仅 fork**：`referencedObjectId` 只认 fork 子线程窗；peer/self/独立成员/root → undefined、不派发。peer 跨对象 canceled / 成员对象 unactive 推 phase-2。
 - **`active` 已接线但零 body**：无 builtin 声明 active（thread 不需要）；fast-path 零成本。装好待用，首个 active body 出现时即生效（届时按上方扩展点补 init seam）。

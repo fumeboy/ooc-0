@@ -51,7 +51,7 @@ activates_on:
 1. 一切是 object；**class 是定义，object 是实例**。class 由 **readable / executable / visible / persistable** 四件套（visible 含前端 `visible/index.tsx` + **`visible/server/index.ts`** for-ui 服务端 API）+ **`index.ts`**（装配 `export const Class`，收口后端程序路由，含 visible/server）+ **`types.ts`**（定义 object data 结构）构成。
 2. **class 不支持继承**：object 经 `ooc.class` 单跳继承一个 class，但 class 不可再继承 class；复用靠 import 目标 class 导出的函数。
 3. **class 分单例 / 非单例**：非单例是可复用模板、在 `index.ts` 注册 **construct** 且可被继承；单例恰一个实例（object 一旦自定义函数方法即成自身 class 的单例）、不可被继承。
-4. **object 在 LLM 视角投影成 context window**：readable 按视角把 data 动态投影成 window 的 class 与展示内容；window 投影态与 object data 分离。
+4. **object 在 LLM 视角投影成 context window**：readable 按视角把 data 动态投影成 window 的 class 与展示内容；window 投影态与 object data 分离。**object 实例的运行态 single-source = session 对象表**（一个 session〔内存线程树〕内 `objectId → 唯一一个持 data 的实例`）；**context window 是对它的引用**——持 `objectRef`（objectId）+ 本窗视角态，磁盘只落 ref、内存 `window.object` 解析为指向表项的共享引用，故同 objectId 多窗读同一份 data（live-ref 仅同 job 内成立）。表挂线程树根、runtime handle 持有、随 job 释放（owner 见 E 区 `## runtime`）。
 5. **object method（executable）vs window method（readable）**：前者改 object data、可产生副作用；后者只动 window 投影态、返回新的不可变 window，不碰 object。
 6. **visible 经 `visible/server` 提供 UI 服务端 API**：前端经 callMethod 请求这些 for-ui server method（ctx 无 thinkloop thread，改 data → persistable.save）；人机分流不再靠 executable object method 上的 `for_ui_access` 标记（退役）。
 7. **持久化可自定义**：object 经 persistable 控制序列化目录与方式，未定义则走系统默认。
@@ -200,7 +200,7 @@ form 是 object method 填表式渐进执行的载体——× executable：objec
 
 ## runtime
 
-`_builtin/runtime` 向 agent 提供系统级接入方法——× executable：如 `create_object`（建新对象骨架）等系统接入 object method，经统一 exec 入口调用。它不是被读展示的窗，而是被 agent **组合持有**的能力来源：agent 触达「建对象 / 系统操作」这类 OOC 系统能力的入口收在此对象上。形态见 [builtins](./builtins.md)，调用契约归 [executable](../children/executable/self.md)。
+`_builtin/runtime` 向 agent 提供系统级接入方法——× executable：如 `create_object`（建新对象骨架）等系统接入 object method，经统一 exec 入口调用。它不是被读展示的窗，而是被 agent **组合持有**的能力来源：agent 触达「建对象 / 系统操作」这类 OOC 系统能力的入口收在此对象上。**× object 生命周期：runtime 在 session 执行上下文内持 object 实例解析表**（`objectId → 唯一持 data 实例`，A 区核心 4 的 single-source / context window 引用解析的落点；= flows 磁盘的运行态镜像、refcount/active-unactive 落点；挂内存线程树根、随 job 释放，**非永生全局表**——worker 各 job 独立 readThread 重建内存树、跨 job 物理隔离无需锁）。形态见 [builtins](./builtins.md)，调用契约归 [executable](../children/executable/self.md)。
 
 ## user
 
