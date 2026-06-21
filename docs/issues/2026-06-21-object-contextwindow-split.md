@@ -1,6 +1,6 @@
 ---
 title: OocObjectInstance 剥离 window 状态 —— object 与 context window（= object ref）分离
-status: landed
+status: verified
 date: 2026-06-21
 ---
 
@@ -145,6 +145,12 @@ date: 2026-06-21
 - [x] **P4a（session 对象表，B→A 核心）—— landed**（worktree 1d9083b7）：`core/runtime/session-object-table.ts`——一个 session（内存线程树）内 `objectId → 唯一持 data 实例`（identity map，挂根 thread `_objectTable`，runtime-only/job-scoped/非永生）；ContextWindow=对它的引用，内存 `window.object` 解析为指向表项的共享引用、磁盘仍持 `objectRef`（持久格式不变）。`WindowManager.fromThread`+`instantiate` 收敛窗 object 到表单一实例；`removeObjectFromSession` 末-ref-evict 删表项（核心 10 无悬空引用）。**工程取舍**：`.object` 留内存（共享指针）→ `objectDataOf`/budget/window-hash/persistence/29 读者**全不变**，批评官两高危项（ref 窗 token 塌零/hash 丢内容敏感）自动不发生。回归网 `session-object-table.test.ts`（5 pass：共享/live-ref/不误共享/evict/objectKeyOf）。gate：tsc 非 web 空/core+thread 757 pass 0 fail/storybook 64/0。
 - [x] **P4b —— 并入 P4a（无新代码）**：末-ref-evict 已在 P4a；budget/window-hash 在共享指针下「按窗各计」即现状语义、无需改（裁决 II 纠错已确认 token 按窗各计、非去重）；**active init seam dormant**（无 facade class 有 active body，fast-path no-op，延后到首个 active body 出现）。
 - [x] **P4c 文档成对回流 —— landed**（ooc-0）：index.md 核心 4（新增 session 对象表 single-source + window=ref）+ `## runtime`（对象表 owner 登记）；object self.md 新增「### 对象表与引用（核心 4）」细节补充（含 live-ref 作用域二分 / token 按窗各计 / read_only 降储备 / **现状诚实：表多 1:1 待 objectId 去重**）；`knowledge/lifecycle.md` 新增「五、session 对象表」实施走查。doc-drift + no-deprecated 门禁绿。
-  - **本期退役/别名/scar 暂留**（非阻塞、harmless）：`ContextWindow=OocObjectInstance` 别名按现结构语义正确未删；self 门面窗 `class:objectId` 在单例 object=class 模型下正确、未删；均记为后续独立退潮。
+  - **退役（验收退潮 gap，已补）**（worktree 5e99dbd6）：P0-a 当初为**方案 B** 引入的 5 个 draft 类型（`OocObject`/`WindowView`/`InlineWindow`/`RefWindow`/`ContextWindowSplit`）= B→A 反转后零 importer 死代码、注释按已否决的 objectCache/P2/P3 路线图——已删，并把 `objectDataOf`/`classOf` 注释改方案 A 口径（`.object`=指向 session 对象表单一实例的共享引用）。
+  - **暂留（非阻塞、harmless）**：`ContextWindow=OocObjectInstance` 别名按现结构语义正确未删；self 门面窗 `class:objectId` 在单例 object=class 模型下正确、未删；均记为后续独立退潮。
+  - **executable × readable 交叉契约 enrich（验收 gap，已补）**：index.md `## executable × readable` 显式重述 B→A 下 `self`=对象表共享 data 引用 / `before_win`=本窗 win（不入表）。
 
-> 状态：**B→A 落地完成（P0–P4 landed）**。窗=ref + session 对象表（一 objectId 一持 data 实例）的**结构与解析层**已钉死、全绿、文档成对回流。**诚实边界**：跨窗 data 真实共享当前稀有（独立对象每 open 新 id、门面窗 data 空 → 表多 1:1），本期是结构地基；让共享真正生效需后续「稳定/去重 objectId」（独立 issue）。剩余：worktree 合入 main（承重墙改动，合前核 branch+MERGE_HEAD 并发陷阱）。
+## 落地验收（design-workflow step 4）
+
+并发派 4 验收官（代码 / 文档 / 退潮 / 漂移）对照本 issue 承诺独立核：**代码 verified**（session-object-table + 接线 + 回归网真在，门禁亲跑绿）/ **文档 verified**（index.md↔self.md↔lifecycle.md 成对一致、无过度宣称）/ **退潮 gaps-found→已补**（死 draft 类型，见上）/ **漂移 verified**（无提案外夹带；shared-pointer-vs-字面-pure-ref 取舍已诚实标注；表 1:1/inert 边界陈述属实）。低优记录：① issue 内 P0-a..P3 commit hash 经 rebase 重写已失效——以合入 main 后的 `git log` 为准（不逐一追旧 hash）；② tsc 门禁需前端 node_modules 装好环境复跑（缺 deps 时 .tsx 误红，非 split 引入）。所有 gap 已补、无残留 → **verified**。
+
+> 状态：**B→A verified（P0–P4 + rebase + 验收补缺全 landed）**。窗=ref + session 对象表（一 objectId 一持 data 实例）的**结构与解析层**已钉死、全绿、文档成对回流、验收无残留缺口。**诚实边界**：跨窗 data 真实共享当前稀有（独立对象每 open 新 id、门面窗 data 空 → 表多 1:1），本期是结构地基；让共享真正生效需后续「稳定/去重 objectId」（独立 issue）。剩余：worktree 合入 main（承重墙改动，合前核 branch+MERGE_HEAD 并发陷阱）。

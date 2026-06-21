@@ -144,7 +144,7 @@ thinkable 的 knowledge 双源——seed（stone `knowledge/` 进 git）与 sedi
 
 ## executable × readable
 
-method 严格分两维但共用同一 **exec-by-name** 入口：object method（executable，改 Data、可副作用，收 `(ctx, self, args)`）vs window method（readable，只动投影态 win、返回不可变的新 win、不碰 Data，收 `(ctx, self, before_win, args)`）。因为二者经同一 exec 入口分派，同一 class 上**不可重名**——重名有 dispatch 优先级歧义，注册期直接 fail-loud。两维的装配交汇点是 window class 声明 `WindowClassDecl{class, object_methods, window_methods}`：一个投影 class 声明展示哪些 object method（按名引用 executable）+ 提供哪些 window method（readable 自有）。Object 多视角可投影成不同 window class，各自挑选展示的 object method。详见 [executable](../children/executable/self.md) 与 [readable](../children/readable/self.md)。
+method 严格分两维但共用同一 **exec-by-name** 入口：object method（executable，改 Data、可副作用，收 `(ctx, self, args)`）vs window method（readable，只动投影态 win、返回不可变的新 win、不碰 Data，收 `(ctx, self, before_win, args)`）。因为二者经同一 exec 入口分派，同一 class 上**不可重名**——重名有 dispatch 优先级歧义，注册期直接 fail-loud。两维的装配交汇点是 window class 声明 `WindowClassDecl{class, object_methods, window_methods}`：一个投影 class 声明展示哪些 object method（按名引用 executable）+ 提供哪些 window method（readable 自有）。Object 多视角可投影成不同 window class，各自挑选展示的 object method。**B→A 下 self/win 切分更清**：object method 的 `self` = session 对象表中该 objectId 单一实例的 data（共享、改即处处见，A 区核心 4）；window method 的 `before_win` = **本窗自己的** `win`（视角态留窗、**不入对象表**）——故同一 object 的多视角窗各持自己 win、共享同一 data。详见 [executable](../children/executable/self.md) 与 [readable](../children/readable/self.md)。
 
 ## reflectable × persistable
 
