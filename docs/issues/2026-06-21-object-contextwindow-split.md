@@ -84,6 +84,29 @@ date: 2026-06-21
 
 **受影响清单补漏（completeness）**：observable/window-hash（哈希输入变 object+view 两源）、**BudgetManager token 计量新契约缺口**（一 object 多 view→token 按 object 计一次 / view 各计自己）、visible/web ~20 文件、lifecycle phase-2 耦合、collaborable、isInlinePersisted 判据。
 
+## 裁决修正（2026-06-21，方案 B → A：统一 ref + session 对象表）
+
+用户拍板把**目标结构**从方案 B 改为 **统一 ref + session 对象表**（接近原否决的 A，但否决理由已反转）：
+
+- **Object（单一真相）**：一个 session 内 `objectId → 唯一一个持 data 的 ooc instance`，活在 **session 作用域对象表**。
+- **ContextWindow = 纯 ref**：只持 `objectId`（指向）+ 本窗视角态（status/title/win/closable/投影 POV/createdAt/parentObjectId）。**任何窗都不持 object data**（含原 B 的 inline 窗）。
+- 多窗 ref 同一 objectId → 经对象表解析到同一 instance、读同一份 data。
+
+**与原 B 的差**：B 让 inline 窗内联 `{class,data}`、只有 ref 窗持 ref + objectCache（**thread-scoped**）；A 是**所有窗纯 ref + 一张 session 对象表持唯一 instance**。故 **P3 已落的 `window.object={class,data}` 是过渡态**，目标要把 data 从窗彻底移到对象表、窗只剩 `objectRef`。
+
+**为何反转「否 A」**（原因曾是：偏离大 + 行为熵增）：
+- **净降熵**：消除三套并存的临时机制——「每窗一份 data 拷贝」「门面窗 data={} 渲染期现算」「跨 thread 经 state.json 做隐式共享后端 + last-writer-wins 整份覆盖」——收敛成一张表。
+- **与 lifecycle 同构**：refcount 已是 **session 作用域**数引用（`countSessionReferences` 遍历可达 thread）；对象表正是 active/unactive 落点、refcount = 表项的 ref 数。A 让 split 与 lifecycle 合一；B（thread-scoped cache）反与 session-scoped refcount 错配。
+- 「改一处处处见」「token 按 object 计一次」在 A 下免费成立（见 objectcache 调查：B 的 thread-scoped cache 够不着 cross-thread、而 cross-thread 才是这俩诉求的真正落点）。
+
+**受影响设计元素**（对照 index.md，待 review fan-out 逐一核契约）：对象模型（self.md 核心 1/4/10：窗=ref、对象表、refcount 落点）/ persistable（窗持久化降纯 ref + 对象 state 单写；inline 对象如 thread 自身怎么落）/ thinkable·context（init 注入、投影渲染从对象表取 data、_renderedWindows）/ executable·window-manager（instances Map → session 对象表、dispatch self 从表取）/ collaborable（跨 thread 共享=ref 同一表项）/ observable·window-hash + BudgetManager（按 object 计）/ runtime·lifecycle（refcount=表项 ref 数）。
+
+**待 review 解的上游问题**：
+1. **snapshot vs live-ref**（context.md Case A/B 未决）：跨 thread 多窗 ref 同一对象，读**实时同一 instance**（live-ref，改即可见）还是 **copy-on-share 快照 + 失效事件**？统一 ref + 单 instance 暗示 live-ref——须确认是否接受（含并发 job 写竞争）。
+2. **对象表 owner 与边界**：表挂哪（session 级 runtime handle？）、跨 thread 并发读写、与 stone/flow 持久层关系。
+3. **inline 对象归宿**：thread 自身这种「随 thread-context 整存」对象，在对象表模型里是表项 + 内联持久，还是特例。
+4. **过渡分期**：P3 的 `window.object` → `objectRef` 怎么分阶段（含 web/visible ~20 文件、collaborable）。
+
 **落地进度**：
 - [x] **P0-a** 并行 draft 类型（`OocObject`/`WindowView`/`InlineWindow`/`RefWindow`/`ContextWindowSplit`，additive 未启用、alias 不动，tsc 绿）—— `context-window.ts`（worktree 520e62ef）。
 - [x] **P0-b** 回归网 `split-invariants.test.ts`（refcount / window-hash content-sensitivity / WindowManager round-trip 不丢 win，4 绿）（79bbed85）。
@@ -94,6 +117,6 @@ date: 2026-06-21
   - **决策：语义变更拆出 P3**。原 P3「option c：objectCache 让 ref 窗共享同一 `.object` 指针」会改 mutation 可见性 + token 计量（**语义变更**），与「剥离」（纯结构）不同质——拆到 P4 单独验证（勿过度机制化：split 目标不依赖共享）。
   - **id 二元已解**：thread 一条只一个 inline 窗；talk/reflect_request 渲染期投影、非独立存窗。ref 窗 id=objectId（现 1:1）。
   - 独立验收：4 门禁绿（tsc 无新错 / core+thread 773 / storybook 64 / no-deprecated）+ 全 cast-hidden 站点（flow-runtime-object/window-hash/talk-delivery/wait/grep-impl）逐一核为 accessor-safe + 磁盘平铺写读两端一致。
-- [ ] **P4（拆出的语义增量 + 退潮 + 回流，可独立成 issue）**：① objectCache 让多 ref 窗共享同一 `.object`（=「共享=第二个 view」，须验 mutation 可见性 + BudgetManager token 按 object 计一次）；② 删 self 门面窗 `class:objectId` 疤痕；③ 评估删 `ContextWindow=OocObjectInstance` 别名（按现结构别名仍语义正确，未必需删）；④ 文档回流（index.md 核心 4/10 + object/persistable/readable self.md + thread.md：陈述「对象身份收进 `.object`、磁盘平铺翻译」实施细节——设计层 object↔window 分离的**概念**未变，仅实施落形）。
+- [ ] **P4（重定义为目标落地：统一 ref + session 对象表）—— 待 review fan-out 定细节 + 分期**：把 object data 从窗（P3 过渡态 `window.object`）移到 **session 对象表**，窗降为纯 `objectRef`；对象表 = refcount/active-unactive 落点（与 lifecycle 合一）；「改一处处处见」「token 按 object 计一次」自然成立；裁定 snapshot vs live-ref（Case A/B）。捎带退潮：删 self 门面窗 `class:objectId` 疤痕、评估别名。文档回流：index.md 核心 + object/persistable/thinkable/executable/collaborable self.md。
 
-> 状态：P0–P3 已落（结构剥离达成）。**P3 即用户原始诉求「OocObjectInstance 剥离 window 状态」的核心交付**。P4 是拆出的语义增量（objectCache 共享）+ 退潮（scar/别名）+ 文档回流，与「剥离」不同质、不阻塞 split 目标，待裁决是否本轮续做或独立成 issue。
+> 状态：**裁决修正中（B→A：统一 ref + session 对象表）**。P0–P3 已落（结构剥离达成，`window.object` 为过渡态）。P4 重定义为目标落地，正派 review fan-out 压契约冲击 + 解 snapshot/live-ref 上游问题，再定稿分期。
