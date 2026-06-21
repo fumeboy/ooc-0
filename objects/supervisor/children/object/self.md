@@ -52,7 +52,9 @@
 9. **ooc agent = ooc object with LLM**：在 readable / executable / visible / persistable 之上，额外具备 **thinkable / collaborable / reflectable**。agent 持名为 **`talk`** 的 object method——执行即创建一条 **thread**，thread 内运行 LLM 的 **thinkloop**，以此实现 agent 的智能。
    **`self.md` 是 agent 实例独有的身份**：agent 的 data 含一个 `self` 字段（身份正文文本），由 agent 的 persistable 写入/读回实例目录的 `self.md`、并渲为该 agent **self 门面窗的 self 视角内容**（`resolveProjection`→`readSelf`；他者视角渲 `readable.md`）——**不进 thinkloop instructions**（身份只活在 self 门面窗这一处）。非 agent 的 object（工具 object、class 定义）没有 self.md。
 
-> 核心设计 9 条已逐条与用户敲定（仿 context.md 听写/grill 流程）。**系统自带 builtin class/object 的清单索引见 supervisor `knowledge/builtins.md`**（高内聚低耦合：本文只讲对象模型、不列具体 builtin）。派生设计 / 细节补充 / 模拟推演待补。
+10. **对象有生命周期：`construct` 诞生 → `active` / `unactive` 按引用计数停启 → 无独立 destruct（删除是 `unactive` 的自决）**。**context window 即引用**：一个 object 在某 thread 的 context 里呈现为 context window（核心 4），这同时就是对该 object 的**一次引用**。三个生命周期钩子皆**可选**、与 `construct` 对称，皆在 `index.ts` 的 `Class` 注册：`construct` 在身份诞生时产出初始 data（一次，核心 3）；**`active`** 在 object 的引用数由 0 变 1（被某 context 首次引用）时触发；**`unactive`** 在最后一个引用被移除、引用数归 0 时触发。**删除是 `unactive` 的可选自决、无独立 destruct**：`unactive` 返回 `{ delete?: boolean }`——缺省 / `false` = 只**停用**（释放运行时资源、磁盘身份留存，之后被重新引用即再 `active`）；`delete: true` = 把该 object **彻底从 session 移除（含持久化文件）**。删除只发生在引用归零这一刻（故绝不留悬空引用），且由 object 自己决定——**没有独立的 destruct 钩子、没有强制销毁**；OOC object 默认是持久身份。**`close` 即移除一个引用**：close 原语把一个 context window 从某 thread 的 context 移除（引用减一），归零即触发该 object 的 `unactive`。**construct 可标结构窗不可关**：thread construct 构造初始 context 时，可把某些 context window 标记为不可关闭；对其执行 close 将被拒绝（结构窗例：thread 与 creator 的恒在通道）。
+
+> 核心 1-10 已逐条与用户敲定（仿 context.md 听写/grill 流程）。**系统自带 builtin class/object 的清单索引见 supervisor `knowledge/builtins.md`**（高内聚低耦合：本文只讲对象模型、不列具体 builtin）。派生设计 / 细节补充 / 模拟推演待补。
 
 ---
 
