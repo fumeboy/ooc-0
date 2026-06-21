@@ -282,7 +282,7 @@ OOC 朝 OOP 哲学推进——「Object 自己编程控制自己的 executable/r
 | `readable` | `readable(ctx,data,win)→ReadableProjection{class,content,consumedMessageIds}`：POV 投 thread/talk/reflect_request；`window[]`（含 window method `set_transcript_window`/`threadCompress`/`threadResize`） | 标准 |
 | `executable` | `methods[]`：`say`(单写 callee thread + 触发对端调度) / `close` / `share` / `new_feat_branch` / `create_pr_and_invite_reviewers` / `end` / `todo` | 标准 |
 | `persistable` | `mode:"inline"` + `save=saveThread`/`load=loadThread`；inbox/outbox append-only 存储 | 标准 |
-| `unactive` | `cancelSubtree`(refcount→0：级联子线程 canceled) | 标准 |
+| `unactive` | refcount→0：non-terminal(running/paused/waiting)→发 inbox 通知「creator 关窗、无订阅者」由 thread 自决 end；terminal→仅清理。**不再 cancelSubtree/canceled**（退役） | 标准（policy 改写） |
 | `onChildTerminal` | child→终态 → **调度 creator**（不写副本）；creator 重投影子 thread 见终态/endSummary | 新·thread 专属派发位 |
 | `compress.maybeCompress(thread,tok)` | 触发判定 + spawn 区段算法 + 经 `WindowManager.instantiate` spawn summarizer fork + 置 inFlightCompress/清 compressIntent | 新 |
 | `compress.compressWaitIntent(thread,tok)→{forkId}\|null` | force-wait **纯查询**（返意图，不切 status；框架据此 enterWaiting） | 新 |
@@ -336,10 +336,15 @@ OOC 朝 OOP 哲学推进——「Object 自己编程控制自己的 executable/r
 
 1. **单写零消息副本**：一场对话存 callee thread 一份（inbox=caller→callee / outbox=callee→caller）；caller 经 peer-ref 投影、不留副本。删 caller outbox 副本 + 删两条 say 路径的 inline 写 peer.status（status 写入归框架）。
 2. **幂等不全删（纠正）**：onChildTerminal/caller-wake 保留**瘦身持久消费游标**（tail/bool，无消息内容）做边沿去重；level-triggered 重扫作崩溃恢复骨架。**非「无幂等负担」**。
-3. **refcount peer 轴不计存活（纠正，跨 lifecycle）**：refcount 生命周期只数 creator/child 持有关系；peer ref 平等投影、不递减对端存活；caller 关 peer 窗只 evict 自侧引用。回流 object 核心 10 + 协调 lifecycle issue。
+3. **unactive 改通知模型（R3 定稿，取代「peer ref 不计数」方案）**：refcount **保持统一**（peer 窗照样计数），差异从「算不算引用」挪到「unactive 做什么」——
+   - **non-terminal（running/paused/waiting）线程 refcount→0**：thread.unactive **不再切 canceled / 不级联**，改为往**该 thread 自己的 inbox** 发一条系统消息「creator 已关闭对话窗口，当前已无消息订阅者」（refcount=0 = 无订阅者的字面意思）。thread 下一轮 thinkloop 看见、**自决**（通常优雅 `end`）。waiting 线程因 inbox 增长被泛型 wakeup 自然唤醒处理。
+   - **terminal（done/failed）线程 refcount→0**：仅清理（释放运行资源、磁盘身份留存），保留 `{delete?}` 自决。
+   - **分层**：core 泛型 refcount→派发 unactive 机制**不动**；只改 **thread class 的 unactive policy body**（cancelSubtree → 发通知）。peer 平等天然保住（关窗不杀对端）、契合「无强制 destruct / 删除是自决」。
+   - **退役 `canceled` 状态 + `cancelSubtree`**：`canceled` 唯一产生点是 cancelSubtree（thread/index.ts:214），改通知后无产生者 → 全树退役（ThreadStatus union / TERMINAL 集 / scheduler.ts:75 / worker.ts:303 / flows model.ts:71 / thread/index.ts）；thread 终结一律走自己的 `end`（done）。**这改了 lifecycle issue（landed）的 close→cancel→级联契约 + canceled 概念**——回流 object 核心 10 + 协调 [[2026-06-21-object-activation-lifecycle]]。
+   - **接受宽限态**：通知后到 thread 自 end 之间存在「running 但 refcount=0、无观众」的宽限期，无强制兜底（符合 agent 自治 / 无强制 destruct）。
 4. **1 写律 + 2 唤醒律**：写一份 on callee thread；say→对话对端（talkWindow 解析）、onChildTerminal→树 creator（creatorThreadId），共用 `enqueueThread` 但目标解析分两套。
 5. **enqueueThread = 泛化/复用 `notifyThreadActivated`**（勿造同义）；同 session 内存 / 跨 session 持久调度信号；保留终态复活。
-6. **退役清单扩**：emitChildEndNotifications + harvest 内联（一/二轮）+ scheduler.ts marker 机制（:44/79-96）+ **worker.ts:263-348** + 两条 say inline-status 路径 + CompressV2Win core 影子。
+6. **退役清单扩**：emitChildEndNotifications + harvest 内联（一/二轮）+ scheduler.ts marker 机制（:44/79-96）+ **worker.ts:263-348** + 两条 say inline-status 路径 + CompressV2Win core 影子 + **`canceled` 状态全树（ThreadStatus/TERMINAL/scheduler.ts:75/worker.ts:303/flows model.ts:71/thread index.ts）+ `cancelSubtree` 函数（thread/index.ts:210）**。
 7. **撤销第一轮 marker 裁决**：撤 #3 notify-marker 实现 + 改硬验收「父 inbox 计数=1」→「creator 重投影见子终态/endSummary」+ 作废 collaborable 回流「第二条 inbox 写入路径」（零副本后无此路径）。
 
 **接口表修正纳入**：表 C 行号 120→441；resolve\* 新槽须同步 register/seedFrom merge；collaborable 核心条 6 + index.md 三处改写。
@@ -347,7 +352,7 @@ OOC 朝 OOP 哲学推进——「Object 自己编程控制自己的 executable/r
 **残留待决（须 Supervisor 拍 / 可能要第四轮定向 review）：**
 - **R1 observable 事件产出**：删 `inbox_message_arrived` 后，是否在调度点保留轻量 `context_change` 观测事件让 loop_timeline 不盲？（防 e2e 观测漂移）——建议派 observable reviewer。
 - **R2 enqueueThread 归属**：runtime（session/job 调度）还是 thinkable（scheduler 所在）？与 notifyThreadActivated 去重方案。
-- **R3 refcount peer 轴**：跨 lifecycle issue 的协调——是在本 issue 改 object 核心 10，还是回 lifecycle issue 改？（涉及两 issue 边界）
+- ~~**R3 refcount peer 轴**~~ → **已定稿**（裁决 #3 unactive 通知模型：refcount 统一计数、unactive non-terminal 发通知不 cancel、退役 canceled/cancelSubtree、协调 lifecycle issue）。
 - **R4 peer-ref 投影自交付**：本 issue 与 split/lifecycle backlog「referencedObjectId 扩 member/peer」三方合并的收口落点 + 推进顺序。
 - **R5 persistable outbox 单 writer 确认**（派 persistable reviewer）。
 
