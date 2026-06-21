@@ -75,10 +75,10 @@ activates_on:
 
 都带 schema、合并进窗方法菜单（可发现）：
 
-- **`resize`**：`level`（`0|1|2`，必填）。内容窗设 compressLevel（`core/readable/display-resize.ts:displayResize`，共享实现、class 自声明才生效）；thread 窗设 autoCompressLevel（`agent/children/thread/readable` 的 `threadResize`）。
+- **`resize`**：`level`（`0|1|2`，必填）。内容窗设 compressLevel（file/search/knowledge/terminal_process/interpreter_process **各在自己 readable 各自实现** resize，即使实现重复——无共享实现）；thread 窗设 autoCompressLevel（`agent/children/thread/readable` 的 `threadResize`）。
 - **`compress`**：**无参**（thread 窗 `threadCompress`：置 `win.compressIntent=true`）。class 可自决加可选参，但协议本身无参。
 
-**无通用默认表**：不存在 `default-window-methods`；`resolveWindowMethod`（`object-registry.ts`）只沿 class window[] 查、查不到返 undefined。内容窗的展示折叠由各窗 class 自声明 `displayResize` opt-in。
+**无通用默认表 + 无共享实现**：不存在 `default-window-methods`；`resolveWindowMethod`（`object-registry.ts`）只沿 class window[] 查、查不到返 undefined。内容窗的展示折叠由各窗 class **各自实现** resize（即使实现重复——协议纯粹优先于 DRY；「共享一个 resize 实现给各类 import」= 默认表换皮，已弃）。
 
 ### 3.2 compressLevel 投影（内容窗读出侧）
 
@@ -131,7 +131,8 @@ resize 设 autoCompressLevel 0/1/2，thread 窗映射为未总结 transcript 的
 
 | 旧概念 / 过渡态 | 归并到 |
 |---|---|
-| compress 作"框架塞的通用 window method"、挂**通用默认表** `default-window-methods`（`resolveDefaultWindowMethod`/`DEFAULT_WINDOW_METHODS`） | 退役——compress/resize 是**协议**，class 自声明；`resolveWindowMethod` 无默认回退。内容窗展示折叠改各窗 opt-in `displayResize` |
+| compress 作"框架塞的通用 window method"、挂**通用默认表** `default-window-methods`（`resolveDefaultWindowMethod`/`DEFAULT_WINDOW_METHODS`） | 退役——compress/resize 是**协议**，class 自声明；`resolveWindowMethod` 无默认回退。内容窗展示折叠改各窗**各自实现** resize |
+| 内容窗 display-resize 共享实现 const `displayResize`（5 类 import 同一份） | 退役（2026-06-21）——「共享一个实现给各类 import」是默认表换皮、违协议纯粹；各窗 class 各自实现 resize（允许重复） |
 | `expand`（逆向降档 window method，`threadExpand`） | 退役——由 `resize(level)` 直接设档位取代（升降合一为滑杆） |
 | `compress` 带 `scope`（windows/events）+ `keepTail`/`fromIdx`/`toIdx`/`summary` 参（agent 自写摘要） | 退役——compress 无参意图；折哪段由框架定（保末尾若干条）、摘要由 summarizer fork 生成；`scope` 全链消失（内容窗 vs thread 窗由 class 自实现区分） |
 | 应急 clamp 作"唯一同步兜底"独立存在 | 重定位为 **force-wait 之下的 clamp floor**（优雅路径=force-wait + fork-summarize；clamp 是其下最后保不崩） |
