@@ -88,7 +88,11 @@ date: 2026-06-21
 - [x] **P0-a** 并行 draft 类型（`OocObject`/`WindowView`/`InlineWindow`/`RefWindow`/`ContextWindowSplit`，additive 未启用、alias 不动，tsc 绿）—— `context-window.ts`（worktree 520e62ef）。
 - [x] **P0-b** 回归网 `split-invariants.test.ts`（refcount / window-hash content-sensitivity / WindowManager round-trip 不丢 win，4 绿）（79bbed85）。
 - [x] **P1** 独立对象窗自描述 `objectRef` + `referencedObjectId` 双读（= lifecycle phase-2「扩到 member 窗」合并；additive+adapter 兼容；行为安全：无 member active/unactive body→fast-path）。gate：tsc core+thread 0 / split-invariants+object-lifecycle+thread 42/0 / storybook 64/0（7876260a）。
-- [ ] **P2** 真 `objectCache`（ref 窗 data 经 cache 解析、多 ref 窗共享同一 object=「共享=第二个 view」）+ `ContextWindow` 切 union + 读者经 `objectOf()` helper 渐进迁移（RefWindow 暂留 cached data 副本保 readers 绿）+ 删 self 门面窗 `class:objectId` 疤痕。
-- [ ] **P3** 持久对齐 + dogfooding 迁移；**P4** 删 OocObjectInstance 别名 + 删 RefWindow cached 副本 + 文档回流（index.md 核心 4/10 + object/persistable/readable self.md）。
+- [x] **P2a** `objectDataOf`/`classOf` accessor —— 读者取 object data/class 的收敛点（worktree f7a48181，零行为）。
+- [x] **P2b** 29 文件读者迁移到 accessor（bdbd0463，纯路由零行为；WindowManager seam / hydrate / mutation alias 正确未迁；tsc 无新错 / 773 测 / storybook 64/0）。
+- [ ] **P3（flip，crux）—— 设计已定（option c）**：内存里每个窗持 `.object: OocObject`（inline 窗自有；ref 窗经 `WindowManager.objectCache: Map<objectId,OocObject>` 共享同一指针、hydrate/instantiate 时设）。`objectDataOf(w)=w.object.data` / `classOf(w)=w.object.class` 统一单参、read 期不查 cache。窗顶层去掉 `data`/`class`（移入 `.object`）= 「剥离」那一刀。WindowManager dispatch（self=`instance.object.data`）/ instantiate / hydrate seam 重写。删 self 门面窗 `class:objectId` 疤痕。
+  - **id 二元已解**：thread 一条只一个 inline 窗（self/thread 窗，内联 thread object）；talk/reflect_request 是渲染期投影、非独立存窗——故无 inline 窗 id vs 对象 id 冲突。ref 窗 id=objectId（现 1:1）。
+  - gate：split-invariants（尤其 round-trip 不丢 win）+ object-lifecycle + thread + storybook + 跨 reload；在隔离 worktree 分支、未合，broken 不污染 main。
+- [ ] **P4** 删 OocObjectInstance 别名 + 文档回流（index.md 核心 4/10 + object/persistable/readable self.md + thread.md）。
 
 > 状态 `decided`：设计已定、落地分期进行中；全部 P0-P4 落完 + 一致性回流（index.md 核心 4/10 + object/persistable/readable self.md）后转 `landed`。
