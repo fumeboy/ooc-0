@@ -38,10 +38,13 @@ activates_on:
 
 3. **window method 是纯函数，只置态/意图、零副作用；副作用由 framework hook 执行**（context.md 核心 5/6）。故 resize 只写档位、compress 只置意图（thread 窗 = `win.compressIntent=true`）——**spawn summarizer fork 这种副作用不进 window method**，由 thinkable 框架 hook 见意图/阈值后执行。
 
-4. **同一 resize/compress、不同 class 自实现自己的语义**：
-   - **内容窗**（file/search/terminal/…）：`resize` 设 `win.compressLevel`（展示详略 0 全文 / 1 缩略 / 2 仅句柄，读出侧 `projectByCompressLevel` 投影）。
-   - **thread 窗**（过程增长型）：`resize` 设 `win.autoCompressLevel`（**自动压缩阈值档**——未总结 transcript 长度超该档阈值即自动折一次）；`compress` 置 `win.compressIntent`（请求立即折一次）。
-   thread 窗 self-view 渲成句柄、compressLevel 对其展示无意义，故阈值用**独立字段** `autoCompressLevel`、不复用 compressLevel（避免触动 renderer 的 display 折叠路径）。
+4. **同一 resize/compress、不同 class 自实现自己的语义；且 fold 只属于「自我主历史窗」**（三类窗各归其位）：
+   - **内容窗**（file/search/terminal/…，当前真相窗）：`resize` 设 `win.compressLevel`（展示详略 0 全文 / 1 缩略 / 2 仅句柄，读出侧 `projectByCompressLevel` 投影）。**不 fold**——它是 object 活状态、随时可全量召回，只调展示档位。
+   - **自我主历史窗**（self-view thread 窗 + reflect_request，折 `thread.events`）：`resize` 设 `win.autoCompressLevel`（**自动压缩阈值档**——未总结 transcript 超档即自动折一次）；`compress` 置 `win.compressIntent`（请求立即折）。**summarizer-fold 专属此类**。
+   - **派生会话视图**（talk/peer 窗）：**不挂 compress/resize、不 fold**（Case E 裁决）。其 transcript 是 `filterTalkMessages` 跨两条 thread 按 createdAt 重排出的**派生视图**、index 不稳（乱序回信可 sort 回插已折段），且 harvest 机制只认自我主历史窗。talk 的压缩走 window-overflow + transcriptViewport（`set_transcript_window`）+ inbox/outbox 持久召回。
+   自我主历史窗 self-view 渲成句柄、compressLevel 对其展示无意义，故阈值用**独立字段** `autoCompressLevel`、不复用 compressLevel（避免触动 renderer 的 display 折叠路径）。
+
+   **框架原则（窗按增长形态自归类压缩手段，新增长窗据此自归类）**：自我主历史窗（append-only 单流、index 稳）→ summarizer-fold；当前真相窗 → 展示档位 compressLevel；派生会话视图 → overflow + viewport（不 fold）。这是 transcript-gated（核心 9）与窗 overflow 正交背后的隐含原则显式化。
 
 5. **历史折叠的摘要由 summarizer fork 生成、非 agent 自写**（镜像 Claude Code full-compact 的 Fork Agent）。框架见 compressIntent / 超阈值即 fork 一条 summarizer 子线程：seed 入早期 transcript 段 + 指令「浓缩成摘要、直接输出正文」，**不给工具**、单轮 think 出摘要即 end。摘要 harvest 进 `win.summarizedRanges{fromIdx,toIdx,summary}`。区别于"agent 在调用里手写 summary"：agent 不必中断本职去拟摘要，压缩是后台异步过程。
 
@@ -49,7 +52,7 @@ activates_on:
 
 7. **折叠态视角独立、随窗持久化**。compressLevel / autoCompressLevel / compressIntent / summarizedRanges / inFlightCompress 都是 win（投影态），随窗实例走；同一 object 在不同视角是不同窗实例、各持自己的 win（context.md 核心 2/6）。故 A 视角折叠**不影响** B 视角；折叠态随**自己视角 thread 窗**（THREAD_CLASS_ID，inline）天然落 thread-context.json、跨 reload 不丢（context.md 核心 7/10）。
 
-8. **compress 的归属窗 = 它要折的内容所在的窗**。self 视角折"我自己的 thread 历史" → 自己视角 thread window；他者视角折"与对端的会话" → 该 talk window（context.md 核心 9/10）。agent 只在该窗见到 compress/resize → 写读自然对齐。
+8. **compress 的归属窗 = 它要折的内容所在的窗**（且 fold 只属自我主历史窗，核心 4）。self 视角折"我自己的 thread 历史" → 自己视角 thread window（reflect_request 同理，折 thread.events）。agent 只在该窗见到 compress/resize → 写读自然对齐。他者视角的 talk window **不折**（派生视图，核心 4 / Case E），只挂 `set_transcript_window`（context.md 核心 9/10）。
 
 9. **自动压缩（auto-trigger）= 阈值驱动的后台折叠**。每轮 think 在构造 context 后、LLM call 前，框架估算自己视角 thread 窗的**未总结** transcript token（扣已折段）；若 `compressIntent` 或 `未总结 token > threshold(autoCompressLevel)`、且**无在途 compress** → spawn summarizer fork 折早期段（保末若干条尾巴）、清 compressIntent。一次一段、不链式；折完仍超下轮再触发。
 
@@ -102,9 +105,9 @@ resize 设 autoCompressLevel 0/1/2，thread 窗映射为未总结 transcript 的
 
 - **写入**：`harvestSummarizerForks` 经 `addSummarizedRange` 追加（规整：排序、合并重叠/相邻；不夹边——写时未必知读时长度）。
 - **读出**：`projectSummarizedRanges(items, ranges, renderItem, renderSummary)` 通用 over「item→渲染单元」，按真实 `items.length` 夹边、丢非法段、段内连续 items 折成一条 summary。
-- **两调用点坐标系不可混**：self 视角折 `thread.events`（events 坐标，`buildInputItems` 构造 transcript 时投影）；peer/talk 视角折该会话窗 messages transcript（messages 坐标，`filterTalkMessages` 输出）。
+- **fold 只在自我主历史窗**（self-view thread / reflect_request）：折 `thread.events`（events 坐标，`buildInputItems` 构造 transcript 时投影；events 单写者 append-only、已发生项 index 稳定，故 `{fromIdx,toIdx}` 跨轮可靠）。**派生会话视图（talk/peer）不 fold**（核心 4、Case E）——其 messages 是 `filterTalkMessages` 跨双流 createdAt 重排的派生视图、index 不稳，故无 messages 坐标的折叠路径。`projectSummarizedRanges` 对 talk 窗的 `summarizedRanges`（恒空）退化为 no-op、不折。
 
-**tool-pair 安全（self 视角专属）**：self 视角 events 渲成含 `function_call`/`function_call_output` 的 items；折的区段若只覆盖一对 call/output 的一半，投影后留孤儿 tool 块——provider 层（`claude-transport.ts`）**不** sanitize，孤儿 tool_use/tool_result 会被 LLM provider 拒、本轮 think 崩。故折叠**投影前先把区段吸附到 tool-pair 安全边界**（`snapRangesToToolPairs`）：只覆盖配对一半就外扩到覆盖另一半（两半要么都折、要么都留），pending call（有 call 无 output、恢复期边界）不外扩、原样保留；吸附只调本轮投影用的 range、不改存储的折叠段。peer 视角折 messages（无 tool 块），天然免疫。
+**tool-pair 安全（self 视角专属）**：self 视角 events 渲成含 `function_call`/`function_call_output` 的 items；折的区段若只覆盖一对 call/output 的一半，投影后留孤儿 tool 块——provider 层（`claude-transport.ts`）**不** sanitize，孤儿 tool_use/tool_result 会被 LLM provider 拒、本轮 think 崩。故折叠**投影前先把区段吸附到 tool-pair 安全边界**（`snapRangesToToolPairs`）：只覆盖配对一半就外扩到覆盖另一半（两半要么都折、要么都留），pending call（有 call 无 output、恢复期边界）不外扩、原样保留；吸附只调本轮投影用的 range、不改存储的折叠段。（fold 仅自我主历史窗 events；派生会话视图不 fold，无此问题。）
 
 ### 3.5 summarizer fork 机制（framework）
 
@@ -161,10 +164,12 @@ fork 折 `[0,k]` 期间 parent 继续产新 events（index k+1…）。因 event
 
 server crash 后 `win.inFlightCompress` 残留而 fork 丢，或 summarizer fork 自身 failed。若不处理，force-wait 会永久卡 parent（等一个不会回的 fork）。**已解**：harvest 端 failed→关本窗自动压缩（防反复 spawn-fail livelock）+ 清 inFlight；orphan（child 不存在）→清 inFlight 解除 force-wait；之后 clamp floor 兜底超 hard。bootstrap 重入兜底唤醒。
 
-### Case E — peer/talk 窗的 resize/compress（便捷模式精度，低）
+### Case E — talk/peer 窗不建 summarizer-fold（已解，2026-06-21）
 
-talk 窗 compressLevel 真有展示意义（整窗档位）+ summarizedRanges 折 messages 段。首版**优先保证 self-view thread 窗主路**；talk 窗保留 resize（设档位）+ compress（折 messages）。talk 窗 compress 走 fork-summarize over messages 还是显式段，实现期定。坐标用该窗 messages 数算总长（非 thread.events.length）。
+**裁决：talk 窗不挂 compress/resize、不 fold**（issue `2026-06-21-talk-window-compress.md`，9-reviewer fan-out + top-view 再审 + 用户采纳）。理由：summarizer-fold 是**自我视角**能力（折自己那条 append-only 主历史 thread.events、单写者 index 稳）；talk transcript 是 `filterTalkMessages` 跨双流 createdAt 重排的**派生视图**——index 不稳（乱序回信 sort 回插已折段、破坏 `{fromIdx,toIdx}` 不变量），且 harvest 机制只认自我主历史窗（旧设想里 talk 的 compress 其实是死路径：harvest 从不写 talk 窗）。强行建 talk-fold 逼出 4 个 BLOCKER（坐标不稳 / harvest 无 talk 入口 / 三层兜底对 talk 不对称 / renderer 路径），cost > value。talk 的压缩本就由 **window-overflow**（per-window 护多窗膨胀、非破坏可恢复）+ **transcriptViewport**（末 N/区间）+ **inbox/outbox 持久召回**（`set_transcript_window` 拉回任意早期段）承担。唯一窄缺口=单条长高相关 1:1 talk 窗「摘要早期留近期」——低频、可经 viewport 召回，不值得为它扛 index 不稳。**reflect_request 不在此列**：它是 self-view（isSelfThreadWindow）、折 thread.events、index 稳，与 self-view thread 同命、保留 compress/resize。
+
+> 连带退潮：原计划的 `summarizedRanges` index→id 锚点改造**取消**——其唯一强理由（折派生不稳视图）随 talk-fold 退役而蒸发，幸存 fold 消费者（thread/reflect_request）全 events-index 稳。
 
 ### 收敛
 
-**Case A（自视折叠载体归属）已解（2026-06-20）**；**Case D（fork 失败/orphan 死锁）已解**（harvest 清 inFlight + clamp floor）。Case B 已界定（首版单段 + clamp 兜底）、Case C 自洽（记不变量）。**Case E（talk 窗 compress 精度/走向）是唯一剩余开放项**——便捷模式、可最后补，不挡 self-view 主路。
+**Case A（自视折叠载体归属）已解（2026-06-20）**；**Case D（fork 失败/orphan 死锁）已解**（harvest 清 inFlight + clamp floor）。Case B 已界定（首版单段 + clamp 兜底）、Case C 自洽（记不变量）。**Case E（talk/peer 窗）已解（2026-06-21）**——裁定**不建 talk-fold**（summarizer-fold 是自我视角能力，talk 是派生视图 index 不稳）、退掉 talk 惰性 compress/resize、连带取消 index→id 改造。**全部 case 收敛，无开放项。**

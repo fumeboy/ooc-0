@@ -1,6 +1,6 @@
 ---
 title: compress v2 Case E —— talk/peer 窗 compress 的折叠机制与坐标系（self 视角已闭，peer 视角待补）
-status: in-review
+status: landed
 date: 2026-06-21
 ---
 
@@ -133,3 +133,11 @@ compress v2（resize/compress 协议 + summarizer fork + force-wait/clamp floor�
 - 风险与成本**远低于方向 A**（无 4 BLOCKER、无 summarizer 子系统扩展）。
 
 **待用户拍板**：采纳本重构（翻 Case E：方向 A→不建 talk-fold + 退 talk 惰性方法）即把 Case E 从「耦合大难题」收敛为「一次小退潮 + 一条更锋利原则 + drop 一个计划机制」。
+
+## 落地（用户采纳 2026-06-21，status=landed）
+
+用户采纳重构。已落地：
+- **代码**（worktree 分支 `refactor/compress-v2-ebb-displayresize`）：`thread/readable/index.ts` talk decl 删 `threadCompress/threadResize`（保 `setTranscriptWindowMethod`）；thread + reflect_request 不动。回归 grep 净（import 不悬空、无测试/storybook/resolveWindowClass 假设三投影都带 fold）。tsc 编辑面零新错、thread 19 pass、core thinkable 0 fail、storybook 64 pass。
+- **文档**（本仓 ooc-0）：compress.md 核心 4（三类窗框架原则 + fold 专属自我主历史窗）/ 核心 6/8 / §3.4 / §四 Case E（已解·不建 talk-fold）/ 收敛（全 case 收敛无开放项）成对回流；index→id 改造取消记入。
+- 未做（不需要）：index.md/context.md/thinkable self.md 无错误 talk-fold 断言、无需改。
+- visible badge v2 词表（observable×visible 漂移）= **独立 issue**，不属本 case（self-view v2 reasons 早已存在、与 talk-fold 无关）；留作后续退潮。
