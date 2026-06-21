@@ -15,7 +15,7 @@ activates_on:
 - **`ooc.kind = object`**，无 `ooc.class`——user **不继承任何 class**，只是一个裸 object 实例：身为 object 天然有 readable/executable/visible/persistable 四个 facet，但每一面几乎全空。
 - user **不是 agent**——不额外取 thinkable/collaborable/reflectable，不持 `talk`、不跑 thinkloop、无 `self.md` 身份正文。
 - **被动 object**：既非 tool-object（无 object method、不被 exec）也非 agent（不被 talk 目标、不被调度 LLM）。只是 web 会话里代表「人类一侧」的占位实体。
-- **data**：`Data = {}`——**空**。user 无任何业务字段；身份信封（id/title/status…）由 runtime/persistable 管理，不在 data 里。
+- **data**：`Data = {}`——**空**。user 无任何业务字段；身份元信息（id/title/status…）由 runtime/persistable 管理，不在 data 里。
 - **一句话职责**：作为 agent `talk` 的对端落地点——agent 向 `user` 发的消息进入与 user 的 thread inbox，由 web 控制面渲染给真人；真人在 UI 的输入作为对端回话注入会话。「user 的思考」全部由真人在 UI 完成，runtime 不为它调度 LLM。
 
 ## 二、self × 各维度（核心设计）
@@ -69,7 +69,7 @@ user 是实例 object（`kind=object`），无 construct——不被构造出新
 ### types.ts —— object data 结构（空）
 
 ```ts
-// user 无业务字段；身份信封由 runtime/persistable 管理
+// user 无业务字段；身份元信息由 runtime/persistable 管理
 export interface Data {}
 ```
 

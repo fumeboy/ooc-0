@@ -21,7 +21,7 @@ activates_on:
 - **data（`types.ts`）= 这个 self 是什么**，只两字段：
   - `message: string` —— 要展示的文本（可多行）。
   - `bumpCount: number` —— 被 `bump` 累加的次数。
-  - 窗信封字段（id / class / status …）与展示态（viewport）**不在 data**——data / 信封 / 投影态三分见 parent `object/self.md` 核心 1 / 4。
+  - 窗的元信息字段（id / class / status …）与展示态（viewport）**不在 data**——data / 元信息 / 投影态三分见 parent `object/self.md` 核心 1 / 4。
 
 一句话职责：**用最小代码量同时演示 class 五处可自定义点（construct + 四 facet），供建 class 作者照抄。**
 

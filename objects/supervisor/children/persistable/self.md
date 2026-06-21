@@ -31,7 +31,7 @@
    - World 内的 OOC Class 与单例 object **同落** `$WORLD_DIR/stones/<branch>/objects/<id>`（不分 `classes/` 与 `objects/` 两套目录）；其 `children/` 子目录配置**子领域**（如 `objects/image/children/png`）——parent 与 child **无继承关系，仅从属命名空间**（对齐 object-model 核心 8）。
    - 系统自带的 **builtin class** 随框架包（`@ooc/builtins/<id>`）发布，不在 world 目录里。
 
-4. **持久化逻辑可自定义**。OOC Class 可经程序自定义自己的持久化逻辑（自定义持久化文件路径与文件格式）。默认的持久化逻辑是把对象数据（**裸 data**，无信封——object↔class 绑定由同目录 `.flow.json` 承载）写入 `objects/<object_path>/data.json`——其中 `object_path` 可能直接对应 object id，也可能由 object id 映射为含 `/children/` 段的多级路径（id：`parent/child` → path:`parent/children/child`）。**第三态 inline**：运行态自有窗（如 thread）声明 `persistable.mode="inline"`，整窗随所属 thread 的 `thread-context.json` inline 落盘、不单独落 `data.json`。
+4. **持久化逻辑可自定义**。OOC Class 可经程序自定义自己的持久化逻辑（自定义持久化文件路径与文件格式）。默认的持久化逻辑是把对象数据（**裸 data**，只写 data 本身、不连 id/class 一起写——object↔class 绑定由同目录 `.flow.json` 承载）写入 `objects/<object_path>/data.json`——其中 `object_path` 可能直接对应 object id，也可能由 object id 映射为含 `/children/` 段的多级路径（id：`parent/child` → path:`parent/children/child`）。**第三态 inline**：运行态自有窗（如 thread）声明 `persistable.mode="inline"`，整窗随所属 thread 的 `thread-context.json` inline 落盘、不单独落 `data.json`。
 
 5. **数据变更由 object 主动报告，runtime 据此触发持久化**。OOC Object 经 Object Method 修改自己的数据；Method 接收一个 `ctx` 参数，`ctx` 具有 `reportDataEdit()` 方法。Object 在 Method 内调用 `ctx.reportDataEdit()` **主动**告诉 runtime 自己的数据已变更，runtime 据此触发该 Object 的（自定义或缺省）持久化程序刷新持久化文件。
    - **`reportDataEdit` → persistable.save 始终是 flow 内非版本化写**——即便某 class 的 save 把数据落在 stone 路径文件（如 agent 把 `data.self` 写 `self.md`），落的也是该 session 的 worktree 副本（如 git working-tree vs commit），**无版本化承诺、不 commit**。data 编辑一律非版本化（落 flow 缺省 data 文件，同 pool sediment 直写）。

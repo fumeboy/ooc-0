@@ -10,7 +10,7 @@ activates_on:
 
 ## win：与 Data 分离的投影态
 
-window 的展示态是 `win`，与业务 `Data` 物理分离：runtime 实例信封 `OocObjectInstance` 把 `data`（业务）与 `win`（投影态）显式分作两个字段（`packages/@ooc/core/runtime/ooc-class.ts:75`）。`win` 只放展示参数——viewport（file/knowledge 的行列视口）、transcript 区间（会话窗）等——**不放业务数据**（file path、knowledge body 这些归 Data）。win 随实例持久化，readable 渲染期连同 Data 一起读：`readable(ctx, self, win)`，用 Data 算内容、用 win 算展示范围。
+window 的展示态是 `win`，与业务 `Data` 物理分离：runtime 实例 `OocObjectInstance` 把 `data`（业务）与 `win`（投影态）显式分作两个字段（`packages/@ooc/core/runtime/ooc-class.ts:75`）。`win` 只放展示参数——viewport（file/knowledge 的行列视口）、transcript 区间（会话窗）等——**不放业务数据**（file path、knowledge body 这些归 Data）。win 随实例持久化，readable 渲染期连同 Data 一起读：`readable(ctx, self, win)`，用 Data 算内容、用 win 算展示范围。
 
 ## window method：只动 win、返回新 win
 

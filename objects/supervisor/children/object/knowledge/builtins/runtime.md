@@ -12,10 +12,10 @@ activates_on:
 ## 一、self（身份 / data）
 
 - **id** `_builtin/runtime`，**kind = class**；**单例 tool-object**：一个 world 一份，由唯一规范实例直接寻址，被多个 agent **组合持有(HAS-A)、被 exec 而非被 talk**，不跑 thinkloop。
-- **Data = {}**——空：单例工具对象无业务运行时数据；窗信封字段（id/class/status）由 WindowManager 管理，不在 Data 内。
+- **Data = {}**——空：单例工具对象无业务运行时数据；窗的元信息字段（id/class/status）由 WindowManager 管理，不在 Data 内。
 - **职责**：对**对象世界语义**的统一接入面——当前仅 `create_object`，是后续对象世界元能力（生命周期、沉淀治理）的归集点。区别于 `filesystem`（操作字节层文件）：runtime 操作的是对象世界语义，是元能力面。
 
-> **命名辨析**：本 builtin `_builtin/runtime` ≠ ExecutableContext 上的 `ctx.runtime`——后者是 WindowManager 句柄（instantiate/close 实例信封），同名不同物。
+> **命名辨析**：本 builtin `_builtin/runtime` ≠ ExecutableContext 上的 `ctx.runtime`——后者是 WindowManager 句柄（instantiate/close 实例），同名不同物。
 
 ## 二、self × 各维度（核心设计）
 
@@ -72,7 +72,7 @@ activates_on:
 ### types.ts —— object data 结构（空）
 
 ```ts
-// 单例工具对象无业务运行时数据；窗信封字段由 WindowManager 管理，不在 Data 内。
+// 单例工具对象无业务运行时数据；窗的元信息字段由 WindowManager 管理，不在 Data 内。
 export interface Data {}
 ```
 

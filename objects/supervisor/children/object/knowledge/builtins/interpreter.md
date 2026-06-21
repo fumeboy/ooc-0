@@ -44,7 +44,7 @@ children 从属于 interpreter 命名空间（id 以 `_builtin/interpreter/` 为
 
 - **construct**：即 parent `run` 委托的目标——取 `ctx.thread` 必需、`normLang(args)` + `code` 必需，跑首段脚本，返回 `{ history: [首条 record] }`；缺 thread context 或缺 language/code 则 fail-loud。
 - **data**：`Data = { history: ProcessExecRecord[] }`（每次 exec 一条）。`ProcessExecRecord`（execId/language:"ts"|"js"/code/output/ok/startedAt）本 class 自有，定义在 `types.ts`；与 terminal_process 结构同构但各自独立，不再共享代码。
-- **object method**：`exec`（在已开窗的进程内再跑一段 ts/js，结果 push 进 `self.history` 并 `ctx.reportDataEdit()` 通知重持久化）、`close`（关窗，无副作用、由 runtime 处置信封 status）。
+- **object method**：`exec`（在已开窗的进程内再跑一段 ts/js，结果 push 进 `self.history` 并 `ctx.reportDataEdit()` 通知重持久化）、`close`（关窗，无副作用、由 runtime 处置实例的 status）。
 - **window method**：`set_history_window`——调 history 视口（tail N / 固定 range），返回新 ProcessWin、不碰 data；实现在本 class 的 `readable/history.ts`（与 terminal_process 同构但独立），默认末 10 次 exec。
 - **投影**：`class:"interpreter_process"`，content 渲染 history 摘要（经 viewport 切片）+ 最近一条 full output（`renderProcessHistory`）。
 - **visible**：自定义详情面板 + diff（本 class 自有 `visible/index.tsx` / `visible/diff.tsx`）。**persistable**：无自定义，系统默认（history 是纯 JSON）。
