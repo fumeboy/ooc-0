@@ -95,7 +95,7 @@ reflectable = **自我迭代，不发明新机制**：它把已有设施（colla
 
 ## visible
 
-Object **持有并演化自身 UI 页面 + 自实现「给 UI 用的服务端 API」**——人类经浏览器看见并与之交互的那一面，与 readable（LLM 侧上下文展示）互为镜像。`ooc://` 原生寻址 1:1 映射控制面 SPA route：stone scope 是跨 session 稳定的单页 `visible/index.tsx`、flow scope 是 session 内多页 `client/pages`。除 tsx UI 外，class 经 **`<ObjectDir>/visible/server/index.ts`** 实现 for-ui 服务端 API（ctx 有 world / session / object-self、**无 thinkloop thread**；改 data → persistable.save 非版本化），由 `index.ts` 与 executable / readable / persistable 一并注册；HTTP `/call_method` dispatch 到此（与 LLM 侧 executable object method 分两条独立签名）。**前端两条编辑通路**：编辑源文件 → app 通用 file-edit 原语（A1，版本化）/ 编辑 data → callMethod 到 class 自写 visible/server（A2，非版本化）。详见 [visible](../children/visible/self.md)。
+Object **持有并演化自身 UI 页面 + 自实现「给 UI 用的服务端 API」**——人类经浏览器看见并与之交互的那一面，与 readable（LLM 侧上下文展示）互为镜像。`ooc://` 原生寻址 1:1 映射控制面 SPA route：stone scope 是跨 session 稳定的单页 `visible/index.tsx`、flow scope 是 session 内多页 `client/pages`。除 tsx UI 外，class 经 **`<ObjectDir>/visible/server/index.ts`** 实现 for-ui 服务端 API（ctx 有 world / session / object-self、**无 thinkloop thread**；改 data → persistable.save 非版本化），由 `index.ts` 与 executable / readable / persistable 一并注册；HTTP `/call_method` dispatch 到此——**仅 flow scope**（`POST /api/flows/:sid/:oid/call_method`），stone scope 只读、不调 object 程序（与 LLM 侧 executable object method 分两条独立签名）。**前端两条编辑通路**：编辑源文件 → app 通用 file-edit 原语（A1，版本化）/ 编辑 data → callMethod 到 class 自写 visible/server（A2，非版本化）。详见 [visible](../children/visible/self.md)。
 
 ## observable
 

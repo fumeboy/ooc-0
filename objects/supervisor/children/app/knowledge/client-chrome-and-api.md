@@ -53,7 +53,7 @@ app.client 只消费 app server 能力的一个较小子集，全部登记在 `p
 - **ui**：`GET /api/tree`、`GET /api/tree/file`、`GET /api/file/read`。
 - **stones / pools**：list / create stone / knowledge 目录与文件读写（写经 pool 层）。
 - **runtime**：job status、global pause status & toggle、debug status & toggle。
-- **call_method**：stone `POST /api/stones/:id/call_method` 与 flow object `POST /api/flows/:sid/objects/:id/call_method`（由 ObjectClientRenderer 等按需调）。
+- **call_method**：flow object `POST /api/flows/:sid/objects/:id/call_method`（由 ObjectClientRenderer 按需调）。**裁定：callMethod 仅 flow scope**——stone scope 不调 object 程序、stone client 只读；stone `POST /api/stones/:id/call_method` 应移除（代码侧尚存待退役）。
 
 当前**不**消费：runtime 的 llm-config / jobs list / latest debug / loop debug；stone 的 self / readme / data / server-source 读写。要新纳入须先在 transport 层登记对应 endpoint。
 

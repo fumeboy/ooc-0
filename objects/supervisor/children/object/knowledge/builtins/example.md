@@ -1,6 +1,6 @@
 ---
 title: _builtin/example — 建 class 时照抄的最小样板 class（construct / object method / readable / persistable）
-description: example 家族单一权威——以 self × 各维度透视：data={message,bumpCount} 的 self、readable 投影成单一 example 窗、executable 的 bump method、自定义 persistable 接管 save/load、无 visible、非单例有 construct；它以最小代码量演示「身为 class 就有的四张 facet + construct」五处可自定义点，是 sibling example.md 逐文件骨架的可运行对照
+description: example 家族单一权威——以 self × 各维度透视：data={message,bumpCount} 的 self、readable 投影成单一 example 窗、executable 的 bump method、自定义 persistable 落人类可读 example.md（非默认 data.json）、无 visible、非单例有 construct；它以最小代码量演示「身为 class 就有的四张 facet + construct」五处可自定义点，是 sibling example.md 逐文件骨架的可运行对照
 activates_on:
   "object::root": "show_description"
 ---
@@ -38,7 +38,7 @@ window method **`set_viewport`** 调整投影视口（line / column range）、�
 
 ### self × persistable —— 序列化（有自定义）
 
-**有自定义**——`save` / `load` 把 data 以裸 JSON 落在系统解析好的实例目录 `ctx.dir/data.json`，作「class 自己接管 save/load」最小参照；不写此面则走系统默认持久化（默认亦写裸 data 到同一 `data.json`）。**注意**：统一持久化后默认与本样例**同名同目录同格式**——所以本最小样例的自定义 save/load 与默认*同效*，它演示的是**自定义接入点的接线本身**（class 如何声明并接管 `save`/`load`），而非某个差异；真实自定义会改**格式或落盘目标**（如落 YAML、或 `load` 做缺字段迁移）。落盘布局 / session-aware 路由权威归 persistable 维度。
+**有自定义**——`save` / `load` 把 Data 落成**人类可读的 `ctx.dir/example.md`**（`bumpCount` header + message 正文），而非系统默认的裸 JSON `data.json`；不写此面则走系统默认。这是个与默认**有真实差异**的最小自定义：演示「class 接管自己的序列化——决定数据落到哪个文件、长什么样」，**同构于真实 builtin `agent`**（把 `data.self` 写成可读的 `self.md`）。掌控格式的代价就是自己 parse 回来——`load` 与 `save` 对称。**真实考量（教学点）**：自定义文件名 `example.md` **不在**默认 gitignore 黑名单 `objects/**/data.json` 内——自定义文件若落进 stone 且不该版本化，需在 world `.gitignore` 补上。落盘布局 / session-aware 路由权威归 persistable 维度。
 
 ### self × visible —— 无自定义
 
@@ -65,7 +65,7 @@ example/
 ├── types.ts              # Data 结构
 ├── executable/index.ts   # object method —— bump（改 data / 有副作用）
 ├── readable/index.ts     # 投影成 example 窗 + window method set_viewport
-└── persistable/index.ts  # 自定义序列化（save/load → ctx.dir/data.json）
+└── persistable/index.ts  # 自定义序列化（save/load → 人类可读 ctx.dir/example.md，非默认 data.json）
                           # 无 visible/index.tsx —— 样板不演示 UI，走系统默认
 ```
 
@@ -181,20 +181,27 @@ export default {
 };
 ```
 
-### persistable/index.ts —— 自定义序列化（落 ctx.dir/data.json）
+### persistable/index.ts —— 自定义序列化（落人类可读 ctx.dir/example.md，非默认 data.json）
 
 ```ts
 import type { PersistableContext } from "<runtime>/persistable";
 import type { Data } from "../types.ts";
 
+const FILE = "example.md"; // 自选文件名（非默认 data.json）
+
 export default {
+  // 自选可读格式：bumpCount 一行 header + message 正文（可多行）——非默认裸 JSON
   save: async (ctx: PersistableContext, data: Data) => {
-    // 接管 save/load：把 Data 以裸 JSON 落系统解析好的实例目录（本样例与默认同效；真实自定义会改格式/落盘目标）
-    await writeFile(join(ctx.dir, "data.json"), JSON.stringify(data, null, 2), "utf8");
+    await writeFile(join(ctx.dir, FILE), `bumpCount: ${data.bumpCount}\n\n${data.message}\n`, "utf8");
   },
+  // 掌控格式的代价 = 自己 parse 回来：header 取 bumpCount，其后正文即 message（兼容多行）
   load: async (ctx: PersistableContext): Promise<Data | undefined> => {
-    try { return JSON.parse(await readFile(join(ctx.dir, "data.json"), "utf8")) as Data; }
-    catch { return undefined; }
+    try {
+      const txt = await readFile(join(ctx.dir, FILE), "utf8");
+      const bumpCount = Number(/^bumpCount: (\d+)$/m.exec(txt)?.[1] ?? 0);
+      const message = txt.replace(/^bumpCount: \d+\n\n?/, "").replace(/\n$/, "");
+      return { message, bumpCount };
+    } catch { return undefined; }
   },
 };
 ```
