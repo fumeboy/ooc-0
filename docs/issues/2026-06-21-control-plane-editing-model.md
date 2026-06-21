@@ -128,6 +128,12 @@ return normalizeMethodResult(await entry.exec(ctx, self, args));
 ### 受影响设计元素（A2 重定向后补）
 原列 9 项之外，visible/server 架构新增：`## filesystem`（write_file vs A1 分工，完整性批评官补）；executable 的 for_ui_access **退役**（抽出 executable）；visible 新增**服务端 API 模块**职责（`visible/server/`）；OOC Class/Object Model **核心 6/7** 改写（for_ui_access 不再挂 object method）；`## readable × visible` 分流改（不再「共用 window.methods 按 for_ui_access 过滤」，改为 visible/server 独立模块）。
 
+### A2 小范围 review 裁决（2026-06-21）
+3 reviewer(visible/collaborable·thread/executable·persistable)+代码实证强收敛，A2 大幅简化：
+- **visible/server = 纯 data 编辑、仅 flow scope**；**say 不迁**(collaborable 会话派送、依赖 live thread；前端聊天走 deliverTalkMessage(source=user) 专路、say 的 for_ui_access 是 vestigial、退役零影响)。
+- ctx 删 runtime/resolveThreadInSession；契约入 `core/_shared/types/visible-server.ts`(core 无 visible 目录)；直调 persistable.save(非 saveObjectData)；stone scope 延后；连带删 `_shared/types/registry.ts` 的 ui 死 case。
+- A2=建机制(无现成 for_ui_access 方法可迁,全树仅 say)+demonstrator(给 todo 加 visible/server 方法验证)。
+
 ### 实现进度
 - **A1（通用 stone-file-edit 原语）已实现并全绿**（worktree 分支 feat/control-plane-editing-model）：`PUT /stones/:id/file`(body path+content) 取代 putSelf/putReadable/putServerSource；path 白名单 `[self.md, readable.md, executable/index.ts, visible/index.tsx, knowledge/*.md]`；读端点 + knowledge(pools) 保留；前端无写调用方。test:storybook 64/0、零新增红。
 - **A2（visible/server 模块）待实现**（A1 落绿后另起）。
