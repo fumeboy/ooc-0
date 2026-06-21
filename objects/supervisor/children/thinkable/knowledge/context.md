@@ -92,7 +92,7 @@ activates_on:
 | 2 | `[ooc:paths]` system message（world_root / object_id / stone_dir / flow_dir / session_id / thread_id…） | 环境路径锚点 |
 | 3+ | transcript（历史 Context Change / ProcessEvent 流） | 过程层：本 thread 经历过什么 + 与 creator 的对话全文 |
 
-> 身份（self.md）**不在 `instructions`**——它作为 **self 门面窗**的 self 视角内容渲进 `<context>` XML（`resolveProjection`→`readSelf`；peer 视角渲 `readable.md`），身份只活在 self 门面窗这一处。self 门面窗同时挂 object methods（agency，exec 默认目标）；**过程**（thread.events + creator 对话 + events 折叠态）归**自己视角 thread 窗**（核心 9/10）——自己/identity 与过程主体不同、各归各窗。
+> 身份（self.md）**不在 `instructions`**——它作为 **self 门面窗**的 self 视角内容渲进 `<context>` XML（agent 自定义 readable 渲 `data.self`，renderer 投影前经 `registry.resolvePersistable(inst.class).load` hydrate；peer 视角渲 `readable.md`），身份只活在 self 门面窗这一处。self 门面窗同时挂 object methods（agency，exec 默认目标）；**过程**（thread.events + creator 对话 + events 折叠态）归**自己视角 thread 窗**（核心 9/10）——自己/identity 与过程主体不同、各归各窗。
 
 > 关键约束：Object 不知道 context 之外的任何事——内存/磁盘里再多状态，没进当前 thread 的 context 就不存在。
 
