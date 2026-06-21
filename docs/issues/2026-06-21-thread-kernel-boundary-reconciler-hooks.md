@@ -308,11 +308,52 @@ OOC 朝 OOP 哲学推进——「Object 自己编程控制自己的 executable/r
 
 ## review 记录（第三轮 —— thread 模型）
 
-（对 collaborable / collaborable×thinkable / thread×object-contextwindow-split 耦合 fan-out 后由 Supervisor 汇总）
+4 reviewer（collaborable / collaborable×thinkable / thread×object-contextwindow-split 耦合 / 完整性批评官）。方向一致赞成（单写零消息副本 = `## thread`/`## collaborable` 已文档化设计的回归，当前双写 `talk-delivery.ts:198-199` 是偏离）。**两处阻塞纠正 + 一处事实前提纠正 + 漏列元素。**
 
-## 裁决（第三轮 —— 最终收口）
+**【阻塞纠正 1 · 幂等没消失，只是转移】**（collaborable×thinkable）：「零副本→无 marker 幂等负担」证伪。marker 原承两职：(a) 写入去重（零副本后消失 ✓）；(b) 「creator 区分『新子终态』vs『上轮已消化』」——**这职没消失，转移到调度层**。level-triggered 崩溃恢复（issue:81 既定前提）每 tick 重扫会发现「callee 终态 && creator waiting」→ 每 tick 重 enqueue creator → busy-loop；do_window.continue（子 done→running→done）二次终态在投影上与首次不可区分（第一轮靠 marker `@tail` 区分）。**结论：保留一个瘦身的持久「消费游标」（tail/bool，无消息内容），不能全删。**
 
-（第三轮 review 后收口最终方案 + 一致性回流清单）
+**【阻塞纠正 2 · refcount peer 轴冲突】**（thread×split）：单写让 caller 的 peer 会话窗成为 callee thread 的 ref；若进 lifecycle refcount，caller 关窗 → callee refcount→0（callee 自 self 门面窗不计）→ `callee.unactive`→`cancelSubtree` → **cancel 一个仍在 running 的平等 callee**，违反 peer 平等（callee 非 caller 的 child，无层级权）；多方对话放大；跨 session 物理上还数不出（`countSessionReferences` 只扫本树）。**裁决：refcount 生命周期轴 = creator/child 持有关系（fork 窗、objectRef 独立对象窗）；peer ref 是平等投影、不递减对端存活。** caller 关 peer 窗只 evict caller 侧引用、不触 callee.unactive。回流 object self.md 核心 10（澄清「context window 即引用」是哪种引用）+ 协调 lifecycle issue。
+
+**【事实前提纠正】**（thread×split + 完整性）：issue:259「依赖 split P0（inline vs ref）」错——split issue 已 `verified` 合入 main，P0 非待办。真 gap：`referencedObjectId`（object-lifecycle.ts:43）对 **peer 会话窗返回 undefined**，split 的 objectRef 只给 inline=false 独立对象窗、**不给 inline 的 thread/talk**。「peer 窗 ref callee thread + 投影期渲染对端 thread」是 split **未交付**的新能力——**本 issue 自交付**，与 lifecycle backlog「referencedObjectId 扩 member/peer」+ split 裁决 II「扩 member/peer」三方合并收口。另：caller 投影 callee = **readThread 磁盘快照**（peer callee 落独立 flow object、不在 caller 内存树，talk-delivery.ts:135-159），非 live 共享——须诚实写明（防虚假 live 安全感）。
+
+**【精确化 · 统一规则拆成 1 写律 + 2 唤醒律】**（collaborable×thinkable）：写入侧真收敛（一份存 callee thread）；唤醒侧是**两条不同关系轴**——say→**对话对端**（collaborable 消息方向轴，talkWindow 解析；peer callee **不是** caller 的 child）；onChildTerminal→**树 creator**（thinkable Thread Tree，creatorThreadId）。二者共用 `enqueueThread` 原语但**目标解析不同**，勿并成一套。
+
+**【漏列元素】**（完整性 + collaborable）：
+- `## observable`（**最关键**）：onChildTerminal 删 marker → 不再 push `inbox_message_arrived`（scheduler.ts:89-96）= **事件产出删除**，非「producer 移位」（第二轮该确认句被证伪）；踩 [[feedback_e2e_observation_drift]]。须决定是否在调度点保留一个轻量 `context_change` 观测事件。
+- `## runtime`：`enqueueThread` 新框架调度能力**无主**——应复用/泛化已有 `notifyThreadActivated`（talk-delivery.ts:220）、**勿造同义 API**；归属 runtime（session/job 调度）须定。同 session=内存、跨 session=持久调度信号（承认这是调度元数据、非消息副本）；**须保留终态复活语义**（talk-delivery.ts:206 waiting/done/failed caller→running，否则回报石沉大海）。
+- `## persistable`：caller 副本删除改落盘形态；**outbox 单 writer 确认**——inbox-store per-message 防多 writer（inbox），outbox 单 writer 可随 thread.json；spec 表 B「inbox/outbox append-only」含糊须分。
+- `## visible`：会话窗渲染数据源从「读父 inbox 副本」→「读 ref 投影 callee thread」，须确认不依赖 caller 副本。
+
+**【内部矛盾必修】**（完整性）：第一轮 onChildTerminal 的 marker/幂等裁决（#3 notify-marker + 硬验收「父 inbox child-end 计数=1」+ collaborable 回流「say 之外第二条 inbox 写入路径」）与第三轮零副本正面矛盾，**收口须显式撤销/改写**；退役清单扩到删整个 marker 机制（scheduler.ts:44/79-96）+ **worker.ts:263-348 `syncCrossObjectCalleeEnds`（第三处 marker 写入，跨对象 peer 回报，原漏）** + **两条 say 路径的 inline 写 status**（talk-delivery.ts:206 + session-methods.ts:101-109 fork 路径，原只点磁盘路径）。
+
+**【接口表修正】**：表 C 行号 `thinkloop.ts:120`→`441`（120 是 permission 逻辑非 isSummarizer；isSummarizer 归框架可读的实质判断正确）。新增 `resolveOnChildTerminal`/`resolveCompressPolicy` 槽机制 ✓ 照抄已验证模式，但落地须同步 `register`/`seedFrom` 两处显式 merge（object-registry.ts:115-122/296-303）。collaborable 核心条 6（self.md:30 + index.md 90/155/167 三处复刻）须改写（双写镜像措辞→单写）。
+
+**【赞成可直接落】**：双 POV 投影机制本就在 readable 层（readable/index.ts:62-87）、与核心 4 自洽；删 caller outbox 副本 + 删 say inline 写 peer.status、status 写入归框架——与第二轮 compress force-wait 裁决对称。
+
+## 裁决（第三轮 —— 收口 + 残留待决）
+
+**采纳方向，按 review 纠正。已定 7 条：**
+
+1. **单写零消息副本**：一场对话存 callee thread 一份（inbox=caller→callee / outbox=callee→caller）；caller 经 peer-ref 投影、不留副本。删 caller outbox 副本 + 删两条 say 路径的 inline 写 peer.status（status 写入归框架）。
+2. **幂等不全删（纠正）**：onChildTerminal/caller-wake 保留**瘦身持久消费游标**（tail/bool，无消息内容）做边沿去重；level-triggered 重扫作崩溃恢复骨架。**非「无幂等负担」**。
+3. **refcount peer 轴不计存活（纠正，跨 lifecycle）**：refcount 生命周期只数 creator/child 持有关系；peer ref 平等投影、不递减对端存活；caller 关 peer 窗只 evict 自侧引用。回流 object 核心 10 + 协调 lifecycle issue。
+4. **1 写律 + 2 唤醒律**：写一份 on callee thread；say→对话对端（talkWindow 解析）、onChildTerminal→树 creator（creatorThreadId），共用 `enqueueThread` 但目标解析分两套。
+5. **enqueueThread = 泛化/复用 `notifyThreadActivated`**（勿造同义）；同 session 内存 / 跨 session 持久调度信号；保留终态复活。
+6. **退役清单扩**：emitChildEndNotifications + harvest 内联（一/二轮）+ scheduler.ts marker 机制（:44/79-96）+ **worker.ts:263-348** + 两条 say inline-status 路径 + CompressV2Win core 影子。
+7. **撤销第一轮 marker 裁决**：撤 #3 notify-marker 实现 + 改硬验收「父 inbox 计数=1」→「creator 重投影见子终态/endSummary」+ 作废 collaborable 回流「第二条 inbox 写入路径」（零副本后无此路径）。
+
+**接口表修正纳入**：表 C 行号 120→441；resolve\* 新槽须同步 register/seedFrom merge；collaborable 核心条 6 + index.md 三处改写。
+
+**残留待决（须 Supervisor 拍 / 可能要第四轮定向 review）：**
+- **R1 observable 事件产出**：删 `inbox_message_arrived` 后，是否在调度点保留轻量 `context_change` 观测事件让 loop_timeline 不盲？（防 e2e 观测漂移）——建议派 observable reviewer。
+- **R2 enqueueThread 归属**：runtime（session/job 调度）还是 thinkable（scheduler 所在）？与 notifyThreadActivated 去重方案。
+- **R3 refcount peer 轴**：跨 lifecycle issue 的协调——是在本 issue 改 object 核心 10，还是回 lifecycle issue 改？（涉及两 issue 边界）
+- **R4 peer-ref 投影自交付**：本 issue 与 split/lifecycle backlog「referencedObjectId 扩 member/peer」三方合并的收口落点 + 推进顺序。
+- **R5 persistable outbox 单 writer 确认**（派 persistable reviewer）。
+
+## 落地验收
+
+（`landed` 后由 Supervisor 汇总验收 reviewer 意见）
 
 ## 落地验收
 
