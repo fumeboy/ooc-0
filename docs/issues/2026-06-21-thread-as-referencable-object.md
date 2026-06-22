@@ -8,7 +8,16 @@ date: 2026-06-21
 
 > 从 `2026-06-21-thread-kernel-boundary-reconciler-hooks`（收敛重建为 [[2026-06-21-thread-builtin-business-retreat]]）**拆出**的 substrate 主题：让 caller 像引用任何 object 一样**引用并投影 callee thread**（say 单写「读侧」的底座）。
 >
-> **⚠️ 范围收窄（2026-06-21）**：unactive 通知模型（原 B）+ refcount 订阅语义（原 C）**已折入 retreat issue 本批落地**（它们不依赖 peer-ref、是纯 thread-class policy + 生命周期改动）。本 issue **只剩 A（peer-ref 投影 + say 读侧：caller 投影 callee thread + 删 caller outbox 镜像 + worker.ts:263 退役）**。下方 B/C 节作背景保留，实施归 retreat。backlog 认领收窄为「扩 **peer**」（member 已由 split P1 落地）。
+> **⚠️ 范围调整（2026-06-21）**：unactive 通知模型 + refcount 统一计数**已折入 retreat issue 落地**（纯 thread-class policy + 生命周期改动、不依赖 peer-ref）。
+>
+> **本 issue 实际范围 = 所有 peer-ref 耦合项**（retreat issue 落地后转入）：
+> 1. **peer-ref 投影**：`referencedObjectId` 扩 peer 会话窗 → callee thread；context builder 投影期渲染对端 thread（磁盘快照、peer-POV 翻转 in/out）。
+> 2. **say 全机制（写+读侧）**：单写（删 caller outbox 镜像，talk-delivery.ts:198）+ caller 经 peer-ref 投影 callee + worker.ts:263 syncCrossObjectCalleeEnds 退役。
+> 3. **`enqueueThread`（runtime，泛化 notifyThreadActivated）+ 终态复活** + 删两条 say inline-status（talk-delivery.ts:206-210 / session-methods.ts:104-109）。
+> 4. **onChildTerminal 零副本重投影 + 消费游标**：retreat 落地为 relocate 形态（保留 marker→inbox→wake）；改「调度 creator + 重投影」（与 say 读侧同一能力）在此做。R1 observable（删 inbox_message_arrived 后是否补观测事件）随此项。
+> 5. **D check 规则**：扫 scheduler/compress 禁读 thread 业务字段（retreat 已使 scheduler 零业务读，本项把它钉成 enforceable check）。
+>
+> backlog 认领收窄为「扩 **peer**」（member 已由 split P1 落地）。下方 A/B/C 节作背景保留。
 
 ## 背景 / 动机
 

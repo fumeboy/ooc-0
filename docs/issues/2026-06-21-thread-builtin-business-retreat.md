@@ -139,14 +139,21 @@ OOC 朝 OOP 推进，系统概念以 builtin class/object 表示在 `packages/@o
 - 内核可读边界 check 规则（扫 scheduler.ts + context/compress-*，豁免框架合法点）；compress.md 单一权威不拆、补边界声明句；core 10/lifecycle 回流（unactive 通知 + canceled 退役，协调 landed lifecycle issue）。
 - 测试纪律：中间增量坏测试只登账本、全改完统一跑绿（[[feedback_refactor_defer_test_fixes]]）。
 
-## 落地进度（worktree `feat/thread-builtin-retreat`）
+## 落地进度（worktree `feat/thread-builtin-retreat`）—— 已落地 + 验收 + 实现期范围校准
 
-源码仓 worktree `.worktree/thread-builtin-retreat`（分支 `feat/thread-builtin-retreat`）隔离开发，账本见该 worktree `LEDGER.md`。
+源码仓 worktree `.worktree/thread-builtin-retreat`（分支 `feat/thread-builtin-retreat`）隔离开发。**全 gate 绿**：`bun run verify` 712 pass / 0 fail（check:tsc + core 全套 + silent-swallow + deprecated-symbols + doc-drift + anchor-drift），`test:storybook` 64 pass。3-reviewer 落地验收（代码/退潮/漂移）确认：A/E 完整落地无缺口、退役符号全树清干净、无 out-of-scope 漂移。
 
-- **E. unactive 改通知 + canceled 退役 —— 已落地**（commit `8199afe2`，check:tsc 绿 / thread+lifecycle 64 pass）：thread.unactive non-terminal→发 inbox「无订阅者」通知不 cancel、terminal 仅停用；退役 canceled 全树 + cancelSubtree；refcount 保持统一计数（差异挪到 unactive policy）；fork-unactive.test 重写为通知行为。**实现期裁决**：不加 `canceled` 进 check:deprecated-symbols FORBIDDEN_PATTERNS（词太通用易长期误报，靠 ThreadStatus 类型防回归）。
-- **B. onChildTerminal 退潮 / C-写侧. say inline status 删+enqueue / A. compress 退潮 —— 待续**（精确续作计划见 worktree LEDGER.md；三者共享待建的 `enqueueThread`〔runtime，泛化 notifyThreadActivated〕+ `resolveOnChildTerminal`/`resolveCompressPolicy`〔新 OocClass 槽〕+ scheduler/thread 共享文件，须顺序做）。
+**本批实际落地（核心目标「thread 业务出 core」达成）：**
+- **E. unactive 改通知 + canceled 退役**（commit `8199afe2`）：thread.unactive non-terminal→发自身 inbox「无订阅者」system 通知、不 cancel/不级联；terminal 仅停用；退役 `canceled` 全树 + `cancelSubtree`；refcount 保持统一计数。fork-unactive.test 重写为通知行为。
+- **B. onChildTerminal 退潮 —— relocate 形态**（commit `f9dbc4f1`）：`emitChildEndNotifications`（含 child.endSummary/endReason/isSummarizer 业务字段读）搬入 thread builtin `child-notify.ts`，core scheduler 经 blessed import（同 writeThread）只调、**零业务字段读**。**保留 marker→inbox→wakeWaitingThreadsOnInbox 既有唤醒机制**。
+- **A. compress 退潮**（commit `efe01eb3`）：compress policy（触发/spawn/seed/force-wait/harvest）搬入 thread builtin `compress.ts`，`CompressV2Win`→`ThreadWin`；core 留框架（budget/WindowManager/compress-trigger/snapRangesToToolPairs）经 blessed import 调。
 
-整批合入 main 后再走文档成对回流（core 10 unactive 通知 + canceled 退役，协调 landed lifecycle issue）+ 落地验收 review，issue 方转 `landed`/`verified`。当前 issue 维持 `decided`（部分增量已落 worktree、未合 main）。
+**实现期范围校准（Supervisor 裁定，修正本文上方「裁决」段的过度承诺）：**
+- **C（say 写+读侧）整体延 [[2026-06-21-thread-as-referencable-object]]**：say 是一个机制、读侧（caller 经 peer-ref 投影 callee）必需 peer-ref（substrate），写侧（删 inline status）依赖 `enqueueThread`+终态复活——**无 substrate 不可单独落**。原「裁决」段列 C-写侧「本批落地」不成立，校准为全 say 延 substrate（talk-delivery.ts 本批零改）。
+- **onChildTerminal 的零副本重投影 + `enqueueThread` + 消费游标 + registry 槽（resolveOnChildTerminal/resolveCompressPolicy）+ D check 规则 + R1 observable 一并延 substrate**：零副本重投影与 say 读侧是同一能力（creator/caller 重投影 referenced thread），无 peer-ref 不可落；relocate 形态保留 marker 故 `inbox_message_arrived` 事件不丢（R1 在 relocate 形态下 moot）。registry 槽对「全部线程同 class」无多态价值，relocate+blessed-import 已达层级目标。
+- **不加 `canceled` 进 FORBIDDEN_PATTERNS**（词太通用易长期误报，靠 ThreadStatus 类型防回归）。
+
+**结论**：本 issue 核心目标（compress/child-notify/unactive 三块 thread 业务退出 core）**已完整落地 + 验收 + gate 绿**，合入 main。say + 上述 refinement 是 peer-ref 耦合项、转 substrate issue。合 main 后走对象树文档成对回流（core 10 unactive 通知 + canceled 退役协调 lifecycle issue / thinkable compress.md 边界声明 / thread self.md）。
 
 ## 落地验收
 
