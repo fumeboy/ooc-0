@@ -104,6 +104,33 @@ OOC 朝 OOP 哲学推进——系统概念以 builtin class/object 表示在 `pa
 - 三签名 self 改 proxy 类型；4 个 core 产 self 点（window-manager execObjectMethod/execWindowMethod、xml renderer readable、exec.ts route）改建 proxy。
 - 全量 builtin `self.<field>`→`self.data.<field>`（~50 文件，含 example/filesystem/agent 家族/feishu/interpreter/terminal/knowledge_base + 各 test/story call site 经工厂包裹）。tsc 零新增错误。
 
+### 点 3 · interpreter sandbox 注入改用 self-proxy + 跨窗路径归 ExecutableContext
+
+**现状锚点（interpreter 自建 bespoke self、内联 deriveStoneFromThread）**：`runInterpreterExec(persistence, lang, code, userData, runtime, reportDataEdit)`（`interpreter_process/executable/runtime.ts`）内部 `createInterpreterSelf(deriveStoneFromThread(persistence), …)`（`executable/self.ts`）造一个 bespoke `InterpreterSelf` 注入 sandbox——带 `self.dir`（thread/persistence 派生）/ `self.callMethod(windowId,…)`（跨窗，实为 `runtime.callMethod` 误挂 self 上）/ `self.getData/setData`（userData 子字段）。thread 残余耦合点 = `deriveStoneFromThread(persistence)`。
+
+**改法（用户裁定：sandbox self = ObjectMethod 输入的 self-proxy；跨窗执行路径移到 ExecutableContext）**：sandbox 注入与标准 object method 同构的 `(self, ctx)`——脚本即一段即席 object method body：
+- `self` = ObjectMethod 的 `SelfProxy<Data>`：`self.data` 读写本实例业务数据（含 `userData` scratch 与 `history`，活引用、随默认 data.json 落盘）、`self.methods.x()` 自调本对象方法。退役 `self.dir` / `self.getData/setData`（→ `self.data.userData`）。
+- 跨窗 `callMethod` 从 self **移到 ExecutableContext**：sandbox 经 `ctx.runtime.callMethod(objectId, method, args)` 跨窗调别的对象（本就在 ExecutableContext 上，原被错挂 self）。
+- `runInterpreterExec(lang, code, self, ctx)` 塌签名、删 persistence/userData/runtime/reportDataEdit 形参 → **零 thread/persistence 依赖**（不再 deriveStoneFromThread、不再自建 bespoke self），exec/construct 各从自己 ctx 透传。construct 无 self-proxy（实例未生）→ 在 nascent data 上建临时 self-proxy（`self.methods` 自调 construct 期不可用）。
+
+**fan-out 重量判定**：本点主体是**退潮**（删 bespoke `InterpreterSelf`/`self.ts` + 删 thread 耦合点，grep + tsc 可验回归）；「跨窗路径归 ctx」是把既有 `ctx.runtime.callMethod` 暴露给 sandbox（非新增机制，contract.ts 早注明该用途）→ 轻流程：接口修正 + 测试改写自验，落地后过验收。
+
+**受影响设计元素（点 3）**：
+- `## executable`（B 区）—— interpreter sandbox self 形状（bespoke → self-proxy）；跨窗路径归 `RuntimeHandle.callMethod`（经 ctx 暴露）。
+- `## thread`（E 区）—— interpreter 退役 `deriveStoneFromThread` 调用，运行时彻底脱离 thread/persistence。
+- `## OOC Class/Object Model`（核心 5/6）—— interpreter 用户代码与标准 object method `(ctx, self, args)` 入参对齐。
+- builtin 权威 doc `builtins/interpreter.md`（child interpreter_process 节）—— 成对回流。
+
+**落地（worktree `feat/interpreter-self-proxy`，tsc 零错误）**：
+- `sandbox/wrap.ts` wrapper `(console, self) → (console, self, ctx)`；`sandbox/executor.ts#executeUserCode(code, self, ctx)`。
+- `executable/runtime.ts#runInterpreterExec(lang, code, self, ctx)`——删 `deriveStoneFromThread`/`ThreadPersistenceRef`/`createInterpreterSelf` import 与 persistence/userData/runtime/reportDataEdit 形参，内部仅 `executeUserCode(code, self, ctx)`。
+- 删 `executable/self.ts`（`createInterpreterSelf`/`InterpreterSelf`，唯一引用者 runtime.ts）。
+- `executable/index.ts` exec / `index.ts` construct 透传 `(self, ctx)`；construct 经 `makeSelfProxy(data, "<constructing>", ctx.runtime)` 建临时 self-proxy。
+- `process.test.ts` 3 条 interpreter 运行时测试改写为 self-proxy 语义（含一条新「ctx.runtime.callMethod 跨窗」断言）；`contract.ts` RuntimeHandle.callMethod 注释 self.callMethod → ctx.runtime.callMethod。
+- doc 回流 `builtins/interpreter.md` construct/exec 骨架 + 「注入 self」段（顺带清掉已漂移的 `getThreadLocal/setThreadLocal`/`ctx.thread` 旧描述）。
+
+**落地测试**：`check:tsc` 干净（无 baseline 错误）/ `check:silent-swallow` / `check:deprecated-symbols` / `check:doc-drift` 全绿；`process.test.ts` **14 pass / 0 fail**（含原「pre-existing 红」的 dir/getData/setData 两条——premise 随退潮溶解、重写后转绿）；`test:storybook` 64 pass / 0 fail。web `builtin-visible-registry` 1 fail 为 main 同款 pre-existing（与本点无关，已 stash 核验）。
+
 ## 落地测试状态（点 1+2 合并落地，worktree `feat/thread-core-boundary`）
 
 **绿**：`check:tsc`（零新增，仅 6 条 baseline 环境 dep 错=main 同款）/ `check:silent-swallow` / `check:deprecated-symbols` / `check:doc-drift`。

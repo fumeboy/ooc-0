@@ -42,13 +42,15 @@ children 从属于 interpreter 命名空间（id 以 `_builtin/interpreter/` 为
 ### `_builtin/interpreter/interpreter_process`（kind=class，非单例）
 一段 ts/js 解释进程窗——`interpreter.run` 造出的结果对象，一个 world 可有多个。
 
-- **construct**：即 parent `run` 委托的目标——取 `ctx.thread` 必需、`normLang(args)` + `code` 必需，跑首段脚本，返回 `{ history: [首条 record] }`；缺 thread context 或缺 language/code 则 fail-loud。
+- **construct**：即 parent `run` 委托的目标——`normLang(args)` + `code` 必需，在 nascent data `{history:[],userData:{}}` 上建临时 self-proxy 跑首段脚本，返回该 data；缺 language/code 则 fail-loud。construct 期实例 id 未分配，`self.methods` 自调不可用（首段脚本不应自调本对象方法）。**已与 thread/persistence 解耦**（不再取 `ctx.thread`/`deriveStoneFromThread`）。
 - **data**：`Data = { history: ProcessExecRecord[] }`（每次 exec 一条）。`ProcessExecRecord`（execId/language:"ts"|"js"/code/output/ok/startedAt）本 class 自有，定义在 `types.ts`；与 terminal_process 结构同构但各自独立，不再共享代码。
 - **object method**：`exec`（在已开窗的进程内再跑一段 ts/js，结果 push 进 `self.history` 并 `ctx.reportDataEdit()` 通知重持久化）、`close`（关窗，无副作用、由 runtime 处置实例的 status）。
 - **window method**：`set_history_window`——调 history 视口（tail N / 固定 range），返回新 ProcessWin、不碰 data；实现在本 class 的 `readable/history.ts`（与 terminal_process 同构但独立），默认末 10 次 exec。
 - **投影**：`class:"interpreter_process"`，content 渲染 history 摘要（经 viewport 切片）+ 最近一条 full output（`renderProcessHistory`）。
 - **visible**：自定义详情面板 + diff（本 class 自有 `visible/index.tsx` / `visible/diff.tsx`）。**persistable**：无自定义，系统默认（history 是纯 JSON）。
-- **sandbox 与注入的 `self`**：ts/js 写 tmp `.mjs` → in-process import 执行，console 进 stdout、`_result_` 进 returnValue。脚本内注入的 `self`（`createInterpreterSelf`，`executable/self.ts`）可 `callMethod`（经 `ctx.runtime.callMethod` 跨窗调当前 thread 内任意 object method）/ `getData`/`setData`（读写本 interpreter_process 实例自身 data 的 `userData` 子字段，随默认 `data.json` 落盘、**同 process 跨 exec 持久**）/ `getThreadLocal`/`setThreadLocal`（线程内跨 exec 共享、**不持久化**）；无 persistence / 无 runtime 时对应能力降级或 fail-loud。
+- **sandbox 与注入的 `(self, ctx)`**：ts/js 写 tmp `.mjs` → in-process import 执行，console 进 stdout、`_result_` 进 returnValue。脚本即一段**即席 object method body**，注入与标准 object method 同构的 `(self, ctx)`（由 exec/construct 从自己的 ctx 直接透传，运行时 `runInterpreterExec` 零 thread/persistence 依赖、不再自建 bespoke self）：
+  - `self`（**self-proxy**）：`self.data` 读写本实例业务数据（含 `userData` scratch 与 `history`，活引用、随默认 `data.json` 落盘、**同 process 跨 exec 持久**）；`self.methods.x(args)` 自调本对象的另一条 object method。
+  - `ctx`（**ExecutableContext**）：`ctx.runtime.callMethod(objectId, method, args)` **跨窗**调别的对象——跨窗执行路径归 ExecutableContext（不再挂在 self 上）；无 runtime 时 fail-loud。
 
 ## 程序骨架（示意）
 
@@ -120,10 +122,12 @@ export const Class = {
       code:     { type: "string", required: true },
     } },
     exec: async (ctx, args) => {
-      const thread = ctx.thread;            // 实例尚未存在，从 ctx 取运行时环境
-      if (!thread) throw new Error("[interpreter_process] 缺少 thread context。");
-      const record = await runInterpreterExec(thread, normLang(args), args.code, ctx.runtime);
-      return { history: [record] };          // → 初始 Data
+      if (!(normLang(args) && args.code)) throw new Error("[interpreter_process] 缺少 language+code。");
+      const data = { history: [], userData: {} };        // nascent Data（实例尚未存在）
+      const self = makeSelfProxy(data, "<constructing>", ctx.runtime);  // 临时 self-proxy（self.methods 自调不可用）
+      const record = await runInterpreterExec(normLang(args), args.code, self, ctx);
+      data.history.push(record);
+      return data;                            // → 初始 Data
     },
   },
   executable, readable,
@@ -137,8 +141,9 @@ const execMethod = {
   description: "Run another ts/js snippet in this interpreter process; result appended to history.",
   schema: { args: { language:{type:"string",required:true,enum:["ts","js"]}, code:{type:"string",required:true} } },
   exec: async (ctx, self, args) => {
-    const record = await runInterpreterExec(ctx.thread, normLang(args), args.code, ctx.runtime);
-    self.history.push(record);
+    if (!self.data.userData) self.data.userData = {};
+    const record = await runInterpreterExec(normLang(args), args.code, self, ctx);  // 透传 (self, ctx)
+    self.data.history.push(record);
     await ctx.reportDataEdit?.();            // 主动报告 data 变更 → runtime 触发持久化
   },
 };
