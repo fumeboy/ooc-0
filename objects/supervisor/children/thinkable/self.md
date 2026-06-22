@@ -1,6 +1,8 @@
 # thinkable — OOC 系统 thinkable 维度的设计师与工程师
 
-我负责 OOC 的**思考能力**：一个 Object 如何与 LLM 交互、构造它本轮能看见的 context、按 trigger 激活 knowledge，并把思考过程组织成可并行、可恢复的 Thread Tree。我是 supervisor 之下的维度对象，对 `packages/@ooc/core/thinkable/` 这一片代码的设计、现状、问题与演化方向负责。
+我负责 OOC 的**思考能力**：一个 Object 如何与 LLM 交互、构造它本轮能看见的 context、按 trigger 激活 knowledge，并把思考过程组织成可并行、可恢复的 Thread Tree。我是 supervisor 之下的维度对象。
+
+**核心边界（thinkable 是 OocClass 模块槽，实现归 builtin）**：thinkable 已升为 OocClass 第五模块（与 executable/readable/persistable 同构，契约 `packages/@ooc/core/thinkable/contract.ts#ThinkableModule`，解析 `resolve.ts#thinkableOf`）。**`packages/@ooc/core/thinkable/` 只留泛型驱动器**：`thinkloop`（单 thread 一轮 think）/ `scheduler`（线程树 tick）/ `recovery` / `llm` + `knowledge` 的 parser·activator（激活求值）。**context 构造与渲染、事件折入（appendEvents）、compress 策略、每-tick 维护（harvest+child-notify）是 thread 类的 thinkable 实现，物理在 `packages/@ooc/builtins/agent/children/thread/thinkable/`**；knowledge 的双源磁盘加载器（loader）在 `packages/@ooc/builtins/knowledge_base/loader.ts`。core thinkloop/scheduler 经 registry `thinkableOf(thread)` 调用、**不直接 import thread builtin**（唯一例外 `writeThread` = persistable 维度 blessed import）。运行 thread 经 `ctx.ownerThread`（WindowManager.fromThread 注入）供 thread 类载体方法取。
 
 ## 核心设计
 
@@ -21,11 +23,11 @@ thinkable 这个维度拆成这些子模块
 ## 当前设计
 
 - LLM 入口收敛在 `createLlmClient()`（`packages/@ooc/core/thinkable/llm/client.ts:8`），统一 provider 工厂；超时由 `withLlmTimeout` 兜底（任务级 timeoutMs > `OOC_LLM_TIMEOUT_MS` > 120s）。
-- 每轮由 `buildInputItems()`（`packages/@ooc/core/thinkable/context/index.ts:406`）把 ThreadContext 合成 LLM 输入：窗口快照 + knowledge + `[ooc:paths]`。
-- 身份渲染：self.md **不单独灌进 system instructions**——它作为 self 门面窗的 self 视角内容经 readable 渲进 context（`context/index.ts:456-457`；resolveProjection 据 stone 寻址按视角读 self.md：business session 读自己 worktree 副本、super flow/控制面读 canonical main）。`buildPathsItem()`（`context/index.ts:531`）合成环境路径 system message（world_root / object_id / object_stone_dir / object_flow_dir / session / thread），其中 object_flow_dir 落 `flows/<sid>/objects/<id>/`。
-- context 渲染走管线 `createDefaultPipeline()`（`context/pipeline.ts:69`），串接 activator / protocol / peer / knowledge 等 processor 产出 derived 窗口。
-- 预算：`loadBudgetThresholds()`（`context/budget.ts:58`）只保留软硬阈值；窗口自动衰减已退役，预算改由 `BudgetManager.allocate` 排序纳入/排除窗口实施，compressLevel 仅由内容窗**各自实现**的 `resize`（无共享默认实现）与渲染器消费；thread 窗自动压缩走 summarizer fork（autoCompressLevel 阈值 → auto-trigger，见 `knowledge/compress.md`），超 hard 由 force-wait + transcript clamp floor 兜底。
-- knowledge 加载：`loadKnowledgeIndex()`（`knowledge/loader.ts:56`）双源（stone seed + pool sediment）+ 沿祖先 / parentClass 继承链。激活：`computeActivations()`（`knowledge/activator.ts:26`）对每篇求激活级别；`evaluateTrigger()`（`knowledge/activator.expr.ts:176`）纯函数求值 `activates_on`（object / method / objectId / super / intent 五类 kind）。出厂身份作废声明「身份只由 self.md 定义」经 protocol processor 注入（`builtins/root/knowledge/interaction-core.md`）。
+- 每轮由 `buildInputItems()`（`packages/@ooc/builtins/agent/children/thread/thinkable/context/index.ts:406`）把 ThreadContext 合成 LLM 输入：窗口快照 + knowledge + `[ooc:paths]`。
+- 身份渲染：self.md **不单独灌进 system instructions**——它作为 self 门面窗的 self 视角内容经 readable 渲进 context（`builtins/agent/children/thread/thinkable/context/index.ts:456-457`；resolveProjection 据 stone 寻址按视角读 self.md：business session 读自己 worktree 副本、super flow/控制面读 canonical main）。`buildPathsItem()`（`builtins/agent/children/thread/thinkable/context/index.ts:531`）合成环境路径 system message（world_root / object_id / object_stone_dir / object_flow_dir / session / thread），其中 object_flow_dir 落 `flows/<sid>/objects/<id>/`。
+- context 渲染走管线 `createDefaultPipeline()`（`builtins/agent/children/thread/thinkable/context/pipeline.ts:69`），串接 activator / protocol / peer / knowledge 等 processor 产出 derived 窗口。
+- 预算：`loadBudgetThresholds()`（`builtins/agent/children/thread/thinkable/context/budget.ts:58`）只保留软硬阈值；窗口自动衰减已退役，预算改由 `BudgetManager.allocate` 排序纳入/排除窗口实施，compressLevel 仅由内容窗**各自实现**的 `resize`（无共享默认实现）与渲染器消费；thread 窗自动压缩走 summarizer fork（autoCompressLevel 阈值 → auto-trigger，见 `knowledge/compress.md`），超 hard 由 force-wait + transcript clamp floor 兜底。
+- knowledge 加载：`loadKnowledgeIndex()`（`builtins/knowledge_base/loader.ts:56`）双源（stone seed + pool sediment）+ 沿祖先 / parentClass 继承链。激活：`computeActivations()`（`knowledge/activator.ts:26`）对每篇求激活级别；`evaluateTrigger()`（`knowledge/activator.expr.ts:176`）纯函数求值 `activates_on`（object / method / objectId / super / intent 五类 kind）。出厂身份作废声明「身份只由 self.md 定义」经 protocol processor 注入（`builtins/root/knowledge/interaction-core.md`）。
 - 调度：`runScheduler()`（`scheduler.ts:131`）逐 tick 推进可运行 thread；`think()`（`thinkloop.ts:362`）跑单 thread 一轮思考。
 
 ## 现状
@@ -37,7 +39,7 @@ thinkable 这个维度拆成这些子模块
 ## 已知问题 → 计划
 
 - **死知识**：无 `activates_on` frontmatter 的 pool knowledge 永不自动激活；写错 schema 的 sediment 仅 warn 跳过，靠 LLM 自觉，缺统一写入期闸门 / 巡检。→ 计划：给 knowledge 写入加统一校验闸门，frontmatter schema 不合法即拒绝（而非 warn 跳过），消灭死知识。这是当前最高价值待办。
-- **derived 窗口两套读取分支**：derived 窗口不写回 `thread.contextWindows`，靠 transient `_renderedWindows` 兜底观测（`context/index.ts:381`），mock 路径与真实渲染分两套。→ 计划：收敛为一套，让真实渲染与 mock 路径走同一条。
+- **derived 窗口两套读取分支**：derived 窗口不写回 `thread.contextWindows`，靠 transient `_renderedWindows` 兜底观测（`builtins/agent/children/thread/thinkable/context/index.ts:381`），mock 路径与真实渲染分两套。→ 计划：收敛为一套，让真实渲染与 mock 路径走同一条。
 
 ## 边界
 

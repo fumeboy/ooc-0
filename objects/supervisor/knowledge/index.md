@@ -48,7 +48,7 @@ activates_on:
 
 核心契约（详见 [object self.md](../children/object/self.md) 核心 1-10）：
 
-1. 一切是 object；**class 是定义，object 是实例**。class 由 **readable / executable / visible / persistable** 四件套（visible 含前端 `visible/index.tsx` + **`visible/server/index.ts`** for-ui 服务端 API）+ **`index.ts`**（装配 `export const Class`，收口后端程序路由，含 visible/server）+ **`types.ts`**（定义 object data 结构）构成。
+1. 一切是 object；**class 是定义，object 是实例**。class 由 **readable / executable / visible / persistable** 四件套（visible 含前端 `visible/index.tsx` + **`visible/server/index.ts`** for-ui 服务端 API）+ **`index.ts`**（装配 `export const Class`，收口后端程序路由，含 visible/server）+ **`types.ts`**（定义 object data 结构）构成。**agent 类额外具 `thinkable` 模块槽**（第五维度模块，与四件套同构在 OocClass 注册/解析）——见 `## thinkable` / `## thread`；任意 class 可声明 thinkable，但只有跑 thinkloop 的 thread 类实际注册并被调度。
 2. **class 不支持继承**：object 经 `ooc.class` 单跳继承一个 class，但 class 不可再继承 class；复用靠 import 目标 class 导出的函数。
 3. **class 分单例 / 非单例**：非单例是可复用模板、在 `index.ts` 注册 **construct** 且可被继承；单例恰一个实例（object 一旦自定义函数方法即成自身 class 的单例）、不可被继承。
 4. **object 在 LLM 视角投影成 context window**：readable 按视角把 data 动态投影成 window 的 class 与展示内容；window 投影态与 object data 分离。**类型分立**：`OocObjectInstance={id,class,data}` = 对象本身（持 data，活 **session 对象表** `objectId→唯一实例`）；`OocObjectRef` = **context window** = 对它的引用（持 `id`〔=objectId,表 key〕+ 缓存 class + 视角态〔含 parentWindowId〕、**不持 data**），`ContextWindow=OocObjectRef`。内存经 `objectDataOf(ref, table)` 按 id 从对象表解析 data（`classOf(ref)=ref.class`），磁盘只落 ref，故同 objectId 多窗读同一份 data（live-ref 仅同 job 内）。表挂线程树根、随 job 释放（owner 见 E 区 `## runtime`）。
@@ -70,6 +70,8 @@ activates_on:
 LLM 看到的世界不是裸 prompt，而是一组 **ContextWindow 对象**——Object 在 context 中的形态，自带可调的 window method。在此之上是**渐进式执行伴随的渐进式知识激活**：Object 经 open→refine→submit 渐进暴露要操作的窗口与方法，knowledge 则按 `activates_on` 意图在执行推进时渐进激活，执行到哪、知识激活到哪。思考过程组织成可并行、可恢复的 **Thread Tree**，每个 thread 由 **thinkloop** 驱动——单 thread 一轮「构造 context→调 LLM→执行 tool→写事件」的循环。
 
 **context 是稀缺资源、有一套专门的压缩机制（compress）需注意**——读 thinkable 时易被一句「一组 window」带过、却是承重的一块：window 在「怎么压缩」上是**统一协议、各对象自有实现**（呼应「everything is a window 统一寻址不统一实现」），三类窗各按自身形态压缩——**自我主历史窗**（thread 自己的过程）用 summarizer fork 摘要早期历史、**内容窗**（file/知识/…）调展示详略档位、**派生会话窗**（talk）靠预算 overflow + 视口收放（不折叠）。单一权威见 [compress.md](../children/thinkable/knowledge/compress.md)；context 总体构成、视角投影与预算见 [context.md](../children/thinkable/knowledge/context.md)。
+
+**thinkable 是 OocClass 的模块槽（实现归 builtin、不在 core）**：core 只留 `thinkloop`（单 thread 一轮 think 的串行驱动器）/ `scheduler`（线程树 tick 调度）/ `recovery` / `llm`（如何请求模型）+ `knowledge` 的 parser/activator（激活求值）+ 模块契约 `contract.ts`/解析 `resolve.ts`。**context 构造与渲染（buildInputItems / pipeline / renderer / budget / 窗注入）、事件折入（appendEvents）、compress 策略、每-tick 维护（harvest + child-notify）全是 thread 类的 thinkable 实现，物理在 `builtins/agent/children/thread/thinkable/`**；core thinkloop/scheduler 经 registry `resolveThinkable(thread.class)`（`thinkableOf`）调用、不直接 import thread builtin。knowledge 的双源磁盘加载器（loader）归 `builtins/knowledge_base`（见 `## knowledge_base / knowledge`）。
 
 实施细节见 [self.md](../children/thinkable/self.md)。
 
@@ -164,7 +166,7 @@ collaborable 的 talk 方法创建 thread，thread 跑 thinkable 的 thinkloop �
 
 ## thread
 
-thread 是 agent 一次智能运行的载体——`talk` 创建它、thinkloop 在其上运行——也是 builtin 里跨维度最密的对象，一身横跨四维。× thinkable：thinkloop 跑在 thread 上，thread 派生 sub thread 织成 Thread Tree，构成可并行、可恢复的思考底座（见 [thinkable](../children/thinkable/self.md)）。× collaborable：每个 thread 持 inbox/outbox，`say` 写入自己 outbox 并派送到对端 thread 的 inbox。× readable：**同一个 thread 实例按视角投影成三种 window class**——thread（自己视角，过程 event + 与 creator 的对话通道）、talk（与 peer/sub 的会话）、reflect_request（super flow POV）。× persistable：thread 声明 `mode="inline"`，整窗随所属 thread 的 `thread-context.json` 落盘，不单独落 `data.json`。**生命周期**：会话窗即对该 thread 对象的一个引用、关一个 fork 窗使该子线程 refcount 归 0 → 由 thread 的 `unactive` policy **通知**（往该子线程自己 inbox 发一条 source="system" 通知「creator 已关闭对话窗口、当前已无消息订阅者」、即时落盘）、**不切终态、不级联**，由其下一轮 thinkloop 自决是否 `end`（waiting 子线程因 inbox 增长被 scheduler 唤醒）；退出态只有 `done` / `failed`（无 `canceled`，已退役），thread 终结一律走 `end`→done；结构窗（thread / creator 门面窗）不可关；引用计数停启机制见 A 区核心 10 与 [object self.md](../children/object/self.md)。
+thread 是 agent 一次智能运行的载体——`talk` 创建它、core thinkloop 在其上运行——也是 builtin 里跨维度最密的对象，一身横跨五维（readable/executable/persistable + **thinkable** + lifecycle）。× thinkable：thread **注册 thinkable 模块**（`builtins/agent/children/thread/thinkable/`：buildInputItems 构造 context / appendEvents 单一 ingest 折事件 / maybeAutoCompress·maybeForceWaitForCompress / onSchedulerTick = harvest + child-notify），core thinkloop/scheduler 经 `thinkableOf(thread)` 调用；thread 派生 sub thread 织成 Thread Tree，构成可并行、可恢复的思考底座（见 [thinkable](../children/thinkable/self.md)）。运行 thread 经 `ctx.ownerThread`（WindowManager 注入）供 thread 类载体方法（construct/end/unactive/readable）取——取代 point-1 的抛错占位。× collaborable：每个 thread 持 inbox/outbox，`say` 写入自己 outbox 并派送到对端 thread 的 inbox。× readable：**同一个 thread 实例按视角投影成三种 window class**——thread（自己视角，过程 event + 与 creator 的对话通道）、talk（与 peer/sub 的会话）、reflect_request（super flow POV）。× persistable：thread 声明 `mode="inline"`，整窗随所属 thread 的 `thread-context.json` 落盘，不单独落 `data.json`。**生命周期**：会话窗即对该 thread 对象的一个引用、关一个 fork 窗使该子线程 refcount 归 0 → 由 thread 的 `unactive` policy **通知**（往该子线程自己 inbox 发一条 source="system" 通知「creator 已关闭对话窗口、当前已无消息订阅者」、即时落盘）、**不切终态、不级联**，由其下一轮 thinkloop 自决是否 `end`（waiting 子线程因 inbox 增长被 scheduler 唤醒）；退出态只有 `done` / `failed`（无 `canceled`，已退役），thread 终结一律走 `end`→done；结构窗（thread / creator 门面窗）不可关；引用计数停启机制见 A 区核心 10 与 [object self.md](../children/object/self.md)。
 
 ## agent
 
@@ -172,7 +174,7 @@ agent = object + LLM：在 object base 标准具备的四维（readable / execut
 
 ## knowledge_base / knowledge
 
-knowledge_base 是单例 object，经 `open_knowledge` 把知识条目接入系统；其 child `knowledge`（class）是知识条目窗（命名空间从属、不继承 parent，对象模型核心 8）。它的故事主要落在 × thinkable：每条 knowledge 持 `activates_on` trigger，thinkloop 构造 context 时对每篇求激活级别，命中即按级别（`show_description` 只露标题描述 / `show_content` 展开正文）激活进 context；这与渐进式执行咬合成"执行到哪、知识激活到哪"，控制每轮 context 体积。knowledge 的双源（seed / sediment）加载与沿祖先 / parentClass 的继承链解析，归 thinkable 的 knowledge 子模块（见 [thinkable](../children/thinkable/self.md)）。**两源的编辑落点按版本化分**：**seed knowledge**（stone / 进 git）经 app 通用 file-edit 原语 `PUT /stones/:id/file?path=knowledge/x.md`（A1，版本化）；**sediment knowledge**（pool / 不进 git、非版本化）走独立 `/api/pools/` 端点——seed/sediment **不并入同一原语**（A1 只管 stone 版本化文件，pool 不进 git 与「版本化文件编辑」矛盾）。
+knowledge_base 是单例 object，经 `open_knowledge` 把知识条目接入系统；其 child `knowledge`（class）是知识条目窗（命名空间从属、不继承 parent，对象模型核心 8）。它的故事主要落在 × thinkable：每条 knowledge 持 `activates_on` trigger，thinkloop 构造 context 时对每篇求激活级别，命中即按级别（`show_description` 只露标题描述 / `show_content` 展开正文）激活进 context；这与渐进式执行咬合成"执行到哪、知识激活到哪"，控制每轮 context 体积。knowledge 的双源（seed / sediment）**磁盘加载与沿祖先 / parentClass 的继承链解析**由 **knowledge_base builtin 的 loader 模块**（`builtins/knowledge_base/loader.ts`）实现；**激活协议**（`activates_on` 触发求值 = `computeActivations`/activator）仍归 core thinkable 的 knowledge 子模块、在 context 构造期（thread thinkable 的 activator-windows/protocol）调用——物理位置 vs 语义属性分立。loader→core parser/persistable 是 builtin→core（合法）。**两源的编辑落点按版本化分**：**seed knowledge**（stone / 进 git）经 app 通用 file-edit 原语 `PUT /stones/:id/file?path=knowledge/x.md`（A1，版本化）；**sediment knowledge**（pool / 不进 git、非版本化）走独立 `/api/pools/` 端点——seed/sediment **不并入同一原语**（A1 只管 stone 版本化文件，pool 不进 git 与「版本化文件编辑」矛盾）。
 
 ## method_exec_form
 
@@ -200,7 +202,7 @@ form 是 object method 填表式渐进执行的载体——× executable：objec
 
 ## runtime
 
-`_builtin/runtime` 向 agent 提供系统级接入方法——× executable：如 `create_object`（建新对象骨架）等系统接入 object method，经统一 exec 入口调用。它不是被读展示的窗，而是被 agent **组合持有**的能力来源：agent 触达「建对象 / 系统操作」这类 OOC 系统能力的入口收在此对象上。**× object 生命周期：runtime 在 session 执行上下文内持 object 实例解析表**（`objectId → 唯一持 data 实例`，A 区核心 4 的 single-source / context window 引用解析的落点；= flows 磁盘的运行态镜像、refcount/active-unactive 落点；挂内存线程树根、随 job 释放，**非永生全局表**——worker 各 job 独立 readThread 重建内存树、跨 job 物理隔离无需锁）。形态见 [builtins](./builtins.md)，调用契约归 [executable](../children/executable/self.md)。
+`_builtin/runtime` 向 agent 提供系统级接入方法——× executable：如 `create_object`（建新对象骨架）等系统接入 object method，经统一 exec 入口调用。它不是被读展示的窗，而是被 agent **组合持有**的能力来源：agent 触达「建对象 / 系统操作」这类 OOC 系统能力的入口收在此对象上。**× object 生命周期：runtime 在 session 执行上下文内持 object 实例解析表**（`objectId → 唯一持 data 实例`，A 区核心 4 的 single-source / context window 引用解析的落点；= flows 磁盘的运行态镜像、refcount/active-unactive 落点；挂内存线程树根、随 job 释放，**非永生全局表**——worker 各 job 独立 readThread 重建内存树、跨 job 物理隔离无需锁）。**× 模块解析：ObjectRegistry 统一五维度模块（executable/readable/persistable/thinkable/visibleServer）的注册 merge + 沿单跳继承链 selfThenChain 解析**——新增 `resolveThinkable(classId)` 与 resolveReadable/resolvePersistable 同构；`thinkableOf(thread)`（core/thinkable/resolve.ts）是 thinkloop/scheduler 的运行时解析入口、无注册 fail-loud。`WindowManager.fromThread` 构造各 ctx 时注入 `ownerThread`（运行 thread）供 thread 类载体方法取。形态见 [builtins](./builtins.md)，调用契约归 [executable](../children/executable/self.md)。
 
 ## user
 

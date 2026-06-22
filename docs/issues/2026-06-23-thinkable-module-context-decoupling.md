@@ -1,6 +1,6 @@
 ---
 title: 新增 OocClass.thinkable 模块 —— context 管理出 core 归 thread builtin / loader 归 knowledge_base
-status: decided
+status: landed
 date: 2026-06-23
 ---
 
@@ -109,6 +109,22 @@ fan-out 10 reviewer（按受影响元素）+ 完整性批评官，**全部 endor
 - index.md：A 区核心 1（+thinkable 槽）/ B 区 ## thinkable（实现去向）/ D 区 executable×・readable×・persistable×・collaborable× thinkable（新分界）/ E 区 ## thread（注册 thinkable+construct 铺窗+appendEvents）・## runtime（resolveThinkable）・## knowledge_base（loader 归属）/ ## observable（_renderedWindows 数据流）。
 - self.md：object（核心 1/9/10）/ thinkable（新「thinkable 模块」节 + context 改「context 构造与渲染」）/ thread / knowledge_base / persistable（knowledge 路径 + thread 二级寻址）/ collaborable（peer 窗生命周期）/ runtime（resolveThinkable）/ observable（_renderedWindows）。
 - ooc-class.ts OocClass interface 注释（+thinkable 槽，注「仅 thread 类实际注册」）；example.md（若示模块槽）。
+
+## 落地记录（feat/thinkable-module，主工作区分支）
+
+按裁决分期落地，每阶段门全绿（tsc / core+builtin bun:test / storybook 64 / silent-swallow / deprecated-symbols / doc-drift）：
+
+- **P0**（commit c760cf8b）：声明 seam——OocClass 加 thinkable 槽 + registry merge/resolveThinkable + contract.ts/resolve.ts + ExecutableContext/ConstructorContext/ReadableContext 加 ownerThread + core 内 type-only ThreadContext import 重指 _shared。纯加法零行为变化。
+- **P1a**（bd253553）：runningThread(ctx)=ctx.ownerThread（WindowManager.fromThread + object-lifecycle + renderer 注入）。**清掉全部 17 条 deferred-red**（point-1 遗留 fork/unactive/finalizer/create_object/write-hint/session-aware/flows-worktree 全转绿），零回归。
+- **P1b/c**（051dee2c）：thread 注册 thinkable（buildInputItems/appendEvents/maybeAutoCompress/maybeForceWaitForCompress/onSchedulerTick）；thinkloop/scheduler 删 context/compress/child-notify blessed import 改 thinkableOf 解析；~17 处 thread.events.push 收成 appendEvents 单一 ingest。
+- **P2**（ea037bbb）：`core/thinkable/context/` 整树 git mv → `builtins/agent/children/thread/thinkable/context/`；删 context.ts shim；全仓 import 分流（类型→_shared / 值→builtin）。
+- **P3**（7f8e6aa9）：`knowledge/loader.ts` git mv → `builtins/knowledge_base/loader.ts`（parser/activator/类型留 core）；消费者重指。
+
+**终态达成**：`core/thinkable/` 只剩 thinkloop / scheduler / recovery / llm + knowledge(parser/activator) + contract/resolve；core 不再 import thread builtin（唯一例外 writeThread = persistable 维度 blessed import，裁决 #5）。
+
+**P4 文档回流**：成对回流 index.md（A 核心 1 / B thinkable / D ×thinkable / E thread·runtime·knowledge_base / observable）+ 各 self.md + ooc-class.ts 注释。
+
+**有意推迟（裁决 #8 的 construct 收敛部分）**：创建期窗 init helper（initContextWindows/injectPeer/injectMember）已物理搬入 thread builtin（P2），但**调用点收敛进 construct + 移除 flows-service/talk-delivery/thread-persist 外部调用**推迟为后续点——根 thread 非 talk-construct（construct 收敛有真实缺口）、且窗初始化时机变更属行为变更而 integration/e2e 为 LLM-gated 不可在本轮完全验证。当前外部 init 调用经 core→builtin import（同 writeThread 既有模式）成立、行为不变。归后续 issue。
 
 ## 落地验收
 
