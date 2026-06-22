@@ -1,0 +1,115 @@
+---
+title: 新增 OocClass.thinkable 模块 —— context 管理出 core 归 thread builtin / loader 归 knowledge_base
+status: decided
+date: 2026-06-23
+---
+
+# 新增 `thinkable` 模块：thread/knowledge 与 core 解耦
+
+## 背景 / 动机
+
+OOC 朝 OOP 推进——系统能力以 builtin class 表达、core 出泛型机制、builtin 出 policy（范本 `object-lifecycle.ts`）。
+但 **thinkable 这一维度的核心实现仍寄居 core**：`core/thinkable/` 把 **think 循环**（thinkloop/scheduler）与
+**上下文管理**（buildContext / 渲染 / budget / 窗注入 / knowledge 加载）揉在一起；且 `thinkloop`/`scheduler`
+直接 "blessed import" thread builtin 的 policy（compress / child-notify / writeThread）。这是 thread↔core 耦合最深的一块
+（接续 [[2026-06-22-thread-core-boundary]]，该 issue 已把 ctx 去 thread 字段、self-proxy、say/reply 退潮，
+但 `runningThread(ctx)` 仍是抛错 TODO ——本 issue 给它归宿）。
+
+## 现状（锚 index.md）
+
+- `## thinkable`（B 区）：LLM 看到一组 ContextWindow；thinkloop = 单 thread「构造 context→调 LLM→执行 tool→写事件」循环。实现整堆在 `core/thinkable/`。
+- `## OOC Class/Object Model`（A 区核心 1）：class = readable/executable/visible/persistable 四件套——**thinkable 不在 OocClass 模块槽里**，故 thread 无法像注册 readable 那样注册自己的 thinkable 实现。
+- `## thread`（E 区）：thread × thinkable = thinkloop 跑在 thread 上，但「跑」的 context 构造逻辑物理在 core，不在 thread builtin。
+- `## knowledge_base / knowledge`（E 区）：knowledge 双源加载（loader）+ 继承链解析「归 thinkable 的 knowledge 子模块」——即在 core；knowledge_base.open_knowledge 反向 import core loader。
+- `## executable × thinkable` / `## readable × thinkable` / `## persistable × thinkable` / `## collaborable × thinkable`（D 区）：均把 context 渲染/knowledge/inbox 归 thinkable，但未表达「thinkable 实现归谁」。
+- 代码锚点：`core/thinkable/{thinkloop.ts,scheduler.ts,recovery.ts}` + `context/`（~15 文件，含 `renderers/xml.ts`）+ `knowledge/{loader,parser,activator,activator.expr}.ts` + `llm/`；`thinkloop.ts:5,7` / `scheduler.ts:4,6,7` 直 import thread builtin；`object-registry.ts` 的 `resolveReadable`/`resolvePersistable`（:227/:236）是模块解析范式。
+
+## 改动提案
+
+1. **新设计元素 `OocClass.thinkable`**（与 executable/readable/persistable 同构的第 N 个模块槽）。`core/thinkable/contract.ts` 定 `ThinkableModule` + `ThinkableContext`，**纯类型零 thread import**。
+   - **签名约定 `(ctx, …)`**——与 `ObjectMethod.exec(ctx, self, args)` / `readable(ctx, self, win)` 对齐；**不拿裸 thread**。运行 thread 经 `ctx.thread` 取（thread 是「提供 thinkable 实现」的 class，正在跑的那条线程经 ctx 传入）。**这是 point-1 `runningThread(ctx)` 抛错 TODO 的归宿**。
+   - 窄接口（纯 per-tick）：`buildInputItems(ctx)`（读：context→LLM 输入）/ `appendEvents(ctx, events)`（写：单一 ingest，core 每步产出的 ProcessEvent 折进 thread 历史，core 不再直接写 thread.events）/ `maybeAutoCompress(ctx, tokens)` / `maybeForceWaitForCompress(ctx, tokens)` / `onSchedulerTick(ctx)`（= harvest + child-notify 合一）。
+2. **registry 解析**：`object-registry.ts` 加 `resolveThinkable(classId)`（镜像 resolveReadable 走 selfThenChain）+ register/seedFrom merge；新 `core/thinkable/resolve.ts#thinkableOf(thread)`（按 thread.class，无注册 **fail-loud 抛错**）。core thinkloop/scheduler 改 call-time 解析、删 blessed import。
+3. **创建期窗初始化收敛进 thread `construct`**（不进 thinkable）：`initContextWindows` + `injectPeerWindows`（兄弟+一级子→peer 会话窗）+ `injectMemberWindows`（单例工具+声明成员→member 工具窗）从 core 退役、并入 thread 类 construct（construct = 完整出生：产 Data + 铺初始窗）；restore（reload 非 construct）走可复用 helper。（peer 每轮重 reconcile 仍在 buildInputItems，属 thinkable。）
+4. **物理搬迁**：`core/thinkable/context/` 整树 → `builtins/agent/children/thread/thinkable/`；`core/thinkable/knowledge/loader.ts` → `builtins/knowledge_base/loader.ts`。parser/activator/activator.expr/类型 **留 core**（parser 还被 `app/stones/service.ts` + `skill_index/scan.ts` 用）。
+5. **终态**：`core/thinkable/` 只剩 `thinkloop`/`scheduler`/`recovery`/`llm/` + `knowledge/{parser,activator}` + 新 `contract`/`resolve`。core 不再 import thread builtin、不再管 context 构造/更新。
+6. **留 core 不进 thinkable**：`writeThread`（persistable 维度，保留 blessed import 或后续 resolvePersistable）；`getAvailableTools`（executable 泛型原语）；`thread.isSummarizer`/`status`/`endSummary`/`statusReason`/`lastError`（ThreadContext 数据/控制字段，core 当数据读写、scheduler 调度用）。
+
+## 受影响设计元素
+
+- `## thinkable`（B 区）—— 维度核心：实现出 core 归 thread builtin；thinkable 升为 OocClass 模块。
+- `## OOC Class/Object Model`（A 区核心 1）—— class 模块四件套 → 加 thinkable 第五槽；construct 收敛创建期窗初始化（核心 10 生命周期）。
+- `## thread`（E 区）—— thread 注册 thinkable、construct 铺初始窗、appendEvents 折历史。
+- `## knowledge_base / knowledge`（E 区）—— loader 归 knowledge_base；knowledge 双源加载「归 thinkable 子模块」表述需改。
+- `## executable × thinkable`（D 区）—— thinkloop 调 LLM + tool dispatch（留 core）vs context 构造（归 thinkable）的新分界。
+- `## readable × thinkable`（D 区）—— readable 投影被 thinkable(builtin) 的 renderer 消费；consumedMessageIds 协作跨 builtin。
+- `## persistable × thinkable`（D 区）—— knowledge 路径/self.md 读取的跨维；writeThread 边界。
+- `## collaborable × thinkable`（D 区）—— peer 窗注入收进 construct；inbox/outbox × buildInputItems。
+- `## persistable`（B 区）—— writeThread 留 persistable 的边界确认。
+- `## runtime`（E 区）—— object-registry 加 resolveThinkable + merge。
+- `## app`（B 区，**fan-out 补列**）—— flows/service.ts 现调 initContextWindows/injectPeer/injectMember + import runScheduler/createLlmClient/ThreadContext；窗初始化收进 construct 后，app 这些调用点改走 thread builtin / construct，import 方向需整理。
+- `## observable`（潜在波及）—— `_renderedWindows` 数据字段通道：renderer 搬进 builtin 后 observable 仅**读** thread._renderedWindows（数据流、非类型流），勿 import 搬走的 renderer。
+- `## reflectable`（潜在波及）—— compress harvest / super flow 经 thinkable 钩子（onSchedulerTick/maybeAutoCompress），须保持完整。
+- `## skill_index` / `## method_exec_form`（fan-out 提及，**核定不受影响**）—— skill_index 用 parseKnowledgeFile（留 core，不动）；method_exec_form 经 route intents 激活，buildInputItems 内部签名变化不影响其契约。
+
+## 风险与权衡
+
+1. `renderers/xml.ts` 运行时耦合最深（session-object-table/registry/self-proxy/persistable/readable）——搬迁后相对→alias 漏改即破 tsc；最后搬、隔离编译。
+2. `parser.ts` 被 app/skill_index 共用——**只搬 loader、parser 留 core**，否则 app/skill_index 反依赖 knowledge_base。
+3. 创建期收 construct 的 **restore 缺口**：reload 不走 construct——init(self/peer/member) 须抽可复用 helper，否则 reload 丢初始窗；P1 须同改 4 创建路径（root/peer/fork/restore）。
+4. `observable._renderedWindows` 是 ThreadContext 数据通道——搬后仍走数据、勿让 observable import 搬走的 renderer。
+5. 循环依赖：registry 间接化打断唯一运行时环（thinkloop/scheduler 不再静态 import builtin）；须核 core 内**无 value import** 指向搬走的 `thinkable/context`（已核实仅 thinkloop:382 一处 value，其余全 type-only ThreadContext，改指 `_shared/types/thread.js`）。
+6. doc/anchor 漂移面大（多处 `core/thinkable/context/...` 锚点位移）——P4 统一扫 check:doc-drift。
+
+## 待裁决点
+
+- **【crux】construct/unactive 的「运行 thread」获取**：point-1 已从泛型 ConstructorContext/LifecycleContext 删 `thread`，故 thread 类的 `construct`（fork 需父 thread，`index.ts:144`）与 `unactive`（需 scope thread，`index.ts:208`）现 `runningThread(ctx)` **抛 TODO**（15 条 deferred-red 根因）。thinkable ctx 解决了 thinkable 函数的运行 thread 获取，但 construct/unactive 是 ObjectConstructor/LifecycleHook（非 thinkable 函数）。裁决方向候选：①泛型 ctx 重加 thread（回退 point-1，污染所有 class）；②runtime 经 thread-builtin 专属通道把 owner thread 传入（如 `ctx.runtime.ownerThread()`，但 RuntimeHandle 泛型）；③construct/unactive 也收 ThinkableContext-风格 ctx（runtime 操作 thread 类时携带 owner thread）。须依 OOC/OOP 哲学定——倾向「thread 是 thinkable 载体，运行 thread 属 thinkable ctx，construct/unactive 作为 thread 生命周期操作经同一 ctx 拿 owner thread」，**允许破坏 point-1 的泛型形状以求干净**。
+- **ThinkableContext 形状**：仅 `{thread}` 起步、按需扩 runtime/persistence？还是一开始就带 runtime 句柄？
+- **窄 vs 宽接口**：appendEvents 单一 ingest（已定）；是否还需把 status 等控制写也纳入 thinkable？（提案：不纳，留 core 控制。）
+- **创建期收 construct 的 restore 路径**：construct 内部 helper 复用 vs 独立 restore 函数。
+- **fail-loud fallback**：thinkableOf 无注册抛错（提案）vs no-op。
+- **writeThread 边界**：留 persistable blessed import（提案）vs 升 resolvePersistable。
+- **knowledge_base 反向依赖**：loader 进 knowledge_base 后，thread builtin 的 context(activator-windows/protocol) import knowledge_base loader —— builtin→builtin 边，确认可接受。
+
+## review 记录
+
+fan-out 10 reviewer（按受影响元素）+ 完整性批评官，**全部 endorse-with-changes，无 design-killing block**。汇总要点：
+
+- **thinkable**：窄接口认可；要求澄清 appendEvents 是「推原始 ProcessEvent」还是「转流 item」（→ 裁决：推原始 event，转流在 buildInputItems 读侧）；onSchedulerTick 合并 harvest+child-notify 被质疑「两正交逻辑混一钩子」（→ 裁决：保持合并，order 属 thread 内部、core 不应知）。
+- **OOC Class/Object Model**：construct 收窗与「核心 10 出生」自洽，但 injectPeer/injectMember 是 async——construct（ObjectConstructor.exec）本就 async-capable，无碍；要求核心 1「四件套」→ 含 thinkable。要求显式规范「thinkable 仅 agent 类生效 / 任意类可声明但仅 agent 触发」。
+- **thread**：两 blocking——①construct 必须完整覆盖 restore（否则跨 reload 丢窗）；②appendEvents 必须覆盖全部 ~17 处 push（否则破坏单一 ingest）。指出 runningThread(ctx) 仍抛桩、construct/fork 取不到 parent（**crux**）。
+- **knowledge_base**：无 block；loader 搬入后 thread thinkable→knowledge_base loader 是 builtin→builtin（knowledge_base 不反 import thread，安全）；loader→core parser 是 builtin→core（安全）。
+- **executable×/readable×thinkable**：无 block；确认 getAvailableTools 是 executable 契约（留 core 合法）；ThinkableModule 契约属 core（core/thinkable/contract.ts），thread 是 impl（镜像 ReadableModule 契约 + builtin impl）；consumedMessageIds 单向 readable→renderer，renderer 搬 builtin 后仍调 core resolveReadable/session-object-table（builtin→core 合法）。
+- **persistable**：无 block；writeThread 留 core blessed import 合理（thread save/load 是「会话容器整 blob」二级寻址、非泛型 Object.save）；knowledge 路径 stoneKnowledgeDir/poolKnowledgeDir 留 persistable。
+- **collaborable**：无 block；要求 peer 窗生命周期自洽——initial+per-round reconcile 都在 buildInputItems（环境发现、惰性），不强求进 construct。
+- **runtime**：两 blocking——①resolveThinkable 必须走 selfThenChain + fail-loud（与四维度对称）；②appendEvents（context 更新）vs writeThread（落盘）边界须明确不撕裂。建议提取 resolveByChain 公共 helper。
+- **observable+reflectable**：无 block；observable 只读 _renderedWindows（数据流）；确认 budget/compress-trigger/transcript-clamp 等 context 子模块的去向（→ 裁决：随 context 树搬进 thread thinkable，compress.ts 改 import 新址）。
+- **完整性批评官**：补列 `## app` 受影响（已加）；指出「member 窗已在 construct（index.ts:100）」故「收进 construct」是**完成/形式化**而非从零搬；澄清「删 blessed import」实为「call-time resolveThinkable 替代 top-level import」。
+
+## 裁决
+
+逐条拍板（OOC/OOP 哲学 + 用户授权破坏性变更求干净态）：
+
+1. **thinkable = OocClass 第五模块槽**（与 executable/readable/persistable/visibleServer 并列）。`ThinkableModule` 契约属 **core**（core/thinkable/contract.ts），thread 是其 **impl**（镜像 ReadableModule 契约 + builtin readable impl 的关系）。object-model 核心 1「四件套」→ 文案含 thinkable（agent 维度）。
+2. **thinkable 适用面**：任意 class 可声明 thinkable，但**仅跑 thinkloop 的 thread 类实际注册/被调**；`thinkableOf(thread)` 无注册 **fail-loud 抛错**（错误信息附 thread.class）——不是优雅降级，是配置错误。不在 registry 注册期强制「仅 agent」，保持机制泛型、约束靠 fail-loud 自然成立。
+3. **ThinkableContext = `{ thread: ThreadContext }`**（最小）。额外 per-tick 参数（transcriptTokens）走函数形参，不塞 ctx。registry 是单例（builtinRegistry，builtin 直接 import）、persistence 在 thread.persistence——故无需进 ctx。thread.status 等控制字段对 thinkable **只读**（写归 core scheduler/thinkloop）。
+4. **appendEvents = 推原始 ProcessEvent**（`appendEvents(ctx, events: ProcessEvent[])`）：折进 thread.events（+ 未来投影记账）。event→LlmInputItem 转流（processEventToItems）+ consumedMessageIds 去重 **留 buildInputItems 读侧**（搬进 thread thinkable）。core thinkloop ~17 处 `thread.events.push` **全部**改走 appendEvents（thread blocking①兑现）；status/endSummary/statusReason/lastError 等控制写留 core。
+5. **appendEvents vs writeThread 不撕裂**：appendEvents = 内存 thread.events 变更（context 历史）；writeThread = 整 thread blob 落盘。两层正交——thinkloop 先 appendEvents（内存）后 writeThread（盘）。writeThread 留 persistable blessed import（thread save/load 是会话容器二级寻址、非泛型）。
+6. **onSchedulerTick 合并**（= harvest + child-notify，thread 内部按序）：core scheduler 调一个钩子、不知两子步顺序——**更解耦**（core blind to internals）。保留合并。
+7. **【crux】runningThread for construct/unactive**：根因 = point-1 删了 ctx 上的运行 thread。裁决——`ConstructorContext`/`LifecycleContext` 增 `ownerThread?: ThreadContext`（在其 runtime 中运行的那条线程），由 **WindowManager.fromThread 注入**；`runningThread(ctx)` 返 `ctx.ownerThread`、缺则 fail-loud。这是对 point-1 泛型形状的**有意、受控的部分反转**——运行 thread 是 thread-class 生命周期/construct 的运行时环境（ThreadContext 物理在 core/_shared、非 builtin 类型）；非 thread 类的 construct 忽略它，零回归。**此裁决顺带清掉 point-1 遗留的 15 条 deferred-red**（fork/unactive/finalizer 链恢复）。
+8. **创建期窗初始化**：helper（initContextWindows/injectSelf/injectPeer/injectMember）随 context 树搬进 thread thinkable，**全部幂等**；construct（出生）调一次铺初始窗；buildInputItems **每轮**幂等重铺（self/member）+ peer reconcile——**自动覆盖 restore**（reload→thinkloop→buildInputItems 重铺），无需独立 restore 函数。flows-service/talk-delivery/thread-persist 的外部 init 调用退役/改走 construct+buildInputItems。
+9. **knowledge**：loader（+测试）→ knowledge_base builtin；parser/activator/activator.expr/类型留 core。方向核定：thread thinkable→knowledge_base loader（builtin→builtin）、knowledge_base loader→core parser/persistable 路径函数（builtin→core）、thread thinkable→core activator（builtin→core）——皆合法，knowledge_base 不反 import thread。
+10. **物理搬迁顺序**：renderers/xml.ts 最后搬、隔离编译（最深耦合）；budget/compress-trigger/transcript-clamp 随 context 树搬（compress.ts import 改新址）。
+11. **registry**：`resolveThinkable` 走 selfThenChain + register/seedFrom merge `thinkable` 字段（与四维度对称）；可提取 `resolveByChain` 公共 helper 去重（可选优化）。
+
+**落地分期** = 计划 P0-P4（见 plan 文件）；**P1 把 crux#7 的 ownerThread 一并落**（解锁 construct + 清 15 deferred-red）。源码仓特化：worktree 无 node_modules → 在主工作区 **feat 分支** `feat/thinkable-module` 落地（非 `.worktree/`，与本 session 既有 thread-core-boundary 点同模式），每阶段门全绿后合 main。
+
+## 一致性回流清单（落地时成对改）
+
+- index.md：A 区核心 1（+thinkable 槽）/ B 区 ## thinkable（实现去向）/ D 区 executable×・readable×・persistable×・collaborable× thinkable（新分界）/ E 区 ## thread（注册 thinkable+construct 铺窗+appendEvents）・## runtime（resolveThinkable）・## knowledge_base（loader 归属）/ ## observable（_renderedWindows 数据流）。
+- self.md：object（核心 1/9/10）/ thinkable（新「thinkable 模块」节 + context 改「context 构造与渲染」）/ thread / knowledge_base / persistable（knowledge 路径 + thread 二级寻址）/ collaborable（peer 窗生命周期）/ runtime（resolveThinkable）/ observable（_renderedWindows）。
+- ooc-class.ts OocClass interface 注释（+thinkable 槽，注「仅 thread 类实际注册」）；example.md（若示模块槽）。
+
+## 落地验收
+
+（`landed` 后由 Supervisor 汇总验收 reviewer 意见）
