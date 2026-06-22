@@ -1,6 +1,6 @@
 ---
-title: thread builtin 业务退出 core——compress 退潮 + onChildTerminal 退潮 + say 机制纠正 + unactive 通知
-status: decided
+title: thread builtin 业务退出 core——compress 退潮 + onChildTerminal 退潮 + unactive 通知（say 转 substrate）
+status: verified
 date: 2026-06-21
 ---
 
