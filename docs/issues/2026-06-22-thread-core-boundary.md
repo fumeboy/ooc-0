@@ -35,13 +35,85 @@ OOC 朝 OOP 哲学推进——系统概念以 builtin class/object 表示在 `pa
 
 > 逐点填充——用户每提一处耦合，在此追加一节（`### 点 N · <标题>`：现状锚点 / 改法 / 受影响元素 / 是否需 fan-out）。
 
-（待用户提出第一点。）
+### 点 1 · object↔core 泛型契约去 thread 字段/参数
+
+**现状锚点（thread 类型漏进泛型契约）**：泛型 object↔core 接口直接携带 thread builtin 的数据类型 `ThreadContext`（`core/_shared/types/thread.ts:411`）——
+- `ExecutableContext.thread?: ThreadContext`（`core/executable/contract.ts:75`）+ `ConstructorContext.thread?`（:98）+ `LifecycleContext`（继承 ConstructorContext，:188）。
+- `ReadableContext.thread?: ThreadContext`（`core/readable/contract.ts:22`）。
+- `PersistableContext.threadId?`（`core/persistable/contract.ts:23`）——thread blob 二级寻址漏进通用持久化契约。
+- `ObjectMethod.exec/route`、`WindowMethod.exec`、`PersistableModule.save/load` 签名本身不命名 thread，但 thread 全经上述 ctx 字段漏入。
+
+**证伪闸门（已 grep 全 51 处 `ctx.thread`，方向有利）**：非 thread builtin **不需要完整 ThreadContext**——13 个非 thread 文件（filesystem/interpreter/terminal/knowledge/runtime/search/pr/skill_index/feishu_doc）只读 `ctx.thread.persistence`（11 处）+ 1 处 `file.write_file` 往 `ctx.thread.events` push worktree 标记。重度用 ThreadContext（events/status/contextWindows/endSummary/creatorSessionId/对象表）的全在 **thread builtin 自己的方法**（end/say/session-methods/talk-delivery/construct/unactive/readable）。`ReadableContext` 已有 `persistence?:{baseDir,sessionId}`；`ExecutableContext` 已有 `ownerThreadRef`/`ownerFlowObjectRef`（持久化 ref，非 ThreadContext）。
+
+**改法（用户裁定：先完成接口修正，缺失路径留 TODO）**：
+1. 从 `ExecutableContext` / `ConstructorContext` / `ReadableContext` 删 `thread?: ThreadContext` 字段 + 删 `ThreadContext` import；`PersistableContext` 删 `threadId?`。
+2. 非 thread 消费者的 `ctx.thread.persistence` 改读**中立** `ctx.persistence`（ReadableContext 已有；ExecutableContext 补中立 persistence 字段或复用 ownerThreadRef）。
+3. thread builtin 自己的方法/persistable 真正需要「正在跑的那条 thread T」/ threadId 处，**留 `TODO("获取 caller")` 占位**（形式 `let thread = TODO(...)`），不在本点解决 T 的获取——T 怎么拿留作后续点（say 单写 / peer-ref substrate 一并定）。
+4. `tsc` 枚举全部断点作为精确工作清单。
+
+**fan-out 重量判定**：本点是**退潮**（删 thread 类型漏点，grep + tsc 可验回归），按 design-workflow「fan-out 给新增、不给删除」→ 轻流程：接口修正 + tsc 自验，落地后过一轮验收。引入的中立 `ctx.persistence` 是小 additive，随验收核。
+
+**落地（worktree `feat/thread-core-boundary`，tsc 零新增错误）**：
+- 三契约删 thread：`ExecutableContext`/`ConstructorContext`/`LifecycleContext` 删 `thread?: ThreadContext`、`ReadableContext` 删 `thread?`、`PersistableContext` 删 `threadId?`；各补/复用中立 `persistence?: ThreadPersistenceRef`（ReadableContext 原 `{baseDir,sessionId?}` 升为全 ref）。
+- 非 thread builtin（runtime/search/knowledge/skill_index/pr/feishu_doc/file/terminal/interpreter）全改读 `ctx.persistence`；`resolveSessionPath`/`resolveStoneWorktreeTarget`/`runBashExec`/`runInterpreterExec` 签名 thread→persistence。
+- **附带退役（用户追加指令）**：interpreter 删 `getThreadLocal`/`setThreadLocal`（跨 exec 共享态）+ core `ThreadContext.threadLocalData` 字段——interpreter 彻底脱离 thread 依赖（self.ts 不再 import ThreadContext）。
+- core ctx 构造点（window-manager/object-lifecycle/exec/xml renderer）填 `persistence: thread.persistence`。
+- thread builtin 自己的载体方法（say/end/new_feat_branch/create_pr/fork construct/unactive/readable）经新 helper `running-thread.ts#runningThread(ctx)` 取「运行 thread T」——**当前为 `TODO(...)` 占位**（抛清晰错误），T 的真获取路径留后续点（say 单写读侧 / peer-ref substrate / enqueueThread）。
+- thread persistable 的 `threadId` 二级寻址下沉为 thread builtin 自有 `ThreadPersistableContext = PersistableContext & {threadId?}`。
+- 新增 `_shared/utils/todo.ts#TODO(reason): never`（编译期合法、运行期炸的退潮占位）。
+
+**遗留 TODO 债（落地验收须清零）**：① thread 载体方法的 `runningThread(ctx)`（6 文件）；② file write_file/edit 的 worktree 提示注入（原经 `ctx.thread.events`，construct ctx 无 events 流）。二者同属「运行 thread T 获取」缺口，与本 issue 后续点（say/peer-ref）同根。
 
 ## 受影响设计元素
 
 > 随每点改动提案在此累积；对照 `knowledge/index.md` 的 `##` 元素清单逐一列出。
 
-（待填充。）
+**点 1**：
+- `## executable`（B 区）—— ExecutableContext / ObjectMethod / ConstructorContext / LifecycleContext 去 thread 字段；object method 签名契约。
+- `## readable`（B 区）—— ReadableContext / WindowMethod 去 thread 字段；persistence 中立化。
+- `## persistable`（B 区）—— PersistableContext 去 threadId；PersistableModule save/load 契约。
+- `## OOC Class/Object Model`（A 区核心 5/6）—— object method (ctx,self,args) / window method (ctx,self,before_win,args) 的 ctx 形状是对象模型契约。
+- `## thread`（E 区）—— thread 自己的方法/persistable 改从中立契约取「运行 thread」（本点留 TODO）。
+- `## executable × readable`（D 区）—— 两维共用 exec-by-name 入口的 ctx 形状对称去 thread。
+- 潜在波及（验收核）：`## persistable × thinkable`（threadId 二级寻址迁出后 thread persistable 怎么拿 threadId）。
+
+### 点 2 · self 入参从裸 Object Data 改为 self-proxy（data/methods 分离）
+
+**现状锚点**：object↔core 的 `self` 入参 = 裸 Object Data——
+- `ObjectMethod.exec/route` 的 `self: Data`（`core/executable/contract.ts`）。
+- `WindowMethod.exec` 的 `self: Data`、`ReadableModule.readable` 的 `self: Data`（`core/readable/contract.ts`）。
+- core 产 self：`getSessionObject(thread,objectId)?.data ?? {}`（window-manager execObjectMethod/execWindowMethod）、`objectDataOf(inst,table)`（xml renderer readable / exec.ts route）。
+
+**改法（用户裁定：分离 self.data / self.methods）**：新增 `core/runtime/self-proxy.ts`，两个 proxy：
+- **读写 + 可调方法**（给 ObjectMethod）：`SelfProxy<Data> = { data: Data（读写）; methods: SelfMethods（调对象自己的 executable method，self.methods.foo(args) → runtime.callMethod(selfId, "foo", args)）}`。
+- **只读**（给 Executable 以外：WindowMethod / ReadableModule.readable）：`ReadonlySelfProxy<Data> = { data: Readonly<Data>（Proxy set 抛错）}`，无 methods。
+- 三签名 `self` 类型：ObjectMethod→SelfProxy、WindowMethod/readable→ReadonlySelfProxy。
+- 4 个 core 产 self 点改建 proxy。
+- builtin 全量 `self.<field>` → `self.data.<field>`（约 245 处 / 50 文件，tsc 枚举逐一迁）。
+
+**fan-out 重量判定**：本点**新增机制**（self-proxy + 自调方法通道）+ 动对象模型核心 5/6 的 self 契约 → 属「加机制」，理应 fan-out；但本轮按用户指令先落地实现（接口 + 全量迁移 + tsc 绿），设计 review 在落地后补（与点 1 一并过验收/ 必要时补设计 review）。
+
+**受影响设计元素（点 2）**：
+- `## OOC Class/Object Model`（核心 5/6）—— object method / window method 的 self 语义（裸 data → proxy）。
+- `## executable`（B 区）—— ObjectMethod self 形状 + self.methods 自调通道（exec-by-name 的自指）。
+- `## readable`（B 区）—— WindowMethod / readable 的 self 收窄为只读 proxy。
+- `## executable × readable`（D 区）—— 两维 self 入参对称改造（rw vs ro proxy 分流）。
+
+**落地（worktree `feat/thread-core-boundary`）**：
+- 新增 `_shared/types/self-proxy.ts`（类型 `SelfProxy`/`ReadonlySelfProxy`/`SelfMethods`）+ `runtime/self-proxy.ts`（工厂 `makeSelfProxy`/`makeReadonlySelfProxy`）。读写 proxy `self.data` 写活引用、`self.methods.x()`→`runtime.callMethod` 自指；只读 proxy set-trap 拒写。
+- 三签名 self 改 proxy 类型；4 个 core 产 self 点（window-manager execObjectMethod/execWindowMethod、xml renderer readable、exec.ts route）改建 proxy。
+- 全量 builtin `self.<field>`→`self.data.<field>`（~50 文件，含 example/filesystem/agent 家族/feishu/interpreter/terminal/knowledge_base + 各 test/story call site 经工厂包裹）。tsc 零新增错误。
+
+## 落地测试状态（点 1+2 合并落地，worktree `feat/thread-core-boundary`）
+
+**绿**：`check:tsc`（零新增，仅 6 条 baseline 环境 dep 错=main 同款）/ `check:silent-swallow` / `check:deprecated-symbols` / `check:doc-drift`。
+
+**core 测试 694 pass / 17 fail**——分两类，均非 self-proxy 回归：
+- **2 条 pre-existing**（main 同样红）：interpreter sandbox `injects self with stone dir` / `getData/setData`——tmp exec .mjs 模块解析的环境问题，与本轮无关。
+- **15 条 TODO-deferred**：全部源于点 1 的 `runningThread(ctx)` 占位（运行 thread T 获取路径未接入）——reflectable finalizer 链（new_feat_branch/create_pr）×6、create_object(d) super(foo) 链 ×1、write-through 提示 event 注入 ×2（construct ctx 无 events 流）、buildContext/attention 的 transcript 归属路由 ×4（readable 缺 viewing thread 降级、不再把 creator 消息收进 transcript）、session-aware create_object+talk ×1、flows-worktree ×1。这些是「say 单写读侧 / peer-ref substrate / enqueueThread」后续点交付前的**预期红**，已在 [[feedback_thread_core_boundary_deferred_tests]] 登记。
+- readable 投影特意用 `runningThreadForRender`（返 undefined 降级、不抛）而非 `runningThread`（抛），保证 **main render 不崩**——仅 transcript 归属暂缺，整条 context 仍可渲染。
+
+**storybook 63 pass / 1 fail**：`visible: 无 FAIL` pre-existing（main 同款）。
 
 ## 风险与权衡
 
