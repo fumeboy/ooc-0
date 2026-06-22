@@ -137,13 +137,17 @@ OOC 朝 OOP 哲学推进——系统概念以 builtin class/object 表示在 `pa
 
 **新语义（creator-scoped，区别于旧模型）**：旧设计（collaborable `self.md:30`）= 「say 写自己 outbox + 派送对端 inbox；inbox=收到/outbox=发出，**与 caller/callee 身份无关**」（双写）。新模型 = **creator-scoped**：inbox = creator→本 thread 的入站；outbox = 本 thread→creator 的出站。一段 creator↔child 对话的单一真相源落在**对话所属 thread 的 box** 上（与 child）。
 
-**落地（worktree `feat/thread-say-inbox-outbox`）**：
+**模型精确化（用户裁定）**：一条 thread 按视角投影成两种会话窗，写消息 method 按视角分名——
+- **self-view 窗**（`thread` / `reflect_request`）：本 thread 对其 **creator** 说话 → `say` → 写本 thread **outbox**。
+- **creator-view 窗**（`talk`，creator 看 child 的会话窗）：creator 回话进 child → `reply` → 写 child **inbox**。
+两 method 对称（都写「窗所代表 thread」的 box、都触发 `self.target` 调度），**方法名即视角**，无需 `isSelfThreadWindow` 分支。caveat：「两窗写同一 thread box」的单一真相源依赖 peer-ref / 对象-上下文窗拆分（creator-view talk 窗 `self.data` 解析到 child thread）——尚未落，当下两窗各写自己的 data 副本（存量、后续点）。
+
+**落地（worktree `feat/thread-say-reply-split`，承接 `feat/thread-say-inbox-outbox`）**：
 - `agent/children/thread/types.ts`：`Data` 加 `inbox?/outbox?: ThreadMessage[]`（creator-scoped doc）；更新「过程数据落 thread.json」注释（inbox/outbox 移入 Data）。
-- `agent/children/thread/executable/session-methods.ts`：`say` 重写为单一职责——
-  - 面向 creator 的自身 thread 窗（`isSelfThreadWindow`）→ 写 `self.outbox`（我→creator）、`notifyThreadActivated` 触发 **creator**（= `self.target`/`targetThreadId`）。
-  - 面向 sub/peer 的窗 → 写 `self.inbox`（→对端）、触发**对端**调度。
-  - **绕开会抛的 `runningThread(ctx)`**（say 不再依赖运行 thread T）；删 deliverTalkMessage / fork 内存树派送 / 状态翻转 / asTalkWindowView 调用。
-- 触发器用既有 `notifyThreadActivated`（issue 待泛化为 `enqueueThread`，本轮沿用）。
+- `agent/children/thread/executable/session-methods.ts`：拆 **`say`（写 outbox）+ `reply`（写 inbox）**，共用 `writeBoxAndSchedule`（写 box + `reportDataEdit`）；**绕开会抛的 `runningThread(ctx)`**；删 deliverTalkMessage / fork 内存树派送 / 状态翻转 / asTalkWindowView。
+- **runtime 调度留 `TODO()` 占位**（用户裁定「简单实现」）：`triggerRuntimeSchedule` = `TODO("...enqueueThread 待建")`——**写盘生效、调度后续点接入**（say/reply 暂入 deferred-red，与点 1 同性质）。
+- `agent/children/thread/readable/index.ts`：`talk` 窗 object_methods `["say"]`→`["reply"]`（self-view `thread`/`reflect_request` 仍 surface `say`）。
+- `thread-say.test.ts`：wiring 断言改为「self-view→say / creator-view(talk)→reply」；旧 fork 内存树双写用例 `it.skip`（退役模型 + 本就被 runningThread TODO 阻塞）。
 
 **fan-out 重量判定**：本点动 collaborable 核心 say/inbox/outbox 语义（identity-agnostic 双写 → creator-scoped 单写），属**加机制/动核心契约** → 理应 fan-out；本轮按用户指令先落实现（字段 + say 单写 + 0 新增红），**设计文档回流（collaborable/self.md + thinkable/thread.md 的 say/inbox/outbox 段）待路由解读确认后补**，再过验收。
 
@@ -153,8 +157,8 @@ OOC 朝 OOP 哲学推进——系统概念以 builtin class/object 表示在 `pa
 - `## persistable`（B 区）—— inbox/outbox 落盘归属（旧：thread.json 过程数据；新：thread Data 字段）。
 - `## OOC Class/Object Model` 核心 7（builtin 自有持久化）—— inbox/outbox 作为 thread 自有 Data。
 
-**落地测试**：`check:tsc` 干净 / `silent-swallow` / `deprecated-symbols` / `doc-drift` 全绿；`storybook` 64 pass / 0 fail。thread builtin 测试 41 pass / 4 fail——**全部 pre-existing**（点 1 `runningThread` TODO deferred-red，阻塞在 fork construct setup，已 stash 核验 main 同款），本点**新增失败 0**。
-**遗留**：① `thread-say.test.ts` 的「fork 子窗 say 走内存树派送（child inbox + 父 outbox）」断言的是**旧双写模型**——新 creator-scoped 单写下已 obsolete，待 `runningThread` 接入后重写（当前被 TODO 阻塞、本就 red）；② 跨 thread 真实 delivery / 对端读侧 peer-ref 投影 / callee 创建首条 say / 跨 session 路由 均**未在 say 内闭合**，归后续点。
+**落地测试**：`check:tsc` 干净 / `silent-swallow` / `deprecated-symbols` / `doc-drift` 全绿；`storybook` 64 pass / 0 fail。thread builtin 测试 41 pass / 1 skip / 3 fail——3 fail **全部 pre-existing**（fork-unactive 的点 1 `runningThread` TODO deferred-red，阻塞在 fork construct setup，已 stash 核验 main 同款），本点**新增失败 0**；1 skip = 退役的 fork 内存树双写用例。
+**遗留**：① say/reply 的 runtime 调度为 `TODO()`（写盘生效、enqueueThread 待建）；② 跨 thread 真实 delivery / 对端读侧 peer-ref 投影（单一真相源）/ callee 创建首条 say / 跨 session 路由 均归后续点；③ 设计文档回流（collaborable/self.md + thinkable/thread.md：双写→creator-scoped 单写 + say/reply 分名）待路由解读最终确认后补。
 
 ## 落地测试状态（点 1+2 合并落地，worktree `feat/thread-core-boundary`）
 
