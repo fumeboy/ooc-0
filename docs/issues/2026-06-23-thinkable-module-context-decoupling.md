@@ -1,6 +1,6 @@
 ---
 title: 新增 OocClass.thinkable 模块 —— context 管理出 core 归 thread builtin / loader 归 knowledge_base
-status: landed
+status: verified
 date: 2026-06-23
 ---
 
@@ -126,6 +126,14 @@ fan-out 10 reviewer（按受影响元素）+ 完整性批评官，**全部 endor
 
 **有意推迟（裁决 #8 的 construct 收敛部分）**：创建期窗 init helper（initContextWindows/injectPeer/injectMember）已物理搬入 thread builtin（P2），但**调用点收敛进 construct + 移除 flows-service/talk-delivery/thread-persist 外部调用**推迟为后续点——根 thread 非 talk-construct（construct 收敛有真实缺口）、且窗初始化时机变更属行为变更而 integration/e2e 为 LLM-gated 不可在本轮完全验证。当前外部 init 调用经 core→builtin import（同 writeThread 既有模式）成立、行为不变。归后续 issue。
 
-## 落地验收
+## 落地验收（verified）
 
-（`landed` 后由 Supervisor 汇总验收 reviewer 意见）
+并发派 3 验收 reviewer（code / doc-reflow / retreat-drift）对照本 issue 核**实际落地**（非重审设计）：
+
+- **code reviewer — as-promised（0 gap）**：终态 core/thinkable 仅 thinkloop/scheduler/recovery/llm + knowledge(parser/activator) + contract/resolve；context 整树 + loader 已搬出 core、shim 已删；core 不 import thread builtin 除 writeThread；OocClass.thinkable 槽 + register/seedFrom/resolveThinkable(selfThenChain) + thread 注册 thinkable + ctx.ownerThread 注入(WindowManager/lifecycle/renderer) + runningThread fail-loud/降级 + appendEvents 单一 ingest——全核实。
+- **retreat reviewer — as-promised（0 gap）**：无残留旧路径 import；deferred-red 抽查（evolve-self/create-object/fs-search ctx 桩已 ownerThread）；P1d 推迟诚实标记、理由充分；无提案外破坏；parser/activator 正确留 core。
+- **doc reviewer — gaps-found → 已修**：index.md + thinkable/object self.md 回流到位；查出 4 处旧址残留 self.md/knowledge.md（object/knowledge/lifecycle.md、readable/self.md、readable/knowledge/two-faces-of-readable.md、thinkable/knowledge/tests.md）+ 行号漂移 → **本轮全修**（路径重指 builtins 新址 + lifecycle init.ts:153/196 + xml.ts resolveProjection 重锚 :285）。collaborable/persistable/observable self.md 经核无旧址残留。
+
+**残留已知（非本 issue 引入）**：builtins `pr-window.test` 的 `deliverPrWindowToReviewers` 1 fail —— 已 stash 核验 main 同款 pre-existing（readThread 未注册 class 丢窗的测试隔离问题，与 thinkable 解耦无关），归独立 follow-up。
+
+全部 should-fix 缺口已闭，无 blocker → **verified**。

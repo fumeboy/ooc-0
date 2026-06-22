@@ -40,7 +40,7 @@ activates_on:
 
 - **unactive — close 原语**（`core/executable/tools/close.ts`）：`handleCloseTool` 取窗后先查 `existing.closable === false`（`:62`）→ 拒关报错；否则 `mgr.close` + `thread.contextWindows = mgr.toData()` 同步后，对该窗 `referencedObjectId` 非空则 `dispatchUnactiveIfZero(...)`（`:74`）。
 - **active — `WindowManager.instantiate`**（`core/runtime/window-manager.ts:164`）：建窗 push 后，先 sync `threadRef.contextWindows = this.toData()`（让 refcount 看见新窗），再 `referencedObjectId(instance)` 非空则 `dispatchActiveIfFirst(...)`。v1 仅 fork 窗触发；thread 无 active body → fast-path no-op。**扩展点**：phase-2 把 `referencedObjectId` 扩到 member/peer 时，init 注入路径（`initContextWindows`/`injectMember`/`injectPeer`，不经 instantiate）须补本调用。
-- **closable 标记 — construct/init**（`core/thinkable/context/init.ts:152` / `:194`）：`initContextWindows` 建 thread/creator self 门面窗时设 `closable: false`（结构窗、恒在通道）；fork/peer/member 窗保持可关。
+- **closable 标记 — construct/init**（`builtins/agent/children/thread/thinkable/context/init.ts:153` / `:196`）：`initContextWindows` 建 thread/creator self 门面窗时设 `closable: false`（结构窗、恒在通道）；fork/peer/member 窗保持可关。
 
 ## 四、thread 的 policy body —— builtin 侧
 

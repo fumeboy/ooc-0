@@ -23,7 +23,7 @@ activates_on:
 
 context 的构造是 thinkable 的核心。已落地并守住的判据：
 
-- **attention 分层（核心 10/12）已实现并测**：与 creator 的对话全文进 LLM Messages 数组、creator 窗在 XML 只剩句柄；sub/peer 窗新消息在 message 流只出「前 50 字」缩略、全文留该窗 transcript。守卫 = `packages/@ooc/core/thinkable/context/__tests__/attention-tiering.test.ts`。
+- **attention 分层（核心 10/12）已实现并测**：与 creator 的对话全文进 LLM Messages 数组、creator 窗在 XML 只剩句柄；sub/peer 窗新消息在 message 流只出「前 50 字」缩略、全文留该窗 transcript。守卫 = `packages/@ooc/builtins/agent/children/thread/thinkable/context/__tests__/attention-tiering.test.ts`。
 - **method 按 class 聚合 + parentClass 链继承（核心 4）**：见 `class` 维度 tests + `renderers/xml.ts` 的 `window_classes` 声明层。
 
 **待与 builtin/thread-as-object 弧一起补的判据**（核心 2/7/9/11，class-dynamic，当前未实现、见 `docs/2026-06-14-context-redesign-impl-plan.md` 决断）：thread-context.json 不存 class（只存 object id + 展示状态）、class 由 readable 按视角动态算、thread window（自己视角句柄）vs talk window（他者视角）双投影、share=object 引用。这些落地时在此补 Tier A TC。
