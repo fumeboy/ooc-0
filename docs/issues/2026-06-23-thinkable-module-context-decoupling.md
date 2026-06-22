@@ -134,6 +134,10 @@ fan-out 10 reviewer（按受影响元素）+ 完整性批评官，**全部 endor
 - **retreat reviewer — as-promised（0 gap）**：无残留旧路径 import；deferred-red 抽查（evolve-self/create-object/fs-search ctx 桩已 ownerThread）；P1d 推迟诚实标记、理由充分；无提案外破坏；parser/activator 正确留 core。
 - **doc reviewer — gaps-found → 已修**：index.md + thinkable/object self.md 回流到位；查出 4 处旧址残留 self.md/knowledge.md（object/knowledge/lifecycle.md、readable/self.md、readable/knowledge/two-faces-of-readable.md、thinkable/knowledge/tests.md）+ 行号漂移 → **本轮全修**（路径重指 builtins 新址 + lifecycle init.ts:153/196 + xml.ts resolveProjection 重锚 :285）。collaborable/persistable/observable self.md 经核无旧址残留。
 
-**残留已知（非本 issue 引入）**：builtins `pr-window.test` 的 `deliverPrWindowToReviewers` 1 fail —— 已 stash 核验 main 同款 pre-existing（readThread 未注册 class 丢窗的测试隔离问题，与 thinkable 解耦无关），归独立 follow-up。
+**顺带修掉的 pre-existing（非本 issue 引入）**：builtins `pr-window.test` 的 `deliverPrWindowToReviewers` 1 fail —— 经 stash 核验 main 同款 pre-existing，根因实为 **PR class 漏声明 `persistable:{mode:"inline"}`**（注释称 inline 但落系统默认 data.json，而 deliverPr 只 writeThread 不写 data.json → PrData round-trip 丢失）。已补声明修复（独立 commit 57d70bfd）。**全 repo 转全绿：core 652 / builtins 214 / storybook 64，0 fail。**
 
 全部 should-fix 缺口已闭，无 blocker → **verified**。
+
+## 唯一后续点（有意推迟）
+
+**construct 调用点收敛**（裁决 #8 后半）：init helper 已物理在 thread builtin，但 flows-service/talk-delivery/thread-persist 仍各自调（经 core→builtin import，同 writeThread 模式、行为正确）。收敛进 construct + buildInputItems 幂等兜底以移除外部调用——因根 thread 非 talk-construct（需 buildInputItems 统一兜底而非 construct）+ 窗初始化时机变更属行为变更而 integration/e2e LLM-gated 不可在确定性测试完全验证，推迟为独立 issue。当前状态已自洽、全绿。
