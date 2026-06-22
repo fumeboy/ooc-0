@@ -26,7 +26,7 @@ activates_on:
    - **context** —— 一组 **context window**，即 LLM 的输入（构造见 context.md）。
    - **inbox / outbox** —— 收 / 发的消息数据。
    - **events** —— 过程轨迹（这条 thread 经历过什么：tool call、状态变化、收消息…）。
-   - **status** —— `running` / `waiting` / `done` / `failed` / `paused` / `canceled`。
+   - **status** —— `running` / `waiting` / `done` / `failed` / `paused`。
    - **identity** —— 自己的 thread id + `creator`  thread 引用（它从属于谁、向谁负责）。
 
 3. **thread 的 object method**（它能做什么）：
@@ -34,13 +34,13 @@ activates_on:
    - **`end`** —— 结束本 thread（标记 done、记 endReason/endSummary，可选 result 经 creator 窗 say 回报父级）。从 agent agency 迁入——thread 作用域操作，**改 thread 自身 Data**（status→done）。
    - **`todo`** —— 在**当前 thread context 内登记一个 todo 子对象**。从 agent agency 迁入——thread 作用域操作；**不改 thread 自身 Data**，而是造 `_builtin/agent/todo` 子对象进入本 thread 的 context（与 `end` 改 Data 区分）。
    - **`new_feat_branch`** / **`create_pr_and_invite_reviewers`** —— 两条 reflectable 沉淀 method（仅在 super 反思 session 的 `reflect_request` 投影窗 surface）。详见 reflectable `self.md`。
-   - （`wait` / `close` 是 tool 原语、作用于窗，不是 thread 的 object method；wait 语义见 thinkloop.md。）关一个会话窗 = 撤回对其对象的一次引用；关一个 fork 子线程的会话窗 → 该子线程及其随之无人引用的子树一并 **canceled**（停用、保留在盘可观测，同 done / failed）；thread 与 creator 的自我门面窗是恒在通道、不可关。
+   - （`wait` / `close` 是 tool 原语、作用于窗，不是 thread 的 object method；wait 语义见 thinkloop.md。）关一个会话窗 = 撤回对其对象的一次引用；关一个 fork 子线程的会话窗使该子线程失去最后订阅者（refcount 归 0）→ 由 thread 的 `unactive` policy **通知**它「creator 已关闭对话窗口、当前已无消息订阅者」（往其自己 inbox 发一条 system 消息、即时落盘），**不切终态、不级联**，由其下一轮自决是否 `end`；thread 与 creator 的自我门面窗是恒在通道、不可关。
 
 4. **一个 agent 可并行持多条 thread**：与不同对端对话、跑并行子任务，彼此 context 独立。thread 之间可通过（`talk(target=自己)` ）派生形成一棵 **Thread Tree**。
 
 5. ooc agent 的 talk 函数，在构造 thread 时，可以提供初始的 context 成员，例如初始 thread context 具有 terminal、filesystem 等 object
 
-6. **thread 的生命周期**：一条 thread 诞生→承载一次运行→在不再被引用时停用为 **canceled**。`canceled` 与 `done` / `failed` 同属终态：thread 走到终态后不再运行，但记录保留在盘、仍可观测。停用是即时落盘的——reload 不会让已 canceled 的 thread 复活；父线程会经 child-end 通知被唤醒、看见子线程已退出。
+6. **thread 的生命周期**：一条 thread 诞生→承载一次运行→在不再被引用（refcount 归 0）时不被强制终结，而是**收到一条「无订阅者」系统通知**、由自己下一轮自决是否 `end`。终态只有 `done` / `failed`（thread 终结一律走 `end`→done，无 `canceled`）：走到终态后不再运行，但记录保留在盘、仍可观测。通知即时落盘——reload 后仍见；waiting 线程因 inbox 增长被调度唤醒处理该通知。
 
 ---
 

@@ -9,7 +9,7 @@ activates_on:
 
 > 本篇是 object self.md **核心 10「对象生命周期」**的实现走查（「怎么实现」）；契约（「是什么/为什么」）只在 self.md 核心 10，这里不复述。锚点对 `packages/@ooc/`（父仓 main），高漂移处锚函数名。
 >
-> 分层铁律：**core 提供泛型机制（引用计数 + active/unactive 派发），builtin 提供 policy body**——与 `construct` 同构。core 的派发引擎 `object-lifecycle.ts` **零 thread builtin import**；canceled/级联等是 thread 的 `unactive` body。
+> 分层铁律：**core 提供泛型机制（引用计数 + active/unactive 派发），builtin 提供 policy body**——与 `construct` 同构。core 的派发引擎 `object-lifecycle.ts` **零 thread builtin import**；「往失去订阅者的 thread 发通知」这类 policy 是 thread 的 `unactive` body。
 
 ## 一、契约层（core 声明，零机制）
 
@@ -24,7 +24,7 @@ activates_on:
 
 **`referencedObjectId(w)`**（`:31`）：窗 → 它引用、且生命周期由本窗持有的对象 id。**v1 仅解析 fork**：`isTalkLikeClass(w.class) && w.data.isForkWindow && w.data.targetThreadId && !isSelfThreadWindow(w.id)` → `targetThreadId`，其余 → `undefined`。（内存 `OocObjectInstance` **无** `_ref`/`refObjectId`——那只活在 `thread-context.json` 磁盘 entry、hydrate 时丢弃，故 v1 不读它。）
 
-**`countSessionReferences(ctxThread, targetId)`**（`:64`）：session **内存线程树**（当前 + 沿 `_parentThreadRef` 到根 + 各 `childThreads` 递归、按 id 去重）里 status ∈ `{running, waiting, paused}` 线程中、`referencedObjectId(w)===targetId` 的外部引用窗数。退出态 `{done, failed, canceled}` 持有的窗**不计数**。自引用（self 门面窗）由 `referencedObjectId` 已排除。**v1 不盘扫**（fork 全在内存树内）。
+**`countSessionReferences(ctxThread, targetId)`**（`:64`）：session **内存线程树**（当前 + 沿 `_parentThreadRef` 到根 + 各 `childThreads` 递归、按 id 去重）里 status ∈ `{running, waiting, paused}` 线程中、`referencedObjectId(w)===targetId` 的外部引用窗数。退出态 `{done, failed}` 持有的窗**不计数**。自引用（self 门面窗）由 `referencedObjectId` 已排除。**v1 不盘扫**（fork 全在内存树内）。
 
 **`dispatchUnactiveIfZero(ctxThread, targetId, targetClass, registry)`**（`export async function dispatchUnactiveIfZero`）：
 1. `resolveUnactive(targetClass)` 无 → return（**fast-path**：refcount 成本只在被解引用对象 class 真声明 unactive 时付）。
@@ -44,18 +44,14 @@ activates_on:
 
 ## 四、thread 的 policy body —— builtin 侧
 
-**`thread.unactive`**（`packages/@ooc/builtins/agent/children/thread/index.ts:231`）：`exec` 调 `cancelSubtree(ctx.thread, ctx.targetId, new Set())`，返回 void（不 delete——canceled 线程保留在盘，同 done/failed）。
+**`thread.unactive`**（`packages/@ooc/builtins/agent/children/thread/index.ts:205`，`const unactive: ObjectLifecycleHook`）：thread 是持久身份、OOC 无强制 destruct——refcount 归 0 不强杀、不级联，改**通知**该线程「失去最后订阅者」，由其自决：
 
-**`cancelSubtree(scope, targetId, visited)`**（`thread/index.ts:210`，async）：
-- `findChild(scope, targetId)` 定位子线程；终态（done/failed/canceled）或不存在则 return。
-- 切 `t.status = "canceled"`；`visited` 去重防环。
-- **即时落盘**：`if (t.persistence) await writeThread(t)`（`:216`）——fork 子跑过 ≥1 tick 后有独立 `thread.json`（scheduler 写为 running），只改内存不刷盘则 bootstrap 的 `enqueueRunningThreadsAtBootstrap`（扫盘上 running/waiting）会把 canceled 子当 orphan 复活；故每节点即时 writeThread。
-- 级联：遍历 `t.contextWindows`，对每个 `referencedObjectId(w)` 若 `countSessionReferences(t, child) === 0` 则递归 `cancelSubtree`（t 已 canceled→其窗不计数→只被 t 引用的孙归零→级联）。
+- `findChild(ctx.thread, ctx.targetId)` 定位子线程；不存在或终态（`TERMINAL = {done, failed}`，`index.ts:192`）则 return（terminal 已退出、仅停用、无需通知）。
+- **non-terminal（running/waiting/paused）**：往该线程**自己 inbox** 追加一条 `source="system"` 通知「creator 已关闭对话窗口，当前已无消息订阅者；可自行决定是否 end」（`appendInbox` 同时 push `inbox_message_arrived` 事件）。**不切终态、不级联**——线程下一轮 thinkloop 自决是否优雅 `end`；waiting 线程因 inbox 增长被 `scheduler.wakeWaitingThreadsOnInbox` 自然唤醒。
+- **即时落盘**：`if (t.persistence) await writeThread(t)`（`index.ts:221`）——通知须随盘存活，否则 reload 丢失。
+- 返回 void（不 delete）：thread 身份留存。
 
-**canceled 终态接入**：
-- `ThreadStatus`（`core/_shared/types/thread.ts:398`）加 `"canceled"`（6 态）。
-- `scheduler.emitChildEndNotifications`（`core/thinkable/scheduler.ts:73`）把 `done/failed` 终态判定纳入 `canceled`——canceled 子线程给父发 child-end marker（唤醒等待父 + 让父看见子含级联被取消），与 done/failed 一致、复用同一可见性通道（不另造 cancel event）。
-- worker 跨对象 end-sync（`core/app/server/runtime/worker.ts`）亦纳 canceled 为终态。
+**`canceled` 状态 + `cancelSubtree` 已全树退役**：改通知模型后 `canceled` 无产生者，从 `ThreadStatus`（`core/_shared/types/thread.ts:394`，现 5 态 running/waiting/done/failed/paused）/ `TERMINAL` / scheduler / worker / flows model 全树删除；`cancelSubtree` 函数已删。thread 终结一律走 `end`→done。（实现期裁决：不加 `canceled` 进 `check-no-deprecated-symbols`——词太通用易长期误报，靠 `ThreadStatus` 类型 5 态封闭防回归。）
 
 ## 五、session 对象表（B→A 正确分解）—— `core/runtime/session-object-table.ts`
 
@@ -71,11 +67,11 @@ activates_on:
 
 ## 六、边界与现状（v1）
 
-- **v1 仅 fork**：`referencedObjectId` 只认 fork 子线程窗；peer/self/独立成员/root → undefined、不派发。peer 跨对象 canceled / 成员对象 unactive 推 phase-2。
+- **v1 仅 fork**：`referencedObjectId` 只认 fork 子线程窗；peer/self/独立成员/root → undefined、不派发。peer 跨对象 unactive 通知 / 成员对象 unactive 推 phase-2。
 - **`active` 已接线但零 body**：无 builtin 声明 active（thread 不需要）；fast-path 零成本。装好待用，首个 active body 出现时即生效（届时按上方扩展点补 init seam）。
 - **`{delete:true}` dormant**：无 builtin 返回 delete；路径经合成 class 单测覆盖（`core/runtime/__tests__/object-lifecycle.test.ts`），非死槽。
-- **测试**：`object-lifecycle.test.ts`（referencedObjectId/refcount/dispatch/active/delete 单测）+ `thread/__tests__/fork-unactive.test.ts`（关 fork 窗→canceled、嵌套级联、跨 reload 不复活）。
-- **phase-2 清单**（dormant，无当前触发）：session 盘扫 refcount / 成员对象 unactive（referencedObjectId 扩 member 窗 + init seam）/ peer 跨对象 canceled / `PersistableModule.delete?` / thread→`done` 释放引用（与 `thinkable/knowledge` context.md core-11「thread 终止钩子」重叠须合并）/ re-entrancy 守卫（仅当某 unactive body 自己关窗才需）。
+- **测试**：`object-lifecycle.test.ts`（referencedObjectId/refcount/dispatch/active/delete 单测）+ `thread/__tests__/fork-unactive.test.ts`（关 fork 窗→子线程收「无订阅者」system 通知、保持 non-terminal 不级联、由其自决 end）。
+- **phase-2 清单**（dormant，无当前触发）：session 盘扫 refcount / 成员对象 unactive（referencedObjectId 扩 member 窗 + init seam）/ peer 跨对象 unactive 通知 / `PersistableModule.delete?` / thread→`done` 释放引用（与 `thinkable/knowledge` context.md core-11「thread 终止钩子」重叠须合并）/ re-entrancy 守卫（仅当某 unactive body 自己关窗才需）。
 - **退役**：旧 thread `close` object method、其 fork 子线程归档 helper、以及先前预留的 dead 析构接口槽——均已删，并入 source/doc 双门禁的 FORBIDDEN_PATTERNS 防回潮（精确符号见 `check-no-deprecated-symbols.sh` / `check-doc-deprecated-drift.sh`）。
 
 > 设计落地经「系统设计调整工作流」issue `docs/issues/2026-06-21-object-activation-lifecycle.md`（landed）。

@@ -103,7 +103,7 @@ resize 设 autoCompressLevel 0/1/2，thread 窗映射为未总结 transcript 的
 
 折叠态 = `win.summarizedRanges: Array<{fromIdx,toIdx,summary}>`（纯类型 + 纯函数在 `_shared/utils/summarized-ranges.ts`）。
 
-- **写入**：`harvestSummarizerForks` 经 `addSummarizedRange` 追加（规整：排序、合并重叠/相邻；不夹边——写时未必知读时长度）。
+- **写入**：thread builtin `harvestSummarizerForks` 经 `_shared` 的 `addSummarizedRange` 追加（规整：排序、合并重叠/相邻；不夹边——写时未必知读时长度）。
 - **读出**：`projectSummarizedRanges(items, ranges, renderItem, renderSummary)` 通用 over「item→渲染单元」，按真实 `items.length` 夹边、丢非法段、段内连续 items 折成一条 summary。
 - **fold 只在自我主历史窗**（self-view thread / reflect_request）：折 `thread.events`（events 坐标，`buildInputItems` 构造 transcript 时投影；events 单写者 append-only、已发生项 index 稳定，故 `{fromIdx,toIdx}` 跨轮可靠）。**派生会话视图（talk/peer）不 fold**（核心 4、Case E）——其 messages 是 `filterTalkMessages` 跨双流 createdAt 重排的派生视图、index 不稳，故无 messages 坐标的折叠路径。`projectSummarizedRanges` 对 talk 窗的 `summarizedRanges`（恒空）退化为 no-op、不折。
 
@@ -111,17 +111,19 @@ resize 设 autoCompressLevel 0/1/2，thread 窗映射为未总结 transcript 的
 
 ### 3.5 summarizer fork 机制（framework）
 
+> **policy 实施 vs 框架的边界（2026-06-21 thread builtin 业务退潮）**：compress **设计单一权威仍是本文（thinkable）**，但 policy 的**实施**（触发判定 maybeAutoCompress / spawn 区段算法 spawnSummarizerFork / seed buildSummarizerSeed / force-wait 意图 maybeForceWaitForCompress / harvest 折叠写入 harvestSummarizerForks）已归**「自我主历史窗」类的 thread builtin**（`builtins/agent/children/thread/executable/compress.ts`），由 core thinkable 经 blessed import（同 writeThread）调。core thinkable 只留**框架**：token 计数（`thinkable/context/budget.ts`）/ fork 原语（`WindowManager.instantiate`）/ `isSummarizer` thinkloop 执行特化 / 纯阈值判定（`thinkable/context/compress-trigger.ts:shouldAutoCompress`）/ 渲染折叠（`snapRangesToToolPairs`+`projectSummarizedRanges`）。本文是设计、锚回实施不复制。
+
 复用 `execFork`（thread 维度的 programmatic fork：建一条 child thread、同 session/object、`_parentThreadRef` 指 parent，child 在同 job 的 scheduler loop 内跑）。
 
-- **spawn**（`thinkable/context/compress-fork.ts:spawnSummarizerFork`）：seed 入 parent `events[fromIdx..toIdx]` 序列化 + 指令；child 标 `isSummarizer`；置 parent `win.inFlightCompress={forkThreadId,fromIdx,toIdx}`（**与 spawn 同次写回**，防双 spawn 双记）；spawn 后移除 parent 侧 fork 子窗（summarizer 不进会话）。
+- **spawn**（`builtins/agent/children/thread/executable/compress.ts:spawnSummarizerFork`）：seed 入 parent `events[fromIdx..toIdx]` 序列化 + 指令；child 标 `isSummarizer`；置 parent `win.inFlightCompress={forkThreadId,fromIdx,toIdx}`（**与 spawn 同次写回**，防双 spawn 双记）；spawn 后移除 parent 侧 fork 子窗（summarizer 不进会话）。
 - **child 跑**：summarizer fork **不给工具**（`thinkloop` 对 `isSummarizer` 不挂 tools），单轮 think 的首条 text 即 `endSummary`、随即 done。
-- **harvest**（`scheduler.ts:harvestSummarizerForks`，每 tick 顶部、先于 emitChildEndNotifications）：对带 `inFlightCompress` 的线程找其 forkThreadId 子——done→读 `child.endSummary` 记 summarizedRanges + push 可见 `[context_change:context_compressed]` 事件（silent-swallow ban）+ 清 inFlight；failed→关本窗自动压缩（`autoCompressLevel=0` 防反复 spawn-fail livelock）+ 可见 note + 清 inFlight；orphan（child 不存在）→清 inFlight；之后若 parent 在本 compress 上 waiting → 直接翻 running 唤醒（内部回收，不靠 inbox 污染）。`emitChildEndNotifications` 对 `isSummarizer` child 跳过（不写 peer 会话）。
+- **harvest**（`builtins/agent/children/thread/executable/compress.ts:harvestSummarizerForks`，core scheduler 每 tick 顶部经 blessed import 调、先于 emitChildEndNotifications）：对带 `inFlightCompress` 的线程找其 forkThreadId 子——done→读 `child.endSummary` 记 summarizedRanges + push 可见 `[context_change:context_compressed]` 事件（silent-swallow ban）+ 清 inFlight；failed→关本窗自动压缩（`autoCompressLevel=0` 防反复 spawn-fail livelock）+ 可见 note + 清 inFlight；orphan（child 不存在）→清 inFlight；之后若 parent 在本 compress 上 waiting → 直接翻 running 唤醒（内部回收，不靠 inbox 污染）。`emitChildEndNotifications` 对 `isSummarizer` child 跳过（不写 peer 会话）。
 
 > 持久化：`win.summarizedRanges` / `win.inFlightCompress` 随 THREAD_CLASS_ID inline 整窗落 thread-context.json，跨 reload 存活（reload 后 harvest 仍能找回 fork、force-wait 仍生效）。
 
 ### 3.6 force-wait + clamp floor（超 hard 兜底）
 
-- **force-wait**（`compress-fork.ts:maybeForceWaitForCompress`，thinkloop 在 buildInputItems 后调）：有 `inFlightCompress` 且 transcript 超 hard → parent 进 waiting（`waitingOn="compress:"+forkId`），return 本轮；fork 折完 harvest 唤醒、下轮重 render 已折叠未超则正常跑。**无损**（不丢数据，只等）。
+- **force-wait**（`builtins/agent/children/thread/executable/compress.ts:maybeForceWaitForCompress`，core thinkloop 在 buildInputItems 后经 blessed import 调）：有 `inFlightCompress` 且 transcript 超 hard → parent 进 waiting（`waitingOn="compress:"+forkId`），return 本轮；fork 折完 harvest 唤醒、下轮重 render 已折叠未超则正常跑。**无损**（不丢数据，只等）。
 - **clamp floor**（`thinkable/context/transcript-clamp.ts`）：force-wait 之下的最后兜底。current 越 hard 且 force-wait 未能压到 hard 下（无在途 / fork 失败超时）时，把 transcript 钳到 `(hard − 窗口估算)` 内——保留最近**后缀**、丢最早、tool-pair 安全；插可见 `[context_change:context_clamped]` marker。per-round 瞬态、**不改 events、不动 win、不持久化、不生成摘要**（与窗 overflow 同模型）；不是自动推进折叠态。
 
 ### 3.7 预算口径

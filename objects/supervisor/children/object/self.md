@@ -82,7 +82,7 @@
 - **引用 = context window**：一个 object 在某 thread context 里的窗即对它的**一次引用**；refcount 在 **session 内非终态线程**间统计，自引用（self 门面窗）不计。
 - **分层边界（与 construct 同构）**：core 提供**泛型**机制（引用计数 + active/unactive 派发，零 class 特判、不 import 任何具体 class）；各 class 提供**钩子 body**（policy）。
 - **删除语义**：`unactive` 返回 `{ delete: true }` 才彻底移除（含持久化文件）；删除只在引用归零这一刻、由对象自决——故无悬空引用、无强制销毁、无独立 destruct。
-- **程序实现走查**（派发引擎 / 触发 seam / thread 的 cancelSubtree policy / 各源码锚点）见 `knowledge/lifecycle.md`。
+- **程序实现走查**（派发引擎 / 触发 seam / thread 的 unactive 通知 policy / 各源码锚点）见 `knowledge/lifecycle.md`。
 
 ---
 
