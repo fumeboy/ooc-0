@@ -78,10 +78,16 @@ date: 2026-06-23
 
 ## 分期（建议）
 
-- **P1（首期，低风险、确定性可测）**：方向①——持久化 seam 化。core 引擎 + app 层改走
-  `resolvePersistable(thread).save/load`；window-persistence 的 reportContextEdit 路由到 seam；退役"runtime 直接
-  import writeThread/readThread"的 blessed 表述（含 thread/persistable/index.ts 的核心 7 误读）。flows/storybook
-  控制面 + talk-delivery.test 提供确定性回归。
+- **P1（首期，低风险、确定性可测）✅ landed**（feat/thread-persist-seam，commit 9cced43d）：方向①——
+  持久化 seam 化。新 core seam 派发器 `core/persistable/thread-container-io.ts`（writeThread/readThread 经
+  `resolvePersistable(THREAD_CLASS_ID).save/load` 派发到 thread 的 saveThread/loadThread，仅 type-import
+  ThreadContext、未注册 fail-loud）；builtin `thread-json.ts` 删 writeThread/readThread adapter、只留 threadFile，
+  saveThread/loadThread 成 thread 容器持久化**唯一**逻辑入口；~33 importer 重定向 builtin→core（签名不变）；
+  window-persistence reportContextEdit 经 seam + 传注入 registry；退役 blessed 表述（thread/persistable/index.ts +
+  window-persistence + L1 story）；create-object.test 补 register-builtins（fail-loud 暴露的真实测试缺口）。
+  **核心战果：core 生产代码零 value-import thread 持久化实现**。质量门全绿（tsc / core 652 / builtins 214 /
+  storybook 64 / silent-swallow / deprecated / doc-drift / anchor-drift）。fork/peer/super-alias 端到端仍
+  LLM-gated（同前，不在确定性门）。
 - **P2（中期）**：方向②——reachableThreads/recovery/树遍历补 seam。改 object-lifecycle / recovery / scheduler
   调 thread 提供的钩子；core 泛型引擎去 thread 树形/事件语义知识。须确定性单测覆盖 refcount + recovery。
 - **P3（类型层，较大）**：方向③——ThreadState/ContextContent 拆分。轻量版（core 定 `ThreadState`、builtin
