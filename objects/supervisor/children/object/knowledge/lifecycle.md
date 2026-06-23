@@ -44,11 +44,11 @@ activates_on:
 
 ## 四、thread 的 policy body —— builtin 侧
 
-**`thread.unactive`**（`packages/@ooc/builtins/agent/children/thread/index.ts:205`，`const unactive: ObjectLifecycleHook`）：thread 是持久身份、OOC 无强制 destruct——refcount 归 0 不强杀、不级联，改**通知**该线程「失去最后订阅者」，由其自决：
+**`thread.unactive`**（`packages/@ooc/builtins/agent/children/thread/index.ts:83`，`const unactive: ObjectLifecycleHook`）：thread 是持久身份、OOC 无强制 destruct——refcount 归 0 不强杀、不级联，改**通知**该线程「失去最后订阅者」，由其自决：
 
-- `findChild(ctx.thread, ctx.targetId)` 定位子线程；不存在或终态（`TERMINAL = {done, failed}`，`index.ts:192`）则 return（terminal 已退出、仅停用、无需通知）。
+- 钩子**接收 `self`**（= 被解引用的目标线程本身，由 runtime `dispatchUnactiveIfZero` 经 `targetId` 解析后注入；不再从 ctx 掏 `runningThread`/`findChild`，与 `ObjectMethod` 的 `(ctx, self)` 签名对齐）；`self` 为空或终态（`TERMINAL = {done, failed}`，`index.ts:70`）则 return（terminal 已退出、仅停用、无需通知）。
 - **non-terminal（running/waiting/paused）**：往该线程**自己 inbox** 追加一条 `source="system"` 通知「creator 已关闭对话窗口，当前已无消息订阅者；可自行决定是否 end」（`appendInbox` 同时 push `inbox_message_arrived` 事件）。**不切终态、不级联**——线程下一轮 thinkloop 自决是否优雅 `end`；waiting 线程因 inbox 增长被 `scheduler.wakeWaitingThreadsOnInbox` 自然唤醒。
-- **即时落盘**：`if (t.persistence) await writeThread(t)`（`index.ts:221`）——通知须随盘存活，否则 reload 丢失。
+- **即时落盘**：`if (t.persistence) await writeThread(t)`（`index.ts:99`）——通知须随盘存活，否则 reload 丢失。
 - 返回 void（不 delete）：thread 身份留存。
 
 **`canceled` 状态 + `cancelSubtree` 已全树退役**：改通知模型后 `canceled` 无产生者，从 `ThreadStatus`（`core/_shared/types/thread.ts:394`，现 5 态 running/waiting/done/failed/paused）/ `TERMINAL` / scheduler / worker / flows model 全树删除；`cancelSubtree` 函数已删。thread 终结一律走 `end`→done。（实现期裁决：不加 `canceled` 进 `check-no-deprecated-symbols`——词太通用易长期误报，靠 `ThreadStatus` 类型 5 态封闭防回归。）
