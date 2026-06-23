@@ -77,7 +77,7 @@
 
 ### 生命周期（核心 10）—— 接口与边界
 
-- **三钩子接口**：`active?` / `unactive?`（`OocClass` 槽，与 `construct` 并列、在 `index.ts` 的 `Class` 注册），签名 `exec(ctx) => void | { delete?: boolean }`——`ctx` 带 `targetId`（refcount 变动的对象）；与 `construct` 不同，作用于**既有**对象、不产 Data。
+- **三钩子接口**：`active?` / `unactive?`（`OocClass` 槽，与 `construct` 并列、在 `index.ts` 的 `Class` 注册），签名 `exec(ctx, self) => void | { delete?: boolean }`——`ctx` 带 `targetId`（refcount 变动的对象 id），`self` = runtime 据 `targetId` 解析注入的**目标对象 data**（钩子 body 直接操作 self、不必从 ctx 自解析目标；无目标 data 时 self 为 undefined）；与 `construct` 不同，作用于**既有**对象、不产 Data。
 - **`closable` 字段**：`OocObjectInstance.closable`（缺省可关；construct 标 `false` = 结构窗，close 原语拒关报错）。
 - **引用 = context window**：一个 object 在某 thread context 里的窗即对它的**一次引用**；refcount 在 **session 内非终态线程**间统计，自引用（self 门面窗）不计。
 - **分层边界（与 construct 同构）**：core 提供**泛型**机制（引用计数 + active/unactive 派发，零 class 特判、不 import 任何具体 class）；各 class 提供**钩子 body**（policy）。

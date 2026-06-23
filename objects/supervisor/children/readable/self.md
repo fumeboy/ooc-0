@@ -53,7 +53,7 @@
   - `ReadableProjection = { class, content, consumedMessageIds? }`（`contract.ts:37`）：投影 class + 展示内容（`XmlNode[] | string`）+ 本窗已收纳消息 id。
   - `WindowMethod = { name, description, schema?, exec(ctx, self, before_win, args) => Win }`（`contract.ts:51`）：签名收 self(只读 Data)+before_win(当前投影态)+args，返回新 win；出错 throw。
   - `WindowClassDecl = { class, object_methods, window_methods }`（`contract.ts:71`）：一个投影 class 声明展示哪些 object method（按名引用 executable）+ 提供哪些 window method。
-  - `ReadableContext = { thread?, object:{id,class}, persistence? }`（`contract.ts:20`）：读侧上下文，不携带改业务数据的能力。
+  - `ReadableContext = { thread?, object:{id,class}, persistence? }`（`contract.ts:22`）：读侧上下文，不携带改业务数据的能力。
 - **装配与注册**：各 class 的 `index.ts` 一处 `export const Class = { construct?, executable, readable, persistable }`（`packages/@ooc/core/runtime/ooc-class.ts:47`）；经单入口 `register(classId, Class, { parentClass })` 注册进 registry（`packages/@ooc/core/runtime/object-registry.ts:103`）。注册期校验 object↔window method 不同名（`object-registry.ts:53`）。
 - **投影态与业务数据分离落盘**：runtime 实例 `OocObjectInstance = { id, class, …, data, win }`（`ooc-class.ts:75`）把身份元信息（id/class/title/status…）、业务 Data、投影态 win 三者显式分离；win 随实例持久化，readable 渲染期读它。
 - **投影解析与回退**：渲染器对每个实例先 `resolveReadable(inst.class)?.readable(ctx, inst.data, inst.win)` 取投影；无 Class.readable 时回退读盘 `readable.md`；都无落 placeholder（`resolveProjection`，`packages/@ooc/builtins/agent/children/thread/thinkable/context/renderers/xml.ts:285`——Step1 Class.readable / Step2 回退读 readable.md / Step3 placeholder 三步回退链在该函数体内）。静态名片读写在 `packages/@ooc/core/persistable/stone-readable.ts:17`（`readReadable`）。

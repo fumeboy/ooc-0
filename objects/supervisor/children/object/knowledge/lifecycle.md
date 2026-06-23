@@ -13,9 +13,9 @@ activates_on:
 
 ## 一、契约层（core 声明，零机制）
 
-- **`ObjectLifecycleHook`**（`core/executable/contract.ts:206`）：`exec(ctx: LifecycleContext) => void | UnactiveResult | Promise<…>`。与 `construct` 签名不同——作用于**既有**对象、不产 Data；body 经 ctx 自解析目标。
-- **`LifecycleContext`**（`contract.ts:190`）= `ConstructorContext` + `targetId`（refcount 变动的对象 id）。
-- **`UnactiveResult`**（`contract.ts:196`）= `{ delete?: boolean }`；`delete:true` 仅 unactive 路径 honor（active 返回值忽略）。
+- **`ObjectLifecycleHook`**（`core/executable/contract.ts:221`）：`exec(ctx: LifecycleContext, self: Data) => void | UnactiveResult | Promise<…>`。与 `construct` 签名不同——作用于**既有**对象、不产 Data；`self` = runtime 据 `ctx.targetId` 解析注入的**目标对象 data**（钩子 body 直接操作 self、不必从 ctx 自解析目标；无目标 data 时 self 为 undefined）。
+- **`LifecycleContext`**（`contract.ts:204`）= `ConstructorContext` + `targetId`（refcount 变动的对象 id）。
+- **`UnactiveResult`**（`contract.ts:210`）= `{ delete?: boolean }`；`delete:true` 仅 unactive 路径 honor（active 返回值忽略）。
 - **`OocClass`** 槽（`core/runtime/ooc-class.ts:50-51`）：`active?` / `unactive?`（复用一个先前预留、从未实现的 dead 析构槽位）。
 - **`OocObjectInstance.closable`**（`ooc-class.ts:87`）：缺省 undefined=可关；construct 标 `false`=结构窗、close 原语拒关。
 - **registry 解析**（`core/runtime/object-registry.ts:170 resolveActive` / `:179 resolveUnactive`）：沿 `ooc.class` 链 `selfThenChain` 解析（与 `resolveConstructor` 同款 for 循环）。`register()` / `seedFrom()` 的 merge 块显式保留 `active`/`unactive` 槽（防增量 re-register 丢钩子）。
@@ -29,18 +29,19 @@ activates_on:
 **`dispatchUnactiveIfZero(ctxThread, targetId, targetClass, registry)`**（`export async function dispatchUnactiveIfZero`）：
 1. `resolveUnactive(targetClass)` 无 → return（**fast-path**：refcount 成本只在被解引用对象 class 真声明 unactive 时付）。
 2. `countSessionReferences > 0` → return。
-3. `const r = await hook.exec({thread, targetId, runtime, args})`——单次调用，body 自解析。
-4. `r?.delete === true` → `removeObjectFromSession`。
+3. 解析 `self` = 目标对象 data：`getSessionObjectTable(ctxThread).get(targetId)?.data ?? reachableThreads(ctxThread).get(targetId)`（object 表兜不到则取内存线程树——覆盖 fork child / thread 目标，`:111`）。
+4. `const r = await hook.exec(ctx, self)`（`:112`）——core 解析好 self、钩子 body 直接用，不再自解析目标。
+5. `r?.delete === true` → `removeObjectFromSession`。
 
-**`dispatchActiveIfFirst(ctxThread, targetId, targetClass, registry)`**（`export async function dispatchActiveIfFirst`）：对称——`resolveActive` 无 → fast-path return；`countSessionReferences !== 1`（刚加的窗须是第一个引用 ⇒ 0→1）→ return；否则 `hook.exec(ctx)`。**active 不消费返回值**。
+**`dispatchActiveIfFirst(ctxThread, targetId, targetClass, registry)`**（`export async function dispatchActiveIfFirst`）：对称——`resolveActive` 无 → fast-path return；`countSessionReferences !== 1`（刚加的窗须是第一个引用 ⇒ 0→1）→ return；否则同样解析 `self`（同 unactive，`:145`）后 `hook.exec(ctx, self)`（`:146`）。**active 不消费返回值**。
 
 **`removeObjectFromSession(ctxThread, targetId)`**（`:139`，private）：`rm(objectDir(ref), {recursive,force})` + 从 `ctxThread.contextWindows` 过滤掉引用 targetId 的窗。**仅覆盖缺省 objectDir 布局**；自定义持久化布局删不净（→ `PersistableModule.delete?` phase-2，见 persistable self.md 扩展点）。
 
 ## 三、触发 seam（机制接哪）
 
 - **unactive — close 原语**（`core/executable/tools/close.ts`）：`handleCloseTool` 取窗后先查 `existing.closable === false`（`:62`）→ 拒关报错；否则 `mgr.close` + `thread.contextWindows = mgr.toData()` 同步后，对该窗 `referencedObjectId` 非空则 `dispatchUnactiveIfZero(...)`（`:74`）。
-- **active — `WindowManager.instantiate`**（`core/runtime/window-manager.ts:164`）：建窗 push 后，先 sync `threadRef.contextWindows = this.toData()`（让 refcount 看见新窗），再 `referencedObjectId(instance)` 非空则 `dispatchActiveIfFirst(...)`。v1 仅 fork 窗触发；thread 无 active body → fast-path no-op。**扩展点**：phase-2 把 `referencedObjectId` 扩到 member/peer 时，init 注入路径（`initContextWindows`/`injectMember`/`injectPeer`，不经 instantiate）须补本调用。
-- **closable 标记 — construct/init**（`builtins/agent/children/thread/thinkable/context/init.ts:153` / `:196`）：`initContextWindows` 建 thread/creator self 门面窗时设 `closable: false`（结构窗、恒在通道）；fork/peer/member 窗保持可关。
+- **active — `WindowManager.instantiate`**（`core/runtime/window-manager.ts:164`）：建窗 push 后，先 sync `threadRef.contextWindows = this.toData()`（让 refcount 看见新窗），再 `referencedObjectId(instance)` 非空则 `dispatchActiveIfFirst(...)`。v1 仅 fork 窗触发；thread 无 active body → fast-path no-op。**扩展点**：phase-2 把 `referencedObjectId` 扩到 member/peer 时，init 注入路径（`initThreadContextWindows` / `injectPeerWindowsIfObjectThread`，不经 instantiate）须补本调用。
+- **closable 标记 — construct/init**（`builtins/agent/children/thread/thinkable/context/init-windows.ts:91` / `:119`）：`initThreadContextWindows` 建 self 门面窗 / 自我视角 thread 窗时设 `closable: false`（结构窗、恒在通道）；fork/peer/member 窗保持可关。
 
 ## 四、thread 的 policy body —— builtin 侧
 
@@ -48,10 +49,10 @@ activates_on:
 
 - 钩子**接收 `self`**（= 被解引用的目标线程本身，由 runtime `dispatchUnactiveIfZero` 经 `targetId` 解析后注入；不再从 ctx 掏 `runningThread`/`findChild`，与 `ObjectMethod` 的 `(ctx, self)` 签名对齐）；`self` 为空或终态（`TERMINAL = {done, failed}`，`index.ts:70`）则 return（terminal 已退出、仅停用、无需通知）。
 - **non-terminal（running/waiting/paused）**：往该线程**自己 inbox** 追加一条 `source="system"` 通知「creator 已关闭对话窗口，当前已无消息订阅者；可自行决定是否 end」（`appendInbox` 同时 push `inbox_message_arrived` 事件）。**不切终态、不级联**——线程下一轮 thinkloop 自决是否优雅 `end`；waiting 线程因 inbox 增长被 `scheduler.wakeWaitingThreadsOnInbox` 自然唤醒。
-- **即时落盘**：`if (t.persistence) await writeThread(t)`（`index.ts:99`）——通知须随盘存活，否则 reload 丢失。
+- **即时落盘**：`if (t.persistence) await writeThread(t)`（`index.ts:98`）——通知须随盘存活，否则 reload 丢失。
 - 返回 void（不 delete）：thread 身份留存。
 
-**`canceled` 状态 + `cancelSubtree` 已全树退役**：改通知模型后 `canceled` 无产生者，从 `ThreadStatus`（`core/_shared/types/thread.ts:394`，现 5 态 running/waiting/done/failed/paused）/ `TERMINAL` / scheduler / worker / flows model 全树删除；`cancelSubtree` 函数已删。thread 终结一律走 `end`→done。（实现期裁决：不加 `canceled` 进 `check-no-deprecated-symbols`——词太通用易长期误报，靠 `ThreadStatus` 类型 5 态封闭防回归。）
+**`canceled` 状态 + `cancelSubtree` 已全树退役**：改通知模型后 `canceled` 无产生者，从 `ThreadStatus`（`core/_shared/types/thread.ts:362`，现 5 态 running/waiting/done/failed/paused）/ `TERMINAL` / scheduler / worker / flows model 全树删除；`cancelSubtree` 函数已删。thread 终结一律走 `end`→done。（实现期裁决：不加 `canceled` 进 `check-no-deprecated-symbols`——词太通用易长期误报，靠 `ThreadStatus` 类型 5 态封闭防回归。）
 
 ## 五、session 对象表（B→A 正确分解）—— `core/runtime/session-object-table.ts`
 
