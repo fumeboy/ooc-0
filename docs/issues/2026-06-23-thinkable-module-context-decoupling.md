@@ -138,6 +138,43 @@ fan-out 10 reviewer（按受影响元素）+ 完整性批评官，**全部 endor
 
 全部 should-fix 缺口已闭，无 blocker → **verified**。
 
-## 唯一后续点（有意推迟）
+## 后续点（有意推迟）：创建期窗初始化收敛 —— 详细顾虑
 
-**construct 调用点收敛**（裁决 #8 后半）：init helper 已物理在 thread builtin，但 flows-service/talk-delivery/thread-persist 仍各自调（经 core→builtin import，同 writeThread 模式、行为正确）。收敛进 construct + buildInputItems 幂等兜底以移除外部调用——因根 thread 非 talk-construct（需 buildInputItems 统一兜底而非 construct）+ 窗初始化时机变更属行为变更而 integration/e2e LLM-gated 不可在确定性测试完全验证，推迟为独立 issue。当前状态已自洽、全绿。
+> 裁决 #8 后半「移除 flows-service/talk-delivery/thread-persist 的外部 init 调用、收敛到 construct」**有意推迟为独立 follow-up**。
+> 下面把推迟的顾虑逐条 grounding（5-probe fan-out 实证，带 file:line），供 follow-up 立项时直接用。
+> **当前态自洽**：init helper 已物理搬入 thread builtin（P2），外部 init 调用经 core→builtin import（同 writeThread blessed 模式）、行为与重构前**逐字节不变**、全 repo 全绿。推迟的是「调用点收敛」这层**纯结构 cleanup**，不是任何功能缺口。
+
+### 现状事实（grounding）
+
+**A. 四条创建路径各自 eager 调 init helper**（创建期同步铺窗，非 thinkloop 内）：
+- root / session 入口：`core/app/server/modules/flows/service.ts:636-640`（init→injectPeer→injectMember），创建后**不立即读** contextWindows（仅 create+persist+notify，writeThread:641）。
+- peer callee：`builtins/agent/children/thread/executable/talk-delivery.ts:162-167`（init→injectPeer→injectMember），**创建后立即读** `calleeThread.contextWindows`（`:178` resolveCalleeReplyToWindowId 按窗 data 的 targetThreadId/target 过滤）。
+- fork 子线程：`builtins/agent/children/thread/index.ts:101`（仅 injectMember；creatorThreadId 自 parent 继承），不立即读。
+- reload 恢复：`builtins/agent/children/thread/persistable/thread-persist.ts:278-284`（init→injectPeer→injectMember），本处不读。
+
+**B. root thread 不走 construct**（关键结构事实）：root / flow-object root thread 由 `flows/service.ts:430-438`(seedSession) 与 `:628-634`(createFlowObject) **直接对象字面量构造 ThreadContext**，不经 `runtime.instantiate`/talkConstructor。thread 类的 talkConstructor（`thread/index.ts:133-187`）**仅**用于 fork（execFork）/ peer（跨对象 talk）子线程。
+→ **「construct 收敛初始窗」无法覆盖 root**——root 没有 construct。真正干净的归宿不是「construct 拥有 init」，而是 **buildInputItems（每轮、对每条 thread 都跑）幂等 ensure 全部结构窗**，root/talk/fork/restored 统一。
+
+**C. buildInputItems 当前只 reconcile peer 窗**（`thinkable/context/index.ts:303-321` reconcilePeerWindowsIntoContext，谓词 `:290-294` id===class 且非 builtin）：它**不**调 initContextWindows/injectSelf/injectMember。pipeline 三 processor（`pipeline.ts:32-54`）产的是 **derived 窗**（protocol/activator 知识 + peer object），非 self/thread/member 结构窗的重注入。
+→ 要让 buildInputItems 成为「所有 thread 初始窗的统一幂等兜底」，须**扩 reconcile 覆盖 self 门面窗 / self-view thread 过程窗 / member 工具窗**（三者皆 transient 重注入，`context-window.ts:145-160` isNonPersistedWindow 剔除不落盘）——非平凡扩展。
+
+**D. 时序变更会触及 6+ 个 eager 读取点**（窗初始化从「创建期 eager」改「首轮 buildInputItems lazy」的风险面）：
+- `flows/service.ts` listThreads（extractTalkPeers 读 contextWindows 提 talkPeers 摘要，readThread 直后、任何 buildInputItems 前）、getThread（`:795` hydrate）、continueThread（`:840` 读 userThread.contextWindows 找 talk_window）。
+- worker `syncCrossObjectCalleeEnds`（`worker.ts:274` 读 caller.contextWindows 遍历 talk_windows）。
+- observable 快照（`debug-file.ts:43`、`window-hash.ts:183`）。
+- **In-path 立即读**：talk-delivery `:178`——callee 建好**当场**读其 contextWindows。此路径若改全 lazy，须同步重写 resolveCalleeReplyToWindowId。
+→ 这些消费者会在「thread 刚建、尚未首 think」时读 contextWindows；改 lazy 后它们看到的窗不完整（缺 peer/member，甚至缺 self/thread），UI/摘要/hash 与首轮 think 后不一致。这正是 init **当前 eager 的原因**。
+
+**E. 无确定性测试覆盖该时序**：14 个 integration 全 `describe.skipIf(!hasLlmEnv)`（`tests/integration/_fixture.ts:11-13`）、22 个 e2e 由 `RUN_*_E2E` + hasLlmEnv 双门。**没有任何确定性测试**覆盖「thread 创建 → runScheduler tick0 → 首轮 buildInputItems → 窗就位」全链路。
+→ 「lazy-ensure」行为变更**只能靠 live-LLM 跑验证**，或新写一条专门 mock scheduler+init+buildInputItems 时序的确定性单测。本轮（无 live backend、确定性门为准）无法对它给出与 P0-P3 同等强度的回归保证。
+
+### 推迟判断（OOC 哲学）
+
+裁决 #8 字面是「收进 construct」，但事实 B 证伪了它能覆盖 root——**正确的干净目标是「buildInputItems 统一幂等 ensure」**，而该目标牵出事实 C（扩 reconcile）+ D（重排 6+ eager 读取的时序契约 + 重写 talk-delivery in-path 读）+ E（确定性不可验、须 live-LLM）。这是一次**有真实行为变更、且本轮工具链无法充分验证**的改动；headline 解耦已 verified+全绿，再为这层纯结构 cleanup 冒「破坏 eager 读取语义 + 不可回归验证」的险不划算（呼应「交付干净已验证的增量、勿过度机制化、退潮不破坏在跑的东西」）。故**推迟**，当前 eager init（经 core→builtin import）保留为正确自洽态。
+
+### follow-up 立项要点（acceptance）
+
+1. 目标改述为 **buildInputItems 幂等 ensure 全结构窗**（self/thread/member + 既有 peer reconcile），覆盖 root/talk/fork/restored 四路；扩 `reconcilePeerWindowsIntoContext` 或并列加 `ensureStructuralWindows`。
+2. 决定 eager 读取契约：listThreads/getThread/continueThread/worker/observable 读「未首 think」thread 时——要么保留创建期 eager init（仅移除**冗余**、不改时序），要么让这些读取点容忍/触发 ensure。**talk-delivery:178 in-path 读**必须保留可用（eager 或 ensure-then-read）。
+3. 先补一条**确定性单测**：thread 创建 → 模拟 tick0 buildInputItems → 断言 self/thread/member/peer 窗就位（脱离 LLM）；再以 live-LLM integration 兜底端到端。
+4. 退潮：四创建路径的外部 init 调用按上述决定收敛/移除，doc 成对回流（object/self.md 核心 10 生命周期 + thread/collaborable self.md 的「窗何时铺」）。
