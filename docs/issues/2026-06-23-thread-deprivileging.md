@@ -78,16 +78,31 @@ date: 2026-06-23
 
 ## 分期（建议）
 
-- **P1（首期，低风险、确定性可测）✅ landed**（feat/thread-persist-seam，commit 9cced43d）：方向①——
-  持久化 seam 化。新 core seam 派发器 `core/persistable/thread-container-io.ts`（writeThread/readThread 经
-  `resolvePersistable(THREAD_CLASS_ID).save/load` 派发到 thread 的 saveThread/loadThread，仅 type-import
-  ThreadContext、未注册 fail-loud）；builtin `thread-json.ts` 删 writeThread/readThread adapter、只留 threadFile，
-  saveThread/loadThread 成 thread 容器持久化**唯一**逻辑入口；~33 importer 重定向 builtin→core（签名不变）；
-  window-persistence reportContextEdit 经 seam + 传注入 registry；退役 blessed 表述（thread/persistable/index.ts +
-  window-persistence + L1 story）；create-object.test 补 register-builtins（fail-loud 暴露的真实测试缺口）。
-  **核心战果：core 生产代码零 value-import thread 持久化实现**。质量门全绿（tsc / core 652 / builtins 214 /
-  storybook 64 / silent-swallow / deprecated / doc-drift / anchor-drift）。fork/peer/super-alias 端到端仍
-  LLM-gated（同前，不在确定性门）。
+- **P1（方向①）✅ landed —— 两轮**：
+  - **P1.0**（feat/thread-persist-seam，9cced43d，已合 main）：消 value 边——core seam 派发器
+    `thread-container-io.ts`。但 review 指出**该派发器仍 thread-专属（THREAD_CLASS_ID hardcode、thread-命名、
+    住 core）**，是 core 特殊对待 thread 的半步（同 ThreadContext 搬位置不算解耦）。
+  - **P1.1 重做**（feat/thread-persist-generic-by-class，commit db2ce548）：用户裁决——**持久化触发是 object
+    级统一机制，thread 只是一种 object；无文档要求每 tick 落盘**。改为**按 class 泛型派发**：① 运行时 thread
+    加 `class` 字段（像 `OocObjectInstance{id,class,data}` 自带 class 标识）；② 新 `runtime-object-io.ts`
+    （**泛型、零 thread 专属**）：`saveObject(obj)` 读 `obj.class` 派发、`loadObject(classId,ref,threadId)`
+    按显式 class 派发 → `resolvePersistable(class).save/load` → 各 class 自己实现（thread → saveThread/
+    loadThread，逻辑 100% 在 builtin）；③ 删 `thread-container-io.ts`（thread-专属，淘汰）；全部 writeThread/
+    readThread → saveObject/loadObject(THREAD_CLASS_ID,…)；buildThread/loadThread/字面量恒置 class；测试补
+    register-builtins/class（fail-loud 暴露的真实缺口）。**核心战果：core 无任何 thread-持久化专属代码，按 class
+    泛型分派（thread 与 file/process 同路）。** 全门绿（tsc / core 652 / builtins 214 / storybook 64 + 4 检查门）。
+- **P1.5（方向①续，elegance，未做）**：调用点审计结论——18 个显式 `saveObject` 点多为**合理的状态变更/hydrate
+  点**（恢复锚点 / 状态 durability / 跨线程投递 / reportContextEdit 窗变触发），不是冗余；真正的 smell 是
+  **「手动 persist now」的脆弱模式**（漏一处即丢数据）。最优雅 = **edit 触发**（appendEvents 单一 ingest +
+  reportContextEdit 自动落盘），把 18 显式点收敛成几个。但这改的是**何时落盘的行为**（durability 时序 + 恢复锚点
+  敏感、LLM-gated 不可确定性验证），故作独立增量、不在 P1 盲改。立项见 acceptance：先补确定性单测覆盖
+  appendEvents→persist 时序，再收敛显式点。
+- **P2（中期）**：方向②——reachableThreads/recovery/树遍历补 seam。改 object-lifecycle / recovery / scheduler
+  调 thread 提供的钩子；core 泛型引擎去 thread 树形/事件语义知识。须确定性单测覆盖 refcount + recovery。
+- **P3（类型层，较大）**：方向③——ThreadState/ContextContent 拆分。轻量版（core 定 `ThreadState`、builtin
+  `ThreadContext extends ThreadState`、core 驱动 typed against ThreadState）vs 内容挪出 struct（contextWindows
+  从 thread struct 迁入 thinkable 自管存储、彻底零内容依赖）——成本对比另立子 issue。注：`thread.class`（P1.1 加）
+  是 P3 ThreadState 的前置——object 自带 class 标识。
 - **P2（中期）**：方向②——reachableThreads/recovery/树遍历补 seam。改 object-lifecycle / recovery / scheduler
   调 thread 提供的钩子；core 泛型引擎去 thread 树形/事件语义知识。须确定性单测覆盖 refcount + recovery。
 - **P3（类型层，较大）**：方向③——ThreadState/ContextContent 拆分。轻量版（core 定 `ThreadState`、builtin
