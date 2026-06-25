@@ -1,8 +1,9 @@
 ---
 title: OOC Object 继承经源码 import + 对象 spread —— 不内建 chain dispatch
-status: draft
+status: landed
 date: 2026-06-25
 supersedes: 2026-06-25-inheritance-as-prototype-chain.md
+worktree: .worktree/inheritance-spread/
 ---
 
 # OOC Object 继承经源码 import + 对象 spread
@@ -350,12 +351,346 @@ agent 在 super flow 想改自己的 talk 行为：
 
 ## review 记录
 
-（待 fan-out）
+经 design-workflow 步骤 2 fan-out（10 个 sub agent：9 个受影响设计元素 reviewer + 1 个完整性批评官）。下面记录每个 reviewer 的结论与核心评论，详细评论见 supervisor 会话日志。
+
+### A · OOC（顶层哲学/三主张）—— 同意但有担忧
+
+- **结论**：本 issue **强化**三主张中的第二（Object 化 Agent）与第三（元编程→自我迭代），且把「克制熵增」哲学根落到机制选择上；相比前 issue 净减约 6 个 OOC 自有名词（proto/super/chain/merge/halt/ownerClassId）。
+- **关键担忧**：
+  1. **「实验态」哲学层退化**：主张三「运行时改写自己的类」在本 issue 后实际是「改源码 → invalidate → 下次 hydrate」——**单 thread 内**的自我演化场景受影响。建议在 `ooc-philosophy.md` 显式补一句：「**运行时改写的颗粒度 = thread 间，不是单步内**」，防止前 issue 的 `patch_self_prototype` 以「主张三未尽」为由复辟。
+  2. **「自举」哲学 vs「向 TS 退化」**：本 issue 让继承能力退回 TS/ESM，需明确表态：「**OOC 不重新发明语言层既有机制——能用 TS / ESM 表达的就用；OOC 只提供 TS/ESM 表达不了的部分（context window 投影、thinkloop、persistable 三层级、reflectable 反思通道等）**。」
+  3. **`extendClass` 收紧措辞**：从「样板代码长时可用 helper」收紧为「**OOC 不推荐任何一种特定继承合并语义**；extendClass 仅作样板长时的可选语法糖；cookbook 须平等展示多种 spread 模式」——防止 helper 被当成「推荐做法」反向强加协议。
+
+### A · OOC Class/Object Model（核心翻案点）—— 同意但需配套修订
+
+- **结论**：核心 2 翻案方向正确，但**核心 1「class 由四件套 + index.ts + types.ts 构成」与 issue 改动 3「无 index.ts 纯实例 object」字面冲突**，必须配套修订。
+- **关键修订**（落地前必做）：
+  1. **核心 1 措辞**：明确「**class 必有 index.ts + types.ts**；**object instance 不必有**——无 index.ts 的 object 不是新 class、就是父 class 的一个 instance」。
+  2. **核心 2 措辞**改为「**OOC Class 协议层不内建任何继承 / dispatch chain 机制**，ClassRegistry 注册的是扁平的 class 定义；class 想复用另一个 class 的能力，由其 `index.ts` 用 TS 标准 `import` + `spread` 在源码侧完成——继承属于 class 实现者的自由，OOC 协议不规约、不感知」。
+  3. **核心 4 / ServerLoader 路径**：**纯实例 object（无 index.ts）不向 ClassRegistry register 任何东西**——只在 session 对象表里 `instance{id, class: <parentClassId>, data}`。**否定 issue 改动 3 原稿「注册空 Class { ...parentClass, id }」**——那等于把 chain dispatch 改名 register-time spread copy，仍是 OOC 自有继承机制。
+  4. **核心 3 加一句**：「单例不可被继承是源码组织约定——OOC 协议层不强制（无运行时感知），由 lint / 评审拦截」。
+  5. **核心 9 加 self.md 复用约定**：继承 agent 的 class 须 `import { readSelf, writeSelf }` 显式调（这正是核心 2 复用模式的实例）。**待裁决点 4 的答案**：`PersistableContext.objectId` 已携带子身份，**不需要改 `self-md.ts`**。
+  6. **核心 10 加 lifecycle 串调约定**：父钩子由子代码显式调（典型 `await parent.active?.exec(ctx, self)`），漏调由代码评审拦截。
+- **新增担忧（必处理）**：
+  - **spread 不是深拷贝**——`{ ...parentClass }` 浅拷贝，facet 对象 mutation 会跨 class 泄露。须在 cookbook 强制声明「OocClass 及其 facet 在注册后视为 immutable」+ lint 规则禁止 `executable.methods.push` 等。
+  - **spread 顺序陷阱**——`{ id: "child", ...parent }` 错（id 被父覆盖回 parent.id）。cookbook 显式警告。
+
+### B · executable —— 同意；3 处补丁需补
+
+- **结论**：dispatch by name + tool 3 原语 + object vs window method 分维全部不变；spread 模型透明传导。
+- **关键补丁**：
+  1. **改动 6 super-call 完整模板修订**：`{ ...parentMethod, exec: async (...) => parentMethod.exec(...) }`（不能只覆盖 exec，否则丢失父的 `route` / `intents` / `schema` / `description`）。这是 executable × thinkable 交叉关键——route 算 intents 反向驱动 knowledge 激活，丢 route 会让知识激活机制连带失效。
+  2. **改动 5 `extendClass`：method 整对象保留**——helper 的 mergeExecutable 必须 spread 整 `ObjectMethod`（含 route/intents/schema/public/for_reflectable/permission），不光看 name + exec。
+  3. **`assertNoMethodNameCollision` 加强**：顺手加 same-class internal name 自查重（防 filter+concat 手写漏 filter 导致同名重复）。
+  4. **改动 4 表加 route / intents 复用行**：让 cookbook 默认推荐 spread 整 method 对象的写法。
+- **storybook**：加一个 case 验证「子 override exec + spread 父对象 → route 仍跑、intents 仍驱动 knowledge 激活」。
+
+### B · readable —— 同意大方向；**反对 `mergeReadable`**
+
+- **结论**：删 `resolveReadable / resolveWindowMethod / resolveWindowClass` 三处沿链 fallback 在 readable 这维**几乎零代价**（self.md 自己写「沿继承链回退尚未被真正行使」）。
+- **关键反对**：**`mergeReadable(按 window class 名 merge)` 必须从改动 5 砍掉**——
+  - 当前 0 真实使用方（self.md 自承认）；
+  - 与核心 5「多视角投影是整体语义」暗中违背——把整体语义拆成字段语义；
+  - 替代写法 `window: [...parentClass.readable!.window, myExtra]` 一行够。
+  - 与 issue 反向哲学（零 OOC runtime 机制）矛盾。
+- **保留 `mergeExecutable`**：method-by-name 是 executable 维度本就有的注册期硬约束（`assertNoMethodNameCollision`），helper 只是 spread + Map 语法糖。**helper 不为 readable / persistable / visible 提供专用合并语义**。
+- **必补**：
+  - 改动 2 增补「readable 三条 resolve 本类直查后的语义清单」+ 「静态 `readable.md` 兜底链与本 issue 正交、不变」。
+  - 改动 3 加一段说明：`readable.md` 兜底链与"无 index.ts"路径**正交**。
+  - 改动 4 表补 readable 三档复用写法（全继承 / 整体 override / window 数组拼接）。
+  - **hot-reload watch 范围扩到 `readable.md` / `self.md`**（不只 `index.ts` mtime）——参看新增「Hot-reload watch 范围」裁决。
+
+### B · persistable —— 同意；3 处接口边界缺口
+
+- **结论**：方向与 persistable 设计哲学（stones/flows/pools 三层 + reflectable × persistable 铁律）吻合；本 issue 没破坏「绝不从 session worktree 直合 main」铁律。
+- **必修（P0 阻塞落地）**：
+  1. **改动 3 删「ESM live binding 自动同步」措辞**——spread 复制的是 facet 对象引用（浅拷贝），父 module 重 import 后 facet 对象**是新引用**，要让子也拿新引用必须**重新注册子**（invalidateStone + 重 register）。这**不是** ESM live binding 透明同步。改为「父 class 改动→invalidateStone+重新 spread 注册」。
+  2. **改动 8 新增 API `WorldRuntime.invalidateAndReregister(objectId)`**（当前只暴露 `invalidateStone`，不重新 register）。或 alpha 路径：PR merge finalizer 调 `serverLoader.invalidateStone` 即可（lazy 模式下次 hydrate 拿新版）。
+  3. **改动 8 例子里的 `coder` 必须明示为 stone object**——排除「builtin 框架包 object（`packages/@ooc/builtins/agent/coder/...`）」混淆。两类对象写入边界不同：stone object 走 reflectable feat-branch PR；框架包内 builtin 走 GitHub PR 由人类合入。**这是 issue 当前最严重的边界混淆**。
+- **新发现**：`stone-versioning.ts:283` ff-merge feat → main 完成后**没有任何回调触发 loader 失效**——running session 的 ClassRegistry 持 stale class。P1 在 `mergeFeatBranch` 末尾加一钩 invalidateStone 即可。
+- **删「sentinel」措辞**（改动 2 末尾）——全树 grep `sentinel` 0 命中，凭空概念。
+- **待裁决点 4 答案**：不需要改 `agent/persistable/self-md.ts`（`ctx.objectId` 已携子身份）。
+
+### B · thinkable —— 同意改动 1-7/9 与改动 8 主路径；**反对 P3 thinkloop tick stat**
+
+- **结论**：thinkable 模块槽与 5 维度同构，本类直查 + spread 完全相容；改动 8 主路径与现有 feat-branch PR 通道字面对齐。
+- **必删 P3**：
+  1. **重复造轮子**：`core/runtime/hot-reload.ts` 已有完整 fs.watch 推模式 watcher + 50ms debounce + `stone:changed` 事件 + `dev/prod` 开关；`world-runtime.ts:54-64` 已联动 `serverLoader.invalidateStone`。issue 写「ServerLoader 已有 mtime 缓存机制，加一行 trigger 即可」是对现状的误判——**已存在推模式机制**。
+  2. **污染 thinkloop 纯粹性**：thinkloop 协议是「build→LLM→tool→事件」单轮，不该承担文件系统/源码热更副作用。
+  3. **强加给所有 thread thinkloop**：即便生产环境也每 tick stat——`hot-reload.ts` 已正确做 dev/prod 分离。
+  4. **stat 单文件不够**：子 spread 父——父改源码后子需要重 register，stat `calleeObjectId 的 index.ts` 漏掉 import 图。
+- **关键裁决点**：把 `## knowledge_base / knowledge`（E）从「未受影响」**移到「受影响」**——loader 当前**未实现**「沿祖先 / parentClass 继承链解析」（代码注释「不做继承链(待 reflectable 重建时补)」），但 index.md L177 + thinkable self.md L30 都声称已做。本 issue 落地后 inheritClass 死锚——**裁决：退役该未实现设计**，同步删 index.md L177 / thinkable self.md L30 / loader.ts 注释里的「沿祖先 / parentClass 继承链」字样。
+- **knowledge 激活 `method::<class>::<method>` 触发**：明确「**不解析 class 继承**——子若想用父 knowledge 触发条件，自己 import 父 knowledge md 并重声明本类 id 的 trigger」（与本 issue 哲学一致）。
+
+### B · visible —— 条件赞成；tsx 通路必须显式声明
+
+- **结论**：visible/server 槽（OocClass 内）删 inheritClass + 本类直查 + spread 干净降熵；但 issue **把 visible 当单一槽位推理，对 tsx 通路完全没提**——必须显式声明。
+- **必加 visible 节裁决**：**tsx 不参与 OocClass 继承**（方案 A，推荐）——
+  - tsx 是文件资源、不是 OocClass 字段；
+  - 子需 tsx 时自己写 `visible/index.tsx`，缺则前端 fallback 到 `StoneFallback`；
+  - 子也可经用户态 ESM `export { default } from "@ooc/builtins/agent/visible/index.tsx"` 复用父 tsx（无 OOC 机制）。
+  - 同样适用 `client/pages/<page>.tsx` flow scope。
+- **「未受影响」清单需显式列**：A1 file-edit 原语 / `visible/index.tsx` 文件解析契约 / `ooc:// URI`↔SPA route / `ObjectClientRenderer` / `visible/diff.tsx`——避免后续 reviewer 重复怀疑。
+- **builtin 现状核查**：`builtins/agent/executable/method.talk.ts` **已经是 method-per-file 形态**——completeness / executable / visible reviewer 担忧的「需为 super-call 拆 builtin method-per-file」**已经做完**。**P 工期不需要额外加这一步**。
+
+### B · reflectable —— 强 approve 改动 8 主路径；reflectable 通道无须改字
+
+- **结论**：reflectable self.md 核心 1「不发明新机制」 + 核心 4「两通道互斥」 + 核心 5「feat-branch PR = stone 变更唯一沉淀单元」**已为改动 8 兜底**——本 issue 不需要改 reflectable self.md 任何字。
+- **`patch_self_prototype` 全树 grep 仅命中 issue 文本**——线上从未实施，不需要清理。
+- **关键裁决**（路径 A vs 路径 B 主语区分）：
+  - **路径 A** = PR merge finalizer → invalidateStone = **agent reflectable 通道**（强制经审核闸）；
+  - **路径 B** = `startHotReloadWatcher` fs.watch 推模式 = **人类 dev hot-reload**，**只在 dev 模式开**，**且必须排除 `flows/<sid>/` worktree 路径**（防 agent 在 session worktree 写就生效绕开 PR 闸门）。
+  - 文字明确写进 issue 落地段；同步在 reflectable × persistable 交叉契约下补一句「dev hot-reload 不监听 session worktree」。
+- **新增担忧（必处理）**：reverse-binding 索引——agent 改父 class 源码后，所有 `ooc.class=该父` 的 children（如 supervisor）是否都被 invalidate？当前 `invalidateStone` 按单 stone 失效。**MVP**：merge finalizer 直接清空整个 sessionRegistry（代价：下次 hydrate 全冷启）；优化路径后续单开 issue。
+
+### E · runtime —— 同意改 1/2/9；强烈反对改 3 「register-time spread copy」+ P3
+
+- **结论 + 实测发现**（最重要）：
+  1. **改动 3 必须改写**：「无 index.ts 的 stone object **不注册新 class**」——hydrate 时 `inst.class = ooc.class`（=父 class id），resolveXxx 直接命中父 class。这才是「真正的无 OOC 机制」。issue 原稿「注册空 Class `{ id, ...parentClass }`」等于把 chain dispatch 改名 register-time spread copy，未消除 OOC 自有继承机制——违背 issue 自己哲学根。
+  2. **supervisor 的 `ooc.class = "_builtin/supervisor"` 是遗留错值**——`_builtin/supervisor` 不在 builtinClassRegistry 注册（已确认），supervisor 当前能跑是误打误撞（resolveXxx 全 undefined）。**P1 必须顺手修为 `_builtin/agent`**。
+  3. **hot-reload 已实现**（`hot-reload.ts:127` + `world-runtime.ts:54-64`）：fs.watch 推模式 + `stone:changed` 事件 → `serverLoader.invalidateStone` 已联动。**整段 P3 删**，改为「沿用现有 fs.watch 推模式 + PR merge finalizer 触发 invalidateStone」。
+  4. **resolveXxx 沿链解析准确范围**：10 个 method、11 处 `inheritClass` 引用（issue 原稿「13 处」是 grep 行数，按 method 计数应为 10）。
+  5. **`object-lifecycle.ts` 不存在**（漂移注释）——实际位置在 `builtins/agent/children/thread/runtime/thread-runtime.ts:251-269`。index.md `## runtime` L205 描述需对齐。
+- **改动 4 表必补 lifecycle 行**：`Lifecycle 串调 | spread 时父 active/unactive 自动继承；子 override 想保留父行为需显式调 parentClass.active?.exec(...)`。
+- **改动 5 helper 字段约束**：在 helper 文件首注释里写死「**只支持 executable.methods 一档 method-level merge**，扩字段必走新 issue」——防滑坡。
+- **待裁决点 5 答案**：builtin agent children **0 处使用 inheritClass**（实测），清字段定义即可、无数据迁移。
+
+### 完整性批评官 —— **issue 在「受影响 / 未受影响」清单上严重不准**
+
+- **结论**：issue 整体方向正确，**但「未受影响」一栏严重错列**（collaborable / thread / knowledge_base / method_exec_form / app 都应移出），且**漏列 8+ 个受影响交叉**——不应直接进步骤 3 裁决，先把清单补完。
+- **漏列受影响**（必加）：
+  - `## collaborable`（B）—— talk/say 解析路径
+  - `## executable × readable`（D）—— `assertNoMethodNameCollision` 在 spread 模型下语义
+  - `## readable × thinkable`（D）—— context 渲染入口 `context.ts:34` 沿链消除
+  - `## persistable × thinkable`（D）—— knowledge 继承链退役（对齐文档）
+  - `## collaborable × thinkable`（D）—— talk(target=super) 自指通道
+  - `## reflectable × persistable`（D）—— `createObjectSkeleton` 写 `ooc.class` 语义改变
+  - `## builtins`（C）—— builtin 家族零冲击（须明示）
+  - `## thread`（E）—— thread-runtime 6 处 resolveXxx 行为变化
+  - `## agent`（E）—— super-call 对 builtin 拆 method-per-file 的需求（**实测：agent 已经拆好**，无额外工作）
+  - `## knowledge_base / knowledge`（E）—— 见 thinkable reviewer 已点出
+- **改动 3 vs 改动 9 字面矛盾**：「移除兜底注入」与「ServerLoader 隐式 spread」对立——按 runtime reviewer 修订（无 index.ts 路径不向 registry 注册新 class，inst.class 直指父）即一并解决。
+- **「13 处 resolveXxx」精确化**为「10 个 resolveXxx method / 11 处 `inheritClass` 引用」。
+- **「ESM live binding」需在裁决时统一定义**（脚注释义），避免散漏漂移。
+- **`ooc.extends` 元数据字段**：建议直接砍（YAGNI）；tooling 需要扫继承图直接扫 `import` 语句即可。
+
+---
 
 ## 裁决
 
-（待裁决后填）
+按 design-workflow 步骤 3，Supervisor 汇总各 reviewer + 完整性批评官意见后做以下裁决。**裁决为权威，本文上方"改动提案"原稿与裁决冲突处以裁决为准**（不再回头改写原稿——它是历史依据；P1 实施直接对照本裁决段）。
+
+### 裁决 D1：核心 2 翻案的协议层措辞
+
+`object/self.md` 核心 2 改为：
+
+> **OOC Class 协议层不内建任何继承 / dispatch chain 机制**：ClassRegistry 注册扁平的 class 定义，无 chain 元信息、无沿链 fallback。object 经 `ooc.class` 单跳 binding 一个 class 作为身份模板。**class 想复用另一个 class 的能力，由其 `index.ts` 用 TS 标准 `import` + 对象 `spread`（或 method 级 import 函数 + 显式调）在源码侧完成**——「如何继承」属于 class 实现者的自由，OOC 协议不规约、不感知。
+
+同步 index.md `## OOC Class/Object Model` 核心 2 节。
+
+### 裁决 D2：核心 1 / 3 / 4 配套修订
+
+- **核心 1**：「class 必有 `index.ts` + `types.ts` + 四件套（readable/executable/visible/persistable）；agent 类额外注册 thinkable 模块槽。**object instance 不必有 `index.ts`**——无 `index.ts` 的 object 不是新 class、是父 class 的一个 instance」。
+- **核心 3**：加一句「单例不可被继承是源码组织约定——OOC 协议层不强制（无运行时感知），由代码评审 / lint 拦截」。
+- **核心 4 + ServerLoader 路径**：**纯实例 object（无 index.ts）不向 ClassRegistry 注册新 class**——hydrate 时 `OocObjectInstance.class = ooc.class`（=父 class id），resolveXxx 直接命中父 class 的字段。
+  - **否定** issue 原稿改动 3 的「ServerLoader 注册空 Class `{ id, ...parentClass }`」——那等于把 chain dispatch 改名 register-time spread copy，未消除 OOC 自有继承机制。
+  - **新的 ServerLoader 双路径**：
+    - 有 `index.ts` → `import { Class } → registry.register(Class)`；子的继承经子源码 spread 表达。
+    - 无 `index.ts` → **不**向 registry register；只在 session 对象表落 `instance{id, class: <parentClassId>, data}`。
+  - 子 OocObjectInstance.class 这个字段本身承担「单跳实例 binding」角色，runtime 不在 ClassRegistry 再造一条空 Class 桥接。
+
+### 裁决 D3：核心 9 + 核心 10 复用约定
+
+- **核心 9**：「继承 agent 的 class 须 `import { readSelf, writeSelf }` 显式调（这是核心 2 复用模式的实例）」。`PersistableContext.objectId` 已携子身份，**不需要改 `agent/persistable/self-md.ts`**（**回答待裁决点 4：不动**）。
+- **核心 10**：「`active / unactive` 钩子父子串调不内建——子 override 时由子代码控制顺序（典型 `await parent.active?.exec(ctx, self); /* own logic */`），漏调父钩子由代码评审拦截」。
+- 改动 4 表补 lifecycle 行：`Lifecycle 串调 | { ...parent, active: { exec: async (ctx, self) => { await parent.active?.exec(ctx, self); /* own */ }}}`（注意 `parent` 是 import 来的引用、不是 spread 后字段）。
+
+### 裁决 D4：resolveXxx 沿链解析全部本类直查
+
+- **同意 issue 改动 1 + 2**：删 `OocClass.inheritClass` 字段；10 个 `resolveXxx` method（11 处 `inheritClass` 引用）改本类直查。
+- 子 class 想继承父的某个 facet（active/readable/persistable/etc），**在自己的 `index.ts` 显式 spread 父 facet**（`{ ...parentClass, id: "child" }`）——子的 `cls.executable` 等已含父 facet 引用，本类直查命中。
+
+### 裁决 D5：extendClass helper 收紧
+
+- **提供** `extendClass(parent, overrides)` 编译期 helper，放 `packages/@ooc/core/runtime/inherit.ts`。
+- **只做 `executable.methods` 一档 method-level merge**（按 name，子覆盖父，整 ObjectMethod 引用保留含 route/intents/schema 等所有字段）。
+- **不为 readable / persistable / visible / thinkable 提供专用合并语义**——这几维 spread 整模块或子手写 `[...parent.window, my]` 数组拼接。
+- **删 `mergeReadable` / `mergeVisible`**——`mergeReadable` 与 readable 核心 5 暗中违背、当前 0 使用方；`mergeVisible` 对称不必要。
+- helper 文件首注释写死「**只支持 executable.methods 一档**，扩字段必走新 issue」（防滑坡）。
+- **同步加强 `assertNoMethodNameCollision`**（P1 顺手）：扫 `cls.executable.methods` 内部 name 自查重，防 filter+concat 手写漏 filter。
+- **回答待裁决点 1**：提供 helper，但 cookbook 不把它作"推荐做法"——平等展示「不写 index.ts / 手写 spread / extendClass」三种范式 + 何时用哪种。
+
+### 裁决 D6：super-call 完整模板
+
+改动 6 super-call 完整模板修订为：
+
+```ts
+import { talkMethod as parentTalk } from "@ooc/builtins/agent/executable/method.talk.js";
+
+export const talkMethod: ObjectMethod<Data> = {
+  ...parentTalk,                            // route / intents / schema / description 全部继承
+  exec: async (ctx, self, args) => {        // 仅 override exec
+    observeLog("coder.talk.audit", args.target);
+    return parentTalk.exec(ctx, self, args);
+  },
+};
+```
+
+**注意「`{ ...parent, override }` 不是 `{ override, ...parent }`」**——后者顺序错、override 被父覆盖回。cookbook 显式警告。
+
+### 裁决 D7：hot-reload 沿用现有推模式
+
+- **删原 P3「thinkloop tick 末尾 stat」整段**。
+- 沿用 `core/runtime/hot-reload.ts` 已有 fs.watch 推模式 watcher + `stone:changed` 事件 → `serverLoader.invalidateStone` 链路（dev 模式开、生产关）。
+- **P1 在 `mergeFeatBranch` / ff-merge → main 路径末尾加一钩** `serverLoader.invalidateStone(mainRef)`——填上 PR merge 后 stale class 这个真实缺口。
+- **路径 A vs B 主语区分**（reflectable × persistable 铁律推论）：
+  - 路径 A = PR merge → invalidateStone = agent reflectable 通道（强制经审核闸）；
+  - 路径 B = fs.watch hot-reload = 人类 dev 直接编辑 = dev-mode 豁免，**必须排除 `flows/<sid>/` worktree 路径**（防 agent 在 session worktree 写就生效绕开 PR 闸门）。
+- **MVP reverse-binding 处理**：暂不引入 parent→children 反向索引；merge finalizer 直接清空整个 sessionRegistry（下次 hydrate 冷启），优化路径后续单开 issue。
+- **watch 范围**：除 `index.ts` 外，也包含 `readable.md` / `self.md` 等 stone scope 文本资源（已在 `hot-reload.ts` 现有实现内，无须新增）。
+- **回答待裁决点 3**：「trigger 选型」不存在——沿用现状即可。
+
+### 裁决 D8：tsx 不参与 OocClass 继承
+
+- **tsx 是文件资源、不是 OocClass 字段**——`visible/index.tsx`、`client/pages/<page>.tsx` 不参与 OocClass 继承机制。
+- 子需 tsx 时自己写文件，缺则前端 fallback 到 `StoneFallback`；子也可经用户态 ESM `export { default } from "@ooc/builtins/agent/visible/index.tsx"` 复用父 tsx（**无 OOC 机制**）。
+- `## visible` self.md 增补该节。
+
+### 裁决 D9：package.json 简化 + `ooc.extends` 砍掉 + supervisor 修正
+
+- **同意 issue 改动 9**：保留 `ooc.class`；不引入 `ooc.proto` / `ooc.inheritClass`。
+- **不引入 `ooc.extends`**（**回答待裁决点 2：YAGNI 砍掉**）——tooling 需要扫继承图直接扫 `import` 语句（ts compiler API / grep），比手维护字段更准。
+- **P1 顺手修 supervisor 的 `ooc.class = "_builtin/supervisor"` → `"_builtin/agent"`**——`_builtin/supervisor` 不在 builtinClassRegistry 注册（实测），当前 supervisor 跑起来是误打误撞。改动 2 落地后此遗留错值会直接暴雷，必须同步修。
+
+### 裁决 D10：knowledge 继承链解析退役
+
+- **同意 thinkable reviewer 裁决建议**：`knowledge_base/loader.ts` 当前**未实现**「沿祖先 / parentClass 继承链解析」，本 issue 落地后失去解析锚——**正式退役该未实现设计**。
+- **同步删**：
+  - `index.md` L177「磁盘加载与沿祖先 / parentClass 的继承链解析」→「磁盘加载（双源 seed + sediment 合并、sediment 覆盖 seed），不沿继承链」。
+  - thinkable `self.md` L30「双源 + 沿祖先 / parentClass 继承链」→ 删后半句。
+  - `loader.ts:5-6` 注释「不做继承链(待 reflectable 重建时补)」→ 删（明确退役而非待补）。
+- **knowledge 激活 `method::<class>::<method>` 触发**：明确「**不解析 class 继承**——子若想用父 knowledge 触发条件，自己 import 父 knowledge md 并重声明本类 id 的 trigger」。
+
+### 裁决 D11：受影响设计元素清单扩列 + 「未受影响」修正
+
+落地时按以下扩列清单做文档回流。
+
+**受影响设计元素**（最终清单，对照 index.md `##` 节做 review fan-out / 文档对齐时用）：
+
+A 区
+- `## OOC` —— 元编程哲学（澄清「运行时改写颗粒度 = thread 间」+ 「OOC 不重复发明 host language 机制」）
+- `## OOC Class/Object Model` —— 核心 1/2/3/4/9/10 修订（裁决 D1-D3）
+
+B 区
+- `## executable` —— resolveObjectMethod 本类直查 + super-call 完整模板 + assertNoMethodNameCollision 加强
+- `## readable` —— resolveReadable/WindowMethod/WindowClass 三条沿链删除 + readable.md 兜底链不变明示
+- `## persistable` —— ServerLoader 改写 + PR merge finalizer 触发 invalidate
+- `## thinkable` —— resolveThinkable 本类直查 + knowledge 继承链退役 + 删原 P3
+- `## visible` —— resolveVisibleServer 本类直查 + **tsx 不参与继承**
+- `## reflectable` —— 路径 A/B 主语区分 + dev hot-reload 排除 session worktree（**self.md 本身不改字**）
+- `## collaborable` —— talk/say 解析依赖 ServerLoader 隐式（new model: inst.class 直指父）
+
+C 区
+- `## builtins` —— builtin 家族零冲击明示
+
+D 区
+- `## executable × thinkable` —— route 经 spread 保留 → intents 激活不断
+- `## executable × readable` —— assertNoMethodNameCollision 在 spread 后语义
+- `## readable × thinkable` —— context 渲染 resolveReadable 本类直查
+- `## persistable × thinkable` —— knowledge 继承链退役（对齐 D10）
+- `## reflectable × persistable` —— `createObjectSkeleton` 写 `ooc.class` 语义对齐 + dev hot-reload 主语
+- `## collaborable × thinkable` —— talk(target=super) 自指通道经 inst.class 直指父
+- `## readable × visible` —— for-ui method 经 spread；tsx 不参与
+
+E 区
+- `## thread` —— thread-runtime 6 处 resolveXxx 行为变化
+- `## agent` —— super-call 在 builtin 已有 method-per-file 形态（**无额外拆分工作**）
+- `## knowledge_base / knowledge` —— 继承链解析退役（裁决 D10）
+- `## runtime` —— inst.class 直指父 + 删 sentinel/object-lifecycle.ts 漂移注释 + 沿用现有 hot-reload
+
+**未受影响**（明示）：observable / app（仅 file-edit 原语侧文档对齐 `ooc.class` 语义、无 runtime 改造）/ method_exec_form（间接经 resolveObjectMethod 但 spread 透明传导）/ thread builtin self.md 核心不变。
+
+### 裁决 D12：worktree 隔离
+
+- 本 issue 涉及 `packages/@ooc/core/runtime/`、`packages/@ooc/builtins/agent/persistable/`、`.ooc-world-meta/.../objects/supervisor/package.json` 等源码变更。
+- **在 `.worktree/inheritance-spread/` 开 worktree 分支隔离开发**（frontmatter `worktree` 字段已记录），P1-P3 实施在该 worktree 内做，完成后从该分支发 PR 到 main。
+
+### 裁决 D13：实施分期重写
+
+- **P1 ≤ 2 天 · 核心改造**（在 worktree 内）：
+  - 删 `OocClass.inheritClass` 字段
+  - 10 个 `resolveXxx` 简化为本类直查
+  - ServerLoader 「无 index.ts」路径改写：`inst.class = ooc.class`，**不**向 registry register 新 class
+  - 加 `assertNoMethodNameCollision` 内部 name 自查重
+  - 修 supervisor `ooc.class` → `_builtin/agent`
+  - 在 `mergeFeatBranch` / ff-merge 末尾加一钩 `serverLoader.invalidateStone`
+  - 删 `core/runtime/inherit.ts` 之类的 sentinel 措辞引用（若有）
+- **P2 ≤ 1 天 · helper + cookbook**：
+  - 加 `core/runtime/inherit.ts`（`extendClass`，仅 executable.methods merge，注释写死「扩字段必走新 issue」）
+  - 写 cookbook：「子继承父的 3 种合法范式」（无 index.ts / 手写 spread / extendClass）+ spread 顺序陷阱 + lifecycle 父调约定
+  - 改 `object/self.md` 核心 1/2/3/9/10 + index.md 对应节（裁决 D1-D3）
+  - 改 `visible/self.md` 加「tsx 不参与 OocClass 继承」节（裁决 D8）
+  - 改 thinkable `self.md` L30 + index.md L177 + `loader.ts:5-6` 注释（裁决 D10）
+  - 在 `ooc-philosophy.md` 加「OOC 与 host language 边界」短段（澄清「不重发明既有机制」+「运行时改写颗粒度 = thread 间」）
+- **P3 ≤ 1 天 · 全树扫漂移点**（清单参考 reviewer 提到的 11+ 处）：
+  - `.ooc-world-meta/.../children/readable/self.md` L45/57/78
+  - `.ooc-world-meta/.../children/visible/self.md` L32
+  - `.ooc-world-meta/.../children/thinkable/self.md` L30 + knowledge/tests.md L27 + context.md L135 + knowledge-activation.md L11
+  - `knowledge/index.md` L177 / L205
+  - `knowledge/ooc-philosophy.md` L47（open question 收尾）
+  - `children/readable/knowledge/readable-registration.md` L31/40
+  - `children/readable/knowledge/two-faces-of-readable.md` L20
+  - `core/runtime/index.md`（如有）/ `ooc-class.ts` 与 `object-registry.ts` 注释
+  - 所有「inheritClass / 单跳继承 / sentinel / object-lifecycle.ts」字样
+
+### 裁决回答 issue 原文待裁决点
+
+1. **`extendClass` helper** — 提供，但收紧范围（裁决 D5）。
+2. **`ooc.extends` 元数据字段** — 不引入（裁决 D9）。
+3. **Hot-reload trigger 选型** — 沿用现有 fs.watch 推模式（裁决 D7）。
+4. **`agent/persistable/self-md.ts` 是否要改** — 不需要（裁决 D3）。
+5. **builtin agent children 当前 inheritClass 使用** — 0 处（实测）；清字段定义即可，无数据迁移（裁决 D9）。
 
 ## 落地验收
 
-（待 landed 后填）
+`status: landed` —— 实际落地状况记录（自我断言，等步骤 4 派验收 reviewer 独立核 → `verified`）。
+
+### 源码（worktree `.worktree/inheritance-spread/` 分支 `feat/inheritance-spread`，4 commits ahead of main）
+
+| commit | 范围 | 裁决覆盖 |
+|---|---|---|
+| `468962de` refactor(runtime): drop OocClass.inheritClass; resolveXxx 改本类直查 | ooc-class.ts / object-registry.ts（删字段 + 10 个 resolveXxx 本类直查 + assertNoMethodNameCollision 加强 internal name 自查重） | D4 / D11 |
+| `62c06967` refactor(runtime): ServerLoader 无 index.ts 路径不再注册空 Class | server-loader.ts（loadAndRegisterStoneClass 双路径明示，无 index.ts 直接 return false，不再 register 空 Class） | D2 / D11 |
+| `66de5ccf` feat(persistable): mergeFeatBranch ff-merge 后失效 ServerLoader 缓存 | stone-versioning.ts（ff-merge 完成后调 defaultServerLoader.invalidateStone(...)，dynamic import 避环依赖，best-effort） | D7 |
+| `7ef71c2d` feat(runtime): add extendClass helper + inherit.md cookbook | core/runtime/inherit.ts + inherit.md（38 行 helper + 173 行中文 cookbook：3 范式 + super-call 完整模板 + lifecycle 父调约定 + 4 反例 + ESM live binding 边界澄清） | D5 / D6 / D11 |
+
+**质量门**：`bun run verify` 6 个 gate 全绿（tsc clean / 40 pass 0 fail / silent-swallow / deprecated-symbols / doc-drift / anchor-drift）。
+
+**裁决 D7 子项的边界拍板**：mergeFeatBranch 不知道当前 sessionId（API 边界），未直接清空 sessionRegistries——只做了 ServerLoader 缓存失效（class-level）；session-level 冷启另开 issue。
+
+### 对象树（`.ooc-world-meta/stones/main/`，7 commits ahead of origin/main on ooc-0）
+
+| commit | 范围 | 裁决覆盖 |
+|---|---|---|
+| `1c13919` docs(object): rewrite core 1/2/3/4/9/10 | object/self.md 核心 1-10 修订 | D1 / D2 / D3 |
+| `86a6b31` docs(thinkable,knowledge_base): retire parent-class knowledge inheritance chain | thinkable/self.md L30 + index.md `## OOC` / `## OOC Class/Object Model` 核心 1-4 / `## knowledge_base / knowledge` | D10 / D11 |
+| `ef26600` docs(object,visible,thinkable,runtime,philosophy): align to D8/D11 | visible/self.md 加「tsx 不参与 OocClass 继承」节 + index.md `## runtime` 漂移修正 + ooc-philosophy.md 加「OOC 与 host language 边界」节 | D8 / D11 |
+| `7c9c81d` docs(readable): retire chain resolution per P3 | readable/self.md + knowledge/readable-registration.md + knowledge/two-faces-of-readable.md | D11 P3 |
+| `a1f336a` docs(object): align lifecycle.md per P3 | object/knowledge/lifecycle.md selfThenChain + object-lifecycle.ts 漂移 | D11 P3 |
+| `be0fae1` docs(*): final drift cleanup per P3 | visible/self.md L42 + knowledge/builtins.md L10 + index.md L122 | D11 P3 |
+| `0268e10` fix(supervisor): ooc.class _builtin/supervisor → _builtin/agent | supervisor/package.json | D9 |
+
+**退潮质量门**：`rg 'inheritClass\|object-lifecycle\.ts\|沿祖先 / parentClass\|selfThenChain\|单跳继承' objects/` 0 命中；「沿继承链」剩 4 处全部是「不沿继承链」式负向声明（保留）。
+
+### 仍待 Supervisor 处理
+
+1. **worktree `feat/inheritance-spread` 合并 main + 删 worktree**：4 commits 在 worktree 内，未合到父仓 main。
+2. **ooc-0 push**：7 commits（含本 commit）在 ooc-0 main 本地，未 push origin。
+3. **步骤 4 派落地验收 reviewer**（design-workflow 步骤 4）：把 status 从 `landed` 推到 `verified`。
+
+### 超出本 issue 范围的发现（建议另开 issue）
+
+- **lifecycle.md 多处 `object-lifecycle.ts` 函数行号锚漂移**（L25/L27/L29/L36/L38/L42/L43）—— 真实派发引擎已迁到 `thread-runtime.ts:251-269`，具体函数名 + 行号均失效。本 P3 严格只清 inheritance-spread 相关漂移未清。
+- **builtins.md L12「self.md 只属 ooc agent 实例」与「除 supervisor 外的 builtin 都无 self.md」一句**与改动 3「纯实例 object 无 index.ts、仍可有 self.md」需核对一致性。
+- **session-level reverse-binding invalidate**：mergeFeatBranch 当前只清 ServerLoader class cache，不触动 sessionRegistries——优化路径未实施。
+
