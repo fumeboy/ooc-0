@@ -21,10 +21,11 @@
 ## 一、核心设计
 
 1. **一切是 object；class 是定义，object 是实例**。
-   **class** 由这几件构成：
+   **class 必有 `index.ts` + `types.ts` + 四件套**（readable / executable / visible / persistable）；agent 类额外注册 **thinkable** 模块槽（见核心 9）。**object instance 不必有 `index.ts`**——无 `index.ts` 的 object 不是新 class、就是父 class 的一个 instance（runtime 不在 ClassRegistry 注册新 class，见核心 4）。
+   class 构成件：
    - **`readable`**（`readable.ts` / `readable/index.ts` / `readable.md`）—— 它**作为 context window 怎么向 LLM 展示**：渲染什么内容、按视角算出什么 class、提供哪些 window method。
    - **`executable`**（`executable/index.ts`）—— 它的 **object method**。
-   - **`visible`**（`visible/index.tsx` + `visible/server/index.ts`）—— 它向 OOC 系统用户提供 UI 界面（tsx）+ 「给 UI 用的服务端 API」（visible/server，前端经 callMethod 调用、改 object data）。
+   - **`visible`**（`visible/index.tsx` + `visible/server/index.ts`）—— 它向 OOC 系统用户提供 UI 界面（tsx）+ 「给 UI 用的服务端 API」（visible/server，前端经 callMethod 调用、改 object data）。**tsx 是文件资源、不参与 OocClass 继承机制**（见 visible 维度 self.md）。
    - **`persistable`**（`persistable/index.ts`）—— 它的**自定义持久化逻辑**（缺省走系统默认）。
    - **`index.ts`** —— class 的**后端程序路由**（不含 visible 前端 tsx）：`export const Class = { construct?, active?, unactive?, executable, readable, persistable, thinkable?, visibleServer? }`，把各维度的程序入口收口在一处——含 **visible/server** for-ui 服务端 API 模块（前端 tsx 资源除外，那是 visible 自带）+ **`thinkable?`**（思考组织模块：buildInputItems/appendEvents/compress/onSchedulerTick；仅跑 thinkloop 的 thread 类注册、由 registry `resolveThinkable` 解析，见 thinkable 维度）；非单例 class 在此注册 **construct**（见核心 3）。槽名是 `construct` 不是 `constructor`——JS `Object.prototype.constructor` 会遮蔽后者（`({}).constructor === Object` 恒真），单例就无法被识别。
    - **`types.ts`** —— 定义该 class 的 **object data 结构**（object 自身运行时数据的类型；**不是** window 投影结构，见核心 4）。
@@ -32,14 +33,29 @@
 
    **object** = 某 class 的实例，持运行时 **data**（结构由 `types.ts` 定义；如何序列化见核心 7）。
 
-2. **OOC Class 不支持继承**：ooc object 可以经 `ooc.class` 继承一个 class；但 class 本身不可以继续继承另一个 class；如果需要复用程序，可以通过 import 目标 class export 的函数、方法的方式。
+2. **OOC Class 协议层不内建任何继承 / dispatch chain 机制**：ClassRegistry 注册扁平的 class 定义，无 chain 元信息、无沿链 fallback；`resolveXxx` **本类直查**。object 经 `ooc.class` 单跳 binding 一个 class 作为身份模板。**class 想复用另一个 class 的能力，由其 `index.ts` 用 TS 标准 `import` + 对象 `spread`（或 method 级 import 函数 + 显式调）在源码侧完成**——「如何继承」属于 class 实现者的自由，OOC 协议不规约、不感知。典型写法：
+   ```ts
+   import { Class as agentClass } from "@ooc/builtins/agent";
+   export const Class: OocClass<Data> = {
+     ...agentClass,        // spread 父 facet（spread 是浅拷贝、facet 视为 immutable）
+     id: "coder",          // 覆盖 id（顺序敏感：override 必须在 spread 之后）
+     executable,           // 子自己的 executable（整模块替换；method-level merge 用 extendClass）
+   };
+   ```
+   可选 helper：`extendClass(parent, overrides)`（`packages/@ooc/core/runtime/inherit.ts`，**只支持 `executable.methods` 一档** method-name 合并，扩字段必走新 issue）。**OOC 不推荐任何特定继承合并语义**——cookbook 平等展示「无 index.ts / 手写 spread / extendClass」三种范式。
 
 3. **class 分单例 / 非单例**：
-   - **非单例 class**：可复用模板，在 `index.ts` 的 `Class.construct` 注册 **construct**（`exec(args)` 产出新 object 实例的初始 data）；可被继承。
-   - **单例 class**：恰一个实例——object 一旦**自定义自己的函数方法**（持自己的 自定义程序逻辑），就成为**自身 class 的单例**（object 即 class）；单例 class **不可被继承**。
+   - **非单例 class**：可复用模板，在 `index.ts` 的 `Class.construct` 注册 **construct**（`exec(args)` 产出新 object 实例的初始 data）。
+   - **单例 class**：恰一个实例——object 一旦**自定义自己的函数方法**（持自己的 自定义程序逻辑），就成为**自身 class 的单例**（object 即 class）。
+   - **单例不可被继承是源码组织约定**——OOC 协议层不强制（无运行时感知，已由核心 2 取消所有 chain 机制），由代码评审 / lint 拦截。
 
 4. **object 在 LLM 视角下呈现为 context window**：object 持自身 **data**（核心 1 的 `types.ts`），由 object 的 **readable** 把 data **投影**成 context window——按视角动态算出 window 的 class 与展示内容，并声明该 window 展示哪些 object method。window 的投影态（如 viewport）与 object data **分离**。
    readable 还可提供 **window method** 调节展示**程度**（详细 / 部分 / 总结 / 压缩）：window method **只动 window 投影态、返回新的 window 状态对象**（不可变），不影响 object 行为、不改变 object data。
+
+   **ServerLoader 双路径**（核心 1 / 核心 2 的运行时落地）：
+   - **有 `index.ts`** → `import { Class } → registry.register(Class)`；子的继承经子源码 `import` + `spread` 在 `index.ts` 内表达，ServerLoader 不做任何 parentClass 兜底注入。
+   - **无 `index.ts`** → **不向 ClassRegistry 注册新 class**；只在 session 对象表落 `OocObjectInstance{id, class: <ooc.class>, data}`——`OocObjectInstance.class` 字段本身承担「单跳实例 binding」角色，runtime 直接命中父 class 的字段（resolveXxx 用 `inst.class` 作 lookup key），不在 registry 再造一条空 Class 桥接。
+   - 两条路径语义同质：无 `index.ts` 等价于「index.ts 只 spread 父」——前者由 instance.class 直指父、后者由子源码 spread 父；OOC 协议层一致（无 chain 元信息）。
 
 5. **object method 由 executable 实现**：区别于 window method（核心 4），object method **可改变 object 数据、可产生副作用**。
 
@@ -51,8 +67,10 @@
 
 9. **ooc agent = ooc object with LLM**：在 readable / executable / visible / persistable 之上，额外具备 **thinkable / collaborable / reflectable**。agent 持名为 **`talk`** 的 object method——执行即创建一条 **thread**，thread 内运行 LLM 的 **thinkloop**，以此实现 agent 的智能。agent 的 **agency = `talk` / `plan`**（自我驱动的对外协作动作）；`end` / `todo` 是 **thread 作用域操作**（`end` 标记当前 thread 结束、`todo` 在当前 thread context 内登记 todo 对象），归 thread 的 object method，**不属 agent agency**。
    **`self.md` 是 agent 实例独有的身份**：agent 的 data 含一个 `self` 字段（身份正文文本），由 **agent builtin 的 persistable** 写入/读回实例目录的 `self.md`（实现归属 builtin，core 不拥有）、并经 **agent 自定义 readable** 把 `data.self` 投影为该 agent **self 门面窗的 self 视角内容**（他者视角渲 `readable.md`）——**不进 thinkloop instructions**（身份只活在 self 门面窗这一处）。非 agent 的 object（工具 object、class 定义）没有 self.md。
+   **继承 agent 的 class 在自己 persistable 里复用 self.md 处理须 `import { readSelf, writeSelf }` 显式调**（这是核心 2 复用模式的实例）——`PersistableContext.objectId` 已携子身份，agent persistable 在解析路径时不假定 class，故无须改 `agent/persistable/self-md.ts`。
 
 10. **对象有生命周期：`construct` 诞生 → `active` / `unactive` 按引用计数停启 → 无独立 destruct（删除是 `unactive` 的自决）**。**context window 即引用**：一个 object 在某 thread 的 context 里呈现为 context window（核心 4），这同时就是对该 object 的**一次引用**。三个生命周期钩子皆**可选**、与 `construct` 对称，皆在 `index.ts` 的 `Class` 注册：`construct` 在身份诞生时产出初始 data（一次，核心 3）；**`active`** 在 object 的引用数由 0 变 1（被某 context 首次引用）时触发；**`unactive`** 在最后一个引用被移除、引用数归 0 时触发。**删除是 `unactive` 的可选自决、无独立 destruct**：`unactive` 返回 `{ delete?: boolean }`——缺省 / `false` = 只**停用**（释放运行时资源、磁盘身份留存，之后被重新引用即再 `active`）；`delete: true` = 把该 object **彻底从 session 移除（含持久化文件）**。删除只发生在引用归零这一刻（故绝不留悬空引用），且由 object 自己决定——**没有独立的 destruct 钩子、没有强制销毁**；OOC object 默认是持久身份。**`close` 即移除一个引用**：close 原语把一个 context window 从某 thread 的 context 移除（引用减一），归零即触发该 object 的 `unactive`。**construct 可标结构窗不可关**：thread construct 构造初始 context 时，可把某些 context window 标记为不可关闭；对其执行 close 将被拒绝（结构窗例：thread 与 creator 的恒在通道）。
+    **`active` / `unactive` 父子串调不内建**——子 override 这两个钩子时由子代码控制顺序（典型 `await parentClass.active?.exec(ctx, self); /* own logic */`，`parentClass` 是 import 来的引用、不是 spread 后字段）；漏调父钩子由代码评审拦截，OOC 协议层不感知。
 
 > 核心 1-10 已逐条与用户敲定（仿 context.md 听写/grill 流程）。**系统自带 builtin class/object 的清单索引见 supervisor `knowledge/builtins.md`**（高内聚低耦合：本文只讲对象模型、不列具体 builtin）。派生设计 / 细节补充 / 模拟推演待补。
 
