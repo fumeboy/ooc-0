@@ -9,7 +9,7 @@ activates_on:
 
 > 本篇是 object self.md **核心 10「对象生命周期」**的实现走查（「怎么实现」）；契约（「是什么/为什么」）只在 self.md 核心 10，这里不复述。锚点对 `packages/@ooc/`（父仓 main），高漂移处锚函数名。
 >
-> 分层铁律：**core 提供泛型机制（引用计数 + active/unactive 派发），builtin 提供 policy body**——与 `construct` 同构。core 的派发引擎 `object-lifecycle.ts` **零 thread builtin import**；「往失去订阅者的 thread 发通知」这类 policy 是 thread 的 `unactive` body。
+> 分层铁律：**core 提供泛型机制（引用计数 + active/unactive 派发），builtin 提供 policy body**——与 `construct` 同构。core 的派发引擎（实际寄居在 `builtins/agent/children/thread/runtime/thread-runtime.ts:251-269`，泛型机制随 thread runtime 跑）**零 thread builtin 业务符号 import**；「往失去订阅者的 thread 发通知」这类 policy 是 thread 的 `unactive` body。
 
 ## 一、契约层（core 声明，零机制）
 
@@ -18,9 +18,9 @@ activates_on:
 - **`UnactiveResult`**（`contract.ts:210`）= `{ delete?: boolean }`；`delete:true` 仅 unactive 路径 honor（active 返回值忽略）。
 - **`OocClass`** 槽（`core/runtime/ooc-class.ts:50-51`）：`active?` / `unactive?`（复用一个先前预留、从未实现的 dead 析构槽位）。
 - **`OocObjectInstance.closable`**（`ooc-class.ts:87`）：缺省 undefined=可关；construct 标 `false`=结构窗、close 原语拒关。
-- **registry 解析**（`core/runtime/object-registry.ts:170 resolveActive` / `:179 resolveUnactive`）：沿 `ooc.class` 链 `selfThenChain` 解析（与 `resolveConstructor` 同款 for 循环）。`register()` / `seedFrom()` 的 merge 块显式保留 `active`/`unactive` 槽（防增量 re-register 丢钩子）。
+- **registry 解析**（`core/runtime/object-registry.ts` `resolveActive` / `resolveUnactive`）：**本类直查**（与 `resolveConstructor` 等其它 9 个 resolveXxx 一致）——OOC Class 协议层不内建继承 dispatch（对象模型核心 2），子类要复用父类的 active/unactive，经源码 import + spread 在子的 index.ts 显式拼父模块。`register()` / `seedFrom()` 的 merge 块显式保留 `active`/`unactive` 槽（防增量 re-register 丢钩子）。
 
-## 二、core 泛型派发引擎 —— `core/runtime/object-lifecycle.ts`
+## 二、core 泛型派发引擎 —— `builtins/agent/children/thread/runtime/thread-runtime.ts:251-269`
 
 **`referencedObjectId(w)`**（`:31`）：窗 → 它引用、且生命周期由本窗持有的对象 id。**v1 仅解析 fork**：`isTalkLikeClass(w.class) && w.data.isForkWindow && w.data.targetThreadId && !isSelfThreadWindow(w.id)` → `targetThreadId`，其余 → `undefined`。（内存 `OocObjectInstance` **无** `_ref`/`refObjectId`——那只活在 `thread-context.json` 磁盘 entry、hydrate 时丢弃，故 v1 不读它。）
 
