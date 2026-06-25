@@ -9,7 +9,7 @@ activates_on:
 
 > 索引 OOC 系统自带、实现基础系统功能的 builtin。**对象模型本身**（class/object、单例/非单例、construct、`ooc.class` 单跳实例 binding、children 命名空间、agent 分层）见 `object/self.md`——本文只回答「系统有哪些 builtin、各自职责、id 与层级」，不复述模型（高内聚低耦合）。
 >
-> 约定：`kind`（class=定义 / object=实例，见对象模型细节补充）；**children 命名空间从属**（id 以 parent id 为前缀 `_builtin/<parent>/<child>`，物理在 `<parent>/children/<child>/`；children 不继承 parent，仅命名空间从属——对象模型核心 8）。`self.md` 只属 ooc agent **实例**（对象模型核心 9），故除 supervisor 外的 builtin 都无 self.md。
+> 约定：`kind`（class=定义 / object=实例，见对象模型细节补充）；**children 命名空间从属**（id 以 parent id 为前缀 `_builtin/<parent>/<child>`，物理在 `<parent>/children/<child>/`；children 不继承 parent，仅命名空间从属——对象模型核心 8）。`self.md` 只属 ooc **agent 实例**（对象模型核心 9）——class 定义（`_builtin/agent` / 各工具 class）与非 agent 单例 object（工具 object）**均不持** self.md；builtin 家族中唯一持 self.md 的实例是 supervisor。注：纯实例 object（无 `index.ts`）若是 agent 实例仍可有 self.md（核心 1）——本约束针对 builtin 范围内。
 
 ## agent class
 
