@@ -18,24 +18,25 @@
 
 ## 一、核心设计
 
-1. **reflectable = 自我迭代，不发明新机制**：它是把既有设施——collaborable 的 **talk/say 投递**、persistable 的 **stone/pool**、thinkable 的 **knowledge**——放进一个**受保护的反思 session** 下协同的结果。本维度只定义「在反思 session 下，这些设施如何组合成自我演化」，不重新实现它们。
+1. **reflectable = 自我迭代闸门**：业务 session 内**任何对象都不直接合并/落 canonical**，只在 flow 暂存改动；所有 stone 变更（含 class 源码 + 版本化字段）+ pool 沉淀（非版本化字段）一律经 super flow 显式分发。
 
-2. **super session = 受保护的反思通道**：OOC 系统提供一个恒定名为 **super** 的特殊 flow session，专门承载 Object 的反思线程，处理 flow→stone / flow→pool 的经验沉淀与自我演化。它是沉淀**闸门 + 通道**，不是业务执行通道——不在其中跑业务任务。
+2. **super flow = 显式合并入口**：`sessionId="super"` 是单一恒定的反思通道；`talk(target="super")` 是 reflectable 的唯一入口——caller object data 持 `superThreadRef`，幂等键 = `(callerSessionId, callerObjectId)`，跨 session 自指由 collaborable 核心 7 兑现，消息派送由 caller 直接写 super flow 内 callee thread 的 inbox（不引入 cross-session bus）。worker scheduler 对 sessionId="super" 起独立 job lane，避免业务长跑饿死反思处理。
 
-3. **入口 = 和 super 对话（自指别名）**：Object Foo 触发自我迭代，靠 `talk(target="super")`——经 collaborable 投递翻译为「派进自己的 super 分身」。**和 super 对话 ≡ 向 super session 里的自己（仍是 Foo）发消息**；对话内容说明哪些知识 / 能力 / 身体要沉淀。
+3. **reflect_request 窗 surface 分发器 method**：super flow 内 self-view 的 thread 投影 class 为 `reflect_request`（thread/readable 投影态、非注册 builtin class），surface 4 个一步到位的 object methods——`scan_changes` / `create_pr_for_versioned` / `sediment_unversioned` / `create_pr_for_class_edits`；普通 session 投影为 `thread`（self-view 非 super）/ `talk`（other-view），看不到这 4 个 method。
 
-4. **两条沉淀通道，互斥、力度不同**：
-   - **pool sediment（运行时事实）**：memory / relations 等运行时自动产生的事实知识，**直写 pool**——不分支、不 PR、写就生效，下一轮新 thread 即刻看见。
-   - **stone 变更（身份 / 身体 / seed knowledge）**：任何进 canonical 的 stone 改动，一律走 **feat-branch PR**（核心 5）。
-   判据是「这是运行时事实、还是 stone 变更」
+4. **三类下游通道，按字段类型自动选**：
+   - **versioned 字段**（class.versioned_fields 声明） → `create_pr_for_versioned` → feat-branch PR → stone canonical。
+   - **unversioned 字段**（其余字段） → `sediment_unversioned` → 直写 pool（`pools/objects/<id>/data.json`，merge），不开 PR、立刻生效。
+   - **class 源码改动**（worktree 内对 stones tracked 文件的编辑） → `create_pr_for_class_edits` → feat-branch PR → stone canonical。
+   判据：字段是否 versioned + 是否 class 源码改动；三组互斥。
 
-5. **feat-branch PR = stone 变更进 canonical 的唯一沉淀单元**：super(Foo) 从 `stones/main` 派生一条 **feat 分支 worktree**，在其上直接编辑要沉淀的改动，再发起合入流程。两个动作：**开分支**（从 main 派生 feat 分支、绑定本反思 thread，使后续写落 feat worktree）+ **finalizer**（commit 署名 actor、算 reviewer 集、开 PR、投递评审窗）。
+5. **feat-branch PR = stone 变更进 canonical 的唯一渠道**：super flow 内调 PR 系 method 时，从 `stones/main` 派生一条 feat 分支 worktree、在其上把 versioned 字段值 / class 源码改动写入、commit + diff + 算 reviewer + 落账 PR-Issue（`stones/.stones_repo/.pr-issues/<id>.json`，不 git tracked），开 reviewer 评审。
 
-6. **谁来审这条 PR，由它改动了谁的地盘决定**：一条 feat 分支改到了哪些对象的领地，就请那些领地的主人来审；supervisor 永远在审核人之列。改自己名下（含自己的 children）的东西，不需要别人审、自己也不审自己。只要有一人 reject 就打回，所有审核人都 approve 才算通过；通过后是自动合入、还是等人点一下确认，由 world 配置（`prAutoMerge`）决定，默认要人确认。
+6. **PR reviewer 由「改动了谁的地盘」决定**：feat 分支 diff 路径所属对象（按 `objects/<X>/...` 顶层领地）= 该路径的 reviewer；supervisor 永远在 reviewer 集；author 自己的子树不产生 reviewer。一票 reject 即驳回；全员 approve 后是自动合入还是人工确认由 `worldConfig.prAutoMerge`（默认 false）决定，人工合入经 `POST /api/runtime/pr-issues/:id/resolve` 落锤。
 
-7. **谁来真正落这次沉淀，看发起者站不站得住**：发起反思的对象如果自己已经是 canonical（在 main 里有正式身份），就自己来落，自我演化前后逐字节对得上。如果发起者是这次 session 里刚建、还没进 main 的新对象，它没资格直接动 canonical，就顺着 parent 往上找最近一个 canonical 的祖先，由这个祖先替它落（一路找不到就落到 supervisor）。这样 PR 的署名总是个站得住的对象，作者校验自然过。
+7. **reflectable 不发明新机制**：本维度只把既有设施——collaborable 的 talk/say（含 super alias）、persistable 的 stone/pool/flow（含 feat-branch worktree + ff-merge）、thinkable 的 knowledge——放进 super flow 下编排成自我演化。不引入新 inbox / 新 bus / 新合入机制；4 个分发器 method 是聚合 LLM 意图的入口，存储底座下沉 `core/persistable/{pr-issue, feat-branch-pr, flow-scan, sediment}`。
 
-8. **怎么反思、怎么开 PR、怎么收尾，是写成知识教给对象的，不写死在代码里**：这些步骤是几篇写给对象自己看的知识，只在用得上的场景（进了 super 反思线程、要写文件、要审 PR、要收尾）才自动出现在它眼前。那几个专门用来沉淀的方法也一样——只在 super 反思线程里露面，平时的业务对话里根本看不见（靠「只在反思场所显示」这条声明，而不是平时摆着、用时再拒绝）。
+8. **reflectable 知识写成 .md 教对象**：怎么反思、怎么开 PR、怎么收尾，是几篇写给对象自己看的 knowledge（`super-flow.md` / `self-evolution.md` / `pr-review.md` / `end-reflection.md`），只在用得上的场景（进了 super 反思线程、要写文件、要审 PR、要收尾）才自动激活到对象眼前；4 个分发器 method 也一样——只在 reflect_request 投影里 surface，平时业务对话里根本看不见（声明驱动可见性，而非平时摆着、用时再拒绝）。
 
 ---
 

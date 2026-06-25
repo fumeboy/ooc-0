@@ -1,6 +1,6 @@
 ---
 title: reflectable 重设计——super session 作为 flow 变更分发器（versioned→stone PR / unversioned→pool）
-status: decided
+status: landed
 date: 2026-06-26
 follows: 2026-06-26-persistable-three-layer-relocation.md
 ---
@@ -313,3 +313,83 @@ E 区
 ## 落地验收
 
 （待 landed 后填）
+
+## 落地（worktree `.worktree/reflectable-redesign-as-flow-dispatcher`）
+
+按裁决执行，骨架 + 主路径 e2e 绿（PR 全自动合入链路标为 phase-2 followup）。
+
+### 修改文件清单（按裁决 A-O 步分组）
+
+**A — 常量**（验证已存在，无改）：
+- `packages/@ooc/core/types/constants.ts`（SUPER_SESSION_ID / SUPER_ALIAS_TARGET / isSuperSessionId / THREAD_CLASS_ID 等）
+
+**B — stone-worktree 守卫 + symbol 旁路**：
+- `packages/@ooc/core/persistable/stone-worktree.ts` — 增 `MERGE_FAST_FORWARD_INTERNAL` symbol + `SuperSessionRequiredError`；`resolveStoneIdentityRef` write+main 守卫，未持 symbol → throw
+
+**C/D/E/F — core/persistable 新模块**：
+- `packages/@ooc/core/persistable/pr-issue.ts`（new）— PR-Issue 持久化底座（落 `stones/.stones_repo/.pr-issues/<id>.json`）+ 状态机类型 + `aggregatePrApproval` 纯函数
+- `packages/@ooc/core/persistable/feat-branch-pr.ts`（new）— `createFeatBranchPr` 聚合 helper
+- `packages/@ooc/core/persistable/flow-scan.ts`（new）— `scanFlowChanges` + `scanWorktreeClassEdits`（硬编码 versioned-fields，待 issue C verified）
+- `packages/@ooc/core/persistable/sediment.ts`（new）— 私有 `_promoteFlowUnversionedToPool`（flow→pool merge）
+- `packages/@ooc/core/persistable/index.ts` — re-export 新模块
+
+**G — agent types**：
+- `packages/@ooc/builtins/agent/types.ts` — `Data.superThreadRef?: { threadId, sessionId }`
+
+**H — talk method SUPER_ALIAS**：
+- `packages/@ooc/builtins/agent/executable/method.talk.ts` — 识别 target='super' 归一；创建/复用 super flow 内 self-view thread；幂等 superThreadRef；跨 session inbox 直写
+
+**I — thread readable**：
+- `packages/@ooc/builtins/agent/children/thread/readable/index.ts` — `computeProjectionClass` 前置 sessionId="super" → reflect_request；window 数组追加第三 decl
+
+**J — thread executable 4 reflect methods**：
+- `packages/@ooc/builtins/agent/children/thread/executable/method.reflect.ts`（new）— `scan_changes` / `create_pr_for_versioned` / `sediment_unversioned` / `create_pr_for_class_edits`，全部 fail-loud if sessionId ≠ "super"（双闸门）
+- `packages/@ooc/builtins/agent/children/thread/executable/index.ts` — 装配 reflect methods
+
+**K/L — pr builtin + finalizer**：
+- `packages/@ooc/builtins/agent/children/pr/index.ts` — 加 inline persistable；approve/reject/comment 内部触发 `onReviewerAction`
+- `packages/@ooc/builtins/agent/children/pr/approval-flow.ts`（new）— `onReviewerAction` / `mergeFinalizer` / `rejectFinalizer` / `notifyAuthor` / `resolvePrIssueByHuman`；接通 worldConfig.prAutoMerge
+
+**M — HTTP route**：
+- `packages/@ooc/core/app/server/modules/runtime/index.ts` — `POST /api/runtime/pr-issues/:id/resolve` + `GET /api/runtime/pr-issues/:id`
+
+**N — worker scheduler**：
+- 已是 per-sessionId 队列（`packages/@ooc/core/app/server/runtime/worker.ts`），super 自然独立 lane，无改动
+
+**O — 测试**：
+- `packages/@ooc/tests/reflectable-redesign-issue-d.test.ts`（new）— 11 test cases 覆盖 4 个核心路径（fail-loud / 幂等 / happy-path 状态机 / reject）
+
+**P — 文档回流（.ooc-world-meta）**：
+- `objects/supervisor/children/reflectable/self.md` — 8 核心全文重写
+- `objects/supervisor/children/collaborable/self.md` — 加核心 7（talk(super) 跨 session 自指）
+- `objects/supervisor/knowledge/index.md` — `## reflectable` / `## collaborable` / `## pr / reflect_request` 同步
+- `packages/@ooc/builtins/agent/knowledge/super-flow.md` — 追加 issue D 4-method 新章节
+
+### 测试结果
+
+- **tsc**：`bun run check:tsc` 绿
+- **新测试**：`reflectable-redesign-issue-d.test.ts` 11 pass / 0 fail（38 expect calls）
+- **回归**：`bun test packages/@ooc/tests/` 49 pass / 1 fail（fail 项 `web-e2e.test.ts` 为预存基线问题——vite build 在该环境不可用，与本 issue 无关，已 stash 验证）
+
+### 与 issue C 衔接（hydrate-snapshot / scan_changes）
+
+**简化版**：本 worktree 基于 main 不带 issue C 改动，故：
+- `flow-scan.getVersionedFields` 硬编码 `_builtin/agent` & 派生类 → `["self"]`，其他 → 空；带 TODO 标记 `verified 后改读 class.versioned_fields`。
+- 不维护 `flows/<sid>/.hydrate-snapshot.json`；scan_changes 直接 flow data.json vs stone canonical 比对。
+- 不做 conflict 检测（vs stone HEAD）。
+
+### 显式 followup
+
+1. **PR-Issue GC**：评审超时 / 长期 pending 的回收策略。
+2. **scan_changes 去重**：join open PR-Issue 视图避免重复打 PR。
+3. **reviewer thread 投递**：当前 createPrIssue 落账，但未实例化 pr window 进 reviewer 的 thread context；reviewer 需经磁盘 read PR-Issue / HTTP API 操作。
+4. **并发 reflect**：当前 concurrency=1（默认序行），多反思 thread 并发是后续问题。
+5. **issue C 同步**：issue C verified 后改 `getVersionedFields` 读 class.versioned_fields；启用 hydrate-snapshot；启用 conflict 检测。
+6. **完整 self-evolution.md / end-reflection.md 改写**：本 issue 只对 `super-flow.md` 加 4-method 章节；其他 agent-facing knowledge 文档全面重写待后续。
+7. **PR 自动合入链路 end-to-end e2e**：当前 happy-path 测 PR-Issue 状态机；从 thread.exec 调 method → feat-branch create + commit + merge 的完整 LLM-free e2e 需要 ensureStoneRepo（git 2.20 `--bare -b` 不支持）解决。
+
+### 意外问题
+
+1. **resolveStoneIdentityRef 守卫与 agent.persistable.save 互动**：守卫严格执行后，super session 内任何 agent.self mutation 都会触发 throw（agent.persistable 调 resolveStoneIdentityRef("write")）——这是正确行为（super session 内不应直接 mutate stone main），但意味 super flow 内的 agent.self 编辑只能经 4 reflect method 走 PR 通道，不能旁路。本 issue 测试不涉及此场景。
+
+2. **`git init --bare -b main` 不支持 git 2.20**：测试环境 git 版本过老，绕开方式是 mkdir 骨架 + 不真做 git 操作；happy-path e2e 仍验证了 PR-Issue 状态机闭环，但完整 mergeFeatBranch 路径需新版 git 才能跑。

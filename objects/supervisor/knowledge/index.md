@@ -89,15 +89,15 @@ Object 行动的唯一方式 = 经 **tool 原语**与 context window 交互；to
 
 ## persistable
 
-**OOC World = 一个持久化目录**，承载系统全部配置与运行时数据。持久层分三个自然命名的子目录：**stones**（静，长期身份+设计源码，git 版本管理）/ **flows**（动，每个 session 一份、作为派生自 stones/main 的 git worktree 分支）/ **pools**（积，跨 session 沉淀的事实，不进 git）。持久化逻辑可自定义——缺省把 Data（**裸 data**，class 由同目录 `.flow.json` 承载）写入 `data.json`，第三态 inline 让运行态自有窗随所属 thread 整窗落盘（不单独落 `data.json`）。数据变更由 object 经 `ctx.reportDataEdit()` 主动报告、runtime 据此触发持久化；变更经 **reflectable** feat-branch 通道合入 stones/main，绝不从 session worktree 直合。实施细节见 [self.md](../children/persistable/self.md)。
+**OOC World = 一个持久化目录**，承载系统全部配置与运行时数据。持久层分三个子目录，按「数据是否版本化 + 是否本 session 暂存」分工：**stones**（版本化 canonical：class 源码 + 标记为版本化的字段值，git 管理）/ **pools**（非版本化 sediment：当前仅 knowledge sediment，不进 git）/ **flows**（本 session 暂存：每 session 一份 git worktree 分支，承载本 session 全部数据变更 working copy）。字段级版本化判据 = `OocClass.versioned_fields`（同伴常量方案——`types.ts` 旁导出 `VERSIONED_FIELDS`，`index.ts` 装配引用注入）。`PersistableContext.scope: "stone"|"pool"|"flow"` 显式标记本次 save/load 写哪一层——**method 写一律 scope="flow"**（runtime 默认注入），整份 data 落 `flows/<sid>/objects/<id>/data.json`；reflectable 分发器（issue D 主体）以 scope="stone"/"pool" 重调把变更分流回 stone（versioned 经 feat-branch PR）/ pool（sediment 直写）。hydrate 顺序 stone canonical + pool sediment + flow override；session 对象表内是单一 merge 后视图，method exec 拿到的 self.data 永远是完整 data。**内存可见性 = write-through**：method 内 mutate self.data 立即在 session 对象表生效，无「写盘 → 重新 hydrate」额外通道。hydrate 完成时记 `flows/<sid>/.hydrate-snapshot.json`（每字段 hash + 可选 stone HEAD sha），供 issue D 增量检测。flow worktree 内 tracked stone（class 源码）与 untracked 运行时数据同落 `objects/<id>/` 由 `.gitignore` 区分。变更经 **reflectable** feat-branch 通道合入 stones/main，绝不从 session worktree 直合。实施细节见 [self.md](../children/persistable/self.md)。
 
 ## collaborable
 
-OOC Agent 之间通过**对话**协作。每个 Agent 持有名为 `talk` 的 Object Method，执行它会创建一个 thread 对象，由 thread 运行 LLM thinkloop 处理这场对话；thread 过程中 Agent 可继续 talk 其他 Agent，从而派生出 thread tree。thread 按视角投影成会话窗，两条轴**正交**：**window class 轴**——自己视角是一个 thread 窗（含与 creator 的对话）、与每个 peer/sub 的会话各是一个 talk 窗（super flow POV 下另投影成 reflect_request 窗，见 `E · thread`）；**消息方向轴**——每个会话窗持 `say` 方法，按自己在该对话里是 caller 还是 callee 决定消息发往哪个对端。Agent talk 自己即创建自己的 sub agent thread。每个 thread 持 inbox/outbox：`say` 写入自身 outbox 并派送到对端 thread 的 inbox。详见 [collaborable](../children/collaborable/self.md)。
+OOC Agent 之间通过**对话**协作。每个 Agent 持有名为 `talk` 的 Object Method，执行它会创建一个 thread 对象，由 thread 运行 LLM thinkloop 处理这场对话；thread 过程中 Agent 可继续 talk 其他 Agent，从而派生出 thread tree。thread 按视角投影成会话窗，两条轴**正交**：**window class 轴**——自己视角是一个 thread 窗（含与 creator 的对话）、与每个 peer/sub 的会话各是一个 talk 窗（super flow POV 下另投影成 reflect_request 窗，见 `E · thread`）；**消息方向轴**——每个会话窗持 `say` 方法，按自己在该对话里是 caller 还是 callee 决定消息发往哪个对端。Agent talk 自己即创建自己的 sub agent thread。每个 thread 持 inbox/outbox：`say` 写入自身 outbox 并派送到对端 thread 的 inbox。**talk(target="super") = 跨 session 自指**（reflectable 入口）：caller 留本 session、callee 进 super flow（sessionId="super"）、callee 对象 = caller 自己；caller object data 持 `superThreadRef` 实现幂等复用，消息派送由 caller 直接写 super flow 内 callee thread 的 inbox（不引入 cross-session bus）。详见 [collaborable](../children/collaborable/self.md)。
 
 ## reflectable
 
-reflectable = **自我迭代，不发明新机制**：它把已有设施（collaborable 的 talk/say、persistable 的 stone/pool、thinkable 的 knowledge）组合进一个受保护的反思 session。系统提供恒定名为 `super` 的反思通道，承载 flow→stone / flow→pool 的经验沉淀；入口是 `talk(target="super")` 自指。两条沉淀通道互斥：pool sediment 直写即生效，stone 变更（身份/身体/seed knowledge）一律走 **feat-branch PR**——这是 stone 变更进 canonical 的唯一沉淀单元。谁来审由改动了谁的地盘决定，supervisor 恒在审核人列。「为自身编程」（原 programmable）作为改身体的手段已并入本维。详见 [reflectable](../children/reflectable/self.md)。
+reflectable = **自我迭代闸门**：业务 session 内任何对象都不直接合并/落 canonical，只在 flow 暂存改动；所有 stone 变更（含 class 源码 + 版本化字段）+ pool 沉淀（非版本化字段）一律经 super flow 显式分发。super flow（`sessionId="super"`）= 显式合并入口，由 `talk(target="super")` 跨 session 自指（collaborable 核心 7）触达。super flow 内 self-view 的 thread 投影为 **reflect_request** 窗，surface 4 个一步到位分发器 method：`scan_changes` / `create_pr_for_versioned` / `sediment_unversioned` / `create_pr_for_class_edits`——按字段类型 / 是否 class 源码改动自动分流到三条下游通道（PR / pool / PR）。feat-branch PR 仍是 stone 变更进 canonical 的唯一渠道（PR-Issue 落账 `stones/.stones_repo/.pr-issues/<id>.json`，不 git tracked）；reviewer 集由「改动了谁的地盘」决定，supervisor 恒在；`worldConfig.prAutoMerge`（默认 false）决定自动合入 vs 人工经 `POST /api/runtime/pr-issues/:id/resolve` 落锤。reflectable 不发明新机制——只把 collaborable / persistable / thinkable 设施在 super flow 下编排成自我演化。详见 [reflectable](../children/reflectable/self.md)。
 
 ## visible
 
@@ -146,7 +146,7 @@ Object 经 readable 投影成 context window，进入 thinkable 构造的 contex
 
 ## persistable × thinkable
 
-thinkable 的 knowledge 双源——seed（stone `knowledge/` 进 git）与 sediment（pool `knowledge/` 不进 git、同名覆盖 seed）——其磁盘路径由 persistable 提供，thinkable 只读 ref、不拥有这套 stone/flows/pools 三层结构。stone/pool/flow 三子树路径经 buildPathsItem 合成进 context 的环境 system message（world_root / object_stone_dir / object_flow_dir / session 等），其中 flow=session 落 `flows/<sid>/objects/<id>/`。身份 self.md 的读取也跨两维：readable 的 `resolveProjection` 据 stone 寻址路由读 self.md 渲入 self 门面窗——按视角解析 stone identity（business session 读自己的 worktree 副本、super flow / 控制面读 canonical main）由 persistable 的 stone 寻址决定；P3 后经 agent persistable 的 `load` + agent readable 投影，不再直接 readSelf。详见 [persistable](../children/persistable/self.md) 与 [thinkable](../children/thinkable/self.md)。
+thinkable 的 knowledge 双源——seed（stone `knowledge/` 进 git）与 sediment（pool `knowledge/` 不进 git、同名覆盖 seed）——其磁盘路径由 persistable 提供，thinkable 只读 ref、不拥有这套 stone/pool/flow 三层结构。stone/pool/flow 三子树路径经 buildPathsItem 合成进 context 的环境 system message（world_root / object_stone_dir / object_flow_dir / session 等），其中 flow=session 落 `flows/<sid>/objects/<id>/`。**context 渲染读 inst.data 是 merge 后单一视图**（issue C：hydrate 顺序 stone canonical + pool sediment + flow override；method/thinkable 拿到的 self 永远是完整 data，不感知分层）——thinkable 不需要按字段分层读盘，只读 session 对象表的 instance.data。身份 self.md 的读取也跨两维：readable 的 `resolveProjection` 据 stone 寻址路由读 self.md 渲入 self 门面窗——按视角解析 stone identity（business session 读自己的 worktree 副本、super flow / 控制面读 canonical main）由 persistable 的 stone 寻址决定；P3 后经 agent persistable 的 `load` + agent readable 投影，不再直接 readSelf。agent.self 是 VERSIONED_FIELDS=["self"]，persistable.save 按 ctx.scope 分支映射成 self.md（flow=worktree 副本 / stone=canonical），thinkable 始终读 merge 后视图。详见 [persistable](../children/persistable/self.md) 与 [thinkable](../children/thinkable/self.md)。
 
 ## executable × readable
 
@@ -154,7 +154,7 @@ method 严格分**三类**但共用同一 **exec-by-name** 入口：object metho
 
 ## reflectable × persistable
 
-reflectable 的自我迭代是把改动落在 persistable 的持久三层级上：pool sediment（memory/relations 等运行时事实）直写 pool——不进 git、不分支、写就生效，下一轮新 thread 即刻看见；stone 变更（身份/身体/seed knowledge）一律走 feat-branch PR——super(Foo) 从 `stones/main` 派生一条 feat 分支 worktree、在其上编辑、commit、开 PR，再合入 canonical main。两通道互斥，判据是「运行时事实 vs stone 变更」。铁律：绝不从 session worktree（`flows/<sid>`）直合 main——它只是派生运行物。**铁律主语是 OOC Agent**——「stone 变更走 feat-branch PR」约束的是 **agent 的自我迭代**（须经审核闸）；**人类经 app 的 `PUT /stones/:id/file?path=` 直 commit main 是合理豁免**（人类=canonical 主权者，编辑本身即「已评审」）。PR-Issue 记录、stone git versioning、reviewer 冒泡纯函数等存储层归 persistable，reflectable 只定义「在反思 session 下如何组合」。而 session=flow=worktree 分支这一 persistable 模型，正是 reflectable feat-branch 沉淀的底座。详见 [reflectable](../children/reflectable/self.md) 与 [persistable](../children/persistable/self.md)。
+reflectable 的自我迭代是把改动落在 persistable 的持久三层级上：判据从「运行时事实 vs stone 变更」收紧为**字段级版本化**（issue C 三层重定位）——OocClass.versioned_fields 列表内 = 版本化（stone canonical 候选），其余 = 非版本化（flow 暂存 / pool sediment 候选）。两通道仍互斥：pool sediment（当前仅 knowledge）直写 pool——不进 git、不分支、写就生效，下一轮新 thread 即刻看见；stone 变更（versioned 字段值 + class 源码 + seed knowledge）一律走 feat-branch PR——super(Foo) 从 `stones/main` 派生一条 feat 分支 worktree、在其上编辑、commit、开 PR，再合入 canonical main。method 写恒走 flow 暂存（runtime 注入 `scope="flow"`），不直写 stone/pool——reflectable 分发器在 session 结束（或显式 `talk(super)`）扫 `flows/<sid>/.hydrate-snapshot.json` 与当前 flow data.json 的字段 hash 差异，对版本化字段以 scope="stone" 重调 save 起 PR、对 sediment 字段以 scope="pool" 直写。铁律：绝不从 session worktree（`flows/<sid>`）直合 main——它只是派生运行物。**铁律主语是 OOC Agent**——「stone 变更走 feat-branch PR」约束的是 **agent 的自我迭代**（须经审核闸）；**人类经 app 的 `PUT /stones/:id/file?path=` 直 commit main 是合理豁免**（人类=canonical 主权者，编辑本身即「已评审」）。**VERSIONED_FIELDS 是 class definition 一部分**，不可在 flow 内 mutate——改它即"改 class 源码"，本身走 PR。PR-Issue 记录、stone git versioning、reviewer 冒泡纯函数等存储层归 persistable，reflectable 只定义「在反思 session 下如何组合」；分发器具体链路（PR finalizer、pool merge）归 issue D 主体。session=flow=worktree 分支这一 persistable 模型，正是 reflectable feat-branch 沉淀的底座。详见 [reflectable](../children/reflectable/self.md) 与 [persistable](../children/persistable/self.md)。
 
 ## collaborable × thinkable
 
@@ -174,7 +174,7 @@ thread 是 agent 一次智能运行的载体——`talk` 创建它、core thinkl
 
 ## agent
 
-agent = object + LLM：在 object base 标准具备的四维（readable / executable / visible / persistable）之上叠加 thinkable / collaborable / reflectable 三维，即成 agent 实例（对象模型核心 9，见 [object self.md](../children/object/self.md)）。它持 `talk` / `plan` agency——`talk` 执行即创建一条 thread 并跑 thinkloop；`end` / `todo` 迁 thread（thread 作用域操作，见 `## thread`）。它的 data 含 `self` 身份字段：由 **agent builtin 的 persistable** 写入/读回实例目录的 `self.md`，经 **agent 自定义 readable** 渲为该 agent **self 门面窗的 self 视角内容**（他者视角渲 `readable.md`），身份只活在这一处、不进 thinkloop instructions。任何 object 经 `ooc.class=_builtin/agent` 继承它，即成 agent 实例。
+agent = object + LLM：在 object base 标准具备的四维（readable / executable / visible / persistable）之上叠加 thinkable / collaborable / reflectable 三维，即成 agent 实例（对象模型核心 9，见 [object self.md](../children/object/self.md)）。它持 `talk` / `plan` agency——`talk` 执行即创建一条 thread 并跑 thinkloop；`end` / `todo` 迁 thread（thread 作用域操作，见 `## thread`）。它的 data 含 `self` 身份字段，**`VERSIONED_FIELDS = ["self"]`**（issue C 同伴常量方案）——self 是版本化字段，每次迭代须经测试评估（reflectable feat-branch PR）。**agent builtin 的 persistable** 按 `ctx.scope` 分支：scope="flow"（method 路径）写 worktree 内 `self.md` 副本（resolveStoneIdentityRef 解析到 session worktree）+ runtime 在外层把整份 data 落 `data.json`（双写、保持 readable + JSON round-trip）；scope="stone"（reflectable 分发器调用，issue D 主体）直写 `stones/main/objects/<id>/self.md` canonical。经 **agent 自定义 readable** 渲为该 agent **self 门面窗的 self 视角内容**（他者视角渲 `readable.md`），身份只活在这一处、不进 thinkloop instructions。任何 object 经 `ooc.class=_builtin/agent` 继承它，即成 agent 实例。
 
 ## knowledge_base / knowledge
 
@@ -188,10 +188,10 @@ form 是 **ObjectGuideMethod 多步引导**的载体——× executable：guide 
 
 两类反思期投影窗，归 reflectable 通道、存储归 persistable：
 
-- **`reflect_request`**：thread 在 super flow POV 下由 readable 算出的**投影 class**（非注册 builtin），复用 talk 的会话/回报形态，额外挂「开分支」「finalizer」两个 `for_reflectable` 方法——只在反思场所 surface。
-- **`pr`**：真注册 builtin class（`agent/children/pr`），reviewer 评审窗，runtime 投递创建。
+- **`reflect_request`**：thread 在 super flow POV 下由 readable 算出的**投影 class**（非注册 builtin）——super flow self-view（thread.sessionId === "super"）下 surface 4 个一步到位分发器 object method（`scan_changes` / `create_pr_for_versioned` / `sediment_unversioned` / `create_pr_for_class_edits`）+ say/reply。普通 session 投影为 thread / talk 看不到这 4 method（声明驱动可见性）。
+- **`pr`**：真注册 builtin class（`agent/children/pr`），reviewer 评审窗，runtime 投递创建；inline persistable（PR data 随载体 thread 落盘）；approve/reject/comment 内部触发 `onReviewerAction` finalizer → 聚合投票 → 按 `worldConfig.prAutoMerge` 自动 / 人工合入。
 
-二者永不共存于同一 thread。窗只是脸：PR-Issue 记录、stone git versioning、reviewer 冒泡纯函数都归 persistable，反思通道的组合语义归 [reflectable](../children/reflectable/self.md)。
+二者永不共存于同一 thread。窗只是脸：PR-Issue 记录（`stones/.stones_repo/.pr-issues/<id>.json`，不 git tracked）、stone git versioning、reviewer 冒泡纯函数都归 persistable，反思通道的组合语义归 [reflectable](../children/reflectable/self.md)。
 
 ## filesystem / terminal / interpreter
 
