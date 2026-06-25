@@ -1,7 +1,22 @@
 ---
 title: OOC Object 继承机制重新设计 —— prototype chain + facet override + 元编程 hot-reload
-status: draft
+status: superseded
+superseded-by: 2026-06-25-inheritance-via-source-import-spread.md
 date: 2026-06-25
+---
+
+> **【SUPERSEDED】**：本 issue 完整经历了 review fan-out + Supervisor 裁决，但裁决后用户提出更根本的反思——**OOC 不应自建 prototype chain dispatch 机制；应当用 TS 源码 `import` + 对象 `spread` 直接表达继承**。原因：
+>
+> 1. OOC 自建 chain 引入大量新名词（proto / super / chain / merge / halt / ownerClassId），违反「克制熵增」哲学根
+> 2. JS / TS 模块系统已经原生提供"复用 + 共享 + live binding 自动同步"——OOC 重新发明是多余
+> 3. self.md 核心 2 原话「class 不支持继承；复用靠 import 目标 class 导出的函数」—— 本应是字面执行
+> 4. 元编程友好度：写 TS spread 比学 ctx.super 心智负担小一档
+> 5. 95% reviewer 担忧（多 proto / diamond / halt / merge 粒度 / ownerClassId 跟踪 / 字段错位）根源于"OOC 自建 dispatch chain"，移除该根则担忧 evaporate
+>
+> 继续推进的方案见 [`2026-06-25-inheritance-via-source-import-spread.md`](./2026-06-25-inheritance-via-source-import-spread.md)（方案 C：源码 import + spread）。
+>
+> 本 issue 保留作设计探索记录——证明"为什么不走 OOC 自建 chain"。所有 reviewer 评论 + Supervisor 12 条裁决留档于此。
+
 ---
 
 # OOC Object 继承机制重新设计
