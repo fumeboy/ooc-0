@@ -107,19 +107,150 @@ resolveObjectMethod(classId, name): ObjectMethod | undefined {
 
 ### 改动 4：facet-level merging 统一
 
-当前 `resolveObjectMethods`（复数）做 method-name merge，其他 facet 是单点 fallback。**统一规则**：
+当前 `resolveObjectMethods`（复数）做 method-name merge，其他 facet 是单点 fallback。**统一规则按维度逐一推演**——继承的具体语义因 facet 性质不同：
 
-| Facet | merge 策略 |
-|---|---|
-| executable.methods | method name 为键，子覆盖父（保持现状） |
-| readable.window[] | window class 为键，子覆盖父（**新**：currently 整槽 override） |
-| readable.readable (render fn) | 单值，沿链找第一个非空（保持现状） |
-| persistable | 单值（整 save/load 模块），沿链找第一个非空 |
-| thinkable | 单值（整 think/onSchedulerTick 模块），沿链找第一个非空 |
-| visible | 单值（整 visible server 模块），沿链找第一个非空 |
-| construct / active / unactive | 单值，沿链找第一个非空 |
+#### 三类继承策略
 
-「单值」的 facet（render fn / persistable / thinkable / visible / construct / active / unactive）选择沿链找**第一个非空**——保持简单，子类要 override 就**完整声明**。如果将来发现需要细粒度，再讨论 init/before/after hook。
+OOC 的 facet 按性质分三类，对应三种继承语义：
+
+1. **method-level merge**（namespace of callables）—— "我的方法集 = 父的方法 + 我新增 + 我覆盖"
+   - executable.methods（按 method name 为键）
+   - readable.window[]（按 window class 为键，每个 window 内的 window_methods 再按 name merge）
+   - visible.methods（如适用，按 method name 为键）
+2. **整模块 fallback**（stateful pipeline 单值）—— "我没声明就用父的，要 override 就完整重写"
+   - readable.readable（render fn 单值）
+   - persistable（save/load 必须同源同模块）
+   - thinkable（think / onSchedulerTick 整模块）
+   - construct（单函数）
+3. **串调（chain invocation）**（lifecycle events）—— "我和父的钩子都跑，我可返 halt 阻断"
+   - active
+   - unactive
+   - init
+
+#### 各维度详细推演
+
+**executable.methods（method-level merge）**：
+- 单元 = 单 method（按 name）
+- merge：子写同名 method 覆盖父；子未写的 method 沿 proto 链可见可调
+- super-call：✅ `ctx.super("methodName", args)` 调链上同名 method
+
+**readable.window[]（window class 级 merge + 每窗内 method 级 merge）**：
+- 单元 = 单 WindowClassDecl（按 class 名为键）
+- merge：子声明同名 window class，则替换父；子未声明的 window class 沿链继承
+- 单窗内 window_methods 按 name 再做 merge
+- object_methods（字符串引用列表）：整数组替换——它声明窗内可见的 object method，不智能合并
+- super-call：✅ window method 内 `ctx.super("methodName", args)` 调同 window class 同名 window method
+
+**readable.readable / readable.render（整模块 fallback）**：
+- render fn 是单值 pipeline，整 fn 整体 override
+- 子未声明 render fn 沿链找首个非空
+- 不做 method-level merge（render 是 stateful pipeline，merge 无良定义）
+
+**persistable（整模块 fallback）**：
+- save 和 load 必须**配对**（自定义 save 就配自定义 load）—— `resolvePersistable` 整模块解析，不能 save 沿链找一个、load 沿链找另一个
+- 子覆盖时必须整模块声明
+- super-call 可用但罕见（少见场景：子在父 save 前后包装加密/压缩）
+
+**thinkable（整模块 fallback）**：
+- 仅 thread 类注册
+- 整模块 fallback；hook 内不做 method-level merge
+- think 是 LLM tick pipeline，部分 override 难做
+
+**visible（method-level merge）**：
+- visibleServer methods 与 executable.methods 同构（name 为键，子覆盖父）
+- v1 不在 visible ctx 注入 super（人类 UI 端 method 罕见 wrap parent）
+
+**construct（整函数 + super 调用）**：
+- 单函数，子覆盖父
+- super-call：✅ ConstructorContext 加 `super(args?)` 调链上同 class 的 construct
+- **关键**：父 ctor 产 partial data + 子 ctor `{...parentData, ...mySubFields}` spread —— 经 super 显式表达，不做 runtime 自动 merge 魔法
+
+```ts
+construct: {
+  exec: async (ctx, args) => {
+    const parentData = await ctx.super(args);
+    return { ...parentData as object, mySubField: args.x };
+  }
+}
+```
+
+**active / unactive / init（串调）**：
+- ⚠️ 与 method 单覆盖**不同**——这些是事件性钩子，多个 class 都可能想响应
+- 派发逻辑：子先跑，然后沿 proto 链继续调父（除非子返回 `{halt: true}` 阻断）
+- super-call 不需要——hook 本身就是串调，子不必显式 super
+
+```ts
+// 派发示例
+for (const cls of [self, ...protoChain]) {
+  const hook = cls.active;
+  if (hook) {
+    const result = await hook.exec(ctx, self);
+    if (result?.halt) break;
+  }
+}
+```
+
+理由：父 class 有 `active` 做 init A；子 class 有 `active` 做 init B；"按 proto 链找第一个非空"会**丢失父的 init A**。lifecycle hook 必须**全部跑**。
+
+#### Data 类型继承（types.ts）
+
+**关键设计问题**：method 继承了，data 形状是不是也要继承？
+
+**结论**：是 —— 子 class 的 types.ts 显式 `extends ParentData`，纯 TS 语言机制处理：
+
+```ts
+// builtins/agent/types.ts
+export interface Data { self: string; }
+
+// stones/main/objects/coder/types.ts
+import type { Data as AgentData } from "@ooc/builtins/agent/types.js";
+export interface Data extends AgentData {
+  codeStats?: Stats;  // 子加自有字段
+}
+```
+
+**多 proto fallback** 的 data 类型：
+```ts
+import type { Data as AgentData } from "@ooc/builtins/agent/types.js";
+import type { Data as LoggerData } from "@ooc/builtins/loggable/types.js";
+export interface Data extends AgentData, LoggerData {
+  mySpecific?: X;
+}
+```
+TS interface 多继承可用，字段名冲突 TS 会报错（合理）。
+
+**为什么是显式 extends 而不是 runtime 自动**：
+- 显式优于魔法：子明确知道自己的 data 形状包括父的字段
+- 编译期类型保证：method 在子 data 上跑能编译期看到父字段（因为 extends）
+- 父 ctor 产 data 经 `await ctx.super(args)` 拿到（显式），子 ctor `{...parentData, ...}` 拼接
+
+**ConstructorContext 加 `super` 拿父 ctor 产物**——这是 data 继承的运行时机制。类型上对应 TS interface extends，运行时上对应父 ctor 调用。
+
+#### 一个综合表
+
+| 维度 | 单元粒度 | merge 策略 | super-call | data 影响 |
+|---|---|---|---|---|
+| executable.methods | 单 method | name 为键，子覆盖父 | ✅ ctx.super(name, args) | method 在 self.data 上跑——self.data 含父 Data 字段 |
+| readable.window | 单 WindowClassDecl | window class 为键，子覆盖父 | ✅ window method 内 | window method 在 self.data 上跑（只读） |
+| readable.readable (render fn) | 单函数 | 子覆盖父（找首个非空） | ❌ | render 在 self.data 上跑 |
+| persistable | 整模块 | 子覆盖父（save/load 必须同源） | 可用但罕见 | save/load 操作完整 data（父+子字段） |
+| thinkable | 整模块 | 子覆盖父 | 可用但罕见 | thread-only |
+| visible | 单 method | name 为键，子覆盖父 | ❌ v1 | 同 executable |
+| construct | 单函数 | 子覆盖父 | ✅ ctx.super(args)（ConstructorContext） | **关键**：子拼 `{...await ctx.super(args), ...}` |
+| active | 单函数 | **串调**（子先跑，可 halt） | ❌（hook 本身串调） | hook 在 self.data 上跑 |
+| unactive | 单函数 | **串调** | ❌ | 同 active |
+| init | 单函数 | **串调**（World 启动） | ❌ | 不跑 data |
+| **Data 类型** | TS interface | 子显式 `extends ParentData` | N/A | TS 编译期机制 |
+| knowledge | md 文件 | inheritable=true 才被子继承 | N/A | 实例级 + 内容级，正交 |
+
+#### self.md 的特殊性
+
+self.md 是 **agent 实例**身份（每个 agent 实例各有自己的 self.md，落在 `stones/main/objects/<id>/self.md`），由 agent persistable 写入 `data.self` 字段，不是 class 级继承的对象。它正交于本 issue 讨论的 class 继承机制。
+
+#### knowledge 的正交性
+
+knowledge 的 `inheritable: true` 是 **领域层级 inheritable 轴**——按 class proto chain（或更广，按祖先目录扫描）决定子 agent 看不看父 agent 的 knowledge。这是 thinkable/knowledge 维度的具体设计，正交于本 issue 的 facet 继承机制。
+
 
 ### 改动 5：`ctx.super(methodName, args)` —— 原型链委托原语
 
@@ -212,11 +343,14 @@ if (await detectSelfClassEdited(thread)) {
 ## 待裁决点
 
 1. `OocClass.proto: string[]` vs 保留 `inheritClass` + 加 `mixins: string[]` —— 拆开还是合并？（建议合并到 proto，单字段更简单。）
-2. facet merge 粒度：除 method-name / window-class 之外是否还要细化？（建议先用 method-name + window-class 双 merge，其余整槽，避免过度抽象。）
+2. facet merge 三类策略（method-merge / 整模块 fallback / 串调）—— 边界正确吗？特别是 active/unactive/init 用串调而非单覆盖，与 OOP 主流（Java 子类 method override 父 method）不同——需明确这是**因为它们是 lifecycle event 不是 polymorphic dispatch**。
 3. `ctx.super` vs `ctx.proto` —— 用哪个名字？（建议 super：与 OOP 语言原语对齐，最熟悉。）
-4. `patch_self_prototype` —— 是 `_builtin/runtime` 的 method 还是单独 `_builtin/reflectable` builtin？（建议放 _builtin/runtime，避免新增 builtin。）
-5. hot-reload 实现：thinkloop tick 末尾 detect vs file watcher？（建议先 tick 末尾、stat 廉价；优化为 watcher 后续做。）
-6. 兼容期长短：旧 `inheritClass` 字段保留多久？（建议保留一个版本，next minor 删。）
+4. **Data 类型继承用 TS extends 显式声明** vs runtime 自动 merge —— 建议显式 extends（编译期保证 + 显式优于魔法）。但需明确父 ctor 产物经 `ctx.super(args)` 在子 ctor 内手 spread—— runtime 不自动合并。
+5. **construct 的 super 语义** —— ConstructorContext 加 super 方法（参数为 args，返回 ParentData）；子 ctor 用 `{...await ctx.super(args), ...mySubFields}` 拼接。这是 data 继承的运行时配对——method 继承也意味着 data 继承。
+6. **active/unactive halt 信号**：返 `{halt: true}` 的具体类型怎么扩展现有 `UnactiveResult`？（active 当前返 void；unactive 返 UnactiveResult{delete?}。需要 active 也加 halt 语义、统一返 `{halt?: boolean, delete?: boolean}`。）
+7. `patch_self_prototype` —— 是 `_builtin/runtime` 的 method 还是单独 `_builtin/reflectable` builtin？（建议放 _builtin/runtime，避免新增 builtin。）
+8. hot-reload 实现：thinkloop tick 末尾 detect vs file watcher？（建议先 tick 末尾、stat 廉价；优化为 watcher 后续做。）
+9. 兼容期长短：旧 `inheritClass` 字段保留多久？（建议保留一个版本，next minor 删。）
 
 ## 实施分期建议
 
