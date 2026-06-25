@@ -1,6 +1,6 @@
 ---
 title: ObjectMethod 协议分裂：拆出 ObjectGuideMethod（多步引导）
-status: decided
+status: verified
 date: 2026-06-26
 ---
 
@@ -262,4 +262,25 @@ E 区
 
 ## 落地验收
 
-（待 landed 后填）
+### verification by issue-A reviewer（2026-06-26）
+
+按 design-workflow 步骤 4 派独立 verification reviewer 核对（不重审设计，只查兑现度）。结论：**verified**——契约（types）/dispatch（runtime）/form（builtin）/activator（thinkable）/registry 校验/文档回流/测试/tsc 八个验收维度全过。
+
+- **文档验收**：裁决 1-8 每条对账，落地步骤 A-J 全部真做；成对回流闭环（executable/readable/thinkable self.md ↔ index.md `## executable` / `## executable × thinkable` / `## executable × readable` / `## method_exec_form` 四节）；术语统一（method/guide/window method 三类 + cohesion）。
+- **代码验收**：
+  - `ObjectMethod` 真删 `intents` / `route` 字段（`types/executable.ts`）。
+  - `ObjectGuideMethod` 字段齐（description/schema?/intents 必有/route 必有/exec/public?/permission?）。
+  - `ExecutableModule.guides?` 加；`WindowClassDecl.guide_methods?` 加。
+  - `ThreadRuntime.exec` 真分流（method → guide → window method）；`runtime.execGuide` 旁路 seam（form.submit 用，避递归开 form）。
+  - registry 加 `assertExecutableMethodGuideCohesion`（4 档：guides 内部 / method↔guide / guide↔window method / 引用悬空）+ `resolveObjectGuideMethod` seam。
+  - method_exec_form 改持 guide：data.guideName / refine 调 runRoute / submit 调 execGuide / readable 扩 context 段。
+  - activator source-key 模型 phase-1 简化（form.currentIntents 经 context.ts 内联合并入 ActivationContext.activeIntents），phase-2 API 已 export 但未挂主路径（文档显式标记）。
+- **退潮验收**：grep `ObjectMethod.intents/route` 源码 0 命中；`for_reflectable`/`for_ui_access` 源码 0 命中；`targetMethodName` 0 命中（保留 construct 期 `targetMethod` alias 是刻意 backward-compat）。
+- **漂移验收**：顺手清 `_builtin/agent.plan` / `_builtin/filesystem/file.reload` 两处 method 悬空引用——是新 cohesion 校验逼出来的必要清理，属合理顺手。无其它 issue 外改动。
+- **质量门**：`bun run check:tsc` 干净；`bun test packages/@ooc/tests/registry-method-guide.test.ts packages/@ooc/tests/dispatch-guide-form.test.ts` = 10 pass / 0 fail / 27 expect。
+
+**缺口清单**（P1，不阻塞 verified，建议下轮顺带）：
+1. `.ooc-world-meta/.../children/object/knowledge/builtins/agent.md:63` 与 `reflectable/self.md:56` 仍描述 thread 上两个 reflect method「标 `for_reflectable`」——按裁决 6 `for_reflectable` 已退役，应改述「仅在 `reflect_request` 投影窗 surface（由 readable decl 白名单控制）」。属术语漂移、由后续维护吸收。
+2. `thinkable/knowledge/source-intents.ts` phase-2 路径建议补 lint TODO 标记，防止误用 setSourceIntents 期望 context 自动读它。
+
+落地 commit：`fa22c4df`（feat/object-guide-method-split 分支）；文档回流 commit：`c3e79e3`（meta 仓 main）。

@@ -1,6 +1,6 @@
 ---
 title: ReadableModule.window 必含 class:"default" 的 decl（统一默认投影约定）
-status: decided
+status: verified
 date: 2026-06-26
 ---
 
@@ -215,4 +215,17 @@ C 区
 
 ## 落地验收
 
-（待 landed 后填）
+### verification by issue-B reviewer（2026-06-26）
+
+按 design-workflow 步骤 4 独立验收。结论：**verified**——代码落地完整、质量门绿、退潮干净、无漂移。
+
+- **文档验收**：裁决 1-7 每条对账；闸门规则（单视角强 default / 多视角豁免 / class 字段唯一）真实施；thread 保留 `thread` 名（不改 default）真做；`_builtin/agent` decl 漂移修复真做；self.md 三段补「default 是 reserved keyword + readable.md 名片回退 + 单视角强约束/多视角豁免」三条契约；index.md `## readable` / `## executable × readable` 已同步。
+- **代码验收**：
+  - 19 个 builtin readable decl `class` 字段全 `"default"`（thread 两条 `thread`+`talk`）；render 返回 projection.class 也对齐。
+  - thread/readable/index.ts 三处 `"this_thread"` 全清；computeProjectionClass 改 `win.class === "talk" ? "talk" : "thread"`。
+  - registry `assertReadableWindowCohesion` + `resolveDefaultWindowClass` + `DEFAULT_WINDOW_CLASS` 常量齐。
+- **退潮验收**：worktree `packages/` 内 `"this_thread"` 0 命中；旧短名（"filesystem"/"file"/"search" 等）作为 window class 字面值 0 命中；`"_builtin/agent"` 作为 window class 字面值 0 命中。
+- **漂移验收**：21 个文件全在 issue 提案范围内（runtime + 19 builtin readable + 1 新测试）；无 thread 路由/readable 渲染/persistable 等域外改动。
+- **质量门**：`bun run check:tsc` 干净；`bun test packages/@ooc/tests/registry-window-default.test.ts` = 8 pass / 0 fail / 14 expect / 277ms。
+
+落地 commit：`46534b0c`（feat/default-window-class-convention 分支）。

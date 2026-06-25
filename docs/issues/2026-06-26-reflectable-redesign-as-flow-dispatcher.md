@@ -1,6 +1,6 @@
 ---
 title: reflectable 重设计——super session 作为 flow 变更分发器（versioned→stone PR / unversioned→pool）
-status: landed
+status: verified
 date: 2026-06-26
 follows: 2026-06-26-persistable-three-layer-relocation.md
 ---
@@ -312,7 +312,33 @@ E 区
 
 ## 落地验收
 
-（待 landed 后填）
+### verification by issue-D reviewer（2026-06-26）
+
+按 design-workflow 步骤 4 独立验收。初次结论：**主路径通过、质量门绿、11 测试全通；但 3 处实质缺口阻断 verified**（agent-facing 文档/错误字符串仍指向退役 API、违反「涨潮必退潮」）。
+
+**初次验收缺口**（已在补落地阶段全部修复）：
+1. `super-flow.md` 前 80 行二段式 live 教学未清，与文末 4-method 章节双口径冲突。
+2. `reflectable/readable.md` lines 8/15 仍教旧 2-step。
+3. `stone-worktree.ts:162` + `stone-feat-branch.ts:284-285` agent-visible runtime error string 仍引用退役 method 名（`new_feat_branch` / `create_pr_and_invite_reviewers`）。
+
+**补落地（commit `0a53c5bd` + meta `7d10dcb`）**：
+- super-flow.md 全文重写——单口径 4 method 教学（scan_changes / create_pr_for_versioned / sediment_unversioned / create_pr_for_class_edits）。
+- reflectable/readable.md 名片对齐 4 method、一步到位、不再二段。
+- stone-worktree.ts (L14 注释、L150-163 docstring+warn) / stone-feat-branch.ts (L283-285 NO_CHANGES error) / stone-git.ts (L115 注释) 全清退役 method 名。
+- reflectable/self.md 删 3 处「分发器」术语；迁移映射表加 `new_feat_branch + create_pr_and_invite_reviewers` 退役记录。
+- 补落地后 `bun run check:tsc` 干净；11 测试仍全通。
+
+**最终验收维度**：
+- **文档验收**：reflectable/self.md 8 cores 重写到位；collaborable/self.md 加核心 7（talk(target="super") 跨 session 自指）；index.md 5 节同步。
+- **代码验收**：talk SUPER_ALIAS 路径接通（caller 持 superThreadRef、幂等绑定、跨 session 写 super flow callee thread）；thread readable 加 reflect_request decl + 投影 ladder（sessionId="super" 时投影 reflect_request）；4 reflect methods 实现 + requireSuperSession fail-loud；core/persistable/pr-issue.ts + feat-branch-pr.ts + flow-scan.ts + sediment.ts 4 新模块齐；pr builtin inline persistable + onReviewerAction hook；approval-flow.ts onReviewerAction/mergeFinalizer/rejectFinalizer/notifyAuthor 接 worldConfig.prAutoMerge；resolveStoneIdentityRef 守卫（mode="write" + ref=main + 无 symbol → throw）；HTTP `POST /api/runtime/pr-issues/:id/resolve` + GET。
+- **退潮验收**：writePoolUnversioned 公开 API 完全退役；阻断缺口补完后无 agent-visible 引用退役 method 名。
+- **漂移验收**：16 个落地文件全在裁决范围内。
+- **质量门**：`bun run check:tsc` 干净；`bun test packages/@ooc/tests/reflectable-redesign-issue-d.test.ts` = 11 pass / 0 fail / 38 expect / 84ms。
+
+**剩余 followup（已显式标记，下一轮 issue 处理）**：
+- PR-Issue GC / scan_changes 去重 / Reviewer thread 投递 / 并发 reflect concurrency=1 / issue C 衔接（`getVersionedFields` 改读 `class.versioned_fields` / 启用 hydrate-snapshot conflict 检测） / self-evolution.md + end-reflection.md 完整改写 / end-to-end PR 合入 e2e 测试（git 2.20 `--bare -b` 兼容） / mergeFeatBranch 双源消除（待 2026-06-25-merge-feat-branch-unification verified 后批量删 `feat-branch.ts`） / collaborable.self.md core 7 三元类型学补充 / index.md `## app` 加 `POST /api/runtime/pr-issues/:id/resolve` 一行 / `## collaborable × thinkable` 加 super 自指通道一句 / object knowledge builtins/agent.md + thinkable/knowledge/thread.md + visible/self.md 残留旧 method 名清理。
+
+落地 commits（feat/reflectable-redesign-as-flow-dispatcher 分支）：`1cce4808`（主体）+ `0a53c5bd`（阻断缺口）；文档回流 commits（meta 仓 main）：`acdb355` + `7d10dcb`。
 
 ## 落地（worktree `.worktree/reflectable-redesign-as-flow-dispatcher`）
 

@@ -1,6 +1,6 @@
 ---
 title: persistable 三层重定位（stone=版本化 / pool=非版本化 / flow=本 session 变更暂存）
-status: decided
+status: verified
 date: 2026-06-26
 ---
 
@@ -340,4 +340,30 @@ C 区
 
 ## 落地验收
 
-（待 landed 后填）
+### verification by issue-C reviewer（2026-06-26）
+
+按 design-workflow 步骤 4 独立验收。结论：**verified**——核心契约全部代码落地、文档回流、质量门绿、严格对齐裁决、无 issue 外漂移。
+
+- **文档验收**：
+  - persistable self.md 一、核心设计段 9 条核心条目（World 持久化目录 / 三层级版本化分工 / VERSIONED_FIELDS 同伴常量 / scope 路由 / hydrate 顺序 / write-through / stone-worktree / feat-branch PR / agent 自写程序），逐条编号互相正交。
+  - 三层物理布局清晰：stone=版本化 canonical / pool=knowledge sediment-only / flow=本 session 暂存 working copy。
+  - VERSIONED_FIELDS 同伴常量 + 方案 B（"不发明 host 不需要的新机制"）明示。
+  - hydrate-snapshot 机制描述（issue C 倒灌、供 issue D 消费）。
+  - index.md `## persistable` / `## persistable × thinkable` / `## reflectable × persistable` / `## agent` 4 节同步。
+- **代码验收**：
+  - `PersistableContext.scope: "stone" | "pool" | "flow"` 加；兼容性 OK。
+  - `OocClass.versioned_fields?: readonly string[]` 加。
+  - 19 个 builtin VERSIONED_FIELDS 装配完整（agent=`["self"]`，其余 18 个空数组）。
+  - hydrate-snapshot.ts 实现完整（recordHydrate / readSnapshot / hashField sha256）并在 hydrateSession 后真调。
+  - saveObjectData 按 scope 路由（默认 scope="flow"）。
+  - hydrate 顺序：stone canonical → pool（仅 knowledge sediment 不入主路径）→ flow override。
+  - write-through 内存可见性（session 对象表单实例 map）已测。
+  - agent.persistable.save 按 scope 分支（flow / stone / pool no-op）。
+- **退潮验收**：`writePoolUnversioned` 公开 API 全仓零命中（彻底退役）；`data.versioned.json` / `data.unversioned.json` / `class-edits/` 全仓零命中（过设计无残留）。
+- **漂移验收**：git diff 仅 45 个文件，全在裁决落地步骤 1-7 范围内。
+- **质量门**：`bun run check:tsc` 干净；`bun test packages/@ooc/tests/persistable-versioned-fields.test.ts` = 6 pass / 0 fail / 19 expect / 277ms。
+
+**缺口清单**（轻微，不阻塞 verified）：
+1. persistable self.md 未设独立「迁移映射」段显式记录 issue 原稿过设计取消（`class-edits/` 目录 / 双 json 文件 / `writePoolUnversioned` 公开 / `PersistableContext.scope` 写进 save 调用方签名）；建议在「四、模拟推演」与「扩展点」之间加小节列出。下一 issue 顺带，不阻塞。
+
+落地 commit：`708fc50d`（feat/persistable-three-layer-relocation 分支）。
