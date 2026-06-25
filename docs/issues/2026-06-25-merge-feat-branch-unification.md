@@ -1,6 +1,6 @@
 ---
 title: mergeFeatBranch 双源统一 + PR resolve 闸门完整接通 + reverse-binding invalidate
-status: draft
+status: in-review
 date: 2026-06-25
 follows: 2026-06-25-inheritance-via-source-import-spread.md
 ---
@@ -125,7 +125,60 @@ reviewer approve / reject (in pr window method)
 
 ## review 记录
 
-（待 fan-out）
+按 design-workflow 步骤 2 fan-out（4 个 sub agent：3 个受影响设计元素 reviewer + 1 个完整性批评官——后者首轮回答事实错位、第二轮重审无新增有效漏列，仅 prAutoMerge 等担忧在 reflectable reviewer 评论中已覆盖；以下记三个有效评论）。
+
+### B · reflectable —— 同意但有严重担忧（issue 严重低估实施工作量）
+
+- **核心发现**：本 issue 揭露的不是「PR resolve 闸缺一个 aggregate 函数」，而是 **reflectable 核心 5 整条链路从未被代码层接通过**——盘点 13 个环节里有 **8 处 gap**：
+  - `reflect_request` 投影 class — **未实现**（thread/readable/index.ts:97-108 window 数组缺第三个 decl）
+  - `new_feat_branch` thread executable method — **未实现**（agent/knowledge/super-flow.md 教 agent 调，但 thread executable 没注册）
+  - `create_pr_and_invite_reviewers` thread executable method — **未实现**
+  - `createPrIssue` / PR-Issue 持久化 — **未实现**（pr.approve/reject 只改 in-memory data，重启丢）
+  - `aggregatePrApproval` — **未实现**（issue 已知）
+  - `auto-merge finalizer` — **未实现**（async mergeFeatBranch 当前零 caller）
+  - reflect_request 通道的 author 回馈 — **未实现**
+  - reviewer 评审 thread 入队 — 状态未知
+- **`reflect_request` 状态裁决**：**未退役**——supervisor knowledge / reflectable self.md / thread builtin 多处权威源仍在描述它；只是 `thread/readable/index.ts:97-108` 的 window 数组实现缺第三个 decl + `computeProjectionClass` 缺 super flow POV 路由。issue 改动 2 第 3 步「reflect_request 窗回馈（已退役？需 review）」应改为「补 reflect_request decl + super flow POV 路由」。
+- **关键漏项 1：`prAutoMerge` world 配置闸**——reflectable self.md 核心 6 明示「自动合入或人工 checkpoint 由 world 配置 prAutoMerge 决定，默认要人确认」。issue 改动 2 第 3 步直接说 approve 满足时 auto-merge——**违反默认值契约**。落地必须 gated；默认 false 时 aggregate 满足仅打 `ready-to-merge` 标签、等人类经控制面确认。
+- **关键漏项 2：路径 A vs 路径 B 偷渡测试**——前 issue D7 拍板边界（agent 不可在 session worktree 直写绕开 PR 闸）需要一个 fail-loud 测试守护。改动 4 端到端测试增第 3 项：agent 经 filesystem.write_file 在 `flows/<sid>/` 下试图直写 → fail-loud。
+- **关键漏项 3：reject finalizer + 回修通道**——reflectable self.md 派生 2「回修 resume」（PR reject → 重投 super(foo) author thread + 同 intent 幂等重绑）issue 完全没提，必须含 reject finalizer。
+- **接口边界一问**：`aggregatePrApproval` 应作纯函数判定逻辑放 `core/persistable/pr-issue.ts`，触发 finalizer 钩子放 builtin pr——**机制 vs 策略分层**。pr 是 reflectable 的承载窗 class，aggregate 规则归 persistable。
+- **拆分建议**：本 issue 改动 2 应拆为 2a（thread surface：reflectable methods + reflect_request decl）+ 2b（PR 闸：aggregatePrApproval + auto-merge finalizer + author 回馈），改动 2b/改动 3 各自考虑另起新 issue——「一次裹太大会 land 不动」。
+
+### B · persistable —— 部分同意（**精准 invalidate 路径 vs 全清**）
+
+- **改动 1（双源统一）**：强 approve 方案 A（收敛 async）。`feat-branch.ts:146` sync 版**缺 invalidate + 缺 releaseWorktree**——按 self.md「ff-merge feat → main + 失效 loader + 回收 worktree」三段铁律，sync 版**事实上是 broken 的子集**。建议 issue 改动 1 措辞为「**删除** feat-branch.ts:140-160，调用方全部切到 async + await」（不是"统一签名"——那暗示双源保留）。
+- **改动 3 关键反对**：「清空所有 sessionRegistries」**违反 flow-main 解耦铁律**——flow 是 main 的 fork、二者解耦；其他 session 各自停在 fork 时刻的 main HEAD，main 推进不该牵连。但**发起本次 merge 的 session 自己**的 registry 在 merge 后确实变 stale（fork base 已被覆盖）。
+- **正确措辞**：`WorldRuntime.invalidateSessionByClass(initiatingSid, classIds)`——签名带 sid，**只清发起方**。前 issue D7 拍板的"直接清空全部 sessionRegistries"应在本轮顺手矫正。
+- **接口边界一问回答**：「哪条路径推动了 main、哪条路径自己负责对齐；旁观者维持独立时间线」——这才是 self.md 的正解。
+- **新增担忧**：
+  1. invalidate 并发安全：merge 期间另一 session 正在 hot-reload 同一 class 时的 race
+  2. mergeFeatBranch 需新增 sid 参数 + PR record schema 需含 originSid（当前可能没有）
+  3. stone-feat-branch.ts:18 类失修注释建议本 issue 顺带跑 `grep -rn "_builtin/agent" packages/@ooc/core/persistable/` 全扫
+  4. feat-branch.ts 整文件存废：若 sync mergeFeatBranch 删后只剩 plumbing，应整合到 stone-versioning.ts 或重命名 stone-worktree.ts（保留空壳是新熵增）
+- **测试要求**：feat-branch.test.ts 在 happy path 之后补「merge 完成后，发起 session 的 registry 中相应 class entry 被清；同 world 另一 session 的 registry 不被清」**正负双断言**，把改动 3 语义锁死。
+
+### E · runtime —— 部分同意（**改动 3 设计前提错位 + 应拆走独立 issue**）
+
+- **重大实测发现 1**：`sessionRegistries` 是 `object-registry.ts:232` 的 **module-level 进程级 const 单例**，**不**在 `WorldRuntime` 实例上（`world-runtime.ts:22-29` interface 只暴露 `serialQueue / serverLoader / stoneRegistry`，**无** sessionRegistries 字段）。issue 改动 3 写的 `WorldRuntime.invalidateSessionsByClass` API **基于错误前提**——正确形态是 `object-registry.ts` 加 module-level export。
+- **重大实测发现 2**：清空 sessionRegistries 后果**不是「下次 hydrate 重读盘」**——`getSessionRegistry(sid)` miss 时只 new 空 ObjectInsRegistry + copyFrom builtinClassRegistry，**没有自动 hydrate**。`thread-runtime.ts:253/273` 的 `if (!inst) return;` 会让 thinkloop **silent 卡死、不报错**。MVP「全清」要真生效，必须同时改 `getSessionRegistry` 语义或所有 caller 前置 hydrate ——**这是个比 issue 描述大得多的工程**，不是 MVP。
+- **strong 建议**：改动 3 **拆走独立 issue**（标题如 `session-level reverse-binding invalidate 设计（含 hot-reload + PR merge 双触发统一）`）。本 issue 只做 1+2+4。
+- **改动 2 实测发现**：
+  - `commitAndOpenPr` 也是承诺未实施（stone-feat-branch.ts 4 处注释引用、0 命中）—— PR **创建侧**也断
+  - `aggregatePrApproval` 全树 0 命中 → issue 断言准确
+  - PR builtin (`builtins/agent/children/pr/`) 当前只有 `index.ts / package.json / types.ts`，3 method 已实现但是 in-memory（不写持久化）
+  - 改动 2 实际 scope 应扩到 P2 收尾：**`commitAndOpenPr` + `aggregatePrApproval` + `approval-flow.ts` 编排**三项一起，否则做了 aggregate 没有 caller 也是新一层死代码
+- **方案 A 接口形态变化**：sync `MergeFeatInput {baseDir, branch, worktreePath}` → async `(baseDir, branch, paths, reason)`——**测试侧要补 paths 参数**+ 调用方 worktree 回收逻辑现已内置在 async 版的 `cleanupWorktreeAfterMerge`，旧测试「worktree removed」断言形态需调整。
+- **paths 透传契约**：mergeFeatBranch caller 在 approval-flow 内必须从 `commitAndOpenPr` 落账的 `record.paths` 取（不能凭空构造）——否则 `extractObjectIdsFromPaths` 拿空集，invalidate 钩"成功但没清任何东西"。
+- **queue 注意**：approval-flow 调 mergeFeatBranch 必须在 `enqueueSessionWrite` 或同等串行 queue 内（stone-versioning.ts:271 注释 queue-naive 假设）——并发 PR merge 会撞 git lock。
+- **裁决点 3 回答**：放 `packages/@ooc/builtins/agent/children/pr/`。stone-feat-branch.ts 注释早就这么写，且 core/persistable 留纯 git 原语的不变量也支持这个选择。**待裁决点 3 实际是个伪问题**，按现有注释执行即可。
+- **lifecycle 与 invalidate 分离**：清 sessionRegistries 时**不应**触发 dispatchUnactive——业务侧 cleanup 跑、但下次 hydrate 重建不会回滚，状态不自洽。正确语义 silent replace class entry。这条不变量真做改动 3 时要写入 self.md。
+
+### 完整性批评官（首轮事实错位 → 补充结论）
+
+首轮回答把 issue 主题读反了（把"补 aggregate"误读成"删 aggregate"），结论不可用。但顺手指出的 **`prAutoMerge` 配置 + `talk(target="super")` 入口** 两个担忧已被 reflectable reviewer 独立覆盖（漏项 1 + 新增担忧 2），无独立增补。
+
+无新增漏列受影响元素需补。issue 当前的「受影响 / 未受影响」清单经三方 reviewer 复核**已足够准确**。
 
 ## 裁决
 

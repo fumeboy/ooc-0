@@ -1,6 +1,6 @@
 ---
 title: lifecycle 测试覆盖恢复（重构窗口期消失的 active/unactive/refcount 单测与端到端测）
-status: draft
+status: in-review
 date: 2026-06-25
 follows: 2026-06-25-inheritance-via-source-import-spread.md
 ---
@@ -88,7 +88,49 @@ inheritance-spread issue verified 后，supervisor 派 sub agent 重写 lifecycl
 
 ## review 记录
 
-（按 design-workflow，测试增补可省 fan-out。Supervisor 可直接派 AgentOfThread 实施。）
+按 design-workflow 「不走流程：测试增补不动设计契约」判据，仅做 1 个 sub agent sanity check（不重审设计、不开 fan-out）。
+
+### Sanity check —— issue 可进入实施，建议先补 3 处小修订
+
+**事实核查**：6 条断言 5 条精准一致，1 条略偏（不影响 issue 范围）。
+
+| 断言 | 实测 |
+|---|---|
+| a. `packages/@ooc/tests/` 12 个测试 grep `unactive/dispatchActive/refcount` = 0 命中 | ✅ 一致 |
+| b. `thread-runtime.test.ts` 86 行 | ✅ 一致 |
+| c. `thread-runtime.ts:251/271/239` 是 dispatchActive/Unactive/refcountInSession | ✅ 一致；**额外发现**调用点 `:148-149`（unsubscribe → dispatchUnactive）+ `:189-193`（subscribe → dispatchActive）应同样锚住——测试要覆盖**调用点 + 实现点** |
+| d. `ObjectInsRegistry.removeObject` 在 `object-registry.ts:209` | ✅ 一致 |
+| e. thread.unactive policy body 在 `thread/index.ts:53` | ⚠️ 略偏——`:53` 是 hook 起点，**实际副作用点**：`:56`（exec 起点）+ `:64`（messages.push）+ `:65`（reportDataEdit）。测试断言应锚 :64 / :65 |
+| f. 旧测试文件 `core/runtime/__tests__/object-lifecycle.test.ts` / `thread/__tests__/fork-unactive.test.ts` 不存在 | ✅ 一致（`__tests__` 目录 0 结果） |
+
+### 范围合理性
+
+- **改动 1（object-lifecycle.test.ts）**：150 行/文件够覆盖 **5 case**——首订阅触发 active / 末退订触发 unactive / 二次订阅不重复触发 active / refcount >0 不触发 unactive / fast-path 0-cost 断言。**建议 issue 显式列这 5 case**，避免实施者"2 case 算完成"。
+- **改动 2（fork-unactive.test.ts）**：100 行/文件够覆盖 thread.unactive policy 在 status=done/failed 时短路 / 在 active 状态时 messages.push + reportDataEdit。
+- **close 原语守卫**：**建议拆为独立文件 `tests/object-close-guard.test.ts` ~50 行**——close 是 lifecycle.md 第四章独立小节，触发路径与 subscribe/unsubscribe 不同；并入 object-lifecycle.test.ts 会让该文件超 200 行且 describe 混杂。
+- **改动 3（lifecycle.md 文档对齐）**：标 (可选) 合理。
+
+### 风险考虑（补 3 条）
+
+1. **session 隔离**：每个 test case 应建独立 session（`_test_lifecycle_<ts>` 前缀，遵守 AGENTS.md 测试卫生），run 后清理。issue 风险段没提。
+2. **mock 范围界定**：`self.messages.push` 纯内存可真测；`ctx.reportDataEdit()` 用 spy/mock 断言被调一次即可，无需 mock thread-runtime 内部 dispatch 逻辑。
+3. **fast-path 0-cost 测试方式**：spy hook resolver 调用次数 = 0（class 未声明 active/unactive hook 时短路）——这是 lifecycle.md「fast-path」契约的唯一可观测证据，**必须测**。
+
+### 待裁决点回答方向
+
+1. 测试覆盖广度 = ~150 行/文件 + 5 case 明列 → **同意**
+2. 端到端测留给 merge-feat-branch follow-up issue → **同意**（当前 lifecycle 是 ThreadRuntime 单元契约，端到端走 feat-branch merge / agent-children spawn 是独立路径，不应混入）
+3. 实施期发现 bug → 另起 issue → **同意**（符合 design-workflow 步骤 4）
+
+### 总评
+
+issue 可进入实施，但建议先补 3 点小修订：
+
+1. **e 项行号精确化**：`thread/index.ts:53` → `:53 (hook) / :56 (exec) / :64 (push) / :65 (reportDataEdit)`
+2. **测试 case 显式列出**：在「改动 1」段落补 5 case 清单
+3. **拆 close 原语守卫**：升格为「改动 1.5：tests/object-close-guard.test.ts ~50 行」
+
+补完后即可派 **AgentOfThread**（thread-runtime.ts 物理在 `builtins/agent/children/thread/`）实施。本轮不需要 fan-out review；落地后走 design-workflow 步骤 4 落地验收核测试是否真覆盖列出的 5+ case。
 
 ## 裁决
 
