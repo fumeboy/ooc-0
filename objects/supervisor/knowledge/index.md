@@ -119,7 +119,7 @@ app 的核心契约是**控制面为显式 runtime orchestration，而非「请�
 
 ## builtins
 
-OOC 系统自带、实现基础系统功能的一组 builtin class/object。对象模型本身（class/object、单例、construct、单跳继承、children 命名空间、agent 分层）见 `../children/object/self.md`；完整清单、各自 id 与命名空间层级见 `./builtins.md`。本节只给设计层骨架。
+OOC 系统自带、实现基础系统功能的一组 builtin class/object。对象模型本身（class/object、单例、construct、`ooc.class` 单跳实例 binding、children 命名空间、agent 分层）见 `../children/object/self.md`；完整清单、各自 id 与命名空间层级见 `./builtins.md`。本节只给设计层骨架。
 
 按家族分组：
 
