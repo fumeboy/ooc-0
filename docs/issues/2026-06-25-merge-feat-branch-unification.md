@@ -1,8 +1,11 @@
 ---
-title: mergeFeatBranch 双源统一 + PR resolve 闸门完整接通 + reverse-binding invalidate
-status: in-review
+title: mergeFeatBranch 双源统一（删 sync 版 + happy-path 测试）
+status: decided
 date: 2026-06-25
 follows: 2026-06-25-inheritance-via-source-import-spread.md
+splits:
+  - 2026-06-25-reflectable-pipeline-wiring.md  # 改动 2 拆走
+  - 2026-06-25-session-level-invalidate.md      # 改动 3 拆走
 ---
 
 # mergeFeatBranch 双源统一 + PR resolve 闸门完整接通
@@ -182,7 +185,67 @@ reviewer approve / reject (in pr window method)
 
 ## 裁决
 
-（待裁决后填）
+按 design-workflow 步骤 3，三方 reviewer fan-out 后 Supervisor 拍板：
+
+### D1 · scope 收窄到「双源统一」一件事
+
+原 issue 改动 1+2+3+4 实际是三件不同尺度的事:
+- 改动 1（双源统一） = 小，删 sync 版本即可
+- 改动 2（PR resolve 闸接通） = 大，reflectable reviewer 揭露**核心 5 整条通路 8 处 gap**
+- 改动 3（session-level invalidate） = 中，runtime reviewer 揭露**设计前提错位**（sessionRegistries 是 module 单例不在 WorldRuntime；MVP 全清会 silent 卡死）
+
+裹一起 land 不动。拆分:
+- **本 issue**保留：**改动 1（删 sync 版 mergeFeatBranch）+ 改动 4 happy-path 测试**
+- 改动 2 → 新 issue **`2026-06-25-reflectable-pipeline-wiring.md`**（reflectable 核心 5 通路接通）
+- 改动 3 → 新 issue **`2026-06-25-session-level-invalidate.md`**（含 hot-reload + PR merge 双触发统一）
+
+### D2 · 改动 1 措辞收紧
+
+按 persistable reviewer 强 approve + runtime reviewer 实测：
+
+- **删除** `packages/@ooc/core/persistable/feat-branch.ts:140-160` 的 sync `mergeFeatBranch`（不是「统一签名」——那暗示双源保留）
+- `tests/feat-branch.test.ts:11` 切到 `packages/@ooc/core/persistable/stone-versioning.ts:290` 的 async 版本 + `await`
+- **接口形态变化必须显式记入实施 PR**：sync `MergeFeatInput {baseDir, branch, worktreePath}` → async `(baseDir, branch, paths, reason)`。测试要补 `paths` 参数；worktree 回收逻辑已内置在 async 版的 `cleanupWorktreeAfterMerge`——旧 `gitWorktreeRemove` 断言不再需要。
+- **feat-branch.ts 整文件存废核查**：删 mergeFeatBranch 后该文件还剩什么？若只剩 create/list/cleanup 类 plumbing，整体并入 stone-versioning.ts 或重命名 stone-worktree.ts——保留空壳是新熵增。
+
+### D3 · 改动 4 happy-path 测试范围
+
+只 1 个测试 case：`open feat-branch → write file → commit → mergeFeatBranch (async) → 核 main HEAD 推进 + spy defaultServerLoader.invalidateStone 调用 = objectIds 数`。
+- 验证 D7 invalidate 钩**真正生效**（之前挂在 async 版上零 caller 永不触发，本 issue 第一次让它被调用）
+- partial approve / reject / 多 reviewer / 跨 session 端到端全部留给 reflectable-pipeline-wiring issue
+
+### D4 · paths 透传契约（落地约束）
+
+mergeFeatBranch caller 必须从 PR record 的 `paths` 字段取（不能凭空构造）——否则 `extractObjectIdsFromPaths` 拿空集、invalidate 钩"成功但没清任何东西"。
+
+本 issue 范围内**没有真 PR 闸 caller**（那是新 issue A 的事），所以本 issue 改动 4 测试里 paths 由测试 setup 显式构造。但实施 PR 注释要写明这条契约约束、给下游 issue A 提示。
+
+### D5 · queue 注意
+
+approval-flow 调 mergeFeatBranch 必须在 `enqueueSessionWrite` 或同等串行 queue 内（stone-versioning.ts:271 注释 queue-naive 假设）——本 issue 改动 1 不动 caller，但实施 PR 注释要写明并发风险。
+
+### D6 · 实施分期
+
+- **P1（≤0.5 天 · 在 worktree）**：
+  - 删 `feat-branch.ts:140-160` sync mergeFeatBranch
+  - feat-branch.ts 整文件存废核：若只剩 plumbing 整合到 stone-worktree.ts 或 stone-versioning.ts
+  - 切 `tests/feat-branch.test.ts` 到 async 版 + 补 paths 参数
+  - 加 happy-path invalidate 钩 spy 断言
+  - `bun run verify` 全绿
+
+- **P2（≤0.5 天 · 对象树文档）**：
+  - 改 `## persistable` self.md / index.md 描述 `mergeFeatBranch` 行为：唯一权威是 async 版、ff-merge + invalidate + worktree cleanup 三段铁律
+
+### D7 · worktree 隔离
+
+涉及 `packages/@ooc/core/persistable/`，按 design-workflow 在 `.worktree/merge-feat-branch-dedup/` 开 worktree。
+
+### 不在本 issue 范围
+
+- reflectable 核心 5 通路（new_feat_branch / create_pr_and_invite_reviewers / pr-issue 持久化 / aggregatePrApproval / auto-merge finalizer / reflect_request decl / author 回馈 / reject 回修）→ 见 `2026-06-25-reflectable-pipeline-wiring.md`
+- session-level invalidate（含 sessionRegistries 归属重设计 + getSessionRegistry miss 语义 + hot-reload/PR merge 双触发统一）→ 见 `2026-06-25-session-level-invalidate.md`
+- `prAutoMerge` world 配置闸 → 归 reflectable-pipeline-wiring
+- reviewer 评审 thread 调度可达性 → 归 reflectable-pipeline-wiring
 
 ## 落地验收
 
