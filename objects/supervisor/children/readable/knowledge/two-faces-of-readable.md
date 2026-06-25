@@ -17,7 +17,7 @@ activates_on:
 
 **铁证（同一投影槽位的优先级回退）**：渲染器算一个 object 实例的投影时，在**同一条回退链**里依次 try，命中谁就渲染成**同一个 `<readable>` 投影**（`resolveProjection`，`~~packages/@ooc/builtins/agent/children/thread/thinkable/context/renderers/xml.ts:285~~（已删除）`）：
 
-1. `resolveReadable(inst.class)?.readable(ctx, inst.data, inst.win)` —— class 的动态 readable 投影（沿继承链解析；`:251`）。
+1. `resolveReadable(inst.class)?.readable(ctx, inst.data, inst.win)` —— class 的动态 readable 投影（本类直查，不沿继承链；子若要复用父 readable 经源码 import + spread 表达，对象模型核心 2）。
 2. 回退读盘 `readReadable(stoneRef)` —— **静态 readable.md**（无 Class.readable 时；`:268`）。
 3. 都无 → placeholder 投影（`:284`）。
 

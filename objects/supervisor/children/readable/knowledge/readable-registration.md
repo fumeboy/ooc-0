@@ -25,24 +25,25 @@ readable 物理上自成一文件（`readable/index.ts` 的 default export），
 
 ## 单入口 `register`
 
-class 经唯一入口注册进 registry（`packages/@ooc/core/runtime/object-registry.ts:103`）：
+class 经唯一入口注册进 registry（`packages/@ooc/core/runtime/object-registry.ts:60`）：
 
 ```
-register(classId, Class, { parentClass })
+register(cls: OocClass)
 ```
 
 - class id 归一（strip `_builtin/` 前缀，使带/不带前缀命中同一键）。
 - 已存在则**合并**模块字段（新模块覆盖、未传字段保留），支持窗类型分多次 side-effect import 增量补全 + 测试 seedFrom。
-- 注册期校验 object method ↔ window method 不同名，fail-loud（`object-registry.ts:53`）——同一 class 上重名会让 exec-by-name dispatch 歧义。
+- 注册期校验 object method ↔ window method 不同名，fail-loud——同一 class 上重名会让 exec-by-name dispatch 歧义。
+- **不持父类指针**：OOC Class 协议层不内建继承元数据，registry 只持扁平的 class 表（对象模型核心 2）。
 
 builtin 包经 side-effect import 各自 `register` 自己的 class；think / exec / render 默认用 `builtinRegistry` 单例，per-world / 测试经 `createObjectRegistry()` seedFrom 拿到等价集合。
 
-## 沿继承链解析
+## 本类直查解析（不沿继承链）
 
-object 经 ooc.class 单跳继承一个 class。渲染 / dispatch 期，readable 相关解析都沿"self 优先、单一父类次之、首个命中胜出"：
+`ooc.class` 是 object→class 的**单跳实例 binding**，**不是** class→class 继承链——OOC Class 协议层不内建任何继承 dispatch 机制（对象模型核心 2）。渲染 / dispatch 期，readable 相关解析都**只查本类**，无 fallback、无 chain walking：
 
-- `resolveReadable(classId)`（`object-registry.ts:202`）——取投影模块。
-- `resolveWindowMethod(classId, name)`（`object-registry.ts:191`）——取 window method。
-- `resolveWindowClass(classId, projectionClass)`（`object-registry.ts:223`）——取某投影 class 的声明（展示哪些 object method + window method）。
+- `resolveReadable(classId)`——取本 class 的投影模块。
+- `resolveWindowMethod(classId, name)`——取本 class 的 window method。
+- `resolveWindowClass(classId, projectionClass)`——取本 class 某投影 class 的声明（展示哪些 object method + window method）。
 
-当前无自定义 object 覆盖框架 class 的 readable，这条回退链尚未被真正行使——详见 self.md「模拟推演」。
+子类要复用父 class 的 readable，经**源码 import + spread** 表达（对象模型核心 2）：子 class 的 `readable/index.ts` 写 `import parent from "..."; export default { ...parent, window: [...parent.window, myWin] }`——继承在源码层显式表达、注册期就是扁平结果。运行时无继承链，行为可预测；父改后由 PR merge → `invalidateStone` 重新 spread 注册子（沿用现有 hot-reload 推模式）。

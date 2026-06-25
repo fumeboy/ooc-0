@@ -42,7 +42,7 @@
 
 - **会话窗去重收纳**：会话载体（thread）投影时，把归属本窗的消息收进 transcript 并报告这批消息 id（`consumedMessageIds`），渲染器据此从顶层 inbox/outbox 兜底里剔除——一条消息要么进某窗 transcript、要么进顶层兜底，"信息只渲一次"（context 模型核心 10）。这是核心 2/5（按视角投影 + 报告已渲内容）的组合，不是新机制。
 - **展示预算自适应**：window method 调展示程度（核心 4）让同一 Object 在 context 预算紧张时给精简投影、宽裕时给详细投影——不改 Data，只换 win，所以投影随时可收放。
-- **沿继承链解析投影**：object 经 ooc.class 单跳继承一个 class 时，readable / window method / window class 声明都沿"self 优先、父类次之"解析（首个命中胜出）——子 class 不覆盖 readable 时自然复用父 class 的投影。
+- **本类直查的投影复用**：object 经 `ooc.class` 单跳 binding 一个 class（**实例 binding，不是继承链**——对象模型核心 2）；readable / window method / window class 声明都**只查本 class**（无 fallback、无 chain walking）。子 class 要复用父 class 的投影，经**源码 import + spread** 在子的 `readable/index.ts` 显式拼父模块（`{ ...parent, window: [...parent.window, myWin] }`）——继承在源码层表达、注册期就是扁平结果。运行时无继承链，行为可预测。
 
 ---
 
