@@ -1,6 +1,6 @@
 ---
 title: ooc class 定义示例
-description: 按 object-model.md 的对象模型，给出新建一个 ooc class 的逐文件骨架；存量 builtin 代码可能过期，以本设计为准
+description: 按 `../self.md` 的对象模型，给出新建一个 ooc class 的逐文件骨架；存量 builtin 代码可能过期，以本设计为准
 activates_on:
   "object::root": "show_description"
 ---

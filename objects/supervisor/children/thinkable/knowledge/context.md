@@ -132,7 +132,7 @@ activates_on:
 
 一个 context window 须向 context 提供：
 
-- **`id`（稳定引用，指向 object）**：context 持久化的唯一字段。**class 不由 window 存**，而由该 object 的 readable 按当前视角算出后交给 context（核心 2/8）；context 据此 class 聚合方法（含 class 继承链上的方法——继承机制由 class/runtime 维度提供，context 只消费解析结果）。
+- **`id`（稳定引用，指向 object）**：context 持久化的唯一字段。**class 不由 window 存**，而由该 object 的 readable 按当前视角算出后交给 context（核心 2/8）；context 据此 class 经 ClassRegistry 本类直查聚合方法（子如需复用父 class 方法，由子 class 源码经 spread 在装配期表达，context 只消费扁平解析结果）。
 - **content 渲染（readable）**：给定本窗展示状态，产出展示节点（或"无内容"）——即 object 的 readable（核心 8）。content 与 class 怎么算（注册时直接给的 / 从 stone 读的 / 动态函数 / 静态名片）由 **readable 维度**定，**context 只调这个接口**。
 - **window method**：调整本窗展示、读写本窗的展示状态块（核心 6）；object method 归 object——context 只按 class 把方法菜单聚合进 `<window_classes>`（核心 4），不关心方法实现。object method 可携**对 object 只读 / 无副作用**标记（核心 5 口子），context 据此判定它在 readonly-ref 窗下是否可展示。
 - **展示状态块**：一块可持久化的展示态（核心 7）；window method 的读写对象。

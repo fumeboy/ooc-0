@@ -66,7 +66,7 @@
 
 把设计放进真实运行时场景，暴露缺口与方向。
 
-- **沿 class 链回退尚未被行使（中）**：registry 有 `resolveWindowMethod` / `resolveReadable` / `resolveWindowClass`（沿 self→父类解析，首个命中胜出，`object-registry.ts:191/202/223`），但目前没有自定义 object 覆盖框架 class 的 readable，这条回退链没有被真正行使过。方向：补一条"子 class 继承/覆盖父 class 投影"的实测。
+- **resolveXxx 本类直查、不沿链回退（已退役旧设计）**：registry 的 `resolveWindowMethod` / `resolveReadable` / `resolveWindowClass` 在旧设计里曾沿 self→父类解析，但 issue `2026-06-25-inheritance-via-source-import-spread` 裁决 D4 后改本类直查、无 chain walking——子 class 想复用父投影经源码 `import { Class as parent }` + `{ ...parent.readable, ... }` spread 表达。方向：补一条"子 class 经 spread 继承/覆盖父 class 投影"的实测。
 - **投影质量需真 LLM 判（中）**：投影渲染得好不好、压缩得当不当，本质是 context 质量问题，控制面确定性测不出。方向：补 agent-native 验证——agent 自写一个 object 的 readable（控其在 context 里的投影）或调 window method 改 viewport，确定性核验实例 win 的变化。
 
 ---

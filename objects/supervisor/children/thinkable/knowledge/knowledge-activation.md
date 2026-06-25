@@ -8,14 +8,14 @@ activates_on:
 # knowledge 激活设计
 
 > 本篇是 thinkable 维度关于 **knowledge 激活机制**自身的**单一权威**：每篇 knowledge 怎么声明触发条件、怎么按当前方法的意图被激活进 context、方法完成后怎么自动卸载。
-> 与邻接权威的分工（依赖倒置、不复述）：**knowledge 属于 agent、不属于普通 object**，agent 是什么见 `agent.md`（核心 4：agent 伴随 knowledge 系统，按方法意图激活、完成即卸载）；**对象模型 / class 继承链**见 class `knowledge/object-model.md`；**激活的 knowledge 怎么排进 LLM 输入、怎么占预算**见 `context.md`。本文只讲"哪篇 knowledge、在什么时机、激活到什么程度"。
+> 与邻接权威的分工（依赖倒置、不复述）：**knowledge 属于 agent、不属于普通 object**，agent 是什么见 `agent.md`（核心 4：agent 伴随 knowledge 系统，按方法意图激活、完成即卸载）；**对象模型 / class 复用经源码 spread**见 class `self.md` 核心 1-10；**激活的 knowledge 怎么排进 LLM 输入、怎么占预算**见 `context.md`。本文只讲"哪篇 knowledge、在什么时机、激活到什么程度"。
 
 ## 编辑规范
 
 1. **单一权威**：knowledge 激活机制只此一处；trigger 语法、激活级别、激活/卸载时机的设计变更先改本文、再改代码，不另起平行文档。
 2. **四段结构**：① 核心设计（原子原则，逐条编号、一句一条、相互正交）；② 派生设计（核心组合后涌现的能力，不引入新原则）；③ 细节补充（trigger 语法 / 级别求值 / 进 context 接口 / 边界）；④ 模拟推演（把机制放进真实运行时场景，暴露并收敛缺口）。新内容按归属入段，不混段。
-3. **高内聚低耦合**：本文只讲激活机制自身——trigger 怎么匹配、激活到哪一档、怎么交给 context；**不讲** agent 是什么（见 `agent.md`）、context 怎么构造成 LLM 输入（见 `context.md`）、对象模型（见 object-model.md），一律"见 X"引用。
-4. **精炼自洽**：一句一条；术语统一（trigger / 激活级别 show_description·show_content / 激活·卸载）；与 agent.md 核心 4、context.md、object-model.md 不矛盾，发现矛盾先修设计再落文字。
+3. **高内聚低耦合**：本文只讲激活机制自身——trigger 怎么匹配、激活到哪一档、怎么交给 context；**不讲** agent 是什么（见 `agent.md`）、context 怎么构造成 LLM 输入（见 `context.md`）、对象模型（见 class `self.md` 核心 1-10），一律"见 X"引用。
+4. **精炼自洽**：一句一条；术语统一（trigger / 激活级别 show_description·show_content / 激活·卸载）；与 agent.md 核心 4、context.md、class `self.md` 不矛盾，发现矛盾先修设计再落文字。
 
 ---
 
