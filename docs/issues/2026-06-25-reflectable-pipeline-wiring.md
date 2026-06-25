@@ -1,6 +1,6 @@
 ---
 title: reflectable 核心 5 通路接通（thread reflectable methods + PR 闸 + reflect_request decl + author 回馈）
-status: draft
+status: in-review
 date: 2026-06-25
 splits_from: 2026-06-25-merge-feat-branch-unification.md
 follows: 2026-06-25-inheritance-via-source-import-spread.md
@@ -244,7 +244,90 @@ E 区
 
 ## review 记录
 
-（待 fan-out）
+按 design-workflow 步骤 2，3 维度 reviewer + 1 完整性批评官 fan-out。结论：方向正确、scope 准确，**13 处真问题 8 处属实**；但有 **4 类必须先修的事实/边界偏差**才能进入裁决：
+
+### B · reflectable —— 同意但有严重担忧（11 改动需补 9 处）
+
+**核心结论**：方向正确，但 issue **低估 reflectable × 其它维度的耦合度**。
+
+**重大修正**：
+1. **改动 3 `pr-issue.ts` 物理位置错误**——reflectable self.md 细 1 明确「**存储层（PR-Issue 记录、reviewer 冒泡纯函数）归 persistable**——窗只是脸」。issue 把 `pr-issue.ts` 放 `builtins/agent/children/pr/` 违反 self.md 细 1。**正解**：存储底座（createPrIssue/loadPrIssue/updatePrIssue）放 `core/persistable/pr-issue.ts`，builtin pr 只持 finalizer 钩子。
+2. **改动 9 派生 3「同 intent 幂等重绑」需要补索引**——实测 `stone-feat-branch.ts:182` 已实现 `WORKTREE_EXISTS 幂等`（branch 侧 OK），**但 author thread 侧 intent → prId 索引完全不存在**——必须新增 `thread.persistence.activeReflectIntent: { intent → prId }`，否则派生 3 落空。
+3. **改动 1 reflect_request 互斥契约缺测试**——reflectable self.md 细 1「reflect_request 与 pr 永不共存于同一 thread」需要 `computeProjectionClass` 测试守卫。
+4. **改动 4 `notifyAuthor` 实现路径未锚定**——应明示「经 collaborable transport 向 author thread 投 say-style 消息，target=authorThreadId.reflectRequestWindowId」，受影响元素**补 `## collaborable`**。
+
+**前置 spike 建议（不在主路径阻塞）**：
+- 改动 5 reviewer 调度可达性：worker scheduler 是否接受异 session 的 thread 入队？现状未明，需先 spike
+- 改动 10 talk(target="super")：`core/types/constants.ts:15` 已有 `SUPER_TARGET_ALIAS` 常量 + knowledge 已用，但 collaborable 投递层是否消费该 alias 未实测——先 spike
+
+**关键源码锚点**（供裁决用）：
+- `thread/readable/index.ts:86-108` —— `computeProjectionClass` 现有 binary 判定（this_thread / talk），改动 1 需扩 reflect_request 第三档
+- `thread/executable/index.ts:14-21` —— 当前仅 4 methods，改动 2 需 +2 with visibility marker
+- `pr/index.ts:40-87` —— pr.comment/approve/reject 只改 in-memory，未写持久化
+- `stone-feat-branch.ts:109-182` —— slugFromIntent + 幂等 WORKTREE_EXISTS 已实现，改动 9 branch 幂等已满足、缺 author 侧索引
+- `stone-worktree.ts:169-197` —— `resolveStoneIdentityRef` 已支持 stonesBranch 优先路由，改动 8 fail-loud 闸落此最佳
+- `core/types/constants.ts:15` —— `SUPER_TARGET_ALIAS` 常量已定义
+
+**P0/P1 分批建议**：
+- **P0（与母 issue 并行）**= 改动 1 / 2 / 3 / 5 / 7 / 8 / 10 / 11
+- **P1（等母 issue 完成 sync 版删除）**= 改动 4 / 6 / 9
+
+### B · executable —— 条件通过（P1 必修 2 处）
+
+**P1 阻塞**：
+
+1. **`for_reflectable` design ↔ contract drift**——reflectable self.md line 64 把 `for_reflectable` 当 ObjectMethod 字段写了，但 `core/types/executable.ts:82-96` 真正 contract 里**没有这个字段**。issue 改动 2 用 `for_reflectable` 触及这条 drift，**必须先解决**：
+   - **(a) 补进 contract** + runtime 侧「在 super flow 才 surface」过滤逻辑
+   - **(b) 走 readable decl 白名单**——reflect_request decl 白名单列出 method names，executable 协议不感知 flow type（**推荐**——visibility 是 readable surface 控制权，让 method 自带 flow 政治标签是越界）
+
+2. **改动 8 filesystem.write_file 守卫越界 executable 协议层**——路径权限属 **runtime 入口拦截**（method 之外、tool 原语 exec 之前）；放 method 体内会把"权限模型"耦合进 builtin 实现。**推到 persistable 维度**：守卫加在 `core/persistable/stone-worktree.ts:resolveStoneIdentityRef`（所有写 stones 文件经它路径解析，一处守卫覆盖全 builtin）。executable self.md 不动。
+
+**P2 建议**：
+- 改动 4 onReviewerAction 文件级 doc comment 明确「这是 pr method 内部 helper、不是新 lifecycle hook 类型」——防后人模仿增设伪 hook
+- 改动 2 给 method 加 `route + intents` 提升 knowledge 激活精度（不强制）
+
+**接口边界一问回答**：executable 协议管「机制层」（dispatch + 副作用通道 + 唯一性），实现管「政治层」（method 怎么写、谁调谁、什么时候 surface）。**改动 8 + `for_reflectable`** 是把"政治层"偷渡进"机制层"，需要回退。
+
+### B · readable —— 通过但表述需细化（3 处需裁决）
+
+**结论**：readable 协议层（多视角投影 + window method vs object method 分维 + projection class 解析）**未被改动**——issue 改动 1 是 thread builtin readable 实现内的 decl 增量，符合多视角投影协议。
+
+**3 处裁决项**：
+
+1. **改动 1 字段级清单**：`reflect_request` decl 的 `window_methods` / `object_methods` 完整列表 + 与 talk decl 的关系（独占？共享？）。建议:
+   - `reflect_request.object_methods = ["say", "new_feat_branch", "create_pr_and_invite_reviewers"]`
+   - `talk.object_methods` 不含 reflectable 系
+   - 跨 class 同名 method（say/reply 在 talk + reflect_request）合法（不同 window class、命名空间分离）
+
+2. **POV 判定机制**：选 A（sessionId 前缀 / SUPER_SESSION_ID）vs B（thread.metadata.isSuperFlow）。**强烈推荐 A**——readable 维度零感知 super flow 这一 reflectable 领域概念；source 已有 `SUPER_SESSION_ID="super"` 常量（`core/types/constants.ts:13`），判定直用此常量 `sessionId === SUPER_SESSION_ID`，无需新字段。
+
+3. **改动 6 `notifyAuthor` 措辞模糊**——「经 reflect_request 窗 say-style 通道」字面解为 readable window method 跨 thread 调用会越界（window 绑定在被投影 thread 的 visible 表面，不应跨实例）。**正确措辞**：「走 collaborable inbox 投递通道，消息体格式与 reflect_request.say 同形」——把 readable（视角形态）与 collaborable（投递通道）解耦清晰。
+
+**新增担忧**：reflect_request decl 是否进 readable knowledge `.ooc-world-meta/.../children/readable/knowledge/`？建议改动 11 显式补一节描述 POV 触发条件 + 暴露的 method 集，否则 decl 只活在 builtin 源码里、未来漂移风险高。
+
+### 完整性批评官 —— 4 处事实偏差 + 3 处漏列受影响元素
+
+**事实偏差**：
+
+1. **`prAutoMerge` 已实现**——实测 `world-config.ts:84` 已有完整配置加载链 + 默认 false；改动 7「world config 加 prAutoMerge」**属虚报**，只需「**对接**已有 prAutoMerge 闸到 approval-flow」即可。
+2. **PR 控制面 endpoint 路径冲突**——issue 改动 7 提 `POST /api/pr/:prId/confirm-merge`，但 source/super-flow.md:96 + world-config.ts:81 **已规划** `POST /api/runtime/pr-issues/:id/resolve {decision:"merge"|"reject"|"request-changes"}`。**冲突由 issue 显式裁决**：沿用已规划路径还是改新路径？
+3. **`aggregatePrApproval` 物理位置自相矛盾**——`stone-feat-branch.ts:18` 注释明示 builtin/pr，issue 改动 4 注释拉回 core/persistable——必须统一（与 reflectable reviewer 的 P1 修正 1 一致：建议存储底座 core/persistable，finalizer 钩子 builtin pr）。
+4. **mergeFeatBranch 双源**——本 issue 改动 4 须显式锚定 `import { mergeFeatBranch } from "@ooc/core/persistable/stone-versioning.js"`（不是 feat-branch.ts:146 那份待删的 sync 版）。
+
+**漏列受影响元素**：
+
+1. **`## app`** ⚠️——改动 7 endpoint 是控制面契约，应列受影响（且与 visible 维度分立）
+2. **`## persistable` 独立 B 区** ⚠️——改动 3 PR-Issue 持久化的位置归属之争必须 persistable reviewer 参与（与 reflectable reviewer P1 修正 1 一致）
+3. **`## runtime`** ⚠️——改动 5 reviewer 投递触动 runtime 派单可达性（待裁决 2 已点出）
+
+**术语漂移**：
+- `authorSessionId` 与 source 已有 `authorThreadId`（stone-feat-branch.ts:216）的关系——建议统一用 `authorThreadId`，删冗余 `authorSessionId`
+- `approval-flow.ts` / `mergeFinalizer` / `rejectFinalizer` / `notifyAuthor` 需先在 reflectable / `## pr` 节定义签名再 source 化
+
+**设计-实施越界**：
+- 改动 4 一整段伪代码应移到 reflectable self.md / `## pr / reflect_request` self.md，issue 留契约层（接口边界 + 状态机 + 触发条件 + 错误语义）
+- 改动 1 POV 判定两选项并列、不裁——issue 作者应自己拍板（建议选 A，见 readable reviewer）
+- 改动 8 守卫位置未拍板——issue 待裁决 4 应自决（建议加在 `resolveStoneIdentityRef`，见 executable reviewer）
 
 ## 裁决
 

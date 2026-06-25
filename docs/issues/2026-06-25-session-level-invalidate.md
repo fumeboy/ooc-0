@@ -1,6 +1,6 @@
 ---
 title: session-level invalidate 设计（含 hot-reload + PR merge 双触发统一 + getSessionRegistry miss 语义）
-status: draft
+status: in-review
 date: 2026-06-25
 splits_from: 2026-06-25-merge-feat-branch-unification.md
 follows: 2026-06-25-inheritance-via-source-import-spread.md
@@ -189,7 +189,106 @@ E 区
 
 ## review 记录
 
-（待 fan-out）
+按 design-workflow 步骤 2，2 维度 reviewer + 1 完整性批评官 fan-out。三方实测结果**全部支持**两个前提错位真实存在；但 **接口边界达成新共识**：本 issue 应大幅收窄、把不属于 runtime/persistable 协议层的改动剥到 reflectable-pipeline-wiring issue。
+
+### E · runtime —— 大幅收窄（**取消 改动 4 与 改动 5**）
+
+**实测全部验证 issue 三大前提错位**：
+- ✅ `sessionRegistries` 是 `object-registry.ts:232` module-level const 单例
+- ✅ WorldRuntime interface 不暴露 sessionRegistries
+- ✅ `getSessionRegistry` miss 时不 hydrate（new 空表 + copyFrom builtinClassRegistry）
+- ✅ caller 群实测 7 处（issue 写"4+ 处"漏了 `app/server/modules/runtime/index.ts` 3 处）
+- ✅ thinkloop silent stuck 风险真实（`dispatchActive/Unactive` 在 `if (!inst) return` 静默卡死）
+
+**待裁决倾向**：
+1. **改动 1 sessionRegistries 归属** → **选 A**（保持 module-level）+ module-level export `invalidateSessionByStoneIds(baseDir, sid, stoneObjectIds)`
+2. **改动 2 miss 语义** → **选 B**（invalidate API 含 re-hydrate）+ 必须澄清「miss 在 invalidate API 内、不在 getSessionRegistry 内」
+3. **改动 5 MVP scope** → **改为：改动 2 + 改动 6 + 改动 9 部分**（happy + miss + lifecycle）+ runtime self.md 文档化 invalidate API
+
+**接口边界一问 → 大幅修正**（runtime 视角强烈反对改动 4、改动 5）：
+
+- **改动 4（mergeFeatBranch 增 sid 参数）= 越界**——`mergeFeatBranch` 是 stone-versioning 的纯 git 机制（注释 `:264-272` 明示「queue-naive、纯 git 机制」），它**不该感知 session 概念**。
+- **改动 5（PR record originSid）= 越界**——`PrRecord` 是 reflectable 数据结构，不归 runtime 协议；本 issue 不应持。
+- **正解**：session-level invalidate 由 mergeFinalizer caller（reflectable-pipeline-wiring 改动 4）在自己作用域内调 `invalidateSessionByStoneIds(baseDir, authorSessionId, stoneObjectIds)`。runtime 协议层只暴露原语，**调用谁/传谁的 sid 是 caller 的事，零耦合**。
+- 改动 4 + 改动 5 → **剥到 reflectable-pipeline-wiring issue 实施落地时挂**
+
+**API 名建议**：`invalidateSessionByClass(sid, classIds)` → `invalidateSessionByStoneIds(baseDir, sid, stoneObjectIds)`：
+- `stoneObjectIds` 而非 `classIds`——OOC 核心区分 class（定义）vs object（实例），sessionRegistry 持的是 `OocObjectInstance(id=objectId)`，清的是 objectId 集合的 entry
+- 加 `baseDir`——因为内部需要调 `hydrateSession(baseDir, sid)`
+
+**实测发现的隐含问题**（不在 issue 中，建议落地时关注）：
+
+- **N1（已存在的 bug）**：mergeFeatBranch 调 `defaultServerLoader.invalidateStone`（module-level），但 hot-reload listener 调 `serverLoader.invalidateStone`（per-WorldRuntime instance）—— **两条路径打不同的缓存**。这独立于本 issue 但需顺手记一笔。
+- **N2（API 名义）**：见上 API 名建议。
+- **N3（并发安全）**：实测 `mergeFeatBranch` 本身 queue-naive，queue 由 caller 持。invalidate hook 应在 `enqueueSessionWrite("hydrate:" + sid, ...)` 串行化避免并发 hydrate 撞 race。
+- **N4（hydrate 幂等）**：实测 `hydrateSession` 当前 setObject 是 Map.set 末写赢——可接受，但有读 race；invalidate API 内需用 enqueue 串行化。
+
+**测试建议（改动 9 加强）**：
+- 已列：happy / miss / lifecycle 三条
+- 加：fs.watch 与 PR merge 并发 race 测试
+- 加：多 WorldRuntime 同进程隔离断言（或诚实标注"不隔离、靠 sid 唯一化"）
+
+### B · persistable —— 同意精神、反对越界（**强烈反对改动 6 入 persistable self.md**）
+
+**结论**：persistable 维度对本 issue 真正承诺的是两件事——
+1. **flow-main 解耦语义**（隐式存在，需显式化）—— self.md 核心 2/5/7 隐含，但**真正缺失的语义**「main 推进不隐式向所有 flow 广播」从未明说。**应入 self.md**：
+
+   > main 推进（无论经人类 PUT /stones 还是 reflectable feat-branch 合入）不向其他 flow 广播，各 flow 各自停在 fork 时刻 main HEAD；flow 自决何时（或是否）与 main 同步——通过显式 rebase / 重 hydrate，而非 main 推进的副作用。
+
+2. **PR record schema 是否含 `authorSessionId`**——归 builtin pr class data 域，**不归 persistable 协议**（self.md 核心 4 只管"data 怎么落盘"、不管"data 里写什么字段"）。
+
+**改动逐条点评**：
+
+- **改动 1（归属）/ 改动 2（miss 语义）/ 改动 7（双触发分流）** → **不归 persistable 管**，由 runtime 视角裁决
+- **改动 3（精准只清发起方）** → **persistable 强烈支持**，这正是 self.md 核心 2/7 的语义投影
+- **改动 4（mergeFeatBranch 增 sid 参数）** → **接受语义但建议重设计**——把 invalidate hook 上移到 caller（与 runtime reviewer 一致）保 git 原语纯净
+- **改动 5（PR record originSid）** → **不归 persistable 管**（pr class data 域），归 reflectable-pipeline-wiring issue
+- **改动 6（lifecycle 与 invalidate 分离铁律入 persistable self.md）** → **强烈反对**——这是 runtime 维度对**对象生命周期钩子**的实现规则，**与持久层无关**；持久层从不"触发 dispatchUnactive"。**正确归属**：`## runtime` 段 + `invalidate API JSDoc`，或 `## persistable × thinkable` 交叉契约段。**不进 persistable self.md**。
+- **改动 8（enqueue 覆盖）** → **支持，但理由要改**——从"git race"改为"merge → invalidate 原子可见性"
+- **改动 9（测试）** → 不直接归 persistable，无意见
+
+**新增担忧**：
+- **hydrate 幂等性**（咬选项 B）：`runtime-object-io.ts:117` 重读盘 setObject 直覆盖——若旧 inst 在表里、新 inst 来自盘、简单覆盖会丢运行态字段（如 thread inbox 增量）。**改动 2 选 B 的隐含前置工作**。
+- **pool 数据在 invalidate 路径中如何**：issue 全文未提 pool——「pool 是运行时事实、直写即生效」（self.md 核心 2），不进 git、与 invalidate 无关。请显式声明：`invalidateSessionByStoneIds` 只触 class & stone object，**不触 pool sediment**。
+- **inline 持久化（self.md 核心 4 第三态）与 invalidate 交互**：thread 等运行态自有窗 `mode="inline"`，数据随 thread-context.json 落盘——re-hydrate 时 inline 窗如何重建？
+
+**接口边界一问 → 关键判据**：
+- 「磁盘真相 → 内存镜像同步**时机**」= persistable 协议
+- 「具体怎么清、清哪个、清完触不触发钩」= runtime 实现自由
+
+**MVP 范围调整建议**：
+- MVP = 改动 2（重设计）+ 改动 4（重设计：mergeFeatBranch 不动、caller 自挂）+ **新增 flow-main 铁律入 self.md**
+- 改动 5 移走、改动 6 删、改动 1/7/8 留 runtime 视角讨论
+
+### 完整性批评官 —— 漏列 thinkable + thread 深化
+
+**漏列受影响元素**：
+
+1. **`## thinkable`（B 区）应列为受影响** ⚠️——scheduler 调 `getSessionRegistry(sessionId)`（`builtins/agent/children/thread/thinkable/scheduler.ts:37,71`）将 registry 传给 think()。invalidate 后 miss → 空表 → tick 既找不到 thread 又拿不到 instances，**这是 thinkable 调度的直接行为变更**。issue 自己背景说「thinkloop silent stuck」却把 thinkable 列「未受影响」——违反 design-workflow 准则。
+
+2. **`## thread`（E 区）描述偏轻** ⚠️——`thread-runtime.ts:63` 经 `new ThreadRuntime(thread, getSessionRegistry(sid), opts)` 把 registry **冻结成 ThreadRuntime 实例字段**——invalidate 后已构造的 ThreadRuntime 仍持旧 registry 引用！**陈旧引用泄漏**风险。`dispatchActive/Unactive` 经 `this.registry.getObject(objectId)` 直查捕获时的 registry 而非最新 `sessionRegistries.get(sid)`。**改动 2 选 B 自动 re-hydrate 后，旧 ThreadRuntime 仍指向被 delete 的 stale Map entry**——需追加待裁决：invalidate 后已存在的 ThreadRuntime 实例如何处理？要么 `releaseSessionRegistry` 改不删 Map、只清内容（保身份），要么 ThreadRuntime 不冻结 registry、每次现取。
+
+3. **`## executable`（B 区）边缘受影响**——method exec ctx 经 `ThreadRuntime.objectDataOf`（`thread-runtime.ts:73,106`）取 data——同上由 captured registry 解析。
+
+**内部自洽问题**：
+- 改动 2 选 B「不动 getSessionRegistry 签名」与「miss → 触发 hydrateSession」自相矛盾——澄清 hydrate 触发点**在 invalidate API 内**而非 getSessionRegistry 内。「miss 自动 hydrate」描述误导，**首启 stuck（worker 重启）不修，由 hydrateSession 显式调兜底**——本 issue 修 invalidate 后续 stuck。
+
+**术语漂移**：
+- `invalidateSessionByClass` 名字含 Class，但实际清的是 object 实例 entry——**改名 `invalidateSessionByStoneIds`** 与 OOC 核心区分对齐（A 区核心 1：class=定义、object=实例）
+- `initiatingSid` / `originSid` / `authorSessionId` 三名一物——**统一为 `authorSessionId`**（与 `authorThreadId` 同构）
+- `scheduler.ts` 物理位置错引 `core/`——**实际在 `builtins/agent/children/thread/thinkable/scheduler.ts`**
+
+**与 reflectable-pipeline-wiring 耦合点（强约束）**：
+1. **PR record schema**：本 issue 改动 5 加 `authorSessionId` ⇄ pipeline-wiring 改动 3（新建 pr-issue.ts）**先后约束明确**——pipeline-wiring 改动 3 是 schema 落地的第一刻，**必须依本 issue 改动 5 同期加 `authorSessionId`**，否则 schema migration 成本骤升
+2. **mergeFinalizer 调 mergeFeatBranch**：本 issue 改动 4 ⇄ pipeline-wiring 改动 4——若改动 4 sid required，强制传，强约束保 invalidate 链路真生效；若 optional 需 lint 守护
+3. **enqueue queue 边界**：本 issue 改动 8 ⇄ pipeline-wiring 改动 4 mergeFinalizer 包 enqueueSessionWrite——一致
+
+**先后约束建议**：
+- **先**：本 issue 改动 1 / 2（底层 + miss 语义修复）—— 独立于 PR 流程
+- **同期**：本 issue 改动 4 + 5 与 pipeline-wiring 改动 3 + 4（schema 与 caller 同生）
+- 改动 6 / 7 / 8（文档铁律）随时可落
+
+**总评**：本 issue 揭露的两个前提错位（sessionRegistries 进程级 / miss 静默卡死）**确实存在**且确实是 runtime 协议层的事。但 issue 提议的多项改造越过 runtime/persistable 协议层边界——把「精准 sid invalidate」和「PR record originSid」当作 runtime 协议字段，实际是 reflectable PR 闸的实现细节。**裁决前建议补漏 thinkable + thread 深化 + 修术语 + 决 4 选 5**，本 issue 即可进入步骤 3 裁决。
 
 ## 裁决
 
