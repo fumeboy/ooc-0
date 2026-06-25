@@ -21,15 +21,27 @@
   - exec（在某 window 上调一条 method）
   - close（关一个 window = 移除对其对象的一个引用；honor 结构窗：`closable===false` 则拒关报错；引用归零触发该对象 `unactive`，机制见 object 模型核心 10）
   - wait（声明等待某个 context window 的 IO 结果）
-3. 可执行的 method 分两类、严格分维：
-  - object method 改 object 自身数据、可产副作用（归 executable，本维度）；
-  - window method 只调 object 在 context 里的展示态、返回不可变的新 window（归 readable 维度）
-  - 二者经同一 exec 入口分派；注册 context window 时保证 window method 与 object method 不会有同名冲突。
+3. 可执行的 method 分**两类**、严格分维：
+  - **object method**（**单步直执行**）：参数已知、schema 描述形状、`exec` 改 object 自身数据 + 可副作用——归 executable，本维度。
+  - **object guide method**（**多步引导**）：参数未必齐全，dispatch 命中即先跑 `route` 算意图：`quickSubmit=true` 直执行；否则自动开 form、用 refine 累积参数、submit 真执行——归 executable，本维度（form 类型实现见 builtin `method_exec_form`）。
+  - **window method**：只调 object 在 context 里的展示态、返回不可变的新 window——归 readable 维度。
+  - 三者经同一 exec-by-name 入口分派；注册时 method/guide/window method 三侧 name 全集不重名，且各 window decl 的 `object_methods`/`guide_methods` 引用必须在 ExecutableModule 内可解析（注册期 fail-loud）。
 
 
-## executable/index.ts —— object method
+## executable/index.ts —— object method / guide method
 
-object method **可改 object 数据、可产生副作用**。
+executable 维度模块 `default export` 形状：
+
+```ts
+export interface ExecutableModule<Data = any> {
+  methods: ObjectMethod<Data>[];
+  guides?: ObjectGuideMethod<Data>[];   // 多步引导（form 触发）
+}
+```
+
+### ObjectMethod（单步直执行）
+
+object method **可改 object 数据、可产生副作用**；参数已知，调用即 exec。
 
 example:
 ```ts
@@ -54,18 +66,18 @@ const appendMethod: ObjectMethod = {
 
 ```ts
 /**
- * object method 定义。
+ * object method 定义（单步直执行模板）。
  *
- * - name        : 方法名（dispatch 入口；同 class 内 object/window method 不可重名）
+ * - name        : 方法名（dispatch 入口；同 class 内 method/guide/window method 三侧不可重名）
  * - description : LLM 面向的方法描述（必填）
  * - schema      : 可选参数 schema（结构化渲染 + fail-soft 校验）
  * - public      : 是否对 peer object 可见可调
- * - for_reflectable: 是否仅在 super flow（反思 session）下 surface
- * - exec        : (ctx, self, args) → 结果文本（或 undefined）；**可改 self、可副作用**
+ * - permission  : 权限谓词（allow / ask / deny）
+ * - exec        : (ctx, self, args) → 结果（`ObjectMethodResult` / 裸 string / void）；**可改 self、可副作用**
  *
- * 注：object method 只管 LLM 侧行动，不再有 `for_ui_access`——人机分流移交 visible 维度的
- *     visible/server 模块（`<ObjectDir>/visible/server/index.ts`，ctx 无 thinkloop thread），
- *     由前端经 callMethod 调用，见 visible 维度。
+ * 注：method 不再持 `intents` / `route`——多步引导语义已迁至 `ObjectGuideMethod`。
+ *     method 只管 LLM 侧行动；人机分流移交 visible 维度的 visible/server 模块（ctx 无 thinkloop thread）。
+ *     `for_reflectable` 不进协议——visibility 经 readable surface（reflect_request decl 白名单）控制。
  */
 export interface ObjectMethod<Data = any, Args = any> {
   name: string;
@@ -73,102 +85,104 @@ export interface ObjectMethod<Data = any, Args = any> {
   schema?: MethodCallSchema;
   permission?: (args: Record<string, unknown>) => "allow" | "ask" | "deny";
   public?: boolean;
-  for_reflectable?: boolean;
-
-  intents?: {name: string, description: string}[]
-  route?: (ctx: ExecutableContext, self: Data, args: Args) => ObjectMethodIntents;
-  // 返回 ObjectMethodResult{message?/data?/err?}；裸 string = sugar for {message}；void/undefined 亦可（runtime normalize）。
   exec: (
     ctx: ExecutableContext,
     self: Data,
     args: Args,
   ) => ObjectMethodResult | string | void | Promise<ObjectMethodResult | string | void>;
 }
+```
+
+### ObjectGuideMethod（多步引导）
+
+guide method **服务于「调用即开 form、逐轮 route 澄清意图直至 submit」**。dispatch 命中即跑 `route` 算 `ObjectMethodIntents{tip, intents, quickSubmit}`：
+
+- `quickSubmit=true` ⇒ 参数已齐、直接执行（与单步 method 等价）。
+- 否则 ⇒ runtime 自动实例化 `_builtin/agent/method_exec_form` 把 form ref 返给 tool call，agent 后续经 `refine` 累积参数 + 重跑 route 刷新 tip/intents，最后 `submit` 真执行。
+
+接口定义:
+
+```ts
+export interface ObjectGuideMethod<Data = any, Args = any> {
+  name: string;
+  description: string;
+  schema?: MethodCallSchema;                              // 总参数空间（可选；route 返回 intents 描述当下需补子集）
+  intents: { name: string; description: string }[];      // 该 guide 可能产生的全部意图（必有；静态先验）
+  public?: boolean;
+  permission?: (args) => "allow" | "ask" | "deny";
+  route: (ctx, self, args) => ObjectMethodIntents | Promise<ObjectMethodIntents>;  // 必有
+  exec: (ctx, self, args) => ObjectMethodResult | string | void | Promise<...>;
+}
 
 // ObjectMethodIntents
-// 类似于现实中我们填写的电子表单
-// 要提交行动前，发起一个表单
-// 填几个参数，然后给出新的填表项并给出提示，然后继续填，然后继续提示，直到表单填写完毕再提交
-// OOC 系统的 Object Method 也支持这个模式，如果 Object Method 定义了 route，那么方法执行时，会先执行 route 取得意图
-// 同时在 上下文中，会创建一个 ObjectMethodForm window, 用于显示表单，这个 window 具有 refine 方法用于继续填充调整参数，具有 submit 方法用于提交表单
-// route 计算出的 tip 会作为 tool call 结果返回，计算出的 intents 会用于激活关联的知识
+// 类似现实中的电子表单：填几个参数、给出新的填表项与提示、继续填，直到可以提交。
+// guide.route 算出 intents，runtime 据此决定开 form 还是直接 submit。
+// route 计算出的 tip 作为 tool call 结果回灌，intents 用于激活关联 knowledge（见 thinkable `intent::` trigger）。
 export interface ObjectMethodIntents {
   tip?: string,
-  intents?: string[] // 从 args 推导的行为意图
-  quickSubmit?: boolean // 无需再主动对表单执行 submit 方法，立刻执行
+  intents?: string[]
+  quickSubmit?: boolean
 }
 
 export interface ObjectMethodResult {
   message?: string;
   data?: any;
-  err?: string
+  err?: string;
+  refs?: OocObjectRef[];   // exec 产出的新对象引用（runtime 据此挂窗 / 把 form ref 回给 tool call）
 }
 ```
 
-### 填表式渐进式执行（form）
+### 填表式渐进式执行（form）—— guide 触发链
 
-object method 可声明 `route`，把"一次填齐参数才能执行"变成"渐进填表"：发起调用时若参数还不齐 / 需要先定意图，先开一张 **form** 分多轮补齐，齐了再提交。像填电子表单——填几项、给出提示与新填项，继续填、继续提示，直到可提交。
+把"一次填齐参数才能执行"变成"渐进填表"，逐轮补齐再提交。像填电子表单——填几项、给出提示与新填项，继续填、继续提示，直到可提交。
 
-- **route 在发起调用时先跑**，据 `(self, args)` 算出 `ObjectMethodIntents{tip?, intents?, quickSubmit?}`：
-  - `quickSubmit=true` ⇒ 参数已齐、无需确认，直接执行（与没声明 route 的 method 同路径）。
-  - 否则 ⇒ 不执行，开一张 **form** 入 context，把 `tip` 回作补参提示。
+- dispatch 入口在 `resolveObjectMethod` 不命中、`resolveObjectGuideMethod` 命中时进入 guide 路径，**先跑 route 算意图**：
+  - `quickSubmit=true` ⇒ 直接执行 guide.exec（与单步 method 同路径）。
+  - 否则 ⇒ runtime 自动 `instantiate(_builtin/agent/method_exec_form, { targetObjectId, guideName, accumulatedArgs:args, currentTip, currentIntents })`，把 form ref 作为 `refs:[formRef]` 返给 tool call。
 - **form 自身是一个对象**（持累积参数 + 填表态），注册两条 object method 供调用：
-  - `refine`：把新参数 merge 进累积参数（可多轮），并重跑 route 刷新 `tip` / `intents`；执行失败的 form 经 refine 可复活回可提交态。
-  - `submit`：用累积参数真正执行目标 method；成功后 form 退场，失败留错误信息、可继续 refine 重试。
-- **route 算出的 `intents` 驱动渐进式知识激活**：填到哪个意图，关联该意图的 knowledge 随之激活、离开即卸载（机制见 thinkable `knowledge-activation.md` 的 `intent::` / `method::` 触发）——执行到哪、知识到哪。
+  - `refine`：把新参数 merge 进累积参数（可多轮），并重跑 guide.route 刷新 `currentTip` / `currentIntents`；执行失败的 form 经 refine 可复活回可提交态。
+  - `submit`：经 runtime `execGuide`（**不走 dispatch、跳过 route**）调 guide.exec；成功返回结果、失败把 err 留在 `lastError`、可继续 refine 重试。
+- form readable 投影 `context` 段含 `target_object` / `guide` / `accumulated_args` / `current_tip` / `current_intents` / `last_error` 子节点——LLM 看 form 窗即知全貌。
+- **route 算出的 `intents` 驱动渐进式知识激活**：所有 form 的 `currentIntents` 合并进 thinkable `ActivationContext.activeIntents`，由 `intent::<name>` trigger 激活关联 knowledge（机制见 thinkable）。phase-1 简化版按全 form 合并；phase-2 按 form objectId 作 source-key 分组替换 + 撤销，避免 form 关后旧 intents 残留。
 
 example（route 据已填参数算意图：缺 `content` 时只回提示不执行；齐了按有无 `id` 分流 create / update）：
 ```ts
-import type { ExecutableContext, ObjectMethod } from "<runtime>/executable";
+import type { ExecutableContext, ObjectGuideMethod } from "<runtime>/executable";
 import type { Data } from "../types.js";
 
-const createOrUpdate: ObjectMethod = {
+const createOrUpdate: ObjectGuideMethod = {
   name: 'CreateOrUpdate',
   description: "create or update record.",
-  schema: { 
+  schema: {
     content: { type: "string", required: true, description: "record content" },
     id: { type: "string", required: false, description: "record id" },
   },
   intents: [
-    {name:"create", description: "create record"},
-    {name: "update", description: "update record"},
+    { name: "create", description: "create record" },
+    { name: "update", description: "update record" },
   ],
   route: async(ctx: ExecutableContext, self: Data, args: any) => {
     if (!args.content) {
       return {
         tip: "需要补充参数 content，可选参数 id, 留空表示新建，非空表示更新",
-        intents: [], 
+        intents: [],
       }
     }
-
-    if (args.id == "") {
-      return {
-        intents: ["create"], 
-      }
-    } else {
-      return {
-        intents: ["update"], 
-      }
-    }    
+    return { intents: args.id ? ["update"] : ["create"] };
   },
   exec: async(ctx: ExecutableContext, self: Data, args: any) => {
-    if (args.content == "") {
-      return {
-        err: "content 为空，无法创建或更新"
-      }
-    }
-    
-    if (args.id == "") {
-      return {
-        message: "record created",
-        data: { ok: true },
-      }
-    }
-    
-    return {
-      message: `record updated`,
-      data: { ok: true },
-    }
+    if (!args.content) return { err: "content 为空，无法创建或更新" };
+    return args.id
+      ? { message: "record updated", data: { ok: true } }
+      : { message: "record created", data: { ok: true } };
   },
 };
 ```
+
+## 迁移映射
+
+- 旧 `ObjectMethod.intents` / `ObjectMethod.route` → **删**，迁至独立 `ObjectGuideMethod`（issue 2026-06-26-object-guide-method-split）。method 退回纯「单步直执行」。
+- 旧 `method_exec_form.data.targetMethod` → `guideName`（构造期 alias 兼容旧 `targetMethod` 字段一段时间）；旧 `tip`/`intents` → `currentTip`/`currentIntents`。
+- runtime `runRoute(targetObjectId, methodName, args)` 签名内部参数名义改 `guideName`——resolve guide 而非 method。新增 `execGuide(targetObjectId, guideName, args)` 给 form.submit **跳过 dispatch** 直调 guide.exec（避开递归开 form）。
+- WindowClassDecl 加 `guide_methods?: string[]`（与 `object_methods` 平级，注册期同等 fail-loud cohesion 校验）。
+- `for_reflectable` 不存于协议层——历史 self.md 描述移除。

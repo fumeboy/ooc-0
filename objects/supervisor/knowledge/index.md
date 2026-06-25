@@ -81,11 +81,11 @@ LLM 看到的世界不是裸 prompt，而是一组 **ContextWindow 对象**—�
 
 ## executable
 
-Object 行动的唯一方式 = 经 **tool 原语**与 context window 交互；tool 原语恒为 3 个：exec（在某 window 上调一条 method）/ close（关窗 = 移除对其对象的一个引用 + honor 结构窗 `closable` 守卫）/ wait（等某窗 IO 结果），compress 是 window method 而非原语。**`active` / `unactive` 是 class 生命周期钩子（引用 0↔1 触发，见 A 区核心 10）、不是新原语——tool 原语恒定 3 个。**可执行的 method 严格分两维——**object method**（改 object 自身 Data、可产副作用，归本维度）与 **window method**（只动展示态，归 readable）；二者经同一 exec 入口按名分派，同 class 内不可重名、注册期 fail-loud。object method **只管 LLM 侧行动**——`for_ui_access` 标记退役，人机分流移交 visible 维度的 **visible/server 模块**（独立签名、ctx 无 thinkloop thread），不再靠 executable object method 上的标记。object method 还可声明 `route` 做**填表式渐进执行**（form：refine 补参、submit 提交），并以推导出的 intents 驱动知识激活。实施细节见 [self.md](../children/executable/self.md)。
+Object 行动的唯一方式 = 经 **tool 原语**与 context window 交互；tool 原语恒为 3 个：exec（在某 window 上调一条 method）/ close（关窗 = 移除对其对象的一个引用 + honor 结构窗 `closable` 守卫）/ wait（等某窗 IO 结果），compress 是 window method 而非原语。**`active` / `unactive` 是 class 生命周期钩子（引用 0↔1 触发，见 A 区核心 10）、不是新原语——tool 原语恒定 3 个。**可执行的 method 分**三类**——**object method**（单步直执行，改 object 自身 Data、可副作用，归本维度）、**object guide method**（多步引导，调用即跑 route 算意图：quickSubmit 直执行 / 否则自动开 form 渐进 refine + submit，归本维度）与 **window method**（只动展示态，归 readable）；三者经同一 exec-by-name 入口分派，**method/guide/window method 三侧 name 全集不可重名、注册期 fail-loud**，且 window decl 的 `object_methods` / `guide_methods` 引用悬空亦 fail-loud。method 只管 LLM 侧行动——`for_ui_access` 标记退役，人机分流移交 visible 维度的 **visible/server 模块**（独立签名、ctx 无 thinkloop thread），不再靠 executable method 上的标记。guide 持 `route` 做填表式渐进执行（form：refine 补参、submit 提交），并以 route 输出的 intents 驱动知识激活。实施细节见 [self.md](../children/executable/self.md)。
 
 ## readable
 
-一个 Object 进入 LLM context 时的「长相」由它**自己的 readable** 算出，而非渲染器替它决定：readable 把业务 **Data 投影成 window**——按视角动态算出投影 class 与展示 content，投影是「读」的算子、不持久化。投影态 **win** 与业务 Data 物理分离落盘；**window method** 只动 win、返回不可变的新 win、不碰 Data（与 object method 的根本分界）。同一 Object 可按视角多视角投影成不同 window class；静态 `readable.md` 名片是投影槽位的最低优先级兜底。readable 与 visible 互为镜像——前者面向思考者、后者面向用户。实施细节见 [self.md](../children/readable/self.md)。
+一个 Object 进入 LLM context 时的「长相」由它**自己的 readable** 算出，而非渲染器替它决定：readable 把业务 **Data 投影成 window**——按视角动态算出投影 class 与展示 content，投影是「读」的算子、不持久化。投影态 **win** 与业务 Data 物理分离落盘；**window method** 只动 win、返回不可变的新 win、不碰 Data（与 object method 的根本分界）。同一 Object 可按视角多视角投影成不同 window class；**默认投影 class 名约定**：`"default"` 是保留关键字——单视角 class 的唯一 decl 强约束 `class:"default"`（注册期 fail-loud），多视角 class 各视角具名（如 thread = `thread`/`talk`/`reflect_request`）、不强制 default。静态 `readable.md` 名片是投影槽位的最低优先级兜底（`resolveDefaultWindowClass` 找不到 default decl 时回退到此）。readable 与 visible 互为镜像——前者面向思考者、后者面向用户。实施细节见 [self.md](../children/readable/self.md)。
 
 ## persistable
 
@@ -138,7 +138,7 @@ kind 口径：`class`=定义，`object`=实例。
 
 ## executable × thinkable
 
-thinkable 构造 context，executable 定义 context 里的 method 能做什么——分界即 thinkable 的 llm 子模块只管「如何请求模型」，「模型能做什么」由 executable 的 tool/method 决定。LLM 操作世界的唯一通道是 3 个 tool 原语（exec / close / wait），它们是 executable 的核心，而消费它们的循环是 thinkable 的 thinkloop：每轮「构造 context→调 LLM→执行 tool→写事件」。两维最深的交汇在**渐进式知识激活**：object method 的 `route` 在发起调用时先跑、算出 `intents`，这些 intents 反向驱动 thinkable 的 knowledge 按 `intent::` trigger 激活——执行到哪、知识激活到哪。form（ObjectMethodForm window）由 executable 开、refine/submit 推进，但激活机制归 thinkable。详见 [executable](../children/executable/self.md) 与 [thinkable](../children/thinkable/self.md)。
+thinkable 构造 context，executable 定义 context 里的 method 能做什么——分界即 thinkable 的 llm 子模块只管「如何请求模型」，「模型能做什么」由 executable 的 tool/method 决定。LLM 操作世界的唯一通道是 3 个 tool 原语（exec / close / wait），它们是 executable 的核心，而消费它们的循环是 thinkable 的 thinkloop：每轮「构造 context→调 LLM→执行 tool→写事件」。两维最深的交汇在**渐进式知识激活**：**object guide method** 的 `route` 在发起调用时先跑、算出 `intents`，这些 intents 反向驱动 thinkable 的 knowledge 按 `intent::` trigger 激活——执行到哪、知识激活到哪。form（method_exec_form window）由 executable 开、refine/submit 推进，但激活机制归 thinkable（phase-1 简化：所有 form 的 currentIntents 合并为 `ActivationContext.activeIntents`；phase-2 按 form objectId 作 source-key 分组替换 + 撤销）。注：method 不再持 `route`——单步语义留 `ObjectMethod`、多步语义迁 `ObjectGuideMethod`。详见 [executable](../children/executable/self.md) 与 [thinkable](../children/thinkable/self.md)。
 
 ## readable × thinkable
 
@@ -150,7 +150,7 @@ thinkable 的 knowledge 双源——seed（stone `knowledge/` 进 git）与 sedi
 
 ## executable × readable
 
-method 严格分两维但共用同一 **exec-by-name** 入口：object method（executable，改 Data、可副作用，收 `(ctx, self, args)`）vs window method（readable，只动投影态 win、返回不可变的新 win、不碰 Data，收 `(ctx, self, before_win, args)`）。因为二者经同一 exec 入口分派，同一 class 上**不可重名**——重名有 dispatch 优先级歧义，注册期直接 fail-loud。两维的装配交汇点是 window class 声明 `WindowClassDecl{class, object_methods, window_methods}`：一个投影 class 声明展示哪些 object method（按名引用 executable）+ 提供哪些 window method（readable 自有）。Object 多视角可投影成不同 window class，各自挑选展示的 object method。**B→A 下 self/win 切分更清**：object method 的 `self` = session 对象表中该 objectId 单一实例的 data（共享、改即处处见，A 区核心 4）；window method 的 `before_win` = **本窗自己的** `win`（视角态留窗、**不入对象表**）——故同一 object 的多视角窗各持自己 win、共享同一 data。详见 [executable](../children/executable/self.md) 与 [readable](../children/readable/self.md)。
+method 严格分**三类**但共用同一 **exec-by-name** 入口：object method（executable 单步，改 Data、可副作用，收 `(ctx, self, args)`） / object guide method（executable 多步，先跑 route 算意图后开 form 或 quickSubmit） / window method（readable，只动投影态 win、返回不可变的新 win、不碰 Data，收 `(ctx, self, before_win, args)`）。三者经同一 exec 入口分派，**任意两侧重名都注册期直接 fail-loud**（dispatch 优先级歧义）。两维的装配交汇点是 window class 声明 `WindowClassDecl{class, object_methods, guide_methods?, window_methods}`：一个投影 class 声明展示哪些 object method（按名引用 `ExecutableModule.methods`）+ 展示哪些 guide method（按名引用 `ExecutableModule.guides`） + 提供哪些 window method（readable 自有）。**注册期 cohesion 闸门**（`assertExecutableMethodGuideCohesion`）：method/guide/window 三侧重名 fail / window decl 的 `object_methods` 与 `guide_methods` 引用悬空 fail。**readable.window cohesion**：单视角 class（`window[].length === 1`）唯一 decl 的 `class` 字段强约束 `"default"`（保留关键字）、多视角 class 各 decl `class` 不重复（否则 `resolveWindowClass` 静默取首个）、多视角是否提供 default 自决。Object 多视角可投影成不同 window class，各自挑选展示的 method/guide。**B→A 下 self/win 切分更清**：object method 的 `self` = session 对象表中该 objectId 单一实例的 data（共享、改即处处见，A 区核心 4）；window method 的 `before_win` = **本窗自己的** `win`(视角态留窗、**不入对象表**)——故同一 object 的多视角窗各持自己 win、共享同一 data。详见 [executable](../children/executable/self.md) 与 [readable](../children/readable/self.md)。
 
 ## reflectable × persistable
 
@@ -182,7 +182,7 @@ knowledge_base 是单例 object，经 `open_knowledge` 把知识条目接入系�
 
 ## method_exec_form
 
-form 是 object method 填表式渐进执行的载体——× executable：object method 可声明 `route`，发起调用时先跑 route 算出 `ObjectMethodIntents{tip, intents, quickSubmit}`；`quickSubmit` 则直接执行，否则参数不齐时不执行，开一张 **form** 入 context，把 `tip` 回作补参提示。form 自身是个对象，持累积参数 + 填表态，注册 `refine`（merge 新参、重跑 route 刷新 tip/intents，失败可复活）与 `submit`（用累积参数真正执行、成功后退场）两条 method。× thinkable：route 算出的 `intents` 驱动渐进式知识激活——填到哪个意图，关联该意图的 knowledge 随之激活、离开即卸载（`intent::`/`method::` 触发）。form 机制本身在 thinkable/executable，`method_exec_form` 只是其类型归位。详见 [executable](../children/executable/self.md)。
+form 是 **ObjectGuideMethod 多步引导**的载体——× executable：guide method 持 `route`，dispatch 命中时先跑 route 算出 `ObjectMethodIntents{tip, intents, quickSubmit}`：`quickSubmit=true` 直接执行 guide.exec；否则 runtime 自动 `instantiate(_builtin/agent/method_exec_form, { targetObjectId, guideName, accumulatedArgs:args, currentTip, currentIntents })`，把 form ref 作为 `refs:[formRef]` 返给 tool call。form 自身是个对象，持累积参数 + 填表态，注册 `refine`（merge 新参、重跑 route 刷新 currentTip/currentIntents，失败把 err 留在 lastError、可继续 refine）与 `submit`（经 `runtime.execGuide` **跳过 dispatch、直调 guide.exec**——避开递归再开 form）两条 object method。form readable 投影 `context` 段含 `target_object` / `guide` / `accumulated_args` / `current_tip` / `current_intents` / `last_error` 子节点，LLM 看 form 窗即知全貌。× thinkable：route 算出的 `intents` 驱动渐进式知识激活——填到哪个意图，关联该意图的 knowledge 随之激活、离开即卸载（`intent::` trigger）。phase-1 简化：所有 form 的 currentIntents 合并入 `ActivationContext.activeIntents`；phase-2 按 form objectId 作 source-key 分组替换 + 撤销（API 在 `core/thinkable/knowledge/source-intents.ts` 已预留）。详见 [executable](../children/executable/self.md)。
 
 ## pr / reflect_request
 
