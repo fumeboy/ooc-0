@@ -42,16 +42,20 @@ activates_on:
 
 **自举（self-hosting）**：用 ooc-world-meta 这个 World 来设计、文档化、实现与测试 OOC 自身。
 
+**OOC 与 host language 的边界（两条澄清）**：
+- **运行时改写颗粒度 = thread 间，不是单步内**——主张三「Object 能为自己写方法、改字段、写知识、改身份」的实现颗粒度收口到「改源码 → invalidate stone → 下次 hydrate / 下一条 thread」，不在单次 thinkloop tool call 中 in-memory mutate 自身 class prototype（前 issue 提议的 `patch_self_prototype` 不采纳）。
+- **OOC 不重新发明 host language 既有机制**——能用 TS / ESM 表达的就用（继承、模块绑定、类型约束）；OOC 只提供 TS/ESM 表达不了的部分（context window 投影、thinkloop、persistable 三层级、reflectable 反思通道等）。继承机制即典型案例：class 复用经 TS `import` + 对象 `spread`，OOC 协议层不内建 dispatch chain。
+
 > 哲学论证链见 `./ooc-philosophy.md`；大局观与 7 维度全貌见 [supervisor self.md](../self.md)。
 
 ## OOC Class/Object Model
 
 核心契约（详见 [object self.md](../children/object/self.md) 核心 1-10）：
 
-1. 一切是 object；**class 是定义，object 是实例**。class 由 **readable / executable / visible / persistable** 四件套（visible 含前端 `visible/index.tsx` + **`visible/server/index.ts`** for-ui 服务端 API）+ **`index.ts`**（装配 `export const Class`，收口后端程序路由，含 visible/server）+ **`types.ts`**（定义 object data 结构）构成。**agent 类额外具 `thinkable` 模块槽**（第五维度模块，与四件套同构在 OocClass 注册/解析）——见 `## thinkable` / `## thread`；任意 class 可声明 thinkable，但只有跑 thinkloop 的 thread 类实际注册并被调度。
-2. **class 不支持继承**：object 经 `ooc.class` 单跳继承一个 class，但 class 不可再继承 class；复用靠 import 目标 class 导出的函数。
-3. **class 分单例 / 非单例**：非单例是可复用模板、在 `index.ts` 注册 **construct** 且可被继承；单例恰一个实例（object 一旦自定义函数方法即成自身 class 的单例）、不可被继承。
-4. **object 在 LLM 视角投影成 context window**：readable 按视角把 data 动态投影成 window 的 class 与展示内容；window 投影态与 object data 分离。**类型分立**：`OocObjectInstance={id,class,data}` = 对象本身（持 data，活 **session 对象表** `objectId→唯一实例`）；`OocObjectRef` = **context window** = 对它的引用（持 `id`〔=objectId,表 key〕+ 缓存 class + 视角态〔含 parentWindowId〕、**不持 data**），`ContextWindow=OocObjectRef`。内存经 `objectDataOf(ref, table)` 按 id 从对象表解析 data（`classOf(ref)=ref.class`），磁盘只落 ref，故同 objectId 多窗读同一份 data（live-ref 仅同 job 内）。表挂线程树根、随 job 释放（owner 见 E 区 `## runtime`）。
+1. 一切是 object；**class 是定义，object 是实例**。**class 必有 `index.ts` + `types.ts` + 四件套**（readable / executable / visible / persistable，visible 含前端 `visible/index.tsx` + **`visible/server/index.ts`** for-ui 服务端 API）；agent 类额外注册 **`thinkable`** 模块槽（第五维度模块，与四件套同构在 OocClass 注册/解析，见 `## thinkable` / `## thread`；任意 class 可声明 thinkable，但只有跑 thinkloop 的 thread 类实际注册并被调度）。**object instance 不必有 `index.ts`**——无 `index.ts` 的 object 不是新 class、是父 class 的一个 instance（runtime 不在 ClassRegistry 注册新 class，hydrate 时 `OocObjectInstance.class = ooc.class` 直指父）。
+2. **OOC Class 协议层不内建任何继承 / dispatch chain 机制**：ClassRegistry 注册扁平的 class 定义，无 chain 元信息、无沿链 fallback；resolveXxx **本类直查**。object 经 `ooc.class` 单跳 binding 一个 class 作为身份模板。**class 想复用另一个 class 的能力，由其 `index.ts` 用 TS 标准 `import` + 对象 `spread`（或 method 级 import 函数 + 显式调）在源码侧完成**——「如何继承」属于 class 实现者的自由，OOC 协议不规约、不感知。可选 helper：`extendClass`（`packages/@ooc/core/runtime/inherit.ts`，**仅 `executable.methods` 一档** method-name 合并）。
+3. **class 分单例 / 非单例**：非单例是可复用模板、在 `index.ts` 注册 **construct**；单例恰一个实例（object 一旦自定义函数方法即成自身 class 的单例）。**单例不可被继承是源码组织约定**——OOC 协议层不强制（无运行时感知），由代码评审 / lint 拦截。
+4. **object 在 LLM 视角投影成 context window**：readable 按视角把 data 动态投影成 window 的 class 与展示内容；window 投影态与 object data 分离。**类型分立**：`OocObjectInstance={id,class,data}` = 对象本身（持 data，活 **session 对象表** `objectId→唯一实例`）；`OocObjectRef` = **context window** = 对它的引用（持 `id`〔=objectId,表 key〕+ 缓存 class + 视角态〔含 parentWindowId〕、**不持 data**），`ContextWindow=OocObjectRef`。内存经 `objectDataOf(ref, table)` 按 id 从对象表解析 data（`classOf(ref)=ref.class`），磁盘只落 ref，故同 objectId 多窗读同一份 data（live-ref 仅同 job 内）。表挂线程树根、随 job 释放（owner 见 E 区 `## runtime`）。**ServerLoader 双路径**：有 `index.ts` → `import { Class } → registry.register(Class)`；无 `index.ts` → **不**向 registry 注册新 class，hydrate 时 `OocObjectInstance.class = ooc.class`（=父 class id），resolveXxx 直接命中父 class 的字段——两条路径语义同质，前者由子源码 spread 父、后者由 instance.class 直指父。
 5. **object method（executable）vs window method（readable）**：前者改 object data、可产生副作用；后者只动 window 投影态、返回新的不可变 window，不碰 object。
 6. **visible 经 `visible/server` 提供 UI 服务端 API**：前端经 callMethod 请求这些 for-ui server method（ctx 无 thinkloop thread，改 data → persistable.save）；人机分流不再靠 executable object method 上的 `for_ui_access` 标记（退役）。
 7. **持久化可自定义**：object 经 persistable 控制序列化目录与方式，未定义则走系统默认。
@@ -174,7 +178,7 @@ agent = object + LLM：在 object base 标准具备的四维（readable / execut
 
 ## knowledge_base / knowledge
 
-knowledge_base 是单例 object，经 `open_knowledge` 把知识条目接入系统；其 child `knowledge`（class）是知识条目窗（命名空间从属、不继承 parent，对象模型核心 8）。它的故事主要落在 × thinkable：每条 knowledge 持 `activates_on` trigger，thinkloop 构造 context 时对每篇求激活级别，命中即按级别（`show_description` 只露标题描述 / `show_content` 展开正文）激活进 context；这与渐进式执行咬合成"执行到哪、知识激活到哪"，控制每轮 context 体积。knowledge 的双源（seed / sediment）**磁盘加载与沿祖先 / parentClass 的继承链解析**由 **knowledge_base builtin 的 loader 模块**（`builtins/knowledge_base/loader.ts`）实现；**激活协议**（`activates_on` 触发求值 = `computeActivations`/activator）仍归 core thinkable 的 knowledge 子模块、在 context 构造期（thread thinkable 的 activator-windows/protocol）调用——物理位置 vs 语义属性分立。loader→core parser/persistable 是 builtin→core（合法）。**两源的编辑落点按版本化分**：**seed knowledge**（stone / 进 git）经 app 通用 file-edit 原语 `PUT /stones/:id/file?path=knowledge/x.md`（A1，版本化）；**sediment knowledge**（pool / 不进 git、非版本化）走独立 `/api/pools/` 端点——seed/sediment **不并入同一原语**（A1 只管 stone 版本化文件，pool 不进 git 与「版本化文件编辑」矛盾）。
+knowledge_base 是单例 object，经 `open_knowledge` 把知识条目接入系统；其 child `knowledge`（class）是知识条目窗（命名空间从属、不继承 parent，对象模型核心 8）。它的故事主要落在 × thinkable：每条 knowledge 持 `activates_on` trigger，thinkloop 构造 context 时对每篇求激活级别，命中即按级别（`show_description` 只露标题描述 / `show_content` 展开正文）激活进 context；这与渐进式执行咬合成"执行到哪、知识激活到哪"，控制每轮 context 体积。knowledge 的双源（seed / sediment）**磁盘加载（双源 seed + sediment 合并、sediment 覆盖 seed，不沿继承链）**由 **knowledge_base builtin 的 loader 模块**（`builtins/knowledge_base/loader.ts`）实现；**激活协议**（`activates_on` 触发求值 = `computeActivations`/activator）仍归 core thinkable 的 knowledge 子模块、在 context 构造期（thread thinkable 的 activator-windows/protocol）调用——物理位置 vs 语义属性分立。loader→core parser/persistable 是 builtin→core（合法）。**`method::<class>::<method>` 触发不解析 class 继承**——子若想用父 knowledge 触发条件，自己 import 父 knowledge md 并重声明本类 id 的 trigger（与 `## OOC Class/Object Model` 核心 2 一致）。**两源的编辑落点按版本化分**：**seed knowledge**（stone / 进 git）经 app 通用 file-edit 原语 `PUT /stones/:id/file?path=knowledge/x.md`（A1，版本化）；**sediment knowledge**（pool / 不进 git、非版本化）走独立 `/api/pools/` 端点——seed/sediment **不并入同一原语**（A1 只管 stone 版本化文件，pool 不进 git 与「版本化文件编辑」矛盾）。
 
 ## method_exec_form
 
