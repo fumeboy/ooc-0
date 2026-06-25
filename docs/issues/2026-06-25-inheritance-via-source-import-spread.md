@@ -76,10 +76,37 @@ resolveObjectMethod(classId, name): ObjectMethod | undefined {
 
 ### 改动 3：继承经 `import { Class } + 对象 spread` 表达
 
-子的 `index.ts` 模板：
+#### 渐进性原则（关键约束）
+
+**默认 object 继承 class 不需要 `index.ts`**——只有 object 想为自己元编程（写自有 method / readable / persistable / lifecycle hook）时才需要写。
+
+| Object 复杂度 | 目录结构 |
+|---|---|
+| **纯实例**（只持身份 + knowledge，无自有程序面） | `package.json` + `self.md` + `readable.md` + `knowledge/` ——**没有 `index.ts`**，ServerLoader 直接走 `ooc.class` 实例 binding、运行时所有 facet 都用父 class 的 |
+| **自有程序面的实例**（要写新 method / override 行为 / 加新 Data 字段） | 加 `index.ts` + `types.ts` + `executable/` 等——自己装配出 OocClass（经 import + spread 复用父） |
+
+当前 `supervisor`（`.ooc-world-meta/.../objects/supervisor/`）就属第一类——只有 self.md / readable.md / knowledge / children，**没有也不需要 index.ts**。继承 `_builtin/agent` 的全部行为，ServerLoader.loadAndRegisterStoneClass 现有路径已支持「无 index.ts → 注册空 Class + parentClass 链」。
+
+#### ServerLoader 双路径
+
+```
+扫描 stones/main/objects/<id>/：
+├─ 有 index.ts → import { Class } → registry.register(Class)
+│  ↓ 子 Class 已自带继承（经 import + spread 在自己源码里表达）
+│  ↓ 不需要 ServerLoader 做任何 parentClass 兜底
+│
+└─ 无 index.ts → 只有 package.json 的 ooc.class
+   ↓ ServerLoader 经 ooc.class 找到父 class
+   ↓ 注册一个空 Class { id: <objectId>, ...parentClass }（运行时 spread）
+   ↓ 等同于子写了 index.ts: export const Class = { ...parentClass, id: "<self>" }
+```
+
+**两条路径的核心一致性**：「无 index.ts」等价于「index.ts 仅 spread 父」—— ServerLoader 兜底 = 隐式 spread，源码 spread = 显式 spread；语义同质。
+
+#### 子的 `index.ts` 模板（仅当需要时）
 
 ```ts
-// stones/main/objects/coder/index.ts
+// stones/main/objects/coder/index.ts —— 只有 coder 想加自己的方法时才写此文件
 import type { OocClass } from "@ooc/core/runtime/ooc-class.js";
 import { Class as agentClass } from "@ooc/builtins/agent";
 import type { Data } from "./types.js";
@@ -102,6 +129,16 @@ export type { Data } from "./types.js";
 2. **ESM live binding 自动同步**：父 class 改了（hot-reload 后），子 spread 拿到的是 module live binding——下次构造或下次 dispatch 就是新版本。**完全保留 prototype chain 的"父变子变"语义**，但不需要 OOC 自建 chain。
 3. **TS 编译期类型检查**：spread 的字段都按 TS 类型 check；子 Data extends 父 Data 也是纯 TS。
 4. **任意粒度灵活复用**：见下表。
+
+#### Object 从无 index.ts 演化到有 index.ts
+
+agent 在某个时刻想为自己元编程（加新 method / override 行为）——这是一个**显式 reflectable 操作**：
+1. agent 经 reflectable feat-branch 通道在自己的 stone 目录创建 `index.ts` + `types.ts` + `executable/method.foo.ts`
+2. commit + PR + reviewer + merge
+3. ServerLoader 重新 load：发现 index.ts 出现，切换路径（无 index.ts → 有 index.ts）
+
+**反向同理**——若 agent 决定回归"纯实例"形态，删除 index.ts 即可。
+
 
 ### 改动 4：复用粒度由子 TS 源码自由表达
 
