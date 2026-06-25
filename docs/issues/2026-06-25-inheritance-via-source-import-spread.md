@@ -1,6 +1,6 @@
 ---
 title: OOC Object 继承经源码 import + 对象 spread —— 不内建 chain dispatch
-status: landed
+status: verified
 date: 2026-06-25
 supersedes: 2026-06-25-inheritance-as-prototype-chain.md
 worktree: .worktree/inheritance-spread/
@@ -693,4 +693,40 @@ E 区
 - **lifecycle.md 多处 `object-lifecycle.ts` 函数行号锚漂移**（L25/L27/L29/L36/L38/L42/L43）—— 真实派发引擎已迁到 `thread-runtime.ts:251-269`，具体函数名 + 行号均失效。本 P3 严格只清 inheritance-spread 相关漂移未清。
 - **builtins.md L12「self.md 只属 ooc agent 实例」与「除 supervisor 外的 builtin 都无 self.md」一句**与改动 3「纯实例 object 无 index.ts、仍可有 self.md」需核对一致性。
 - **session-level reverse-binding invalidate**：mergeFeatBranch 当前只清 ServerLoader class cache，不触动 sessionRegistries——优化路径未实施。
+- **PR resolve / mergeFeatBranch 双源分裂**（验收发现）：`stone-versioning.ts:290 mergeFeatBranch`（含本 issue D7 invalidate 钩）当前没有任何 import caller；实际 PR 测试路径走的是 `persistable/feat-branch.ts:146` 的同名 `mergeFeatBranch`（无 invalidate 钩）。需另开 issue 统一双源 + 完整接通 PR auto-merge 闸。
+
+## 步骤 4 落地验收（design-workflow）
+
+按 design-workflow 步骤 4，supervisor 派 4 个独立验收官 sub agent：**文档验收 / 代码验收 / 退潮验收 / 漂移验收**，对照「裁决」+「落地验收」段独立核「文档/代码/退潮/漂移」四项。
+
+### 第一轮验收结果
+
+| 验收官 | 结论 | 关键发现 |
+|---|---|---|
+| 文档验收 | 有缺口 | D1-D13 主回流落地全 ✅；P1 缺口 2 处（`readable/self.md:69` 沿 self→父类、`thinkable/knowledge/context.md:135` class 继承链上的方法）+ P2 文件名锚漂移 4 处（`knowledge/object-model.md` 不存在） |
+| 代码验收 | 通过 + 1 LOW + 1 MEDIUM | 主源码全合裁决，6 gate 全绿；LOW: `skill_index/index.ts:5` 注释「沿继承链」残留；MEDIUM: `stone-versioning.ts:290 mergeFeatBranch` 与 `feat-branch.ts:146` 同名分裂、本 issue 加的 invalidate 钩当前未生效 |
+| 退潮验收 | 全清通过 | 9 项退役清单全部干净；仅 issue 文件自身 + 合规负向声明命中 |
+| 漂移验收 | 轻微可接受 | 范围/概念/语义/禁令 5 维度核完无 P0；D7 落地保守（class-level invalidate 而非 sessionRegistry 清空），但已自归 follow-up，可接受 |
+
+### 第二轮补缺口（P3 round 2）
+
+针对文档验收 + 代码验收的 P1 / LOW 缺口（共 8 处漂移点），supervisor 亲手 patch，落 2 个 commit：
+
+| 仓 | commit | 修补点 |
+|---|---|---|
+| 父仓 | `de6cdece` docs: P3 drift fixes round 2 | skill_index/index.ts:5 + agent/readable/index.ts:12 + thread/TODO.md:8 + flow-object.ts:28 |
+| 对象树 | `54c2fd7` docs(*): P3 round 2 drift fixes | readable/self.md:69 + readable/knowledge/tests.md:34 + thinkable/knowledge/{context,agent,thread,knowledge-activation}.md + object/knowledge/example.md frontmatter |
+
+**round-2 后退潮门**：
+- `bun run verify` 6 gate 全绿
+- 父仓 `rg '沿继承链\|沿 self→父类\|沿 class 链\|class 继承链上的方法\|object-model\.md\|inheritClass\|selfThenChain\|object-lifecycle\.ts\|单跳继承' packages/@ooc/`：剩 1 处合规负向（`skill_index/index.ts:5` 「不沿继承链」）
+- 对象树 `rg ... objects/`：剩 5 处全部是合规「不沿继承链 / 本类直查 / 已退役旧设计」式负向声明
+
+验收闭环；status → `verified`。
+
+### 仍未做（不阻塞 verified）
+
+- **push**：父仓 main + 对象树 ooc-0 仍未 push，等用户授权。
+- **3 个 follow-up issue**：lifecycle.md 行号锚漂移 / mergeFeatBranch 双源分裂统一 / builtins.md L12 一致性——待 supervisor 后续派单开 issue。
+
 
