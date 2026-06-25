@@ -44,4 +44,13 @@ self.md（声明）/ readable（序列化）/ executable（行为）/ visible（
 
 Object 定义自己 → 展示自己（readable）→ LLM 阅读 → LLM 操作（method）→ Object 被改后重新展示。这个闭环能跑通、能演化，OOC 的设计目标就达成。
 
-> 仍未收口的 open question（裁决具体取舍时挖深）：readable/visible 耦合、parentClass vs mixin、运行时对象图的引用计数正确性、人机分流（LLM 侧 executable object method 的 `public` 轴 / 人类侧 visible/server 模块）是否够用。
+## OOC 与 host language 的边界
+
+裁决「OOC 是否要为某能力发明新机制」时的根：
+
+1. **OOC 不重新发明 host language 既有机制**——能用 TS / ESM 表达的就用（继承、模块绑定、类型约束、动态 import）；OOC 只提供 TS/ESM 表达不了的部分（context window 投影、thinkloop、persistable 三层级、reflectable 反思通道、agent 协作消息）。继承机制即典型案例：class 复用经 TS `import { Class } + 对象 spread`，OOC 协议层不内建 dispatch chain（见 `index.md` `## OOC Class/Object Model` 核心 2、`children/object/self.md` 核心 2）。
+2. **运行时改写颗粒度 = thread 间，不是单步内**——主张三「Object 能为自己写方法、改字段、写知识、改身份」的实现颗粒度收口到「**改源码 → invalidate stone → 下次 hydrate / 下一条 thread 拿到新版本**」，不在单次 thinkloop tool call 中 in-memory mutate 自身 class prototype（前 issue 提议的 `patch_self_prototype` 不采纳）。「实验态」由 git uncommitted 状态承担、「沉淀态」由 merged 状态承担，OOC 不内建第三类。
+
+这两条共同构成 OOC 的「克制熵增」底线：发明新机制前先问「能不能用 host language 表达」，发明新状态层前先问「能不能用 git 表达」。
+
+> 仍未收口的 open question（裁决具体取舍时挖深）：readable/visible 耦合、运行时对象图的引用计数正确性、人机分流（LLM 侧 executable object method 的 `public` 轴 / 人类侧 visible/server 模块）是否够用。

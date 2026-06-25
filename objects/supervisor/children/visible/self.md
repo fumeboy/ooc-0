@@ -8,6 +8,16 @@
 
 **两条正交的前端编辑通路**：① **编辑源文件**（self.md / readable.md / executable 源码 / seed knowledge）—— 经 app 的通用 file-edit 原语 `PUT /stones/:id/file?path=`（版本化 commit main），由控制面的**通用文件编辑器**承载，与某 class 自写 UI 无关；② **编辑 data**（业务运行态，如 todo.status / form.tip）—— 经 callMethod dispatch 到该 class **自写的 visible/server for-ui method**，改 object data → persistable.save（非版本化、flow 层）。前者改「源」、后者改「数据」，互不交叉。
 
+### tsx 不参与 OocClass 继承
+
+**tsx 是文件资源、不是 OocClass 字段**——`visible/index.tsx`、`client/pages/<page>.tsx` 都是磁盘文件，由 client-source-url endpoint 直接按 object 物理路径解析、给前端 `dynamic import`，**不进 ClassRegistry**、不参与 `## OOC Class/Object Model` 核心 2 的 spread 继承。
+
+- 子需要自己的 UI 时**自己写 `visible/index.tsx`**；缺则前端 fallback 到 `StoneFallback`。
+- 子也可经用户态 ESM `export { default } from "@ooc/builtins/agent/visible/index.tsx"` 复用父 tsx——但这是**纯 ESM 机制、无 OOC 介入**，与「class 复用经 spread」是同一类型的「用 host language 表达」。
+- `client/pages/<page>.tsx` flow scope 同理。
+
+与之对照：visible/server（`visible/server/index.ts`）**确实是 OocClass 模块槽**（`Class.visibleServer?`，经 `resolveVisibleServer` 解析、本类直查）——它走核心 2 的 spread 继承约定（子可 `import { Class as agent } from "@ooc/builtins/agent"; visibleServer: agent.visibleServer`）。**tsx 与 visible/server 走两条不同通路**：前者是文件资源（前端 import）、后者是后端模块（registry 解析）。
+
 ## 我负责的
 
 - **stone client**：每个 Object 在自己的 stone 里有 `stones/<self>/visible/index.tsx`——跨 session 稳定的单页入口（"主页"）。
