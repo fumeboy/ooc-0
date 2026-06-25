@@ -16,7 +16,7 @@ readable 是一个 class 的维度模块，与 executable / persistable 并列�
 export const Class = { construct?, executable, readable, persistable }
 ```
 
-- `readable` —— 本维度模块（`ReadableModule`，`packages/@ooc/core/readable/contract.ts:78`）：`readable` 投影函数 + `window` 投影 class 声明。
+- `readable` —— 本维度模块（`ReadableModule`，`~~packages/@ooc/core/readable/contract.ts:78~~（已删除）`）：`readable` 投影函数 + `window` 投影 class 声明。
 - `executable` —— object method（改 Data / 副作用）。
 - `persistable` —— 自定义序列化（省略走系统默认）。
 - `construct` —— 仅非单例 class 注册（产出新实例初始 Data）。

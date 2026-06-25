@@ -14,7 +14,7 @@ window 的展示态是 `win`，与业务 `Data` 物理分离：runtime 实例 `O
 
 ## window method：只动 win、返回新 win
 
-window method 与 object method 并列，但签名与归属不同（`WindowMethod`，`packages/@ooc/core/readable/contract.ts:51`）：
+window method 与 object method 并列，但签名与归属不同（`WindowMethod`，`~~packages/@ooc/core/readable/contract.ts:51~~（已删除）`）：
 
 - 由 readable 维度声明在 `readable.window[].window_methods` 里（`contract.ts:74`），不在 executable 的 object method 表。
 - exec 签名 `(ctx, self, before_win, args)`：`self` 是只读 Data（据业务数据算合法范围，如行数上限），`before_win` 是当前投影态，`args` 是调用参数。

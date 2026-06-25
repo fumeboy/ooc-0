@@ -10,7 +10,7 @@ observable 在 thinkloop 周围加观测点，把每一轮 LLM 调用的输入/�
 
 ## LlmObservation（内存最近一次）
 
-`packages/@ooc/core/observable/index.ts:87-118`：
+`~~packages/@ooc/core/observable/index.ts:87~~（已删除）-118`：
 - `writeLatestLlmInput` / `writeLatestLlmOutput`：thinkloop 在请求前后调用；有 persistence 时同步落盘 `llm.input.json` / `llm.output.json`（始终落盘，与 debug 开关无关）。
 - `getLatestLlmObservation`：测试与控制面读取最近一次 input/output/provider/model。
 
@@ -18,12 +18,12 @@ observable 在 thinkloop 周围加观测点，把每一轮 LLM 调用的输入/�
 
 ## loop_NNNN 三类文件（默认关闭，enableDebug 开启）
 
-`packages/@ooc/core/observable/index.ts:126-221` 的 `beginLlmLoop` / `finishLlmLoop` 分配 loopIndex（4 位 0 padding）、计时、字节统计，开启后写 `<threadDir>/debug/`。落点路径由 `packages/@ooc/core/observable/debug-file.ts:154` 的 `debugDir(ref)` = `threadDir(ref)/debug` 解析，`threadDir`（`persistable/common.ts:72`）= `objectDir/threads/<tid>`、`objectDir`（同文件:61）= `flows/<sid>/objects/<nestedObjectPath>`——即运行时统一落 `flows/<sid>/objects/<id>/threads/<tid>/debug/`，与 stone identity 同落 `objects/<id>/`。三类文件：
+`~~packages/@ooc/core/observable/index.ts:126~~（已删除）-221` 的 `beginLlmLoop` / `finishLlmLoop` 分配 loopIndex（4 位 0 padding）、计时、字节统计，开启后写 `<threadDir>/debug/`。落点路径由 `~~packages/@ooc/core/observable/debug-file.ts:154~~（已删除）` 的 `debugDir(ref)` = `threadDir(ref)/debug` 解析，`threadDir`（`persistable/common.ts:72`）= `objectDir/threads/<tid>`、`objectDir`（同文件:61）= `flows/<sid>/objects/<nestedObjectPath>`——即运行时统一落 `flows/<sid>/objects/<id>/threads/<tid>/debug/`，与 stone identity 同落 `objects/<id>/`。三类文件：
 - `loop_NNNN.input.json`：本轮 inputItems + contextSnapshot。
 - `loop_NNNN.output.json`：normalized outputItems + provider/model。
 - `loop_NNNN.meta.json`：provider / model / latencyMs / messageCount / toolCount / toolCallCount / contextBytes / status / error / **windowsSnapshot**（每条 entry `{id, class, contentHash, parentWindowId?, status?, compressLevel?, fileDiff?}`）。
 
-loopIndex 由 `packages/@ooc/core/runtime/observable-store.ts:94-110` 的 `loopKey` + `allocateLoopIndex` 分配。
+loopIndex 由 `~~packages/@ooc/core/runtime/observable-store.ts:94~~（已删除）-110` 的 `loopKey` + `allocateLoopIndex` 分配。
 
 **为何按 persistence 分两套 key**（observable-store.ts:94-98）：
 - 有 persistence：key = `{baseDir}:{sessionId}:{objectId}:{threadId}`——同一 thread 跨进程（worker 重启 / 多进程）共享计数，loopIndex 连续。

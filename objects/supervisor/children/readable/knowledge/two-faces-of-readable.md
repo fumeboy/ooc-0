@@ -15,7 +15,7 @@ activates_on:
 
 **统一判据 = "Object 怎样被读"**。两面都回答这个问题——静态名片是"被读到的固定自述"，动态投影是"被读到的随 Data/视角变化的展示"。
 
-**铁证（同一投影槽位的优先级回退）**：渲染器算一个 object 实例的投影时，在**同一条回退链**里依次 try，命中谁就渲染成**同一个 `<readable>` 投影**（`resolveProjection`，`packages/@ooc/builtins/agent/children/thread/thinkable/context/renderers/xml.ts:285`）：
+**铁证（同一投影槽位的优先级回退）**：渲染器算一个 object 实例的投影时，在**同一条回退链**里依次 try，命中谁就渲染成**同一个 `<readable>` 投影**（`resolveProjection`，`~~packages/@ooc/builtins/agent/children/thread/thinkable/context/renderers/xml.ts:285~~（已删除）`）：
 
 1. `resolveReadable(inst.class)?.readable(ctx, inst.data, inst.win)` —— class 的动态 readable 投影（沿继承链解析；`:251`）。
 2. 回退读盘 `readReadable(stoneRef)` —— **静态 readable.md**（无 Class.readable 时；`:268`）。

@@ -8,7 +8,7 @@ Web 控制面在 `packages/@ooc/web/`（Vite + React）。它**不持有业务�
 
 ## AppShell：URL 单向真相
 
-`packages/@ooc/web/src/app/routing.ts:42` 定义 `RouteState` 六个 kind：welcome / scope / file / stoneClient / flowPage / flowsView。`toPath(state)`（`:80`）是 URL 反向构造、`parseRoute(pathname, search, params)`（`:165`）是正向解析、`useRouteState()`（`:145`）从 react-router 当前 URL 派生 RouteState。
+`~~packages/@ooc/web/src/app/routing.ts:42~~（已删除）` 定义 `RouteState` 六个 kind：welcome / scope / file / stoneClient / flowPage / flowsView。`toPath(state)`（`:80`）是 URL 反向构造、`parseRoute(pathname, search, params)`（`:165`）是正向解析、`useRouteState()`（`:145`）从 react-router 当前 URL 派生 RouteState。
 
 `shell.tsx` 不 `setState` 改导航字段——所有 handler 走 `navigate(toPath(...))`，URL 变化经 `useRouteState` 回流为下一帧 state。这让前进/后退、刷新、URL 复制粘贴都能恢复页面。导航维度全部从 URL 派生：`activeSessionId`（`shell.tsx:64`）、`activeObjectId`（`:83`）、`activeThreadId` / `activePath`。本地 `useState` 只承担两类职责：数据缓存（tree/thread/flows/stones + hash）与 transient UI（表单 draft、modal、showSessions）。
 

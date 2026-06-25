@@ -10,7 +10,7 @@ activates_on: {"object::root": "show_description"}
 
 ## 1. 日志去重 + 限流（log-aggregator）
 
-`packages/@ooc/core/observable/log-aggregator.ts:72-108` 提供**单一受控 console 收口**：
+`~~packages/@ooc/core/observable/log-aggregator.ts:72~~（已删除）-108` 提供**单一受控 console 收口**：
 
 - **去重计数**：按 caller 给的稳定 `key` 累计同类事件次数（变量部分不进 key，否则失去去重意义）。
 - **限流输出**：首 3 条直出（`EMIT_FIRST`）、之后每 100 条采样一次（`EMIT_EVERY`，带 `(×count)` 总数后缀）。370× 收口为 ~6 行 + 总数可见。
@@ -21,7 +21,7 @@ activates_on: {"object::root": "show_description"}
 
 ## 2. 系统活动快照（/api/runtime/activity）
 
-`packages/@ooc/core/app/server/modules/runtime/service.ts:324` 的 `getActivity` 一次读出服务端此刻全貌：running/queued job + 每个 running 的 `ageMs` + `runningCount` + 主导日志模式（`logPatterns`）。端点 `packages/@ooc/core/app/server/modules/runtime/api.activity.ts`，response schema 显式校验，route-audit.e2e 验证真路由已注册。
+`~~packages/@ooc/core/app/server/modules/runtime/service.ts:324~~（已删除）` 的 `getActivity` 一次读出服务端此刻全貌：running/queued job + 每个 running 的 `ageMs` + `runningCount` + 主导日志模式（`logPatterns`）。端点 `packages/@ooc/core/app/server/modules/runtime/api.activity.ts`，response schema 显式校验，route-audit.e2e 验证真路由已注册。
 
 ## 3. harness 超时快照
 

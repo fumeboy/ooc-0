@@ -11,7 +11,7 @@ activates_on:
 
 OOC 只写 tsx 文件 + 给出绝对路径与 `fsUrl`；真正的打包/渲染由消费方实现。当前 web 控制面用 Vite dev server 经 `/@fs/<绝对路径>/` 把本地 visible 文件暴露给浏览器 `dynamic import`。
 
-`client-source-url` endpoint 返回 `fsUrl: \`/@fs${absPath}\``（`packages/@ooc/core/app/server/modules/ui/api.client-source-url.ts:117`）。
+`client-source-url` endpoint 返回 `fsUrl: \`/@fs${absPath}\``（`~~packages/@ooc/core/app/server/modules/ui/api.client-source-url.ts:117~~（已删除）`）。
 
 两个消费入口共用同一 `/@fs/` 动态加载契约：主控制面内嵌的 `ObjectClientRenderer`，与独立预览页 `packages/@ooc/web/object-client.html` + `object-client-preview.tsx`（脱离 AppShell 单独渲染一个 Object 的 visible 组件）。
 
@@ -29,6 +29,6 @@ stone 升级为 session-worktree 模型后，业务 session 在自己 worktree �
 1. **标识符校验**：`assertSafeIdentifier`（`api.client-source-url.ts:40`）拒绝含 `/` `\` `..` `\0` 的 objectId / sessionId / page → `INVALID_INPUT`。
 2. **page 白名单**：flow 页名受 `/^[A-Za-z0-9_-]+$/` 约束（`persistable/stone-client.ts:32` flow 读写），防路径穿越。
 3. **canonical 单入口**：只解析 `visible/index.tsx`（+legacy `client/index.tsx`），不扫根具名 tsx。
-4. **fs.allow**：Vite dev server 经 `server.fs.allow` 放行 `[<repo packages 目录>, worldRoot]`（`packages/@ooc/web/vite.config.ts:117`）——即整个 world 根目录可经 `/@fs/` 访问。注意陷阱——脚本用临时 `/tmp/...` world 但 Vite 在另一 world 下运行时，`fs.allow` 不含临时目录，visible 文件会 403。
+4. **fs.allow**：Vite dev server 经 `server.fs.allow` 放行 `[<repo packages 目录>, worldRoot]`（`~~packages/@ooc/web/vite.config.ts:117~~（已删除）`）——即整个 world 根目录可经 `/@fs/` 访问。注意陷阱——脚本用临时 `/tmp/...` world 但 Vite 在另一 world 下运行时，`fs.allow` 不含临时目录，visible 文件会 403。
 
 **边界**：仓库不提供生产级渲染 host——这是 visible 维度的显式 warning。

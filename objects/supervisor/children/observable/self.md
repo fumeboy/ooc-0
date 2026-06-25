@@ -30,12 +30,12 @@
 
 ## 当前设计
 
-- LLM 快照读写：`packages/@ooc/core/observable/index.ts:87-118`（`writeLatestLlmInput` / `writeLatestLlmOutput`，有 persistence 时同步落盘）。
-- loop 计时与落盘：`packages/@ooc/core/observable/index.ts:126-221`（`beginLlmLoop` / `finishLlmLoop`，分配 loopIndex、字节统计、debug 开启时落 loop_NNNN.{input,output,meta}.json，meta 含 windowsSnapshot）。
-- 状态机底座：`packages/@ooc/core/runtime/observable-store.ts:94-166`（`ObservableStore`：loopKey/allocateLoopIndex、enableDebug、setPauseChecker/isPausing、setPermissionDecider、getLatestLlmObservation）。module-level 导出仅薄委托 `defaultObservableStore`。
+- LLM 快照读写：`~~packages/@ooc/core/observable/index.ts:87~~（已删除）-118`（`writeLatestLlmInput` / `writeLatestLlmOutput`，有 persistence 时同步落盘）。
+- loop 计时与落盘：`~~packages/@ooc/core/observable/index.ts:126~~（已删除）-221`（`beginLlmLoop` / `finishLlmLoop`，分配 loopIndex、字节统计、debug 开启时落 loop_NNNN.{input,output,meta}.json，meta 含 windowsSnapshot）。
+- 状态机底座：`~~packages/@ooc/core/runtime/observable-store.ts:94~~（已删除）-166`（`ObservableStore`：loopKey/allocateLoopIndex、enableDebug、setPauseChecker/isPausing、setPermissionDecider、getLatestLlmObservation）。module-level 导出仅薄委托 `defaultObservableStore`。
 - window hash：`packages/@ooc/core/observable/window-hash.ts`（`buildWindowsSnapshot`，type-agnostic：剥 volatile + sorted key + Bun.hash→toString(36)）。
-- 日志聚合：`packages/@ooc/core/observable/log-aggregator.ts:72-108`（`observeLog`/`observeWarn`/`logPatternSnapshot`，单一 console 收口，按稳定 key 去重计数 + 限流 + top 模式）。
-- 活动快照：`packages/@ooc/core/app/server/modules/runtime/service.ts:324`（`getActivity` 实现，汇总 running job + ageMs + logPatterns；`RuntimeActivitySnapshot` 接口定义见 `service.ts:76-86`）；端点 `packages/@ooc/core/app/server/modules/runtime/api.activity.ts`。
+- 日志聚合：`~~packages/@ooc/core/observable/log-aggregator.ts:72~~（已删除）-108`（`observeLog`/`observeWarn`/`logPatternSnapshot`，单一 console 收口，按稳定 key 去重计数 + 限流 + top 模式）。
+- 活动快照：`~~packages/@ooc/core/app/server/modules/runtime/service.ts:324~~（已删除）`（`getActivity` 实现，汇总 running job + ageMs + logPatterns；`RuntimeActivitySnapshot` 接口定义见 `service.ts:76-86`）；端点 `packages/@ooc/core/app/server/modules/runtime/api.activity.ts`。
 - 控制面其它端点（同目录）：`api.enable-debug` / `api.disable-debug` / `api.get-debug-status` / `api.get-loop-debug` / `api.list-loop-debug` / `api.enable-global-pause` / `api.disable-global-pause` / `api.get-global-pause-status` / `api.permission-decision`，把内存/落盘观测暴露给 UI。
 
 子能力：LlmObservation（最近一次 LLM 调用快照）/ debug files（落盘观测）/ pause（PauseChecker）/ context snapshot（每轮 context 快照）。

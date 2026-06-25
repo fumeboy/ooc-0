@@ -19,7 +19,7 @@ activates_on: {"object::root": "show_description"}
 
 ## RightPanel header：对话对象 + 主视图切换
 
-`packages/@ooc/web/src/app/layout/RightPanel.tsx:36` 的 `.right-header` 行（取代旧的 invisible spacer）：
+`~~packages/@ooc/web/src/app/layout/RightPanel.tsx:36~~（已删除）` 的 `.right-header` 行（取代旧的 invisible spacer）：
 
 - 左侧：**对话对象 displayName**（`:39`，取自 self.md 首行经 `useDisplayNames(objectId)` 解析，fallback objectId）。
 - 右侧：**Network 按钮**（`:49`）调 `handleShowContextWindows`，本质是 `navigate(toPath({kind:"flowsView", view:"thread_context", ...}))`，把 MainPanel 从 file viewer 等视图一键切回 thread context tree；以及 **LayoutModeToggle**（`:3` import，与 breadcrumb 那个共享 mode）。
@@ -39,7 +39,7 @@ activates_on: {"object::root": "show_description"}
 
 通用 file-viewer（CodeMirror + `llm.input.json` / `loop_*.input.json` 专用 debug viewer，已在 [[client-appshell-and-chat]] 提到）之外，另有一个**不受 world 隔离**的只读 endpoint：
 
-- `GET /api/file/read?path=&maxBytes=`（后端 `packages/@ooc/core/app/server/modules/ui/api.read-any-file.ts:15`，service `modules/ui/service.ts:198` `readAnyFile`）。
+- `GET /api/file/read?path=&maxBytes=`（后端 `~~packages/@ooc/core/app/server/modules/ui/api.read-any-file.ts:15~~（已删除）`，service `modules/ui/service.ts:198` `readAnyFile`）。
 - 用途：服务 `file_window` 详情面板预览——`file_window.path` 常是绝对路径、不一定落在 `--world` 内。
 - **256 KB 软上限**（`service.ts:198` `maxBytes = 256 * 1024`），超出标 `truncated`（`:213`）。前端经 `fetchAnyFile(path)`（endpoint `endpoints.ts:36` `readAnyFile`）消费，`.md` 走 MarkdownContent、其它走 CodeMirror。
 

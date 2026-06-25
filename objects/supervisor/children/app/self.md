@@ -21,10 +21,10 @@
 
 ## 当前设计（锚真实代码）
 
-- server 装配 + onError 全覆盖：`packages/@ooc/core/app/server/index.ts:211`（onError）/ `:217-223`（7 个 module use：health / runtime / stones / pools / ui / flows / world-config）/ `:341`（listen 0.0.0.0）。
-- world 根解析 + 端口：`packages/@ooc/core/app/server/bootstrap/config.ts:48`（`--world → OOC_WORLD_DIR → OOC_BASE_DIR → cwd`）/ `:52`（端口 `OOC_APP_PORT ?? 3000`）。
-- AppShell 导航派生：`packages/@ooc/web/src/app/shell.tsx:68`（activeSessionId）/ `:87`（activeObjectId）/ `:256`（4s thread 轮询，`setInterval(..., 4000)`）。
-- 路由真相：`packages/@ooc/web/src/app/routing.ts:42`（RouteState 6 kind：welcome / scope / file / stoneClient / flowPage / flowsView）/ `:80`（toPath）/ `:165`（parseRoute）/ `:145`（useRouteState）。
+- server 装配 + onError 全覆盖：`~~packages/@ooc/core/app/server/index.ts:211~~（已删除）`（onError）/ `:217-223`（7 个 module use：health / runtime / stones / pools / ui / flows / world-config）/ `:341`（listen 0.0.0.0）。
+- world 根解析 + 端口：`~~packages/@ooc/core/app/server/bootstrap/config.ts:48~~（已删除）`（`--world → OOC_WORLD_DIR → OOC_BASE_DIR → cwd`）/ `:52`（端口 `OOC_APP_PORT ?? 3000`）。
+- AppShell 导航派生：`~~packages/@ooc/web/src/app/shell.tsx:68~~（已删除）`（activeSessionId）/ `:87`（activeObjectId）/ `:256`（4s thread 轮询，`setInterval(..., 4000)`）。
+- 路由真相：`~~packages/@ooc/web/src/app/routing.ts:42~~（已删除）`（RouteState 6 kind：welcome / scope / file / stoneClient / flowPage / flowsView）/ `:80`（toPath）/ `:165`（parseRoute）/ `:145`（useRouteState）。
 
 ## 现状
 

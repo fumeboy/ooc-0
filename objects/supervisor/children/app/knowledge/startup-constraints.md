@@ -10,7 +10,7 @@ activates_on: {"object::root": "show_description"}
 bun --env-file=.env packages/@ooc/core/app/server/index.ts --world ./.ooc-world
 ```
 
-- **world 根目录必须显式传 `--world`**。解析顺序在 `packages/@ooc/core/app/server/bootstrap/config.ts:48`：`--world (--world-dir / --base-dir) → OOC_WORLD_DIR → OOC_BASE_DIR → process.cwd()`。
+- **world 根目录必须显式传 `--world`**。解析顺序在 `~~packages/@ooc/core/app/server/bootstrap/config.ts:48~~（已删除）`：`--world (--world-dir / --base-dir) → OOC_WORLD_DIR → OOC_BASE_DIR → process.cwd()`。
   - ⚠️ 不带 `--world` 时回退到 `process.cwd()`，把**源码目录当 world**，会在代码树写出 flows/ stones/ —— 严禁。本仓库根仅放代码与 meta，约定 world 为 `./.ooc-world`（已 gitignore）。
   - `--world` 会被归一为绝对路径：相对路径若不归一，前端 `/@fs${absPath}` 会产出坏的 `/@fs.ooc-world/...` 让浏览器 import client page 失败（config.ts:45-46 注释）。
 - **端口环境变量是 `OOC_APP_PORT`，不是 `OOC_PORT`**（`config.ts:52`：`OOC_APP_PORT ?? 3000`；`--port` flag 优先）。切端口后服务仍起在 3000，先查环境变量名是否写对。

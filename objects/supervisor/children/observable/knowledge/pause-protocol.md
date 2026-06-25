@@ -10,7 +10,7 @@ observable 提供 runtime 可注入的**暂停判定器**，在 tool call 执行
 
 ## PauseChecker
 
-`packages/@ooc/core/runtime/observable-store.ts:90,122-127`：
+`~~packages/@ooc/core/runtime/observable-store.ts:90~~（已删除）,122-127`：
 - `setPauseChecker(checker)`：runtime 注入 `(thread) => boolean | Promise<boolean>` 判定器。
 - `isPausing(thread)`：thinkloop 在 tool call 前查询；返回 true 则暂停等待介入。
 
@@ -18,7 +18,7 @@ observable 提供 runtime 可注入的**暂停判定器**，在 tool call 执行
 
 ## permission decider
 
-`packages/@ooc/core/runtime/observable-store.ts:91,129-134`：
+`~~packages/@ooc/core/runtime/observable-store.ts:91~~（已删除）,129-134`：
 - `setPermissionDecider(decider | null)` / `getPermissionDecider()`：注入 tool call 的权限决策器。
 - **silent-swallow ban**：permission 决策不允许静默吞——与 observable 整体的 silent-swallow ban 一致（permission 模型见 executable child；silent-swallow ban 是本 observable 能力的核心条款）。
 
@@ -33,7 +33,7 @@ observable 提供 runtime 可注入的**暂停判定器**，在 tool call 执行
 
 `thread.status === "paused"` 是**两条语义不同路径**的共同落点，单看 status 无法区分：
 
-1. **HITL 审批 pause**（`packages/@ooc/core/thinkable/thinkloop.ts:280-301`）：permission decider 返回 `ask` → **先 push 一个 `category:"permission", kind:"permission_ask"` event，再** `thread.status="paused"`。靠 reviewer 在决议卡 approve/reject 推进。
+1. **HITL 审批 pause**（`~~packages/@ooc/core/thinkable/thinkloop.ts:280~~（已删除）-301`）：permission decider 返回 `ask` → **先 push 一个 `category:"permission", kind:"permission_ask"` event，再** `thread.status="paused"`。靠 reviewer 在决议卡 approve/reject 推进。
 2. **系统级 pause**（`thinkable/thinkloop.ts:437-440` 的 `isPausing`，来源 session pause 或 global pause）：**不写任何 permission event**，直接 `thread.status="paused"`。靠 resume（清 pause 标记 + 重新入队）推进。
 
 **唯一可靠判别信号 = 是否存在「未决 permission_ask」**：HITL 必先写 permission_ask 才 pause、系统级必不写，故「有未决 permission event」⟺「HITL 等审批」是协议层 sound invariant。消费方（前端等）**不得**仅凭 `status==="paused"` 推断为 HITL——否则系统级 pause 会被误显示「等待审批中」却找不到决议卡。前端落点：`packages/@ooc/web/src/domains/chat/formatter.ts` 的 `threadHasPendingPermission`（formatThread 结果里 `kind==="permission_card" && !decided`）。
