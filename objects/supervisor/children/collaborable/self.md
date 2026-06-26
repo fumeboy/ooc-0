@@ -29,3 +29,9 @@
 5. 特殊而又不特殊地，OOC Agent 可以执行自己的 talk 方法，这样等同于创建自己的 sub agent thread
 6. 每个 thread 持有 inbox/outbox 数据：**thread 自己执行 say 写入自己的 outbox、并派送到对端 thread 的 inbox**——即对单个 thread 而言 inbox=收到的消息、outbox=发出的消息（与 caller/callee 身份无关）
 7. **talk(target="super") = 跨 session 自指**（reflectable 入口）：target 归一（trim+lowercase）为字面 `"super"` 时，caller 留在本 session，callee 进 super flow（sessionId="super"）、callee 对象 = caller 自己。caller object data 持 optional `superThreadRef?: { threadId, sessionId }`，幂等键 = `(callerSessionId, callerObjectId)`：同对象多次 talk(super) 复用同一 super thread。消息派送由 caller 直接写 super flow 内 callee thread 的 inbox（不走 cross-session bus）；super flow 内 self-view 的 thread 投影为 `super` 窗（reflectable 装填 4 reflect method；可见性由 readable.window 控制）。
+
+   **三元 target 形态**：综上，`talk` 的 target 字段在 collaborable 维度有**三种正交语义**——
+   - **peer**（target = 他者 objectId）：同 session 内派生一条到对端 agent 的 thread，对端 = 该 objectId（典型 agent-agent 协作）。
+   - **fork-self**（target = self.id）：同 session 内派生自己的 sub agent thread（核心 5；自我并发 / 子任务分派）。
+   - **super-alias**（target = `"super"`）：跨 session 派生到 super flow 的反思 thread，对端 = caller 自己（本核心 7；reflectable 自我迭代入口）。
+   三种形态由 target 字段值决定路由，互不冲突。
