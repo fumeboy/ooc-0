@@ -190,6 +190,10 @@ const createOrUpdate: ObjectGuideMethod = {
 };
 ```
 
+### RuntimeHandle 槽位
+
+`ctx.runtime` 注入到 method/constructor，承载「副作用需 runtime 协助」的最小面：实例化子对象（`instantiate`）、对象方法间互调（`callMethod`）、guide 路由/直执行（`runRoute` / `execGuide`）、显式开 form（`open`）。**`scheduleSession?(sessionId: string): void`**（optional，issue G）—— **跨 session 调度信号**：调用者必须**先**写盘对端 inbox/事件，再调本 method 让 runtime 唤醒目标 sessionId 的 worker（**仅唤醒、不传载荷**；写盘+wake 不原子，crash 容忍由 scheduler 启动/周期 tick 扫 inbox 兜底）。tier-A 控制面/storybook 无 worker 时静默 no-op + warn、不抛错。say / reply / talk(target="super") 写盘后调此 method 让对端 worker 推进。注入路径见 thread `## runtime`。
+
 ## 迁移映射
 
 - 旧 `ObjectMethod.intents` / `ObjectMethod.route` → **删**,迁至独立 `ObjectGuideMethod`（issue 2026-06-26-object-guide-method-split）。method 退回纯「单步直执行」。
