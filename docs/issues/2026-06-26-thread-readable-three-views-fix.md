@@ -1,6 +1,6 @@
 ---
 title: thread readable 投影修正——default(外人看)/self(自己看)/super(super flow 自看) 三视角
-status: landed
+status: verified
 date: 2026-06-26
 follows: 2026-06-26-scheduler-thinkable-seam.md
 ---
@@ -302,3 +302,16 @@ worktree: `.worktree/thread-readable-three-views-fix`(基 main `2d099380`)
 这部分配套未在 issue 提案中显式列出,但**是裁决 3 + 裁决 9 case D 落地的必要前置**——没有它 self-view ref push 进 contextWindows 后 thinkloop 直接挂掉。已在 issue 落地清单段补记。
 
 无其它意外。computeProjectionClass signature 改动（`(sessionId: string) → (threadData: Data, ref: OocObjectRef)`）只在 thread/readable/index.ts 内部 caller,未牵连其它文件,export 后供新测试用。
+
+
+---
+
+## 落地验收 reviewer 报告
+
+按 design-workflow 步骤 4 独立验收（2026-06-26）。结论：**verified，P0/P1 缺口全 0**——10 项裁决文档+代码全兑现、退潮干净、质量门绿（107 pass / 0 fail）。
+
+self-view 短路解析（thread-runtime + thinkable/context）评为**必要前置而非漂移**：self-view ref id 是窗约定（`w_creator_<threadId>`）、session 表内无对应 inst，core renderReadable 通用 lookup 会落 placeholder；把短路放 thread builtin 内是thread 特殊性归 thread的正确处置，未污染 core。
+
+无 P0/P1 缺口；P2 文档建议（test 文件头加 issue 锚链、JSDoc 风格统一）不阻 verified。
+
+Followup（按裁决留出）：visible self-view UI 表现 / observable trace dedup / 双向引用——独立 issue。
