@@ -1,6 +1,6 @@
 ---
 title: thread readable 投影修正——default(外人看)/self(自己看)/super(super flow 自看) 三视角
-status: decided
+status: landed
 date: 2026-06-26
 follows: 2026-06-26-scheduler-thinkable-seam.md
 ---
@@ -246,4 +246,59 @@ readable render 内 transcript 渲染**不变**——单 transcript 模型仍按
 
 ## 落地验收
 
-（待 landed 后填）
+worktree: `.worktree/thread-readable-three-views-fix`(基 main `2d099380`)
+
+### 修改文件清单
+
+**裁决 1（三视角 + computeProjectionClass 三档）**：
+- `packages/@ooc/builtins/agent/children/thread/readable/index.ts` —— 重写 window decl 为 default/self/super 三档,新增 `computeProjectionClass(threadData, ref)` 三档判定（export 供测试），import `threadWindowIdOf`，文件头注释改写。
+
+**裁决 2-3（thread.construct + method.talk.ts super 路径加 self-view ref + 修 class:"self" bug）**：
+- `packages/@ooc/builtins/agent/children/thread/index.ts` —— construct 在 contextWindows 首位 push self-view ref（id=`threadWindowIdOf(threadId)`,class=`_builtin/agent/thread`），callee agent ref class 由字面 `"self"` 改为 `"_builtin/agent"`。
+- `packages/@ooc/builtins/agent/executable/method.talk.ts` —— super 路径 createSuperThread 内 contextWindows 同步加 self-view ref + 修 callee `class:"self"` → `"_builtin/agent"`，import `threadWindowIdOf`。
+
+**裁决 4（refcount self-ref guard）**：
+- `packages/@ooc/core/runtime/refcount.ts` —— computeRefcount 遍历时 `if (inst.id === objectId) return;` 跳过自指 inst；JSDoc 文件头与函数注释补 self-ref guard 语义。
+
+**裁决 5（caller 持对端 thread ref）**：
+- 普通 talk 路径(`method.talk.ts` 末尾 `ctx.runtime.instantiate`)经 ThreadRuntime.instantiate 内 `this.thread.contextWindows.push(ref)` **已自动挂**对端 thread ref 进调用者 thread 的 contextWindows——无需改动。
+- super 路径跨 session：caller 与 super-thread 不在同一 session 表内，挂进 caller-thread.contextWindows 不会被 resolve（getObject 跨 session 不通），改用 `superThreadRef` 字段做幂等键；本 issue 不补 super 路径的 caller-side ref。
+
+**裁决 6（computeProjectionClass）**：合并入裁决 1。
+
+**self-view ref resolve 配套**（落地中浮现，参见"意外"段）：
+- `packages/@ooc/builtins/agent/children/thread/runtime/thread-runtime.ts` —— `objectDataOf(ref)` 内对 self-view ref（`isSelfThreadWindow(ref.id) && ref.id === threadWindowIdOf(thread.id)`）短路返 `this.thread`；execObjectMethod / execGuideMethod 内 `instance?.data ?? {}` 改用 `this.objectDataOf(ref) ?? {}` 统一路径，import `isSelfThreadWindow / threadWindowIdOf`。
+- `packages/@ooc/builtins/agent/children/thread/thinkable/context.ts` —— `renderWindow(ref, registry, thread)` 增 thread 参数；对 self-view ref 短路直调本 thread `readable.readable(thread, ref)`，跳过 renderReadable 的 inst lookup（避免 self-view id 在 session 表无对应 inst 导致 data 空）。
+
+**裁决 9（tests）**：
+- `packages/@ooc/tests/thread-readable-views.test.ts` —— 新增,覆盖 case A/B/C/D（11 个 test）。
+- `packages/@ooc/tests/registry-window-default.test.ts` —— 更新 thread window decl 断言（default 仅 say、self 含 reply/end/todo、super 加 reflect method）。
+
+**裁决 10（文档回流，独立 commit 进 meta 仓）**：
+- `.ooc-world-meta/.../supervisor/knowledge/index.md`：`## thread` 改写三视角描述 + self-view ref id 编码；`## collaborable` 补 say/reply 方向语义+ surface 闸门校齐；`## readable` 加多视角投影按 surface method 分集（thread 典型例）+ thread 三视角具名；`## runtime` 加 refcount self-ref guard 描述。
+- `.ooc-world-meta/.../children/readable/self.md` 核心 5 加多视角按 surface 分集 + thread 三视角具名；样板节更新。
+- `.ooc-world-meta/.../children/collaborable/self.md` 核心 6 加 say/reply 方向语义 + surface 闸门校齐。
+
+### 质量门
+
+- `bun run check:tsc`：**OK,干净**。
+- 新增 `tests/thread-readable-views.test.ts`：**11 pass / 0 fail**。
+- 关键回归 `thread-scheduling.test.ts` + `reflectable-redesign-issue-d.test.ts` + `refcount-gc.test.ts`：**23 pass / 0 fail**。
+- 全量 `bun test packages/@ooc/tests/`：**105 pass / 1 fail / 315 expect**——唯一 fail 是 `web-e2e.test.ts`,预先红（vite build failed,与本 issue 无关）。
+
+### grep 验收
+
+- `grep -rn 'class:\s*"self"' packages/@ooc/`：4 处命中均为**注释/文档说明**或 readable.window decl 的 self 投影 class 名（合法），**实际 ref field 上的 `class:"self"` bug 命中 0**。
+- `grep -rn 'threadWindowIdOf\|isSelfThreadWindow' packages/@ooc/`：thread/readable + thread/index + method.talk + thread/runtime + thread/thinkable/context 五处使用 helper，符合裁决预期（thread/runtime 与 thinkable/context 是 self-view resolve 配套新增）。
+
+### 意外
+
+落地中发现 **self-view ref 的 id（`w_creator_<threadId>`）与 thread inst id（`threadId`）不同**——session 对象表里没 id 为 `w_creator_<threadId>` 的 inst，导致：
+1. **渲染阶段**：`renderReadable` 调 `registry.getObject(ref.id)` 找不到，data 退化为 `{}`,thread.readable.readable 拿到 `self.data.messages = undefined` 报错（thinkloop-e2e 4 个 test 一开始全红）。
+2. **dispatch 阶段**：`ThreadRuntime.exec(selfViewId, "reply")` 内 `instance?.data ?? {}` 同样退化,reply method 拿空 data 工作不了。
+
+修法：在 thread builtin 内部对 self-view ref 做**短路解析**——`ThreadRuntime.objectDataOf` 和 `thinkable/context.renderWindow` 内识别 `isSelfThreadWindow(ref.id) && ref.id === threadWindowIdOf(thread.id)` 时直接返/用 thread 自身 data,不走 session 表 lookup。core renderReadable 通用入口保持不变（不知 self-view 概念），特殊语义局限在 thread builtin 内,符合"哪个维度的特殊性归哪里"的原则。
+
+这部分配套未在 issue 提案中显式列出,但**是裁决 3 + 裁决 9 case D 落地的必要前置**——没有它 self-view ref push 进 contextWindows 后 thinkloop 直接挂掉。已在 issue 落地清单段补记。
+
+无其它意外。computeProjectionClass signature 改动（`(sessionId: string) → (threadData: Data, ref: OocObjectRef)`）只在 thread/readable/index.ts 内部 caller,未牵连其它文件,export 后供新测试用。
