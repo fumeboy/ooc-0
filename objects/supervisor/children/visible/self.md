@@ -25,7 +25,7 @@
 - **visible/server 服务端 API 模块**：除 tsx UI 外，class 还实现「给 UI 用的服务端 API」——约定编程路径 `<ObjectDir>/visible/server/index.ts`，由 `<ObjectDir>/index.ts` 与 executable / readable / persistable **一并注册**。其 for-ui method 的 **ctx 有 world / session（目标 flow）/ object-self（data）、无 current thinkloop thread**；改 object data → 经 persistable.save 持久化（非版本化、flow 层）。因是独立目的模块，天然不写依赖 thinkloop thread 的操作。详见「名词解释 · visible/server」。
 - **调用通道**：UI 经 HTTP `/call_method` dispatch 到 Object 的 **visible/server for-ui method**（人类侧专路，与 LLM 侧 executable object method 分两条独立签名，不再共用 `window.methods` 按标记过滤）——callMethod **仅 flow scope**（`POST /api/flows/:sid/:oid/call_method`）；stone scope 不调 object 程序（裁决：运行时/data 编辑归 flow session），stone client 是只读展示。
 - **client-source-url**：后端权威给出某 Object visible 源码的 `{absPath, fsUrl}`，前端据此 `dynamic import`，不再自拼路径。
-- **client evolution**：业务 session 在自己的 worktree 里改 `*.tsx`（统一 write_file → session worktree 写路径，去 metaprog 后唯一写通道），进 canonical 走 super flow feat-branch PR（`new_feat_branch` → feat 分支编辑 → `create_pr_and_invite_reviewers` finalizer 开 PR → 审批合入 main）；合入后下次客户端加载即生效（重写自己的界面）。
+- **client evolution**：业务 session 在自己的 worktree 里改 `*.tsx`（统一 write_file → session worktree 写路径，去 metaprog 后唯一写通道），进 canonical 走 super flow 的 4 reflect method 一步到位（`scan_changes` 看清单 → `create_pr_for_class_edits` 处理 class 源码改动 → 派生 feat 分支 + 开 PR + 算 reviewer + 落账 PR-Issue）；合入后下次客户端加载即生效（重写自己的界面）。
 - **ooc:// 寻址**：Object 知识侧产出稳定 `ooc://client/...` URI，1:1 映射 SPA route。
 - **loop_timeline**：thread loop 的 Time Machine + window diff 可视化视图。
 - **scope 选择**：stone client（跨 session 稳定）放 Object 的"主页/身份名片/长期面板"；flow client pages（与 session 绑定）放"本次任务进度/实时输出/会话内可编辑视图"。把临时 session 状态塞进 stone client，会让其它 session 看到陈旧无关 UI——这是 scope 误用的典型代价。

@@ -26,13 +26,17 @@
 
 4. **window method 只动 win、返回新 win，不碰 Data**：readable 提供 window method 调展示**程度/范围**（详细/部分/总结/压缩、viewport…）。它收 `(ctx, self, before_win, args)`、返回**新的 win**（不可变，runtime 写回实例的 win），不改 Data、不产副作用；出错直接 throw。这是它与 executable 的 object method（改 Data、可副作用）的根本分界。
 
-5. **同一 Object 多视角投影成不同 window class**：readable 可声明多个 window class——同一个 Object 实例按视角（看它的 thread POV、它当前状态）投影成不同的 class，每个 class 各自声明展示哪些 object method、提供哪些 window method。投影 class 是渲染期动态算出的（`ReadableProjection.class`），不写进实例存储的固有 class。**默认投影 class 名约定**：`"default"` 是保留关键字——**单视角 class**（`window[].length === 1`）的唯一 decl 的 `class` 字段必须为 `"default"`（注册期强约束，fail-loud）；**多视角 class** 各视角具名（如 thread = `thread` / `talk` / `reflect_request`），是否提供 `default` decl 自决——通常多视角每条都具名语义，不强求兜底。术语：window.class（字段名） / default 约定（规则） / default class 值（字符串字面量 `"default"`）三者分开命名。
+5. **同一 Object 多视角投影成不同 window class**:readable 可声明多个 window class——同一个 Object 实例按视角(看它的 thread POV、它当前状态)投影成不同的 class,每个 class 各自声明展示哪些 object method、提供哪些 window method。投影 class 是渲染期动态算出的(`ReadableProjection.class`),不写进实例存储的固有 class。**默认投影 class 名约定**:`"default"` 是保留关键字——**单视角 class**(`window[].length === 1`)的唯一 decl 的 `class` 字段必须为 `"default"`(注册期强约束,fail-loud);**多视角 class** 各视角具名(如 thread = `default` / `super`,issue E 收口),是否提供 `default` decl 自决——通常多视角每条都具名语义,不强求兜底。术语:window.class(字段名) / default 约定(规则) / default class 值(字符串字面量 `"default"`)三者分开命名。
 
-6. **method/guide/window method 三侧 name 全集不重名 fail-loud**：同一个 class 上，object method（executable / 单步）、guide method（executable / 多步引导）、window method（readable）三侧共享同一 exec-by-name dispatch 入口，**任意两侧重名都有优先级歧义、注册期 fail-loud**。同侧补：window decl 数组内 `class` 字段不重复（否则 `resolveWindowClass` 静默取首个，dispatch 歧义）+ 各 window decl 的 `object_methods` / `guide_methods` 引用必须能在 `ExecutableModule.methods` / `ExecutableModule.guides` 内解析（悬空 fail-loud）。
+6. **method/guide/window method 三侧 name 全集不重名 fail-loud**:同一个 class 上,object method(executable / 单步)、guide method(executable / 多步引导)、window method(readable)三侧共享同一 exec-by-name dispatch 入口,**任意两侧重名都有优先级歧义、注册期 fail-loud**。同侧补:window decl 数组内 `class` 字段不重复(否则 `resolveWindowClass` 静默取首个,dispatch 歧义)+ 各 window decl 的 `object_methods` / `guide_methods` 引用必须能在 `ExecutableModule.methods` / `ExecutableModule.guides` 内解析(悬空 fail-loud)。
 
-7. **静态 readable.md 名片是投影的最低优先级回退**：Object 可写一张静态自我介绍名片 `readable.md`（"我是谁、能做什么、何时找我"，协作网络里的对外名片，与 self.md 双面身份）。它是 `<readable>` 投影槽位的**最低优先级兜底**——class 有动态 readable 时用动态投影，没有时才回退读这张名片，再没有才落 placeholder。`resolveDefaultWindowClass(classId)` 找不到 default decl 时（多视角无 default 豁免场景）回退到这张名片渲染，兑现本核心。
+7. **静态 readable.md 名片是投影的最低优先级回退**:Object 可写一张静态自我介绍名片 `readable.md`("我是谁、能做什么、何时找我",协作网络里的对外名片,与 self.md 双面身份)。它是 `<readable>` 投影槽位的**最低优先级兜底**——class 有动态 readable 时用动态投影,没有时才回退读这张名片,再没有才落 placeholder。`resolveDefaultWindowClass(classId)` 找不到 default decl 时(多视角无 default 豁免场景)回退到这张名片渲染,兑现本核心。
 
-8. **与 visible 互为镜像**：readable 是 LLM 侧展示（投影成 context XML），visible 是人类侧展示（tsx 画进浏览器）。两者并列、不互相吞并；同一个 Object，readable 面向思考者、visible 面向用户。
+**渲染入口**(issue E 收口):核心 5 / 7 的三档 fallback 由 `packages/@ooc/core/readable/render-context.ts:renderReadable` 单入口完成,出 `ReadableResult { payload, source: "render-fn"|"static-card"|"placeholder", warning?, projectionClass?, nextWin? }`。**`<window>` XML 壳由调用方自己包**(典型:thread builtin 的 thinkable/context.ts);renderReadable 只出 payload + source 标识。`source` 字段供 storybook / observability 区分本次渲染命中哪档,便于排查"不该 placeholder 却落了"漂移。
+
+8. **方法可见性单一来源 = readable.window**(issue E,跨维度收口):某 method 对哪些视角可见、可调,**完全**由各 `WindowClassDecl.object_methods[]` / `WindowClassDecl.guide_methods[]` 决定。executable 协议层**不持** `public?` 字段——method/guide 协议最小化,可见性策略集中在本维度,跨维度无双权威。
+
+9. **与 visible 互为镜像**:readable 是 LLM 侧展示(投影成 context XML),visible 是人类侧展示(tsx 画进浏览器)。两者并列、不互相吞并;同一个 Object,readable 面向思考者、visible 面向用户。
 
 ---
 
@@ -59,7 +63,7 @@
 - **投影态与业务数据分离落盘**：runtime 实例 `OocObjectInstance = { id, class, …, data, win }`（`ooc-class.ts:75`）把身份元信息（id/class/title/status…）、业务 Data、投影态 win 三者显式分离；win 随实例持久化，readable 渲染期读它。
 - **投影解析与回退**：渲染器对每个实例先 `resolveReadable(inst.class)?.readable(ctx, inst.data, inst.win)` 取投影；无 Class.readable 时回退读盘 `readable.md`；都无落 placeholder（`resolveProjection`，`~~packages/@ooc/builtins/agent/children/thread/thinkable/context/renderers/xml.ts:285~~（已删除）`——Step1 Class.readable / Step2 回退读 readable.md / Step3 placeholder 三步回退链在该函数体内）。静态名片读写在 `~~packages/@ooc/core/persistable/stone-readable.ts:17~~（已删除）`（`readReadable`）。
 - **viewport 纯 helper**：viewport 类 window method 不再走集中执行体，各 class readable 自装 set_viewport + 自带 viewport 纯 helper（`mergeViewport` / `applyViewport`）。曾收在 `core/_shared/utils/viewport.ts` 共享，现已拆解进各 class 内部（自我闭环、容忍重复）：file/knowledge/example 各有 `readable/viewport.ts`（二维行列）；thread/search/process 各有 `transcript-viewport.ts`（tail/range）。
-- **样板**：投影 + window method 的标准样板见 `packages/@ooc/builtins/knowledge_base/children/knowledge/readable/index.ts`（set_viewport + Data 投影）；会话窗"一个实例多视角投影成多 class"见 `packages/@ooc/builtins/agent/children/thread/readable/index.ts`（thread 投影成 thread/talk/reflect_request 三 class）；最小对象样板 `packages/@ooc/builtins/example/`（types/executable/readable/persistable 分文件 + index.ts 一处装配）。
+- **样板**：投影 + window method 的标准样板见 `packages/@ooc/builtins/knowledge_base/children/knowledge/readable/index.ts`（set_viewport + Data 投影）；会话窗"一个实例多视角投影成多 class"见 `packages/@ooc/builtins/agent/children/thread/readable/index.ts`（thread 投影成 default/super 二 class,issue E）；最小对象样板 `packages/@ooc/builtins/example/`（types/executable/readable/persistable 分文件 + index.ts 一处装配）。
 
 ---
 

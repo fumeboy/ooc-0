@@ -17,7 +17,7 @@ activates_on:
 
 ## agent 的 children（`_builtin/agent/<child>`）
 
-- **`thread`**（class）—— agent 一次智能运行的载体（`talk` 创建、跑 thinkloop）；唯一会话载体 class，按视角投影成 thread/talk/reflect_request 三种 window class。
+- **`thread`**（class）—— agent 一次智能运行的载体（`talk` 创建、跑 thinkloop）；唯一会话载体 class，按视角投影成 default + super 二种 window class（issue E 简化）。
 - **`plan`**（class）—— 任务结构化。
 - **`todo`**（class）—— 待办项（`mark_done` 标记完成）。
 - **`skill_index`**（class，派生注入、无 construct）—— 技能索引（每 thread 由 synthesizer 派生注入）。
@@ -47,4 +47,4 @@ activates_on:
 
 - **`_builtin/example`**（class）—— 建 class 时照抄的样板（演示 construct / object method / readable / persistable / types，非真实功能对象）。
 
-> 说明：`runtime` 当前 `kind=class`（单例未定）——提供系统接入方法、被 agent 组合持有；若后续确认单例则可改 `kind=object`。`knowledge_base` 已确认单例 → `kind=object`（与 filesystem/interpreter/terminal 一致）。`reflect_request` 已不再是注册 class——它是 thread 在 super flow 视角下的投影 class（见对象模型 + thinkable `knowledge/thread.md`）。
+> 说明：`runtime` 当前 `kind=class`（单例未定）——提供系统接入方法、被 agent 组合持有；若后续确认单例则可改 `kind=object`。`knowledge_base` 已确认单例 → `kind=object`（与 filesystem/interpreter/terminal 一致）。**`super` 是 thread 在 super flow 视角下的投影 class、非注册 class**（原 `reflect_request` 概念已整体退役改为 `super` 投影，见对象模型 + thinkable `knowledge/thread.md` + issue E）。

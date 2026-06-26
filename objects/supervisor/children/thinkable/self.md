@@ -6,7 +6,21 @@
 
 ## 核心设计
 
-OOC 的核心设计：LLM 看到的世界不是裸 prompt，而是一组 **ContextWindow 对象**（Object 在 context 中的形态，自带可调的 window method）。在此之上是**渐进式执行伴随的渐进式知识激活**——Object 经 open→refine→submit 渐进暴露要操作的窗口与方法，knowledge 则按 `activates_on` 意图在执行推进时渐进激活：执行到哪、知识激活到哪。思考过程组织成可并行、可恢复的 Thread Tree。
+OOC 的核心设计:LLM 看到的世界不是裸 prompt,而是一组 **ContextWindow 对象**(Object 在 context 中的形态,自带可调的 window method)。在此之上是**渐进式执行伴随的渐进式知识激活**——Object 经 open→refine→submit 渐进暴露要操作的窗口与方法,knowledge 则按 `activates_on` 意图在执行推进时渐进激活:执行到哪、知识激活到哪。思考过程组织成可并行、可恢复的 Thread Tree。
+
+**`ThinkableModule` 协议字段**(issue E 扩展):
+
+| 字段 | 必/选 | 说明 |
+|---|---|---|
+| `think?` | 选 | 一轮 think 入口(thinkloop tick 调一次) |
+| `onSchedulerTick?` | 选 | scheduler 每 tick 给本 class 实例的回调(harvest / child-notify / 唤醒检查) |
+| `active?(data) → boolean` | 选 | 本实例当下是否活;返 false 视为终态,core GC pass1 据此把它的 outgoing refs 一次性 decRef。缺省 true。**纯函数**,基于 data 算。 |
+| `refs?(data) → OocObjectRef[]` | 选 | 本实例对其它对象的出度引用列表;core 据此算 refcount(实现 refs 的 class contributes,不实现即不贡献)。缺省 []。**纯函数**,基于 data 算。 |
+
+**context 切分**(issue E 收口):
+- **投影**(把单个 ref 渲成 payload + 决定投影 class)归 **core readable**(`renderReadable` 单入口,3 档 fallback)。
+- **拼装**(把 `<window>` XML 壳、`<messages>` 段、`<knowledge>` 段串成 LLM input)留在 thinkable / thread builtin 的 `context.ts`。
+- 单点收口让"渲染一个窗"与"组织 LLM input"分别有单一来源,避免散落字面量漂移。
 
 ## 我负责的
 
@@ -58,7 +72,7 @@ thinkable 这个维度拆成这些子模块
 - **渐进式知识激活**：执行经 open→refine→submit 渐进暴露窗口与方法，knowledge 随之按 trigger 渐进激活——执行到哪、知识激活到哪，控制每轮 context 体积。
 - **seed / sediment**：knowledge 双源（seed=设计期 stone `knowledge/` 进 git；sediment=运行时沉淀 pool `knowledge/{memory,relations}/` 不进 git，同名覆盖 seed）；详见 supervisor `knowledge/ooc-glossary.md`。
 - **inheritable**：knowledge frontmatter 字段，唯有显式 `true` 才下传给嵌套子 Agent（领域层级轴）。
-- **exec / close / wait**：LLM 操作世界的 3 个基础 tool（恒 3 个）。`compress` 不在其中——它是经 `exec(method="compress")` 调的 window method。
+- **exec / close / wait / open**：LLM 操作世界的 4 个基础 tool（恒 4 个）。`exec` 调 method（参数已齐）；`open` 调 guide（参数未齐、传 `want` 表达意图、由 `method_exec_form` 多轮 refine 补参）；`close` 关窗；`wait` 等 IO。`compress` 不在其中——它是经 `exec(method="compress")` 调的 window method。
 - **ProcessEvent**：thread 运行产生的过程事件流（LLM 输出 / tool 调用 / context 变化），构成 transcript 过程事件层。
 - **BudgetManager**：相关度排序的预算实施器，按 score 在 token 预算内纳入/排除窗口（取代退役的自然衰减 / emergency guard）。
 

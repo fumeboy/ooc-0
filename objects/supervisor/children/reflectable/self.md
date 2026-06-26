@@ -22,7 +22,7 @@
 
 2. **super flow = 显式合并入口**：`sessionId="super"` 是单一恒定的反思通道；`talk(target="super")` 是 reflectable 的唯一入口——caller object data 持 `superThreadRef`，幂等键 = `(callerSessionId, callerObjectId)`，跨 session 自指由 collaborable 核心 7 兑现，消息派送由 caller 直接写 super flow 内 callee thread 的 inbox（不引入 cross-session bus）。worker scheduler 对 sessionId="super" 起独立 job lane，避免业务长跑饿死反思处理。
 
-3. **reflect_request 窗 surface 4 个 reflect method**：super flow 内 self-view 的 thread 投影 class 为 `reflect_request`（thread/readable 投影态、非注册 builtin class），surface 4 个一步到位的 object methods——`scan_changes` / `create_pr_for_versioned` / `sediment_unversioned` / `create_pr_for_class_edits`；普通 session 投影为 `thread`（self-view 非 super）/ `talk`（other-view），看不到这 4 个 method。
+3. **super 窗 surface 4 个 reflect method**:super flow 内 self-view 的 thread 投影 class 为 `super`(thread/readable 投影态、非注册 builtin class,issue E:原名 reflect_request → super,人话术语「super 窗 / super 视角」),surface 4 个一步到位的 object methods——`scan_changes` / `create_pr_for_versioned` / `sediment_unversioned` / `create_pr_for_class_edits`;普通 session 投影为 `default`(issue E:原 thread/talk 二投影合并),看不到这 4 个 method。
 
 4. **三类下游通道，按字段类型自动选**：
    - **versioned 字段**（class.versioned_fields 声明） → `create_pr_for_versioned` → feat-branch PR → stone canonical。
@@ -34,9 +34,22 @@
 
 6. **PR reviewer 由「改动了谁的地盘」决定**：feat 分支 diff 路径所属对象（按 `objects/<X>/...` 顶层领地）= 该路径的 reviewer；supervisor 永远在 reviewer 集；author 自己的子树不产生 reviewer。一票 reject 即驳回；全员 approve 后是自动合入还是人工确认由 `worldConfig.prAutoMerge`（默认 false）决定，人工合入经 `POST /api/runtime/pr-issues/:id/resolve` 落锤。
 
-7. **reflectable 不发明新机制**：本维度只把既有设施——collaborable 的 talk/say（含 super alias）、persistable 的 stone/pool/flow（含 feat-branch worktree + ff-merge）、thinkable 的 knowledge——放进 super flow 下编排成自我演化。不引入新 inbox / 新 bus / 新合入机制；4 个 reflect method 是聚合 LLM 意图的入口，存储底座下沉 `core/persistable/{pr-issue, feat-branch-pr, flow-scan, sediment}`。
+7. **reflectable 不发明新机制**:本维度只把既有设施——collaborable 的 talk/say(含 super alias)、persistable 的 stone/pool/flow(含 feat-branch worktree + ff-merge)、thinkable 的 knowledge——放进 super flow 下编排成自我演化。不引入新 inbox / 新 bus / 新合入机制;4 个 reflect method 是聚合 LLM 意图的入口,存储底座下沉 `core/persistable/{pr-issue, feat-branch-pr, flow-scan, sediment}`。
 
-8. **reflectable 知识写成 .md 教对象**：怎么反思、怎么开 PR、怎么收尾，是几篇写给对象自己看的 knowledge（`super-flow.md` / `self-evolution.md` / `pr-review.md` / `end-reflection.md`），只在用得上的场景（进了 super 反思线程、要写文件、要审 PR、要收尾）才自动激活到对象眼前；4 个 reflect method 也一样——只在 reflect_request 投影里 surface，平时业务对话里根本看不见（声明驱动可见性，而非平时摆着、用时再拒绝）。
+8. **reflectable 知识写成 .md 教对象**:怎么反思、怎么开 PR、怎么收尾,是几篇写给对象自己看的 knowledge(`super-flow.md` / `self-evolution.md` / `pr-review.md` / `end-reflection.md`),只在用得上的场景(进了 super 反思线程、要写文件、要审 PR、要收尾)才自动激活到对象眼前;4 个 reflect method 也一样——只在 super 投影里 surface,平时业务对话里根本看不见(声明驱动可见性,而非平时摆着、用时再拒绝)。
+
+### super 四重一致指涉(issue E)
+
+「super」这个字面在 OOC 里同时承担四个角色,**字符串字面量一处定义、四处一致**:
+
+| 层 | 是什么 |
+|---|---|
+| **session** | `sessionId === "super"`(`SUPER_SESSION_ID`),super flow 的恒定 session 标识 |
+| **talk target alias** | `talk(target="super")`,跨 session 自指 alias(trim+lowercase 归一,见 `SUPER_ALIAS_TARGET`) |
+| **window class** | thread 在 super flow self-view 下的投影 class 字符串,issue E 收口为 `"super"`(原 `reflect_request`) |
+| **人话** | 中文文档 / agent 知识里用「super 窗 / super 视角」指 super flow 内 self-view 的反思视角 |
+
+四者**一致指涉同一概念**:进了 super flow(session) → 经 super alias 进入(talk target) → self-view 的窗投影成 super class(window class) → agent 在 super 窗里行使 4 个反思 method(人话)。任何改动必须四处同步,避免某层独立漂移。
 
 ---
 
@@ -53,7 +66,7 @@
 ## 三、细节补充
 
 - **super 通道恒定**：`sessionId="super"`；自指别名 `target="super"`（trim+lowercase 归一，防大小写文件系统绕过）。
-- **落脚点（窗，复用 talk 原语）**：反思会话面 = 一个**反思请求窗**（`reflect_request`——thread 在 super flow POV 下由 readable 算出的**投影 class**，非注册 builtin）——复用 talk 的会话/回报形态，额外挂「开分支」「finalizer」两个方法（标 `for_reflectable`）；reviewer 评审 = 另一类**评审窗**（`pr`，真注册 builtin class，在 `agent/children/pr`）；二者永不共存于同一 thread。存储层（PR-Issue 记录、stone git versioning、reviewer 冒泡纯函数）归 **persistable**——窗只是脸，不是 god-object。
+- **落脚点(窗,复用 talk 原语)**:反思会话面 = 一个**反思请求窗**(`super`——thread 在 super flow POV 下由 readable 算出的**投影 class**,非注册 builtin,issue E 收口);reviewer 评审 = 另一类**评审窗**(`pr`,真注册 builtin class,在 `agent/children/pr`);二者永不共存于同一 thread。存储层(PR-Issue 记录、stone git versioning、reviewer 冒泡纯函数)归 **persistable**——窗只是脸,不是 god-object。
 - **协议知识**：`self-evolution`（自我演化总则）/ `super-flow`（沉淀·合入·治理）/ `pr-review`（评审协议）/ `end-reflection`（收尾提醒）等 agent-facing 正文，经各自 `activates_on` 在对应场景（sessionId="super" / 写文件 / 进评审窗 / 调 end）命中下发；激活语法权威归 thinkable 的 knowledge-activation。
 - **sediment write contract**：pool 写须带合法 frontmatter（含**激活条件**），否则下一轮 activator 不命中、该篇形同未写——这是 pool 通道「写就生效」的前提约束。
 
@@ -75,6 +88,6 @@
 | 旧概念 | 归并到 |
 |---|---|
 | `evolve_self`（旧名） | 已退役；进 canonical 的 stone 变更经 super flow 的 `create_pr_for_versioned` / `create_pr_for_class_edits` 分别处理 versioned 字段与 class 源码 |
-| `new_feat_branch` + `create_pr_and_invite_reviewers`（旧二段式） | 已退役（issue D 2026-06-26）;合并为 4 个 reflect method 一步到位（`scan_changes` / `create_pr_for_versioned` / `sediment_unversioned` / `create_pr_for_class_edits`）,在 super flow 的 `reflect_request` 投影窗 surface |
+| `new_feat_branch` + `create_pr_and_invite_reviewers`(旧二段式) | 已退役(issue D 2026-06-26);合并为 4 个 reflect method 一步到位(`scan_changes` / `create_pr_for_versioned` / `sediment_unversioned` / `create_pr_for_class_edits`),在 super flow 的 `super` 投影窗 surface(issue E 收口窗 class 名 `reflect_request` → `super`) |
 | 旧「session worktree 合入 main」自我演化模型（`evolveSelfMerge` / `tryMergeSelf` 等） | 已退役；进 canonical 一律 feat-branch PR（核心 5） |
 | **programmable**（曾为独立维度） | 已并入本维度（2026-06-18），作为「改身体 = 为自身编程」的手段 |

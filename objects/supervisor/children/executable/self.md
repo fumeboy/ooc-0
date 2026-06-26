@@ -16,16 +16,29 @@
 
 ## 核心设计
 
-1. 唯一行动方式 = 通过 tool 原语与 context window 交互。LLM 改变世界的唯一通道，是通过 tool 原语在 context window 上交互。
-2. tool 原语恒为 3 个：
-  - exec（在某 window 上调一条 method）
-  - close（关一个 window = 移除对其对象的一个引用；honor 结构窗：`closable===false` 则拒关报错；引用归零触发该对象 `unactive`，机制见 object 模型核心 10）
-  - wait（声明等待某个 context window 的 IO 结果）
-3. 可执行的 method 分**两类**、严格分维：
-  - **object method**（**单步直执行**）：参数已知、schema 描述形状、`exec` 改 object 自身数据 + 可副作用——归 executable，本维度。
-  - **object guide method**（**多步引导**）：参数未必齐全，dispatch 命中即先跑 `route` 算意图：`quickSubmit=true` 直执行；否则自动开 form、用 refine 累积参数、submit 真执行——归 executable，本维度（form 类型实现见 builtin `method_exec_form`）。
-  - **window method**：只调 object 在 context 里的展示态、返回不可变的新 window——归 readable 维度。
-  - 三者经同一 exec-by-name 入口分派；注册时 method/guide/window method 三侧 name 全集不重名，且各 window decl 的 `object_methods`/`guide_methods` 引用必须在 ExecutableModule 内可解析（注册期 fail-loud）。
+1. 唯一行动方式 = 通过 tool 原语与 context window 交互。LLM 改变世界的唯一通道,是通过 tool 原语在 context window 上交互。
+2. tool 原语恒为 **4 个**（issue 2026-06-26-six-refinements）:
+  - **exec**（在某 window 上调一条 method —— 命中 object method 直执行;命中 guide method 跑 route → 据 `quickSubmit` 直 exec / 否则自动开 form;命中 window method 改投影）
+  - **close**（关一个 window = 移除对其对象的一个引用;honor 结构窗:`closable===false` 则拒关报错;引用归零触发该对象 `unactive`,机制见 object 模型核心 10）
+  - **wait**（声明等待某个 context window 的 IO 结果）
+  - **open**（对目标 object 的某 method **不行使 exec**、只开一张 `method_exec_form`,**把 `want`（自然语言意图）写进 form data**;agent 在动手前显式表达「为什么调」,降低误触/掩盖意图的风险）
+
+   open vs exec 决策表:
+
+   | 场景 | 用 |
+   |---|---|
+   | 单步 method,参数齐、动作低风险 | `exec` 直执行 |
+   | guide method,参数未必齐 | `exec`（自动开 form,但 form 不带 want） |
+   | 高风险动作 / 跨对象副作用 / 不可逆操作 | `open`（先显式 want、refine、submit） |
+   | 想把"为什么调"留在上下文给后续轮自查 | `open` |
+
+3. 可执行的 method 分**两类**、严格分维:
+  - **object method**（**单步直执行**）:参数已知、schema 描述形状、`exec` 改 object 自身数据 + 可副作用——归 executable,本维度。
+  - **object guide method**（**多步引导**）:参数未必齐全,dispatch 命中即先跑 `route` 算意图:`quickSubmit=true` 直执行;否则自动开 form、用 refine 累积参数、submit 真执行——归 executable,本维度（form 类型实现见 builtin `method_exec_form`）。
+  - **window method**:只调 object 在 context 里的展示态、返回不可变的新 window——归 readable 维度。
+  - 三者经同一 exec-by-name 入口分派;注册时 method/guide/window method 三侧 name 全集不重名,且各 window decl 的 `object_methods`/`guide_methods` 引用必须在 ExecutableModule 内可解析（注册期 fail-loud）。
+
+4. **方法可见性的唯一来源 = readable.window**（issue E 收口）:method 协议层**不持 `public?` 字段**——某 method 对哪些视角可见、可调,由各 `WindowClassDecl.object_methods[]` / `WindowClassDecl.guide_methods[]` 显式 surface 决定。窗 decl 未列入即不可见、不可调;协议层最小化、可见性策略由 readable 维度托管,跨维度无双权威。
 
 
 ## executable/index.ts —— object method / guide method
@@ -71,20 +84,18 @@ const appendMethod: ObjectMethod = {
  * - name        : 方法名（dispatch 入口；同 class 内 method/guide/window method 三侧不可重名）
  * - description : LLM 面向的方法描述（必填）
  * - schema      : 可选参数 schema（结构化渲染 + fail-soft 校验）
- * - public      : 是否对 peer object 可见可调
  * - permission  : 权限谓词（allow / ask / deny）
  * - exec        : (ctx, self, args) → 结果（`ObjectMethodResult` / 裸 string / void）；**可改 self、可副作用**
  *
  * 注：method 不再持 `intents` / `route`——多步引导语义已迁至 `ObjectGuideMethod`。
+ *     method 协议层**不再持 `public?`**——方法可见性唯一来源 = readable.window decl（核心 4，issue E）。
  *     method 只管 LLM 侧行动；人机分流移交 visible 维度的 visible/server 模块（ctx 无 thinkloop thread）。
- *     `for_reflectable` 不进协议——visibility 经 readable surface（reflect_request decl 白名单）控制。
  */
 export interface ObjectMethod<Data = any, Args = any> {
   name: string;
   description: string;
   schema?: MethodCallSchema;
   permission?: (args: Record<string, unknown>) => "allow" | "ask" | "deny";
-  public?: boolean;
   exec: (
     ctx: ExecutableContext,
     self: Data,
@@ -106,9 +117,7 @@ guide method **服务于「调用即开 form、逐轮 route 澄清意图直至 s
 export interface ObjectGuideMethod<Data = any, Args = any> {
   name: string;
   description: string;
-  schema?: MethodCallSchema;                              // 总参数空间（可选；route 返回 intents 描述当下需补子集）
   intents: { name: string; description: string }[];      // 该 guide 可能产生的全部意图（必有；静态先验）
-  public?: boolean;
   permission?: (args) => "allow" | "ask" | "deny";
   route: (ctx, self, args) => ObjectMethodIntents | Promise<ObjectMethodIntents>;  // 必有
   exec: (ctx, self, args) => ObjectMethodResult | string | void | Promise<...>;
@@ -131,6 +140,8 @@ export interface ObjectMethodResult {
   refs?: OocObjectRef[];   // exec 产出的新对象引用（runtime 据此挂窗 / 把 form ref 回给 tool call）
 }
 ```
+
+> **协议字段删除**（issue E 收口）:`ObjectGuideMethod` 不再持 `schema?` —— guide 的总参数空间形态由 `route` 输出的 `ObjectMethodIntents` 在每次迭代中按当下需补的子集动态给出,静态 schema 与 form 渐进语义重复。也**不持 `public?`**（与 ObjectMethod 同源,可见性归 readable.window）。
 
 ### 填表式渐进式执行（form）—— guide 触发链
 
@@ -181,8 +192,11 @@ const createOrUpdate: ObjectGuideMethod = {
 
 ## 迁移映射
 
-- 旧 `ObjectMethod.intents` / `ObjectMethod.route` → **删**，迁至独立 `ObjectGuideMethod`（issue 2026-06-26-object-guide-method-split）。method 退回纯「单步直执行」。
-- 旧 `method_exec_form.data.targetMethod` → `guideName`（构造期 alias 兼容旧 `targetMethod` 字段一段时间）；旧 `tip`/`intents` → `currentTip`/`currentIntents`。
-- runtime `runRoute(targetObjectId, methodName, args)` 签名内部参数名义改 `guideName`——resolve guide 而非 method。新增 `execGuide(targetObjectId, guideName, args)` 给 form.submit **跳过 dispatch** 直调 guide.exec（避开递归开 form）。
-- WindowClassDecl 加 `guide_methods?: string[]`（与 `object_methods` 平级，注册期同等 fail-loud cohesion 校验）。
+- 旧 `ObjectMethod.intents` / `ObjectMethod.route` → **删**,迁至独立 `ObjectGuideMethod`（issue 2026-06-26-object-guide-method-split）。method 退回纯「单步直执行」。
+- 旧 `ObjectMethod.public` / `ObjectGuideMethod.public` → **删**(issue E)——方法可见性唯一来源 = readable.window decl 白名单。
+- 旧 `ObjectGuideMethod.schema` → **删**(issue E)——总参数空间由 route 输出的 ObjectMethodIntents 动态给出,与静态 schema 重复。
+- 旧 3 tool 原语 → **4 tool 原语**(issue E)新增 `open`(objectId, methodName, want):不行使 exec、只开 form + 注入 want。
+- 旧 `method_exec_form.data.targetMethod` → `guideName`(构造期 alias 兼容旧 `targetMethod` 字段一段时间);旧 `tip`/`intents` → `currentTip`/`currentIntents`;新增 `want?: string`(open 原语注入)。
+- runtime `runRoute(targetObjectId, methodName, args)` 签名内部参数名义改 `guideName`——resolve guide 而非 method。新增 `execGuide(targetObjectId, guideName, args)` 给 form.submit **跳过 dispatch** 直调 guide.exec(避开递归开 form);新增 `RuntimeHandle.open(objectId, methodName, want)`。
+- WindowClassDecl 加 `guide_methods?: string[]`(与 `object_methods` 平级,注册期同等 fail-loud cohesion 校验)。
 - `for_reflectable` 不存于协议层——历史 self.md 描述移除。

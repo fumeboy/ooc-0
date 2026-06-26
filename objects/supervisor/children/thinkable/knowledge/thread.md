@@ -33,7 +33,7 @@ activates_on:
    - **`say`** —— 向对端发消息（按视角双实现：自己视角 = 向对方发，对方视角 = 向自己发）。
    - **`end`** —— 结束本 thread（标记 done、记 endReason/endSummary，可选 result 经 creator 窗 say 回报父级）。从 agent agency 迁入——thread 作用域操作，**改 thread 自身 Data**（status→done）。
    - **`todo`** —— 在**当前 thread context 内登记一个 todo 子对象**。从 agent agency 迁入——thread 作用域操作；**不改 thread 自身 Data**，而是造 `_builtin/agent/todo` 子对象进入本 thread 的 context（与 `end` 改 Data 区分）。
-   - **`new_feat_branch`** / **`create_pr_and_invite_reviewers`** —— 两条 reflectable 沉淀 method（仅在 super 反思 session 的 `reflect_request` 投影窗 surface）。详见 reflectable `self.md`。
+   - **super 窗 4 reflect method** —— `scan_changes` / `create_pr_for_versioned` / `sediment_unversioned` / `create_pr_for_class_edits`（仅在 super 反思 session 的 `super` 投影窗 surface；可见性由 readable.window 控制，method 协议层不再持 `for_reflectable` / `public?` 标签）。详见 reflectable `self.md`。
    - （`wait` / `close` 是 tool 原语、作用于窗，不是 thread 的 object method；wait 语义见 thinkloop.md。）关一个会话窗 = 撤回对其对象的一次引用；关一个 fork 子线程的会话窗使该子线程失去最后订阅者（refcount 归 0）→ 由 thread 的 `unactive` policy **通知**它「creator 已关闭对话窗口、当前已无消息订阅者」（往其自己 inbox 发一条 system 消息、即时落盘），**不切终态、不级联**，由其下一轮自决是否 `end`；thread 与 creator 的自我门面窗是恒在通道、不可关。
 
 4. **一个 agent 可并行持多条 thread**：与不同对端对话、跑并行子任务，彼此 context 独立。thread 之间可通过（`talk(target=自己)` ）派生形成一棵 **Thread Tree**。

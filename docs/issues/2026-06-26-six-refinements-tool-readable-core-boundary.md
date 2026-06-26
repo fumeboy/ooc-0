@@ -1,6 +1,6 @@
 ---
 title: 6 项设计精修：open tool 原语 + readable 控可见性 + core 承担 ref/GC/XML 渲染 + thinkable 契约扩展
-status: decided
+status: landed
 date: 2026-06-26
 follows: 2026-06-26-reflectable-redesign-as-flow-dispatcher.md
 ---
