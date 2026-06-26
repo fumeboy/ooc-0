@@ -1,6 +1,6 @@
 ---
 title: window class → window view 全局重命名 + OocObjectRef.window_view 字段
-status: decided
+status: landed
 date: 2026-06-26
 follows: 2026-06-26-thread-readable-three-views-fix.md
 ---
@@ -325,4 +325,48 @@ E 区：
 
 ## 落地验收
 
-（待 landed 后填）
+**worktree**：`.worktree/window-class-to-window-view-rename/`（基于 main `0dc498fb`）
+**主仓 commit**：`48d30c35` —— `feat(readable+runtime): window class → window view 全局重命名 + ref.window_view 字段（issue J）`
+**meta 仓 commit**：本 commit（文档回流）
+
+**落地清单**（按 13 项裁决分组）：
+
+1. 协议层符号重命名 ✅
+   - `packages/@ooc/core/types/readable.ts`: `WindowClassDecl` → `WindowViewDecl` + `decl.class` → `decl.view` + `ReadableProjection.class` → `ReadableProjection.view`。
+   - `packages/@ooc/core/runtime/object-registry.ts`: `resolveWindowClass` → `resolveWindowView` / `resolveDefaultWindowClass` → `resolveDefaultWindowView` / `DEFAULT_WINDOW_CLASS` → `DEFAULT_WINDOW_VIEW` / `resolveWindowMethod` 第二参 `windowClass` → `windowView`。
+   - `packages/@ooc/core/thinkable/knowledge/activator.expr.ts`: `Trigger.window.class` → `Trigger.window.view` + `ActivationContext.windowClasses` → `windowViews`。
+   - `packages/@ooc/core/readable/render-context.ts`: `ReadableResult.projectionClass` → `projectionView`。
+2. OocObjectRef.window_view 字段 ✅ —— `packages/@ooc/core/runtime/ooc-class.ts`。
+3. persistable 兼容 ✅ —— optional 字段 + 缺省 undefined → readable render 走 DEFAULT_WINDOW_VIEW 兜底，无迁移。
+4. ref 创建点显式写 ✅ —— `thread/index.ts:46` 写 `"self"`、`method.talk.ts:119` 写 `"super"`、`thread-runtime.ts:354` instantiate 经 `spec.windowView` 透传写入；其它创建点缺省落 default。
+5. computeProjectionClass fallback + warning ✅ —— `thread/readable/index.ts:99-125`。
+6. render-context.ts projectionView 字段 ✅。
+7. thinkable/context.ts fallback 清理 ✅ —— XML attribute 用 `view`、`result.projectionView ?? ref.window_view ?? DEFAULT_WINDOW_VIEW`。
+8. `<window>` XML attribute view ✅。
+9. dispatch bug 拆 issue K ✅ —— `thread-runtime.ts:132` 保留现状。
+10. RuntimeHandle.instantiate args windowView? ✅ —— `core/types/executable.ts`。
+11. 文档回流 ✅ —— meta 仓本 commit：`readable/self.md`（核心 5 + 迁移映射）、`object/self.md`（核心 4 OocObjectRef + refIdentity）、`thinkable/self.md`（windowViews 拼写说明）、`knowledge/index.md`（readable / executable × readable / thread / runtime 节）、agent prompt md（`<window_classes>` → `<window_views>`）。
+12. refIdentity helper ✅ —— `core/types/context-window.ts`。
+13. tests 同步 ✅ —— `tests/registry-window-default.test.ts` / `registry-method-guide.test.ts` / `dispatch-guide-form.test.ts` / `knowledge-activator.test.ts` / `render-readable.test.ts` / `thread-readable-views.test.ts` 全改；新增 `tests/window-view-issueJ.test.ts`（12 tests 覆盖 ref round-trip / self/super 视角写 / resolveWindowView 命名 / fallback warning / instantiate windowView 透传 / refIdentity）。
+
+**质量门**：
+- `bun run check:tsc` 干净。
+- `bun test` 123 pass 1 fail（fail = web-e2e vite build，worktree 内无 web 目录，预期红，与本 issue 无关）。
+
+**完成回报**：
+
+1. **修改文件清单（13 项分组）** —— 见上「落地清单」。
+
+2. **tsc + tests 结果**：tsc 干净；tests 123 pass / 1 fail（web-e2e 预先红，非回归）。issue J 新增 12 个 test 全绿。
+
+3. **computeProjectionClass fallback 实际是否被命中**：worktree 内跑 `bun test` 时 `thread-readable-views.test.ts` 的 case B 共触发 4 次 fallback warning（该 case 显式不写 ref.window_view 专测 fallback 路径——合规预期）。**新写路径下** thread.construct + createSuperThread 都已硬编码 `window_view`，正常运行时 fallback 不应被命中。
+
+4. **RuntimeHandle.instantiate args 形态确认**：`instantiate(spec: { class, childId?, args?, windowView? })`。`thread-runtime.ts:354` 内 `if (spec.windowView) ref.window_view = spec.windowView` 透传到 ref。新增 test 覆盖：传 windowView → ref.window_view 命中；不传 → ref.window_view 缺省。
+
+5. **grep 退潮验收**：
+   - `windowClass / WindowClass / DEFAULT_WINDOW_CLASS / resolveWindowClass / resolveDefaultWindowClass` 在 `packages/@ooc/` 全清，仅 `activator.expr.ts` 一处注释明示"历史 windowClasses 字段名变更"（合规说明）。
+   - `projection.class / projectionClass` 全清。
+   - meta 树残余仅 readable/self.md 第 84 行迁移映射条目（合规——明确标"旧"）+ thinkable/self.md 一处 issue J 字段名变更说明（合规）。
+
+6. **意外**：无显著意外。`ReadableProjection.class → view` 字段改名传播平稳——所有 readable render 返回点都是 builtin 内（无外部消费者），sed 一次性改完。method.talk.ts 中 caller 持 super thread ref 复用 / 新建（裁决表 177-181 / 194-198）本就缺省 window_view，无需改动。
+

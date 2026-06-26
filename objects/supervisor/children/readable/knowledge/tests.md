@@ -31,4 +31,4 @@ readable 尚无独立 `stories/readable.story.ts` 的 `runAgentNative`，也无 
 ## 边界
 
 - readable 的展示**质量**（投影得好不好、压缩得当不当）本质需真 LLM，归 Tier B。
-- `resolveWindowMethod` / `resolveReadable` / `resolveWindowClass` 本类直查、不沿链（issue `inheritance-spread` D4 退役了曾经的沿父类回退）；子 class 经源码 spread 继承父投影，无运行时 chain（详见 self.md「模拟推演」）。
+- `resolveWindowMethod` / `resolveReadable` / `resolveWindowView` 本类直查、不沿链（issue `inheritance-spread` D4 退役了曾经的沿父类回退）；子 class 经源码 spread 继承父投影，无运行时 chain（详见 self.md「模拟推演」）。

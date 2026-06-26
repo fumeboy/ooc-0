@@ -44,6 +44,6 @@ builtin 包经 side-effect import 各自 `register` 自己的 class；think / ex
 
 - `resolveReadable(classId)`——取本 class 的投影模块。
 - `resolveWindowMethod(classId, name)`——取本 class 的 window method。
-- `resolveWindowClass(classId, projectionClass)`——取本 class 某投影 class 的声明（展示哪些 object method + window method）。
+- `resolveWindowView(classId, windowView)`——取本 class 某投影 view 的声明（展示哪些 object method + window method）。
 
 子类要复用父 class 的 readable，经**源码 import + spread** 表达（对象模型核心 2）：子 class 的 `readable/index.ts` 写 `import parent from "..."; export default { ...parent, window: [...parent.window, myWin] }`——继承在源码层显式表达、注册期就是扁平结果。运行时无继承链，行为可预测；父改后由 PR merge → `invalidateStone` 重新 spread 注册子（沿用现有 hot-reload 推模式）。

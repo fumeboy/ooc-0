@@ -38,7 +38,7 @@
   - **window method**:只调 object 在 context 里的展示态、返回不可变的新 window——归 readable 维度。
   - 三者经同一 exec-by-name 入口分派;注册时 method/guide/window method 三侧 name 全集不重名,且各 window decl 的 `object_methods`/`guide_methods` 引用必须在 ExecutableModule 内可解析（注册期 fail-loud）。
 
-4. **方法可见性的唯一来源 = readable.window**（issue E 收口）:method 协议层**不持 `public?` 字段**——某 method 对哪些视角可见、可调,由各 `WindowClassDecl.object_methods[]` / `WindowClassDecl.guide_methods[]` 显式 surface 决定。窗 decl 未列入即不可见、不可调;协议层最小化、可见性策略由 readable 维度托管,跨维度无双权威。
+4. **方法可见性的唯一来源 = readable.window**（issue E 收口）:method 协议层**不持 `public?` 字段**——某 method 对哪些视角可见、可调,由各 `WindowViewDecl.object_methods[]` / `WindowViewDecl.guide_methods[]` 显式 surface 决定。窗 decl 未列入即不可见、不可调;协议层最小化、可见性策略由 readable 维度托管,跨维度无双权威。
 
 
 ## executable/index.ts —— object method / guide method
@@ -202,5 +202,5 @@ const createOrUpdate: ObjectGuideMethod = {
 - 旧 3 tool 原语 → **4 tool 原语**(issue E)新增 `open`(objectId, methodName, want):不行使 exec、只开 form + 注入 want。
 - 旧 `method_exec_form.data.targetMethod` → `guideName`(构造期 alias 兼容旧 `targetMethod` 字段一段时间);旧 `tip`/`intents` → `currentTip`/`currentIntents`;新增 `want?: string`(open 原语注入)。
 - runtime `runRoute(targetObjectId, methodName, args)` 签名内部参数名义改 `guideName`——resolve guide 而非 method。新增 `execGuide(targetObjectId, guideName, args)` 给 form.submit **跳过 dispatch** 直调 guide.exec(避开递归开 form);新增 `RuntimeHandle.open(objectId, methodName, want)`。
-- WindowClassDecl 加 `guide_methods?: string[]`(与 `object_methods` 平级,注册期同等 fail-loud cohesion 校验)。
+- WindowViewDecl 加 `guide_methods?: string[]`(与 `object_methods` 平级,注册期同等 fail-loud cohesion 校验)。
 - `for_reflectable` 不存于协议层——历史 self.md 描述移除。
