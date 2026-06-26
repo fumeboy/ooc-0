@@ -1,6 +1,6 @@
 ---
 title: thread 跨 thread/跨 session 调度接通（say scheduleSession + super wake + callerSessionId 编码）
-status: decided
+status: verified
 date: 2026-06-26
 follows: 2026-06-26-stitch-issue-cd-tail.md
 ---
@@ -255,4 +255,23 @@ E 区：
 
 ## 落地验收
 
-（待 landed 后填）
+### verification by issue-G reviewer（2026-06-26）
+
+按 design-workflow 步骤 4 独立验收。结论：**verified，P0 缺口 0**——12 项裁决文档+代码全兑现、退潮 grep 全绿、质量门 tsc 干净、18 tests 全过、无 issue 外漂移。
+
+- **文档验收**：collaborable self.md 核心 6 / 7 改写为单 transcript + scheduleSession 模型；executable self.md 加 RuntimeHandle.scheduleSession 槽位 + 语义收紧；index.md 5 节（## executable / ## collaborable / ## collaborable × thinkable / ## thread / ## runtime）同步。
+- **代码验收**：12 项逐条对账——RuntimeHandle.scheduleSession? optional + JSDoc、ThreadContext.callerSessionId? + isSuperThread 辅助、ThreadRuntime.scheduleSession 含 no-op + warn 兜底、wakeSession 注入链路 `worker→scheduler→thinkloop→ThreadRuntime`（worker 单点构造闭包 + 三层透传 opts，是必要透传非过度）、method.say 删 triggerRuntimeSchedule 真接通、method.talk super 路径 createSuperThread 写 callerSessionId + 写盘后 wake、findCallerSessionId 直读 + 自愈写回。
+- **退潮验收**：grep `triggerRuntimeSchedule` / `TODO("runtime 触发"` / `enqueueThread` 全 0 命中；`core/utils/todo.ts` 当前 0 user（保留作工程债凭证、留 followup）。
+- **漂移验收**：method.end auto-reply 经 grep 确认仅 :7 注释提及、无 sayMethod 复用（合规、本 issue 不需补 wake）；11 个 touched 文件全在 issue 落地清单内、无 sneak-in。
+- **质量门**：`bun run check:tsc` 干净；新增 `tests/thread-scheduling.test.ts` 6 case + 扩 reflectable-redesign-issue-d 1 assertion = 18 pass / 0 fail / 63 expect / 522ms。
+- **测试覆盖**：4 场景全覆盖（peer say / super alias talk wake / super reflect direct read + 自愈 / super reply 反向）；「对端 thread 真被推进一轮」断言用「self.data.messages 数组 +1」充分守门 method 契约边界。
+
+落地 commits：`ac04b7f1`（worktree feat/thread-cross-session-scheduling）+ `563ccc9`（meta 仓 main 文档回流）。
+
+### Followup（不阻塞 verified）
+
+- **F1（P2）**: `isSuperThread` 辅助导出但 0 import 用户——method.say 推断处可显式用上提升可读性。
+- **F2（P1）**: runtime e2e wake → worker tick → 对端 think 真链路单元 mock 不覆盖；建议起 storybook tier-B agent-native `collaborable.say-cross-thread-roundtrip.story.ts` 或 tests/e2e/ 真 worker 测——属既有 e2e 矩阵覆盖度问题、不是本 issue 引入。
+- **F3（P2）**: method.end auto-reply 路径未接通 result→creator——method.end.ts:7 注释承诺「deferred_hooks 待反推」久无落地，独立 issue 评估真接通 vs 删承诺。
+- **F4（P2）**: observable trace wake 事件——裁决 12 留 followup，未做。
+- **F5（P2）**: `core/utils/todo.ts` 现 0 user、是否同步退役另起轻量 issue 决断。
