@@ -370,3 +370,24 @@ E 区：
 
 6. **意外**：无显著意外。`ReadableProjection.class → view` 字段改名传播平稳——所有 readable render 返回点都是 builtin 内（无外部消费者），sed 一次性改完。method.talk.ts 中 caller 持 super thread ref 复用 / 新建（裁决表 177-181 / 194-198）本就缺省 window_view，无需改动。
 
+
+
+---
+
+## 落地验收 reviewer 报告（2026-06-26）
+
+独立验收按 design-workflow 步骤 4，**verified、P0/P1 缺口全 0**——13 项裁决文档+代码全兑现、退潮干净、关键边界守住、followup 登记完整。
+
+**关键确认**：
+- thread-runtime.ts:132 dispatch bug **未被动**（保持 silent miss、留 issue K）。
+- 9 处 ref 创建点显式 window_view 全部按裁决表对账。
+- 退潮 grep：windowClass/projectionClass 全清；prompt md `<window_classes>` → `<window_views>` 全替换。
+- 全量回归 123 pass / 1 fail（web-e2e 预期红、与本 issue 无关）。
+
+**P2 微 drift**（不阻塞）：
+- 实际仓内 12 个 readable/index.ts（25 window decl）、issue 文档原描述提 18 个——文档描述偏差、实际改造覆盖全。
+- thread/TODO.md:92 "projection-class.ts" 文件名提及（issue I 旧 TODO 残留）—— issue L migration 时一并清。
+
+**Followup**：issue K（dispatch bug 修复 + LLM 真触达 window method 行为评估）/ issue L（computeProjectionClass 正式退役 + thread.json migration）。
+
+落地 commits：`48d30c35`（feat/window-class-to-window-view-rename）+ `0efcedb`（meta 仓 main 文档回流）。
