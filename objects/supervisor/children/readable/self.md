@@ -54,10 +54,11 @@
 ## 三、细节补充
 
 - **契约单一权威**：readable 维度的可编译契约在 `packages/@ooc/core/types/readable.ts`——
-  - `ReadableModule = { readable(ctx, self, win) => ReadableProjection, window: WindowViewDecl[] }`。
+  - `ReadableModule = { readable(ctx, self, win) => ReadableProjection, window: WindowViewDecl[], intents?(self, ref) => readonly string[] }`。**`intents?`**（issue N 新增可选槽）：本 class 暴露给上下文聚合的 intent 集合,由 `core/thinkable/context/scanIntents.ts` 在每轮 thinkloop 调一次、Set 去重后注入 `ReadableContext.intents`。**stateless 投影**——每轮重算、无缓存,form close 后自然消失。典型实现:`method_exec_form` 产 `form_open::<targetClass>::<guideName>` + `user::<name>` user intents；`thread` 据 ref.window_view + sessionId 产 `class::root` / `class::talk` / `super_flow::active`；`agent` 产 `class::root`（callee 门面）。缺省 undefined = 本 class 不产 intent。
   - `ReadableProjection = { view, content, win?, consumedMessageIds? }`：投影 view 名 + 展示内容（`XmlNode[] | string`）+ 可选新 win 投影态 + 本窗已收纳消息 id。
   - `WindowMethod = { name, description, schema?, exec(ctx, self, before_win, args) => Win }`：签名收 self(只读 Data)+before_win(当前投影态)+args，返回新 win；出错 throw。
   - `WindowViewDecl = { view, object_methods, guide_methods?, window_methods }`：一个投影 view 声明展示哪些 object method（按名引用 `ExecutableModule.methods`）+ 展示哪些 guide method（按名引用 `ExecutableModule.guides`，issue 2026-06-26-object-guide-method-split 引入）+ 提供哪些 window method。method 与 guide 命名空间共享 dispatch 入口，跨域重名 fail-loud；引用悬空 fail-loud。
+  - `ReadableContext = { object: { id, class }, intents: Set<string> }`（issue N: `intents` 必填,缺省传空 Set 即可）：readable / window method 的执行上下文（读侧）。`intents` 由 core scanIntents 聚合,所有 readable render 据"基于意图的资源激活"协议消费（knowledge_base 是实现之一）。
   - `ReadableContext = { object:{id,class} }`：读侧上下文，不携带改业务数据的能力。
 - **装配与注册**：各 class 的 `index.ts` 一处 `export const Class = { construct?, executable, readable, persistable }`（`packages/@ooc/core/runtime/ooc-class.ts`）；经 `register(cls)` 注册进 registry（`packages/@ooc/core/runtime/object-registry.ts`）。注册期校验 method↔window method 不同名（`assertNoMethodNameCollision`）+ **method/guide/window method 三侧 cohesion**（`assertExecutableMethodGuideCohesion`：guides 内部查重 / method 与 guide / guide 与 window method 跨域不重名 / window decl 的 `object_methods` 与 `guide_methods` 引用悬空 fail-loud）+ readable.window cohesion（`assertReadableWindowCohesion`：单视角强 default / 多视角 default-or-all-named / view 字段唯一）。
 - **默认投影 view seam**：`resolveDefaultWindowView(classId)` 查 `view === "default"` 的 decl，是单视角 class 的兜底入口；多视角 class 若无 default decl 时返 undefined，调用方回退到 `readable.md` 名片（兑现核心 7 最低优先级回退）。`DEFAULT_WINDOW_VIEW` 常量作字符串字面量唯一源。
