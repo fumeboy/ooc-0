@@ -38,7 +38,7 @@
   - **window method**:只调 object 在 context 里的展示态、返回不可变的新 window——归 readable 维度。
   - 三者经同一 exec-by-name 入口分派;注册时 method/guide/window method 三侧 name 全集不重名,且各 window decl 的 `object_methods`/`guide_methods` 引用必须在 ExecutableModule 内可解析（注册期 fail-loud）。
 
-4. **方法可见性的唯一来源 = readable.window**（issue E 收口）:method 协议层**不持 `public?` 字段**——某 method 对哪些视角可见、可调,由各 `WindowViewDecl.object_methods[]` / `WindowViewDecl.guide_methods[]` 显式 surface 决定。窗 decl 未列入即不可见、不可调;协议层最小化、可见性策略由 readable 维度托管,跨维度无双权威。
+4. **方法可见性的唯一来源 = readable.window**（issue E 立法 / issue M 兑现）:method 协议层**不持 `public?` 字段**——某 method 对哪些视角可见、可调,由各 `WindowViewDecl.object_methods[]` / `WindowViewDecl.guide_methods[]` 显式 surface 决定。窗 decl 未列入即不可见、不可调;协议层最小化、可见性策略由 readable 维度托管,跨维度无双权威。**dispatch 层兑现**:`ThreadRuntime.exec` 在 object/guide method 命中后追加 `assertInSurface(ref, methodName, kind)` 白名单闸,未列入抛 `[exec] method "X" not in surface of view "Y" on class Z`(issue M);与 `resolveWindowMethod` 按 view 闸(issue K)形成 method 三类一致按 view 闸的统一语义。
 
 
 ## executable/index.ts —— object method / guide method
@@ -197,7 +197,7 @@ const createOrUpdate: ObjectGuideMethod = {
 ## 迁移映射
 
 - 旧 `ObjectMethod.intents` / `ObjectMethod.route` → **删**,迁至独立 `ObjectGuideMethod`（issue 2026-06-26-object-guide-method-split）。method 退回纯「单步直执行」。
-- 旧 `ObjectMethod.public` / `ObjectGuideMethod.public` → **删**(issue E)——方法可见性唯一来源 = readable.window decl 白名单。
+- 旧 `ObjectMethod.public` / `ObjectGuideMethod.public` → **删**(issue E 立法 + issue M 兑现)——方法可见性唯一来源 = readable.window decl 白名单;**声明 + dispatch 双层闸**:核心 4 注释明示「未列入即不可见、不可调」,声明层由 render-context 按 decl 渲 surface 兑现(可见),dispatch 层由 `ThreadRuntime.exec.assertInSurface` 按 decl object_methods/guide_methods 白名单兑现(可调,issue M)。
 - 旧 `ObjectGuideMethod.schema` → **删**(issue E)——总参数空间由 route 输出的 ObjectMethodIntents 动态给出,与静态 schema 重复。
 - 旧 3 tool 原语 → **4 tool 原语**(issue E)新增 `open`(objectId, methodName, want):不行使 exec、只开 form + 注入 want。
 - 旧 `method_exec_form.data.targetMethod` → `guideName`(构造期 alias 兼容旧 `targetMethod` 字段一段时间);旧 `tip`/`intents` → `currentTip`/`currentIntents`;新增 `want?: string`(open 原语注入)。

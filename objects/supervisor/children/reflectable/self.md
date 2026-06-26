@@ -22,7 +22,7 @@
 
 2. **super flow = 显式合并入口**：`sessionId="super"` 是单一恒定的反思通道；`talk(target="super")` 是 reflectable 的唯一入口——caller object data 持 `superThreadRef`，幂等键 = `(callerSessionId, callerObjectId)`，跨 session 自指由 collaborable 核心 7 兑现，消息派送由 caller 直接写 super flow 内 callee thread 的 inbox（不引入 cross-session bus）。worker scheduler 对 sessionId="super" 起独立 job lane，避免业务长跑饿死反思处理。
 
-3. **super 窗 surface 4 个 reflect method**:super flow 内 self-view 的 thread 投影 class 为 `super`(thread/readable 投影态、非注册 builtin class,issue E:原名 reflect_request → super,人话术语「super 窗 / super 视角」),surface 4 个一步到位的 object methods——`scan_changes` / `create_pr_for_versioned` / `sediment_unversioned` / `create_pr_for_class_edits`;普通 session 投影为 `default`(issue E:原 thread/talk 二投影合并),看不到这 4 个 method。
+3. **super 窗 surface 4 个 reflect method**:super flow 内 self-view 的 thread 投影 class 为 `super`(thread/readable 投影态、非注册 builtin class,issue E:原名 reflect_request → super,人话术语「super 窗 / super 视角」),surface 4 个一步到位的 object methods——`scan_changes` / `create_pr_for_versioned` / `sediment_unversioned` / `create_pr_for_class_edits`;普通 session 投影为 `default`(issue E:原 thread/talk 二投影合并),看不到这 4 个 method。**双闸门 defense-in-depth**:issue M 后 dispatch 层 `assertInSurface` 已先 fail-loud(业务 session default-view ref 调 reflect method → throw `not in surface of view "default"`),reflect 系 method 内 `requireSuperSession(ctx)` 保留作 dispatch 外路径(直接 `runtime.callMethod` 偷调、测试 stub 绕开等)兜底防线;主守护从 ctx 检查迁到 surface 声明(主闸)+ ctx 检查(后置闸)。
 
 4. **三类下游通道，按字段类型自动选**：
    - **versioned 字段**（class.versioned_fields 声明） → `create_pr_for_versioned` → feat-branch PR → stone canonical。
