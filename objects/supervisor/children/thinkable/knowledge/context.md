@@ -56,7 +56,7 @@ activates_on:
 
    thread 间的对话发生在这对窗的两端（自己这端 thread window、对端 talk window）；开对话/发消息的动词（talk / say）由 collaborable 提供，非 context 范畴。
 
-10. **context window 如何构造成 LLM Messages 输入**：每个 window 经 readable 渲染成展示节点，整组 window 汇成一段 `<context>` XML、作为一条 system message 进 LLM Messages 数组。**thread window 是其中的特殊设计**：自己视角的 thread window 在 XML 里**只渲染它的 method（一个句柄）、不内联内容**，它的内容——thread event + 与 creator 的对话——**直接进 LLM Messages 数组**（迎合 Attention：最重要的主叙事走 message 流、强 attend；其余窗的内容留在 XML、弱 attend）。由此 thread event 与 creator 对话也是 thread window 这一个窗的内容，**一并纳入 context 预算**、可被该窗 `compress`（消除了"窗之外的 message 流"这一无预算归属的特例）。
+10. **context window 如何构造成 LLM Messages 输入**：每个 window 经 readable 渲染成展示节点，整组 window 汇成一段 `<context>` XML、作为一条 system message 进 LLM Messages 数组。**thread window 是其中的特殊设计**：自己视角的 thread window 在 XML 里**只渲染它的 method（一个句柄）、不内联内容**，它的内容——thread event + 与 creator 的对话——**直接进 LLM Messages 数组**（迎合 Attention：最重要的主叙事走 message 流、强 attend；其余窗的内容留在 XML、弱 attend）。由此 thread event 与 creator 对话也是 thread window 这一个窗的内容，**一并纳入 context 预算**（消除了"窗之外的 message 流"这一无预算归属的特例）。
 
 11. 经对话向其他 thread 发消息时，除消息文本外还可**传递上下文**——传的是**对某 OOC object 的引用（object 本身，不是某个固定 class 的 window）**。因为同一 object 在对方视角下 class 可能不同（如我这端是 thread window、传给 peer 那端会算成 talk window，核心 2/9），对方拿到引用后由**对方的 readable 按其视角算出 class**。**传递方式**描述"怎么把引用交给对方"，结果落到核心 2 的**引用模式**：
     - **readonly-ref（共享只读）**：对方新得一个 **readonly-ref** 引用，只能调 window method（看/调展示）、不能调 object method；自己仍持原态。
@@ -68,7 +68,7 @@ activates_on:
 
 这些不是新增机制，而是上面核心设计**组合后自然涌现**的能力。
 
-- **统一行动入口（exec / close / wait 三原语）**：一切行动都是「在某 window 上 exec 一个 method」（核心 3+5）；`close` 关窗、`wait` 声明等待。信息压缩**不是原语**——它是一项 **window method 协议**（核心 6）：`resize`（设展示/压缩档位）+ `compress`（无参折叠意图），各 class 在 readable 自实现、无通用默认，经 `exec(method="resize"|"compress")` 调（详见 `compress.md`）。**稳定原语恒为 3 个**：`exec` / `close` / `wait`。
+- **统一行动入口（exec / close / wait / open 四原语）**：一切行动都是「在某 window 上 exec 一个 method」（核心 3+5）；`close` 关窗、`wait` 声明等待、`open` 打开窗。**稳定原语恒为 4 个**：`exec` / `close` / `wait` / `open`。
 
 - **everything is a window（统一协议、各对象自有实现）**：会话（talk）、子线程、知识、文件、程序、乃至 agent 自身（self），都是 context window（核心 1+2）。context = 一组 window + 历史，没有"窗之外"的特殊结构。**「都是 window」统一的是协议/接口，不是实现**——统一的引用面（每窗一个 id）、统一的交互入口（exec/close/wait + window method）、统一的构造（readable 投影）；至于每个窗内部怎么做，**同一协议下不同对象各有自己独特的设计与关注的细节**：自己视角的 thread 窗折自己那条主历史、talk 窗调与对端会话的展示、file 窗调展示详略，各按自身内容形态实现、互不强求一致。这正是高内聚低耦合 + 接口原则——协议把分界画好，实现的自由留给各对象；**别把某一种窗的做法，当成所有窗的普遍约定**。
 
@@ -136,7 +136,7 @@ activates_on:
 - **content 渲染（readable）**：给定本窗展示状态，产出展示节点（或"无内容"）——即 object 的 readable（核心 8）。content 与 class 怎么算（注册时直接给的 / 从 stone 读的 / 动态函数 / 静态名片）由 **readable 维度**定，**context 只调这个接口**。
 - **window method**：调整本窗展示、读写本窗的展示状态块（核心 6）；object method 归 object——context 只按 class 把方法菜单聚合进 `<window_classes>`（核心 4），不关心方法实现。object method 可携**对 object 只读 / 无副作用**标记（核心 5 口子），context 据此判定它在 readonly-ref 窗下是否可展示。
 - **展示状态块**：一块可持久化的展示态（核心 7）；window method 的读写对象。
-- 可选：**压缩态渲染**（compressLevel ≥ 1 时的简化呈现）/ **关窗清理钩子**（close 时的清理；"副作用"一词在本文专指对被引用 object 的状态改变，故此处不用该词）/ **本窗消费了哪些消息**（供 attention 分流去重）。
+- 可选：**关窗清理钩子**（close 时的清理；"副作用"一词在本文专指对被引用 object 的状态改变，故此处不用该词）/ **本窗消费了哪些消息**（供 attention 分流去重）。
 
 context 侧职责到此为止：拿到一组满足接口的 window → 逐窗调 readable 渲染 + 按 class 聚合方法 + attention 分流（核心 10）+ 预算分配。
 
@@ -148,18 +148,17 @@ window 内容变化主动报告为 event，context 按 kind 映射为确定 item
 |---|---|
 | `inbox_message_arrived`（creator 对话，属 thread window） | system，**全文**（核心 10：进 LLM Messages 数组、强 attend） |
 | `inbox_message_arrived`（其他 talk 窗） | system，**缩略**（`<window> 收到新消息 "…前 50 字"`，核心 10：弱 attend、全文在该窗 transcript） |
-| `context_compressed` / `scheduler_yielded` / `inject` | system 简述（silent-swallow ban：任何变化都对 LLM 可见） |
-| `events_summary` | 替换被折叠的中段历史 |
+| `scheduler_yielded` / `inject` | system 简述（silent-swallow ban：任何变化都对 LLM 可见） |
 | llm 文本 / function_call / function_call_output | assistant / function_call / function_call_output |
 | reasoning / call_started | 不进 transcript（reasoning 不复喂；call_started 仅 crash recovery 锚点） |
 
 ### 3.5 预算与可见性
 
-context 是稀缺资源（两条轴：信息密度、class/实例正确性）。按相关度排序在 token 预算内分 `{visible, overflow}`；口径：**锚渲染输出**（非序列化对象）估 token，且**含 thread window 的内容通道**——thread event + creator 对话虽走 message 流，但它们是 thread window 的一部分（核心 10），故同样计入预算、可被该窗的 `compress` 折叠；超预算**先把低相关窗压一档再踢 overflow**；当前 form 等结构必需窗 **pin** 保护；被裁的窗在 `<context_overflow>` 留摘要行（silent-swallow ban）。
+context 是稀缺资源（两条轴：信息密度、class/实例正确性）。按相关度排序在 token 预算内分 `{visible, overflow}`；口径：**锚渲染输出**（非序列化对象）估 token，且**含 thread window 的内容通道**——thread event + creator 对话虽走 message 流，但它们是 thread window 的一部分（核心 10），故同样计入预算；当前 form 等结构必需窗 **pin** 保护；被裁的窗在 `<context_overflow>` 留摘要行（silent-swallow ban）。
 
 ### 3.6 视角(POV)：context 是视角而非归属
 
-- 同一 object（如一场跨 agent 的 talk）可同时出现在多个 thread 的 context；每个 thread 持自己的**视角参数**（展示状态块：compressLevel / viewport / sharing 快照 + 按此视角算出的 class，核心 2），object 的业务状态只存一份。
+- 同一 object（如一场跨 agent 的 talk）可同时出现在多个 thread 的 context；每个 thread 持自己的**视角参数**（展示状态块：viewport / sharing 快照 + 按此视角算出的 class，核心 2），object 的业务状态只存一份。
 - 故 thread 的 context 是一张"指针表"——每个 window 是对某 object 的引用（核心 2），引用语义对应 OO 的对象指针。
 - **state ≠ context**：window 展示状态（视角）属 context、随 thread 走；object 跨 thread 共享的业务状态属 object 自身。两者落盘的**具体布局归持久化层**定，context 不耦合。
 
@@ -168,13 +167,13 @@ context 是稀缺资源（两条轴：信息密度、class/实例正确性）。
 | 旧概念 | 归并到 |
 |---|---|
 | 旧 `do` 方法 / `do_window` class / `continue` / `move`（已并入 talk，2026-06-14） | `talk`（target=自己 ⇒ fork 子线程）/ `say` / `share`(readonly-ref·move) |
-| `compress` 顶层 tool / `scope`(windows/events/auto) / `expand` 逆向方法 | 已退役——压缩升为 window method 协议（`resize` 设档位替代 expand + `compress` 无参意图），各 class 自实现、无通用默认表；稳定原语恒 3 个（exec/close/wait）。详见 `compress.md`|
 | 旧 sharing kind `ref`(只读引用) / `lent_out`(已借出)（已并入新命名，2026-06-14） | 引用模式 `readonly-ref`（核心 2）；缺省持有 = `mutable-ref`；`move` 是产生只读态的动作（核心 11）、非稳态 |
 | 渲染层把 `window.class` 漂成 XML `type=` | 统一 `class=`，`type` 仅 arg 数据类型 |
 | 逐实例方法菜单重复 / 空 self 窗壳 | class 声明一次 / **self 身份走 self 门面窗**（self.md 作 self 门面窗 self 视角内容，**非 instructions**） |
 | 自己 thread 的 events + creator 对话裸渲在 `<thread>` 块 / message 流、无预算归属；`isCreatorWindow` 标记 | **已落（2026-06-20）**：收敛为自己视角 **thread 窗**（核心 9/10）——**无独立"creator 窗"概念**，creator 对话是 thread 窗内建的上游通道；XML 只渲 methods、内容进 message 流、一并纳入预算。谓词拆 `isSelfThreadWindow`（自视检测）/ `hasCreatorChannel`（有上游，gate creator affordance） |
-| events compress 折叠态曾停在 **self 门面窗**（`isSelfWindow`、非持久化、靠写盘 inline 后门、stone 冷启动丢窗洞） | **已落（2026-06-20）**：折叠态挂**自己视角 thread 窗**的 win（class=`_builtin/agent/thread`、inline 天然持久化、免后门与冷启动 registry-miss；self-driven root 用空通道 thread 窗承载）；写侧 events-compress 能力归属 thread class。真 LLM 实证 + 跨 job reload e2e gate |
-| transcript（thread event + creator 对话）曾在 `buildInputItems` 预算分配**之后**无条件追加、不计 token 账 | **已落**：transcript token 纳入预算口径（核心 10/3.5，commit 9376ffd8），计入自己视角 thread 窗预算账；逼近上限可 `compress`（无参意图，框架 fork summarizer 折叠）+ 越 hard force-wait / clamp floor 兜底 |
+| transcript（thread event + creator 对话）曾在 `buildInputItems` 预算分配**之后**无条件追加、不计 token 账 | **已落**：transcript token 纳入预算口径（核心 10/3.5，commit 9376ffd8），计入自己视角 thread 窗预算账 |
+
+> **`compress` 子能力已整体退役（issue L, 2026-06-26）**——context 压缩待重新设计、原 compress / resize / summarizer-fork / autoCompressLevel / summarizedRanges 协议机制不再保留。
 
 ---
 
@@ -182,7 +181,7 @@ context 是稀缺资源（两条轴：信息密度、class/实例正确性）。
 
 把上面的设计放进真实运行时场景推演，能暴露设计是否还有欠缺。下列每个 case 先描述场景，再点出它暴露的设计 gap 与补法方向。这些 gap 多落在"二分模型没穷尽真实态"或"瞬时语义没补生命周期"，补法皆为**给已有概念加一段生命周期或一条规则**，而非引入新机制（守"简单叠加涌现、勿过度机制化"）。
 
-> 注：曾经记在这里的 **「creator 主线长对话逼近预算 / message 流无预算」** 已由**核心 10**解决——message 流是自己视角 thread window 的内容通道，thread event 与 creator 对话都是该窗的一部分，故一并纳入 3.5 预算、可被该窗 `compress` 折叠。它不再是开放 gap。
+> 注：曾经记在这里的 **「creator 主线长对话逼近预算 / message 流无预算」** 已由**核心 10**解决——message 流是自己视角 thread window 的内容通道，thread event 与 creator 对话都是该窗的一部分，故一并纳入 3.5 预算。它不再是开放 gap。
 
 ### Case A — 跨 thread 共享后 owner 改了对象（一致性模型缺失，高）
 
@@ -198,7 +197,7 @@ A 把窗 `move` 给 B（所有权转 B，A 自己降为 `readonly-ref`）。接�
 
 ### Case D — 真实窗类型逐个套 ContextWindow 接口（接口是乐观最小集，中-高）
 
-把 form / search / plan 等真实窗逐个套 3.3 的 ContextWindow 接口时，发现接口漏了三类：① **窗-窗层级**（form 内嵌子窗，需 `parentWindowId` / `sub_windows`）；② **budget/attention 元数据**（`relevance` / `provenance` / `compressLevel` 接口没暴露）；③ 窗自身的**生命周期/工厂型 method**——form 的 `refine`/`submit` 会产出新窗、`search.open_match` 打开一个匹配项、`plan.expand_step` 展开步骤，这类"产出新窗"的 method 既不是纯 window method（只改展示）也不是 object method（改对象本体），核心 5 的二分缺这根判定轴。此外核心 6/7"每个窗带一块可持久化状态配置块"是过强的全称——form.fill 的瞬态输入装不进、self/member 这类门面窗是确定性重建的、不需落盘。**方向**：接口补三槽；核心 5 method 二分加判定轴（容纳"工厂型 method"）；核心 6/7 承认"瞬态/确定性重建窗"例外。（注：这条"产物/工厂型"判定轴与核心 5 口子的"对 object 只读/可改"判定轴是**两条正交轴**；交叉态如"只读的工厂型 method"默认按对父对象有副作用处理，除非显式标只读。）
+把 form / search / plan 等真实窗逐个套 3.3 的 ContextWindow 接口时，发现接口漏了三类：① **窗-窗层级**（form 内嵌子窗，需 `parentWindowId` / `sub_windows`）；② **budget/attention 元数据**（`relevance` / `provenance` 等接口没暴露）；③ 窗自身的**生命周期/工厂型 method**——form 的 `refine`/`submit` 会产出新窗、`search.open_match` 打开一个匹配项、`plan.expand_step` 展开步骤，这类"产出新窗"的 method 既不是纯 window method（只改展示）也不是 object method（改对象本体），核心 5 的二分缺这根判定轴。此外核心 6/7"每个窗带一块可持久化状态配置块"是过强的全称——form.fill 的瞬态输入装不进、self/member 这类门面窗是确定性重建的、不需落盘。**方向**：接口补三槽；核心 5 method 二分加判定轴（容纳"工厂型 method"）；核心 6/7 承认"瞬态/确定性重建窗"例外。（注：这条"产物/工厂型"判定轴与核心 5 口子的"对 object 只读/可改"判定轴是**两条正交轴**；交叉态如"只读的工厂型 method"默认按对父对象有副作用处理，除非显式标只读。）
 
 ### Case E — creator 判据的边界（缺归类全函数，中）
 

@@ -27,7 +27,7 @@
    - **`executable`**（`executable/index.ts`）—— 它的 **object method**。
    - **`visible`**（`visible/index.tsx` + `visible/server/index.ts`）—— 它向 OOC 系统用户提供 UI 界面（tsx）+ 「给 UI 用的服务端 API」（visible/server，前端经 callMethod 调用、改 object data）。**tsx 是文件资源、不参与 OocClass 继承机制**（见 visible 维度 self.md）。
    - **`persistable`**（`persistable/index.ts`）—— 它的**自定义持久化逻辑**（缺省走系统默认）。
-   - **`index.ts`** —— class 的**后端程序路由**（不含 visible 前端 tsx）：`export const Class = { construct?, active?, unactive?, executable, readable, persistable, thinkable?, visibleServer? }`，把各维度的程序入口收口在一处——含 **visible/server** for-ui 服务端 API 模块（前端 tsx 资源除外，那是 visible 自带）+ **`thinkable?`**（思考组织模块：buildInputItems/appendEvents/compress/onSchedulerTick；仅跑 thinkloop 的 thread 类注册、由 registry `resolveThinkable` 解析，见 thinkable 维度）；非单例 class 在此注册 **construct**（见核心 3）。槽名是 `construct` 不是 `constructor`——JS `Object.prototype.constructor` 会遮蔽后者（`({}).constructor === Object` 恒真），单例就无法被识别。
+   - **`index.ts`** —— class 的**后端程序路由**（不含 visible 前端 tsx）：`export const Class = { construct?, active?, unactive?, executable, readable, persistable, thinkable?, visibleServer? }`，把各维度的程序入口收口在一处——含 **visible/server** for-ui 服务端 API 模块（前端 tsx 资源除外，那是 visible 自带）+ **`thinkable?`**（思考组织模块：buildInputItems/appendEvents/onSchedulerTick；仅跑 thinkloop 的 thread 类注册、由 registry `resolveThinkable` 解析，见 thinkable 维度）；非单例 class 在此注册 **construct**（见核心 3）。槽名是 `construct` 不是 `constructor`——JS `Object.prototype.constructor` 会遮蔽后者（`({}).constructor === Object` 恒真），单例就无法被识别。
    - **`types.ts`** —— 定义该 class 的 **object data 结构**（object 自身运行时数据的类型；**不是** window 投影结构，见核心 4）。
    - 可选 **`common/`** —— 放公用的程序函数。
 

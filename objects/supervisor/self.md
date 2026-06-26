@@ -31,7 +31,7 @@ OOC 系统的工作区称为 OOC World, 通过 **ooc-world-meta** 这个 World �
 
 ## executable
 
-1. LLM 本身支持 tool_use, OOC 系统面向 context windows 设计了 3 个基础 tool（恒 3 个）, 分别是 exec(执行 method) / close(关闭一个 window) / wait(等待一个 window 新的信息)。compress(压缩 context 信息) 不是原语——它是 window method，经 exec(method="compress") 调
+1. LLM 本身支持 tool_use, OOC 系统面向 context windows 设计了 4 个基础 tool（恒 4 个）, 分别是 exec(执行 method) / close(关闭一个 window) / wait(等待一个 window 新的信息) / open(打开 guide form)。
 2. 所有 OOC Object 都可以自己实现并注册 methods，注册时需提供 method name、method description
 3. object method 实现处需要声明 method 可以关联的 intent 列表，提供程序来计算 args=>intents, 来进行相关知识的匹配
 4. object method 实现处可以在创建 method_exec form 时一并返回一些方法知识信息或提示信息, 这些信息会直接展示在 context 中 method_exec form 的相关位置
