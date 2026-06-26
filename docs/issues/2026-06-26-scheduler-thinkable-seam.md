@@ -1,6 +1,6 @@
 ---
 title: scheduler → thinkable seam 真启用（ThinkableDeps 扩 opts + scheduler 经 resolveThinkable 派发）
-status: decided
+status: landed
 date: 2026-06-26
 follows: 2026-06-26-thread-cross-session-scheduling.md
 ---
@@ -247,3 +247,15 @@ E 区：
 ## 落地验收
 
 （待 landed 后填）
+
+## 落地记录
+
+- 源代码 commit：worktree `.worktree/scheduler-thinkable-seam` 分支 `feat/scheduler-thinkable-seam` 上 `feat(thinkable): scheduler 经 resolveThinkable seam 派发 think（issue H）`。
+- 修改文件清单：
+  - `packages/@ooc/core/types/thinkable.ts`：ThinkableModule.think 签名改 `(data, deps)`；ThinkableDeps 扩 `worldDir? / onDataEdit? / wakeSession?` + jsdoc 标 thread-only。
+  - `packages/@ooc/builtins/agent/children/thread/thinkable/index.ts`：adapter 入口 fail-loud 断言 worldDir+onDataEdit 必备；解 deps 调 thinkloop module-level think；移除多余 `OocObjectInstance` 引入。
+  - `packages/@ooc/builtins/agent/children/thread/thinkable/scheduler.ts`：删 `import { think } from "./thinkloop.js"`；改经 `registry.resolveThinkable(THREAD_CLASS_ID)` 派发 + capability check fail-loud（thinkable 模块缺失即注册表损坏）。
+  - `packages/@ooc/tests/thinkloop-e2e.test.ts`：scheduler 测补 `worldDir + onDataEdit` stub 适配新 adapter 契约。
+- 质量门：`bun run check:tsc` 干净；`bun test packages/@ooc/tests/` 94 pass / 1 fail（仅 web-e2e 预先红，与本 issue 无关）。
+- grep 验收：`grep -rn 'import.*\bthink\b.*from.*thinkloop' packages/@ooc/` 仅命中 `thread/thinkable/index.ts`（adapter 本身的 module-level wrap，按设计保留）；scheduler 已 0 命中。
+- 文档回流（meta 仓 main 分支）：`supervisor/children/thinkable/self.md`（think 签名 + ThinkableDeps 字段表 + 迁移映射）；`supervisor/knowledge/index.md` `## thinkable / ## runtime / ## thread` 同步。

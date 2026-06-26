@@ -8,14 +8,26 @@
 
 OOC 的核心设计:LLM 看到的世界不是裸 prompt,而是一组 **ContextWindow 对象**(Object 在 context 中的形态,自带可调的 window method)。在此之上是**渐进式执行伴随的渐进式知识激活**——Object 经 open→refine→submit 渐进暴露要操作的窗口与方法,knowledge 则按 `activates_on` 意图在执行推进时渐进激活:执行到哪、知识激活到哪。思考过程组织成可并行、可恢复的 Thread Tree。
 
-**`ThinkableModule` 协议字段**(issue E 扩展):
+**`ThinkableModule` 协议字段**(issue E + H 扩展):
 
 | 字段 | 必/选 | 说明 |
 |---|---|---|
-| `think?` | 选 | 一轮 think 入口(thinkloop tick 调一次) |
+| `think?(data, deps)` | 选 | 一轮 think 入口(thinkloop tick 调一次)。**签名收敛为 `(data, deps)`**(issue H 裁决)——thinkable 是能力模块、不持 instance handle;scheduler 与 adapter 不再包/拆 fake instance。 |
 | `onSchedulerTick?` | 选 | scheduler 每 tick 给本 class 实例的回调(harvest / child-notify / 唤醒检查) |
 | `active?(data) → boolean` | 选 | 本实例当下是否活;返 false 视为终态,core GC pass1 据此把它的 outgoing refs 一次性 decRef。缺省 true。**纯函数**,基于 data 算。 |
 | `refs?(data) → OocObjectRef[]` | 选 | 本实例对其它对象的出度引用列表;core 据此算 refcount(实现 refs 的 class contributes,不实现即不贡献)。缺省 []。**纯函数**,基于 data 算。 |
+
+**`ThinkableDeps` 字段**(issue H 扩展,thread-only 假设):
+
+| 字段 | 必/选 | 说明 |
+|---|---|---|
+| `llm` | 必 | LLM client 句柄(`unknown`,实现层 cast)。 |
+| `registry` | 必 | class registry 句柄,`resolveXxx` 用。 |
+| `worldDir?` | 选 | 持久化 + flow 寻址用——thread think 必备(adapter fail-loud 断言)。 |
+| `onDataEdit?` | 选 | data 变更后通知 runtime 持久化(scope=flow 写入路径)——thread think 必备。 |
+| `wakeSession?` | 选 | 跨 thread/跨 session 唤醒钩(issue G 注入路径);ThreadRuntime 内 no-op + warn 兜底。 |
+
+> 当前 thinkable 模块槽天生面向 thread 系(OOC 哲学澄清 2:只有 thread 类跑 thinkloop);`worldDir / onDataEdit / wakeSession` 是 thread 启动 thinkloop 的 cross-cutting opts,字段全 optional——非 thread caller(refs/active 经 GC/refcount 调)不读,不破坏向后兼容。fail-loud 落在 thread thinkable adapter 入口,而非 types 层(types 保持纯类型声明)。
 
 **context 切分**(issue E 收口):
 - **投影**(把单个 ref 渲成 payload + 决定投影 class)归 **core readable**(`renderReadable` 单入口,3 档 fallback)。
@@ -42,7 +54,11 @@ thinkable 这个维度拆成这些子模块
 - context 渲染走管线 `createDefaultPipeline()`（`builtins/agent/children/thread/thinkable/context/pipeline.ts:69`），串接 activator / protocol / peer / knowledge 等 processor 产出 derived 窗口。
 - 预算：`loadBudgetThresholds()`（`builtins/agent/children/thread/thinkable/context/budget.ts:58`）只保留软硬阈值；窗口自动衰减已退役，预算改由 `BudgetManager.allocate` 排序纳入/排除窗口实施，compressLevel 仅由内容窗**各自实现**的 `resize`（无共享默认实现）与渲染器消费；thread 窗自动压缩走 summarizer fork（autoCompressLevel 阈值 → auto-trigger，见 `knowledge/compress.md`），超 hard 由 force-wait + transcript clamp floor 兜底。
 - knowledge 加载：`loadKnowledgeIndex()`（`builtins/knowledge_base/loader.ts:56`）双源（stone seed + pool sediment，sediment 覆盖 seed），**不沿继承链**——子若想用父 knowledge 触发条件，自己 import 父 knowledge md 并重声明本类 id 的 trigger（与 `object/self.md` 核心 2「OOC 协议不内建继承机制」一致）。激活：`computeActivations()`（`knowledge/activator.ts:26`）对每篇求激活级别；`evaluateTrigger()`（`knowledge/activator.expr.ts`）纯函数求值 `activates_on`，trigger 现支持 4 类——`window::<class>` / `method::<class>::<guide>`（语义已迁 ObjectGuideMethod，trigger 关键字保留历史拼写） / `intent::<name>` / `super`。`activeIntents` 数据源：thread 构造 context 时扫所有 form 对象 data.currentIntents 合并入 `ActivationContext.activeIntents`（phase-1 简化版——所有 form 共享一个 intents 集；phase-2 按 form objectId 作 source-key 分组替换 + 撤销，API `setSourceIntents` / `clearSourceIntents` 在 `core/thinkable/knowledge/source-intents.ts` 已预留，refine/close 路径接入待后续 issue）。出厂身份作废声明「身份只由 self.md 定义」经 protocol processor 注入（`builtins/root/knowledge/interaction-core.md`）。
-- 调度：`runScheduler()`（`scheduler.ts:131`）逐 tick 推进可运行 thread；`think()`（`thinkloop.ts:362`）跑单 thread 一轮思考。
+- 调度：`runScheduler()`（`scheduler.ts`）逐 tick 推进可运行 thread；选下个 running thread 后**经 `registry.resolveThinkable(THREAD_CLASS_ID).think(data, deps)` seam 派发**(issue H：scheduler 不再直 import thinkloop.think)，adapter 内部解包 deps 调 thinkloop module-level `think()`（`thinkloop.ts`）跑单 thread 一轮思考。capability check fail-loud：未命中即注册表损坏 → throw。
+
+**迁移映射**（已退役）：
+- ~~`scheduler.ts` 直 `import { think } from "./thinkloop.js"`~~ → 改经 `registry.resolveThinkable` seam 派发（issue H）。
+- ~~`ThinkableModule.think(instance, deps)`~~ → `think(data, deps)`（issue H：thinkable 是能力模块、不持 instance handle）。
 
 ## 现状
 
