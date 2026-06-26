@@ -1,6 +1,6 @@
 ---
 title: 衔接 issue C/D 落地遗留：mergeFeatBranch 双源消除 + flow-scan 读真 versioned_fields
-status: decided
+status: verified
 date: 2026-06-26
 follows: 2026-06-26-reflectable-redesign-as-flow-dispatcher.md
 ---
@@ -174,4 +174,17 @@ E 区：
 
 ## 落地验收
 
-（待 landed 后填）
+### verification by issue-F reviewer（2026-06-26）
+
+按 design-workflow 步骤 4 独立验收。结论：**verified，P0/P1/P2 全 0**——裁决 1-10 全部如约落地，质量门绿，退潮干净，无漂移。
+
+- **文档验收**（裁决 1-8 全过）：feat-branch.ts 整文件删 / feat-branch.test.ts 整文件删 / barrel index.ts 无 feat-branch.js 残留 / method.reflect.ts 三处调点（实际行号 `:120-122` / `:213-215` / `:319-321`，与裁决 1:1 对齐）+ getSessionRegistry import 加 `:31` / flow-scan.test.ts 3 case 全实 / reflectable-redesign-issue-d.test.ts +90 行 wiring assertion / 两处 TODO 清理 + 黑名单段整删。
+- **代码验收**：scanFlowChanges 签名 `(baseDir, sessionId, objectId, versionedFields: readonly string[])` 完成 classId 入参移除；getVersionedFields 函数 + 6 个 if 黑名单分支整段消失；caller 形态与裁决片段 1:1 对齐；不扩 RuntimeHandle（types/executable.ts 未触动，「最小面」立场维持）。
+- **退潮验收**：`grep "from.*feat-branch[^-]"` 0 命中 / `grep "getVersionedFields"` 0 命中 / `grep "issue C verified 后"` 0 命中。
+- **漂移验收**：顺手清 flow-scan.ts 内 `gitDiffPatch` / `sessionWorktreePath` / `STONES_BARE_REPO_DIR` 死 import——经核对旧文件这三个 import 只引未用，是与 getVersionedFields 同期遗留死代码，属合理同文件局部退潮、非 issue 外扩张。
+- **质量门**：`bun run check:tsc` 干净 / `bun test flow-scan.test.ts reflectable-redesign-issue-d.test.ts` 15 pass / 0 fail / 58 expect。
+- **术语遵守**：`versioned_fields`（概念）vs `VERSIONED_FIELDS`（常量）/ `scanFlowChanges`（函数）vs `scan_changes`（method 名）层面无混用。
+
+落地 commit：`2f625c3c`（feat/stitch-cd-tail 分支）。
+
+**hydrate-snapshot conflict 检测**留独立 issue G——属设计变更，需扩 ScanFlowChangesResult 契约 + reflect method UX 决策，不在本 issue scope。
