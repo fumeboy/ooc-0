@@ -113,7 +113,7 @@ observable 的铁律是**不改变 agent 行为的旁路观测**：只在 thinkl
 
 > **非维度 / 横切模块**：把各维度内核汇成人类面入口，本身不是能力维度。
 
-app 的核心契约是**控制面为显式 runtime orchestration，而非「请求即完成」的同步接口**：建线程、入队 job、轮询、pause-resume、恢复都经 server 的 job 语义串起，进程内状态（pause/debug）也经 HTTP 暴露成可查询、可切换的能力。它由 HTTP 控制面（Elysia，把 stone/pool/flow/runtime 暴露为稳定 API，写 stone 必经 versioning，无 uncommitted 半成品）与 Web 控制面（Vite+React，URL 即单向真相、不持业务状态、只把既有状态翻译成人读界面）两面组成。**源文件编辑收口为单一 file-edit 原语** `PUT /stones/:id/file?path=`（三层 path 防护 + 白名单，经 runVersioned 直 commit main；按文件类型开的 self/readable/executable-source 三 typed 端点退役）——人类控制面直写、豁免 reflectable feat-branch 纪律。详见 [app](../children/app/self.md)。
+app 的核心契约是**控制面为显式 runtime orchestration,而非「请求即完成」的同步接口**:建线程、入队 job、轮询、pause-resume、恢复都经 server 的 job 语义串起,进程内状态(pause/debug)也经 HTTP 暴露成可查询、可切换的能力。它由 HTTP 控制面(Elysia,把 stone/pool/flow/runtime 暴露为稳定 API,写 stone 必经 versioning,无 uncommitted 半成品)与 Web 控制面(Vite+React,URL 即单向真相、不持业务状态、只把既有状态翻译成人读界面)两面组成。**源文件编辑收口为单一 file-edit 原语** `PUT /stones/:id/file?path=`(三层 path 防护 + 白名单,经 runVersioned 直 commit main;按文件类型开的 self/readable/executable-source 三 typed 端点退役)——人类控制面直写、豁免 reflectable feat-branch 纪律。**reflectable PR 人工合入端点** `POST /api/runtime/pr-issues/:id/resolve {decision:"merge"|"reject"}`——`worldConfig.prAutoMerge=false`(默认)时 reviewer 全 approve 后 PR-Issue 转 `ready-to-merge`,经此端点人工落锤触发 ff-merge;`prAutoMerge=true` 时跳过此端点自动 merge。详见 [app](../children/app/self.md)。
 
 # C · 内置对象
 
@@ -158,7 +158,7 @@ reflectable 的自我迭代是把改动落在 persistable 的持久三层级上:
 
 ## collaborable × thinkable
 
-collaborable 的 talk 方法创建 thread，thread 跑 thinkable 的 thinkloop 处理对话——协作即派生 Thread Tree（thinkable 的并行、可恢复底座）；thread 途中继续 talk 别的 Agent，树就长深。对话窗（thread / talk window）是 readable 按视角对 thread 的投影，进 thinkable 构造的 context，自带 say 方法把消息发给对端（caller 或 callee）。thread 各持 inbox/outbox：say 写入自己的 outbox 并派送对端 thread 的 inbox。渲染时归属本窗的消息收进窗 transcript 并报告已渲 id，从顶层 inbox/outbox 兜底剔除——与 thinkable context「一条信息只渲一次」咬合。详见 [collaborable](../children/collaborable/self.md) 与 [thinkable](../children/thinkable/self.md)。
+collaborable 的 talk 方法创建 thread，thread 跑 thinkable 的 thinkloop 处理对话——协作即派生 Thread Tree（thinkable 的并行、可恢复底座）；thread 途中继续 talk 别的 Agent，树就长深。对话窗（thread / talk window）是 readable 按视角对 thread 的投影，进 thinkable 构造的 context，自带 say 方法把消息发给对端（caller 或 callee）。thread 各持 inbox/outbox：say 写入自己的 outbox 并派送对端 thread 的 inbox。渲染时归属本窗的消息收进窗 transcript 并报告已渲 id，从顶层 inbox/outbox 兜底剔除——与 thinkable context「一条信息只渲一次」咬合。**`talk(target="super")` 跨 session 自指通道**——caller 留本 session、callee 进 super flow（sessionId="super"）、对端=caller 自己；caller 直接写 super flow 内 callee thread 的 inbox（非 cross-session bus），super flow thinkloop 经 super 投影窗 surface 4 reflect method 完成自我演化分发；这是 reflectable 自我迭代入口，但通道与机制纯由 collaborable × thinkable 现有设施承载（不发明新机制）。详见 [collaborable](../children/collaborable/self.md) 与 [thinkable](../children/thinkable/self.md)。
 
 ## readable × visible
 
