@@ -150,3 +150,16 @@ method 路径调用恒 scope="flow"；scope="stone"/"pool" 由 super flow 内的
 - **scope="pool" 通用化**：当前 pool 仅承载 knowledge sediment，不接受通用 unversioned data。「unversioned 字段 → pool 直写」由 reflectable 反思链路在 issue D 决定（reviewer 已裁决 unversioned 字段写**flow**而非直写 pool，保持 pool sediment-only 语义；issue D 视需要再扩 pool 通用化）。
 
 - **delete 字段语义 + GC**：从 data 中删一个字段（如改 schema），versioned_fields 收紧时该字段 stone canonical 残留——dormant，待迁移脚本专项处理。
+
+---
+
+## 迁移映射（非设计 / issue C 原稿取消的过设计）
+
+issue C `2026-06-26-persistable-three-layer-relocation` 起草时曾提议但 reviewer 裁决取消的过设计，留此备查：
+
+| 原稿提议 | 裁决取消理由 | 现行落地 |
+|---|---|---|
+| `flows/<sid>/objects/<id>/class-edits/` 独立目录 | 与 worktree 文件系统重叠——worktree 本就承载未合入 class 源码修改 | class 源码改动仍走 flow worktree 工作树（与 issue C 前一致） |
+| `flows/<sid>/objects/<id>/data.versioned.json` + `data.unversioned.json` 双 json 拆分 | 物理拆分缺乏紧迫驱动；可经 VERSIONED_FIELDS 在读写时分流字段流向 | 单 `data.json` 含 versioned + unversioned 字段，运行时按 VERSIONED_FIELDS 拆 |
+| `writePoolUnversioned(baseDir, ownerObjectId, data)` 通用 pool 直写 API | pool 通用化稀释 sediment-only 语义；与 flow 隔离性冲突 | unversioned 字段写 flow（非 pool）；pool 保留 knowledge sediment 唯一通道；session 结束由 super flow 内 reflect method `sediment_unversioned` 把 flow→pool promote |
+| `PersistableContext.scope` 字段写进 save 调用方签名 | 破坏向后兼容；runtime 多次调用 save 注入不同 scope 更优 | runtime 经 ctx 注入 scope；method 路径恒 scope="flow"；reflect method 链路才以 stone/pool scope 重调 |
