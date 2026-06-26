@@ -1,6 +1,6 @@
 ---
 title: 6 项设计精修：open tool 原语 + readable 控可见性 + core 承担 ref/GC/XML 渲染 + thinkable 契约扩展
-status: landed
+status: verified
 date: 2026-06-26
 follows: 2026-06-26-reflectable-redesign-as-flow-dispatcher.md
 ---
@@ -424,4 +424,53 @@ C 区
 
 ## 落地验收
 
-（待 landed 后填）
+### verification by issue-E reviewer（2026-06-26）
+
+按 design-workflow 步骤 4 独立验收。初次结论：**代码层完整、tsc 干净、12/12 守门测试通过、87/88 全量测试绿（web-e2e 预先红）；但发现 P0+P1 共 8 处文档漂移**——已在补落地阶段全部修复。
+
+**12 项裁决兑现情况**：
+- 1（tool 原语 3→4）：代码 100% 兑现；文档 self.md 主轴正确但 thinkable/self.md:75 + index.md L84 存在内部不自洽 → **P0 已补**。
+- 2（删 ObjectGuideMethod.schema）：完整。
+- 3（删 method.public）：协议层 + 7 处 builtin 标记全删；源码 grep 0 命中。
+- 4（readable.window 唯一可见性 source）：executable self.md 核心 4 + readable self.md 核心 8 双声明。
+- 5（reflect_request → super 一次到位）：代码 100% 兑现；文档 6 个 supervisor 子文档存在 live 残留 → **P1 已补**。
+- 6（拆 renderReadable / `<window>` XML 壳）：core/readable/render-context.ts 出 ReadableResult { payload, source, warning? } + 3 档 fallback；thread/thinkable/context.ts 改 import + 自包 `<window>` XML。
+- 7（refcount/GC 移 core）：core/runtime/refcount.ts + gc.ts 新增；thread-runtime.ts 删 refcountInSession 改 import；dispatchUnactive 持 `unactiveDispatched: Set<string>` 幂等护栏。
+- 8（ThinkableModule active?/refs?）：协议层加字段 + 缺省语义；thread thinkable 实现完整。
+- 9（thread 三投影 → 二投影 default+super）：window decl + computeProjectionClass + 单 transcript+author 渲染全到位；end/todo 漂移修齐（实测 method.end.ts / method.todo.ts 已存在，无需补）。
+- 10（顺手清 index.md 残留分发器）：L100 + L191 已清；P2 范围（其它 self.md 内分发器字眼）未夹带——按 reviewer 标记不属本 issue scope。
+- 11（术语统一 super 窗 / super 视角）：reflectable self.md 加「super 四重一致指涉」段；其它 self.md 主轴一致。
+- 12（scheduler→thinkloop seam 不夹带）：thread-runtime.ts 未触 scheduler/thinkloop 派发路径。
+
+**补落地（meta commit `5a8eefa`）**：
+- **P0**：`thinkable/self.md:75` 名词解释「3 个 tool 原语」→「4 个 (exec/close/wait/open)」；`index.md` `## executable` 节「tool 原语恒为/恒定 3 个」两处改 4 个，与 `## executable × thinkable` 节自洽。
+- **P1**：8 个 supervisor 子文档（`object/knowledge/builtins/agent.md` / `collaborable/self.md` / `thinkable/knowledge/thread.md` / `thinkable/knowledge/compress.md` / `readable/knowledge/window-method-and-display-state.md` / `reflectable/readable.md` / `knowledge/builtins.md` / `visible/self.md`）live 活语用 `reflect_request` → `super`；retired `new_feat_branch`/`create_pr_and_invite_reviewers` → 4 reflect method 一步到位；`for_reflectable` 标签退役声明（可见性单一 source = readable.window）。
+- 补落地后 grep `reflect_request` 仅余迁移映射段命中；grep `恒为/恒定 3 个` 在 tool 原语语境下 0 命中。
+
+**代码验收**（最终）：
+- 32 文件 diff（+896 / -149）全部围绕 12 项裁决；无 issue 外越界改动。
+- LlmToolName 联合扩展完整 5 处（thinkable/llm/types.ts + permissions.ts + thread/types.ts + thread/runtime + dispatch）。
+- close+GC race 用 `unactiveDispatched: Set<string>` 幂等护栏——dispatchActive 重激活清记录、dispatchUnactive 二次调用静默跳过；合理直接实施 issue 裁决 7 隐含的「unactive 幂等」要求。
+- GC pass1「移除终态 inst」与 issue 裁决「递归 decRef」语义等价（terminating inst 经 ObjectInsRegistry.removeObject 后 computeRefcount 看不到其 outgoing refs；pass2 经 refcount==0 兜底触发其引用对象的 unactive）。
+
+**退潮验收**：
+- `grep -rn 'method\.public|public:\s*true' packages/@ooc/` → 0 hits ✓
+- `grep -rn 'reflect_request' packages/@ooc/` → 3 hits（全注释迁移历史，非 live）✓
+- `grep -rn 'for_reflectable' packages/@ooc/` → 0 hits ✓
+- `grep -rn 'refcountInSession' packages/@ooc/` → 3 hits（全注释迁移历史）✓
+
+**质量门**：
+- `bun run check:tsc` 干净。
+- 新增 3 守门测试 (`tools-open.test.ts` / `render-readable.test.ts` / `refcount-gc.test.ts`) = 12 pass / 0 fail / 45 expect。
+- 全量 `bun test packages/@ooc/tests/` = 87 pass / 1 fail（web-e2e baseline 预先红，与本 issue 无关）。
+
+**剩余 followup（按 reviewer 显式标记，留后续 issue）**：
+- P2「reflectable 分发器」字眼在 persistable/self.md / collaborable/self.md / index.md L177 / 多个 core 源码注释中仍活跃使用——issue D 退役术语未彻底退潮，不在本 issue scope。
+- scheduler → thinkloop 派发经 resolveThinkable seam（issue D / issue E 都未夹带）——属"thinkable seam 治理"独立 issue。
+- persistable 与 refs() 的边界细化（避免两套 source of truth）——独立 followup。
+- observable 消费 refcount 信号 + ReadableResult.source 字段做 fallback 健康度可视化——独立 followup。
+- visible 前端复用 renderReadable 入口（人机双消费）——visible × readable 跨维交叉 followup。
+- storybook executable + reflectable + thread story 改造——属各维度 tests.md 持续维护、非阻塞。
+- form 上线后 tool 暴露规则 + open 错误契约——method_exec_form followup。
+
+落地 commits（feat/six-refinements 分支）：`ba52812b`（主体）；文档回流 commits（meta 仓 main）：issue E 主体回流 + `5a8eefa`（P0+P1 补落地）。
