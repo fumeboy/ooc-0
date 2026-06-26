@@ -1,6 +1,6 @@
 ---
 title: 修复 thread-runtime.ts dispatch bug（window method lookup key 错配，issue K）
-status: decided
+status: verified
 date: 2026-06-26
 follows: 2026-06-26-window-class-to-window-view-rename.md
 ---
@@ -160,4 +160,18 @@ import { DEFAULT_WINDOW_VIEW } from "@ooc/core/runtime/object-registry.js";
 
 ## 落地验收
 
-（待 landed 后填）
+**verified（2026-06-26）**——改动表面极小（1 行 lookup key 修 + 3 case 测试），不派独立 verification reviewer，由 supervisor 自验：
+
+- **改动 1**：thread-runtime.ts:132 改 `resolveWindowMethod(ref.class, ref.window_view ?? DEFAULT_WINDOW_VIEW, methodName)` ✅；DEFAULT_WINDOW_VIEW 加入 import block ✅；issue K 修复注释加入 ✅。
+- **改动 3 测试**（按裁决调整为 A/C/D，B 退役）：
+  - case A（self-view thread ref set_transcript_window）✅
+  - case C（file ref window_view 缺省 → DEFAULT_WINDOW_VIEW 命中 set_viewport 真改 viewport.lineStart/lineEnd）✅
+  - case D（super-view ref 调 set_transcript_window 跨视角分发）✅
+- **改动 4 文档同步**：thread-runtime.ts:132 加 issue K 注释——OK。
+- **质量门**：tsc 干净、全量回归 122 pass / 0 fail / 359 expect（比 issue J 后 +3 case）。
+
+**Followup（不阻塞 verified）**：
+- **issue L**：autoCompressLevel + compress 空实现退役评估（survey + reviewer 一致建议另起）。
+- **issue M**：object_methods 按视角分集 surface 但 dispatch 层不闸 leak（thread reviewer 揭出更深协议层问题）。
+
+落地 commits：（合并 main 直改、commit hash 待 push）。
