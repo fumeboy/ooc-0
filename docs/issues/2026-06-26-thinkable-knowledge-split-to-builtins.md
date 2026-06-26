@@ -1,6 +1,6 @@
 ---
 title: thinkable 维度二次拆分——core 产出 intents、knowledge 激活下沉 builtins（issue N）
-status: decided
+status: verified
 date: 2026-06-26
 follows: 2026-06-26-retire-compress-mechanism.md
 ---
@@ -291,4 +291,35 @@ const readable: ReadableModule<Data, Win> = {
 
 ## 落地验收
 
-（待 landed 后填）
+**verified（2026-06-26）**——独立 verification reviewer 核 13 项裁决全兑现。
+
+**13 项裁决兑现度全 ✅**：
+- core 协议层 ReadableContext.intents (Set<string>) + ReadableModule.intents?(self, ref) 二参签名扩。
+- core/thinkable/context/scanIntents.ts 新增（thinkable 归属、core 经 readable 槽聚合不识别 class id）。
+- core/thinkable/knowledge/ + core/types/knowledge.ts 整删；builtins/knowledge_base/activator/ 5 文件齐。
+- Trigger 简化为单 intent kind；parser 仅认 `intent::` 前缀。
+- intent 三段式命名 `class::* / form_open::* / super_flow::* / user::*` 落地。
+- method_exec_form 加 `targetClass` data 字段 + readable.intents 供给。
+- knowledge_base.readable 承担 `<knowledge>` XML 渲染；空 index fallback 不渲段。
+- knowledge_base 默认 root ref：thread.construct (`thread/index.ts:53`，issue 前已存在) + method.talk.createSuperThread (新增、`:122-124`)。
+- 12+1 篇 knowledge md `activates_on` 全迁 `object::|method::|super::` → `intent::xxx`。
+- windowViews / methodForms / inSuper 全树退潮 0 命中。
+- readable.intents stateless 投影（每轮重算）。
+
+**reviewer 误报澄清**：reviewer 提 P1-1「业务 thread 未挂 kb ref」属误读——`thread/index.ts:53` 业务 thread.construct 早已默认挂 kb ref（issue 前现状），落地者补的是 super flow 路径（`method.talk.ts:122-124`）。两路径都挂、回归零风险。
+
+**落地者意外项评估**：
+- method_exec_form `targetClass` 字段 + intents 签名扩 `(self, ref)` 二参：reviewer 评估合理（targetClass 比 ref 反查 class 更直接）。
+- ref 二参在 thread.readable.intents 已用 `ref.window_view` 派生视角 intent——签名扩有实际消费方。
+- thread/context.ts 识别 `KNOWLEDGE_BASE_CLASS_ID` 预加载 ref.data.index：builtin→builtin 协作合理（thread 是唯一掌握 worldDir + ownerId 的 caller）。
+- ReadableContext.intents 必填（非 optional）：所有调用方显式构造 `new Set()` 或预扫聚合——契约对称干净。
+
+**退潮验收**：grep `core/thinkable/knowledge\|core/types/knowledge` 仅注释路径回流；`windowViews\|methodForms\|inSuper` 0 命中；knowledge md `object::|method::|super::` 0 命中。
+
+**质量门**：tsc 干净；knowledge-activator 9 pass / 0 fail；全量 123 pass / 1 fail（web-e2e 预先红与本 issue 无关）。
+
+**P2 followup（reviewer 提，不阻塞）**：
+- **P2-1**：core scanIntents 兜底产 `class::<full_id>` + `class::<short_name>` 双形态——落地者额外引入、issue 未授权。设计上 generic（路径解析、不识别 class 语义、不破 core 边界）但是协议层增量、需追写进 readable/self.md 设计文档（或评估退回 class 自决）。建议另起小 issue 评估。
+- **P2-2**：meta 仓 commit `3d34b83` push origin（已 push）。
+
+落地 commits：`150a8547`（feat/thinkable-knowledge-split）+ `3d34b83`（meta 仓 main）。

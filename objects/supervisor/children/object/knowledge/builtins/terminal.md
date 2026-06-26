@@ -12,7 +12,7 @@ activates_on:
 
 ## 一、self（身份 / data）
 
-- **id** `_builtin/terminal`；**`ooc.kind=object`**；**单例 tool-object**——一个 world 一份，被多个 agent **组合持有(HAS-A)、被 exec 而非被 talk**（见对象模型核心 3/9）。它**不是 agent**：无 thinkable/collaborable/reflectable，只持自己的工具方法。
+- **id** `_builtin/terminal`；**`ooc.kind=object`**；**单例 tool-object**——一个 world 一份，被多个 agent **组合持有(HAS-A)、被 exec 而非被 talk**（见对象模型核心 3/10）。它**不是 agent**：无 thinkable/collaborable/reflectable，只持自己的工具方法。
 - **Data = {}**（空）——self 只承载身份 + 一个方法面，状态全在它造出的 child `terminal_process` 上。
 - **职责**：把「跑 bash」收成一个可被 exec 的成员对象。
 
@@ -37,7 +37,7 @@ Data 空，无可序列化实例态，走系统默认持久化。
 
 ## 三、children（命名空间从属、不继承 terminal）
 
-children 从属于 terminal 命名空间（id 以 `_builtin/terminal/` 为前缀，物理 `terminal/children/terminal_process/`），但与 parent **无继承关系，仅从属命名空间**（见对象模型核心 8）。
+children 从属于 terminal 命名空间（id 以 `_builtin/terminal/` 为前缀，物理 `terminal/children/terminal_process/`），但与 parent **无继承关系，仅从属命名空间**（见对象模型核心 9）。
 
 ### `_builtin/terminal/terminal_process`（kind=class，非单例）
 bash 进程窗——`terminal.run` 造出的结果对象，一个 world 可有多个。

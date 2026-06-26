@@ -46,7 +46,7 @@ activates_on:
 
 ## 三、children（命名空间从属，id 前缀 `_builtin/filesystem/`）
 
-children 从属于 filesystem 命名空间（id 以 `_builtin/filesystem/` 为前缀，物理 `filesystem/children/<child>/`），**仅命名空间从属、不继承 filesystem**（对象模型核心 8：children 不继承 parent）。每个 child 自身即一个完整 ooc class（四 facet + index.ts/types.ts）。
+children 从属于 filesystem 命名空间（id 以 `_builtin/filesystem/` 为前缀，物理 `filesystem/children/<child>/`），**仅命名空间从属、不继承 filesystem**（对象模型核心 9：children 不继承 parent）。每个 child 自身即一个完整 ooc class（四 facet + index.ts/types.ts）。
 
 ### `_builtin/filesystem/file`（kind=class，非单例）
 

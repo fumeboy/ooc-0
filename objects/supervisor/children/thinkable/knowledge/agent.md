@@ -8,7 +8,7 @@ activates_on:
 # ooc agent 设计
 
 > 本篇是 thinkable 维度关于 **ooc agent** 的**单一权威**：agent 是什么、它凭什么"智能"。
-> 与邻接权威的分工（依赖倒置、不复述）：**对象模型**（class/object、单例/非单例、agent 是叠加 thinkable/collaborable/reflectable 三维的 object）见 class `self.md` 核心 1-10；**context 怎么构造成 LLM 输入**见 `context.md`；**thread 是什么 / 数据 / 行为**见 `thread.md`；**thread 怎么调度、单轮 thinkloop、三原语**见 `thinkloop.md`。本文只讲 agent 这一抽象本身。
+> 与邻接权威的分工（依赖倒置、不复述）：**对象模型**（class/object、单例/非单例、agent 是叠加 thinkable/collaborable/reflectable 三维的 object）见 class `self.md` 核心 1-11；**context 怎么构造成 LLM 输入**见 `context.md`；**thread 是什么 / 数据 / 行为**见 `thread.md`；**thread 怎么调度、单轮 thinkloop、三原语**见 `thinkloop.md`。本文只讲 agent 这一抽象本身。
 
 ## 编辑规范
 

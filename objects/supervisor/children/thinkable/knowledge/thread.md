@@ -7,7 +7,7 @@ activates_on:
 
 # thread
 
-> 本篇是 thinkable 维度关于 **thread** 的权威：thread 是什么、有什么数据、有什么行为。分工（不复述）：**thread 怎么被调度、单轮怎么跑**见 `thinkloop.md`；**agent 为何 `talk`→thread 即智能**见 `agent.md`；**thread 持有的 context 怎么构造成 LLM 输入**见 `context.md`；**thread 作为 ooc object / builtin class 的对象模型**见 class `self.md` 核心 1-10。
+> 本篇是 thinkable 维度关于 **thread** 的权威：thread 是什么、有什么数据、有什么行为。分工（不复述）：**thread 怎么被调度、单轮怎么跑**见 `thinkloop.md`；**agent 为何 `talk`→thread 即智能**见 `agent.md`；**thread 持有的 context 怎么构造成 LLM 输入**见 `context.md`；**thread 作为 ooc object / builtin class 的对象模型**见 class `self.md` 核心 1-11。
 
 ## 编辑规范
 

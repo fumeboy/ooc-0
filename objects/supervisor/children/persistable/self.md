@@ -37,7 +37,7 @@
 
 6. **内存可见性 = write-through**。method 内 mutate self.data 立即在 session 对象表生效——method exec 拿到的 self 就是 session 对象表中 instance.data 引用，mutate 即可见；`saveObjectData` 负责把内存值持久化到磁盘（flow 暂存）。同 thread 后续 method 读 self.data 立即看到上一 method 的改动。无"写盘 → 重新 hydrate"的额外通道。
 
-7. **stone-worktree 物理结构**：flow worktree = session 在 `flows/<sid>/` 起一个 stones/main 的 git worktree 分支（`session-<sid>`），让 OOC Agent 在自己的 session 内可文件级编辑 class 源码（自写程序）。tracked stone（self.md / readable.md / executable/ / package.json 等）与 untracked 运行时数据（`.flow.json` / `data.json` / `threads/`）**同落** `objects/<id>/` 目录，由 main 根 `.gitignore` 黑名单区分。
+7. **stone-worktree 物理结构**：flow worktree = session 在 `flows/<sid>/` 起一个 stones/main 的 git worktree 分支（`session-<sid>`），让 OOC Agent 在自己的 session 内可文件级编辑 class 源码（自写程序）。tracked stone（self.md / readable.md / executable/ / package.json 等）与 untracked 运行时数据（`.flow.json` / `data.json` / `threads/`）**同落** `objects/<id>/` 目录，由 main 根 `.gitignore` 黑名单区分。此布局的设计依据见 [object self.md 核心 4](../object/self.md)「objects/ 不分 class 与 object」。
 
 8. **变更合入 stone canonical 经 reflectable feat-branch PR，绝不从 session worktree 直合**。OOC Agent 经 reflectable 维度自我迭代通道把变更合入 `stones/main`：**不**从 `flows/<sessionId>` 这个 worktree 分支直接合入，而是从 `stones/main` 派生 `stones/<feat>` 分支、在 feat 分支应用要合入的变更、再发起合入流程（PR-Issue）。reflectable 流程细节不在本篇（归 reflectable 维度 + sibling `session-worktree-model.md`）。
 

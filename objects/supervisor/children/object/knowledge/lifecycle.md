@@ -1,13 +1,13 @@
 ---
 title: 对象生命周期的程序实现（active / unactive / close / closable）
-description: object self.md 核心 10「对象生命周期」的程序实现走查——核心契约 + ThreadRuntime 派发引擎 + builtin policy body + 触发 seam，逐处锚定源码。设计契约见 self.md 核心 10，本篇只讲「怎么实现的」。
+description: object self.md 核心 11「对象生命周期」的程序实现走查——核心契约 + ThreadRuntime 派发引擎 + builtin policy body + 触发 seam，逐处锚定源码。设计契约见 self.md 核心 11，本篇只讲「怎么实现的」。
 activates_on:
   "object::root": "show_description"
 ---
 
 # 对象生命周期的程序实现
 
-> 本篇是 object self.md **核心 10「对象生命周期」**的实现走查（「怎么实现」）；契约（「是什么/为什么」）只在 self.md 核心 10，这里不复述。锚点对 `packages/@ooc/`（父仓 main），高漂移处锚函数名。
+> 本篇是 object self.md **核心 11「对象生命周期」**的实现走查（「怎么实现」）；契约（「是什么/为什么」）只在 self.md 核心 11，这里不复述。锚点对 `packages/@ooc/`（父仓 main），高漂移处锚函数名。
 >
 > 分层铁律：**core 提供泛型契约 + class 注册表 seam（`resolveActive` / `resolveUnactive`），thread builtin 提供 refcount 算法 + 派发引擎 + policy body**——派发引擎实现在 `ThreadRuntime`（`packages/@ooc/builtins/agent/children/thread/runtime/thread-runtime.ts`）。这不是 core 通用机制：refcount = "扫本 session 全部 thread 看 contextWindows 引用此 object 的个数"，**只有 thread 形状对象 contributes refcount**，故 ThreadRuntime 是 thread builtin 的私有运行时（见 thread-runtime.ts:13-16 的归属说明）。
 
@@ -80,7 +80,7 @@ activates_on:
   - 控制面 server runtime（`packages/@ooc/core/app/server/modules/runtime/index.ts:15`/`:65`）：响应预 hydrate 平铺下发前端。
   - PR-Issue deliver（`packages/@ooc/core/persistable/pr-deliver.ts:15`/`:54`）：跨 session 路由经 reviewer.sessionId 取对端表。
 - **回归网**：`packages/@ooc/tests/registry.test.ts:11`/`:52` 覆盖 `iterateSessionObjectTable` 行为；其它生命周期单测目前由 thread-runtime 自身测试承载（旧 `core/runtime/__tests__/object-lifecycle.test.ts` / `thread/__tests__/fork-unactive.test.ts` 在重构窗口期不存在，待 phase-2 重建）。
-- **token 计量**：按**窗**各计其渲染产物（核心 9 多视角不同文本各占预算），**非按 object 去重**——session 表的红利是 data 存一份、不等于 token 计一次。
+- **token 计量**：按**窗**各计其渲染产物（核心 5 多视角投影不同文本各占预算），**非按 object 去重**——session 表的红利是 data 存一份、不等于 token 计一次。
 
 ## 六、边界与现状（当前重构窗口）
 
