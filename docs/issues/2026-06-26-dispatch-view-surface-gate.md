@@ -1,6 +1,6 @@
 ---
 title: dispatch 层按 view 闸 object/guide method —— 兑现 method.public 退役契约（issue M）
-status: decided
+status: verified
 date: 2026-06-26
 follows: 2026-06-26-thread-runtime-dispatch-bug-fix.md
 ---
@@ -216,4 +216,34 @@ survey 已验证现存 tests 零回归——所有 `runtime.exec` 调用都按 d
 
 ## 落地验收
 
-（待 landed 后填）
+**verified（2026-06-26）**——改动表面小（~50 行 helper + 2 行 dispatch 链调用 + 4 case 测试），不派独立 verification reviewer，由 supervisor 自验：
+
+**5 处 grep 排查结果**（裁决 5 必做项）：
+- **(i) `runtime.callMethod`**：内部 `this.exec(...)` ✅ —— 自动得益于 surface 闸。
+- **(ii) `runRoute`**：不调 exec、只算 intents ✅ —— 不闸合理（无 dispatch 副作用）。
+- **(iii) `execGuide`**：form.submit 跳 dispatch 直调 guide.exec ✅ —— issue J 有意设计（避递归开 form）、form 内部递归调不构成新越权面。
+- **(iv) storybook**：目录不存在（已废）✅。
+- **(v) method_exec_form default decl**：`object_methods: ["refine", "submit"]` ✅ 完整。
+
+**改动 1 assertInSurface helper 落地**（thread-runtime.ts:160-182）：
+- 私有 helper、(ref, methodName, "object"|"guide") 签名。
+- decl 缺失 fallback 不闸 + dev-mode `console.warn`（hot-reload 中间态兼容）。
+- 错误文案：`[exec] method "X" not in surface of view "Y" on class Z`。
+- dispatch 链 object/guide method 命中后调用（thread-runtime.ts:127, 132）。
+
+**改动 2 reflect requireSuperSession 双闸门保留**——defense-in-depth、未删。
+
+**改动 3 测试 4 case 全绿**（tests/dispatch-view-surface-gate.test.ts）：
+- case A（default-view 调 reply）throw ✅
+- case B（default-view 调 say）surface 闸过 ✅
+- case C（default-view 调 scan_changes）throw（surface 先于 requireSuperSession）✅
+- case D（super-view 调 set_transcript_window，issue K+M 联合）✅
+
+**质量门**：tsc 干净、全量回归 126 pass / 0 fail / 363 expect（+4 case vs issue K）。
+
+**Followup**：
+- **issue N（reflectable）**：case E reflect requireSuperSession defense-in-depth 回归覆盖（super-view ref 业务 sessionId 调 reflect → surface 通过 + requireSuperSession fail）。
+- **glossary**：术语「surface」入 `knowledge/ooc-glossary.md` —— 文档回流任务、不阻塞 verified。
+- **meta self.md 回流**：executable.self.md + reflectable.self.md 双闸门关系明文 + index.md `## readable × executable` 加 "dispatch 闸 surface invariant" 条目。
+
+落地 commits：（待 push）。
