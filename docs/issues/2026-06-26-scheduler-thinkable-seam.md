@@ -1,6 +1,6 @@
 ---
 title: scheduler → thinkable seam 真启用（ThinkableDeps 扩 opts + scheduler 经 resolveThinkable 派发）
-status: landed
+status: verified
 date: 2026-06-26
 follows: 2026-06-26-thread-cross-session-scheduling.md
 ---
@@ -246,7 +246,18 @@ E 区：
 
 ## 落地验收
 
-（待 landed 后填）
+### verification by issue-H reviewer（2026-06-26）
+
+按 design-workflow 步骤 4 独立验收。结论：**verified，P0/P1/P2 缺口全 0**——7 项裁决文档+代码全兑现、退潮干净、质量门绿。
+
+- **文档验收**：7 项裁决逐条对账全 ✅。thinkable/self.md 签名表 + ThinkableDeps 字段表 + 迁移映射段同步；index.md 3 节（## thinkable / ## runtime / ## thread）同步。
+- **代码验收**：ThinkableDeps 扩 worldDir?/onDataEdit?/wakeSession? optional + thread-only jsdoc；ThinkableModule.think 签名 `(data, deps)` 收敛；adapter fail-loud worldDir+onDataEdit 必备、wakeSession 仍 optional；scheduler 删 direct import + `registry.resolveThinkable(THREAD_CLASS_ID)` 派发 + capability check fail-loud。
+- **scheduler 用常量 THREAD_CLASS_ID 而非 next.class**：合理——ThreadContext data 无 class field（class 在 OocObjectInstance 包装），scheduler 上下文 class 是常量；与既有 `inst.class !== THREAD_CLASS_ID` 过滤一致；throw 即注册表损坏。
+- **退潮验收**：`grep -rn 'import.*\bthink\b.*from.*thinkloop' packages/@ooc/` 唯一 1 命中 = adapter 自身 wrap；`think(instance` / `(instance, deps)` 残留 0 命中（核心+builtin）。
+- **漂移验收**：thinkloop-e2e.test.ts 补 2 stub（worldDir + onDataEdit）系 fail-loud 自然后果；diff 4 文件 +46/-15 全在 issue 提案范围内、无越界。
+- **质量门**：tsc 干净 / thinkloop-e2e 5 pass / 全量 96 pass / 1 fail（web-e2e 预先红与本 issue 无关）。
+
+落地 commits：`b9332122`（feat/scheduler-thinkable-seam）+ `1aee726`（meta main 文档回流）。
 
 ## 落地记录
 
