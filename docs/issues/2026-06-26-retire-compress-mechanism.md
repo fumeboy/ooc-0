@@ -1,6 +1,6 @@
 ---
 title: 清除 compress 整套机制（暂退役整个上下文压缩设计、未来再补，issue L）
-status: decided
+status: verified
 date: 2026-06-26
 follows: 2026-06-26-dispatch-view-surface-gate.md
 ---
@@ -179,4 +179,14 @@ tsc 干净、全量 bun test 仍绿（compress 无测试依赖）。
 
 ## 落地验收
 
-（待 landed 后填）
+**verified（2026-06-26）**——独立 verification reviewer 核对 6 项裁决全兑现。
+
+- **裁决 1 源码 11 文件清完整性**：✅ thread/readable index.ts (compress + resize 删 + 三视角 decl 引用清) / summarize.ts 整删 / types.ts (ProcessEvent variant + ThreadWin 2 字段 + JSDoc 折叠段) / core/utils/summarized-ranges.ts 整删 / terminal+interpreter process readable 双 4 文件 / TODO.md + permissions.ts + ooc-class.ts 3 注释清。
+- **裁决 2 events kind switch 兜底**：✅ `grep context_compressed packages/@ooc/` 0 命中；旧 thread.json 含此 kind 读出走 graceful skip。
+- **裁决 3 文档清理 9 文件 + compress.md 整删**：✅ thinkable/self.md + context.md 各留 1 行简短退役标记指 issue L；readable Wave4 时代 compressView 迁移映射保留；observable / object / ooc-philosophy / index.md / supervisor.self.md 同步清。
+- **退潮验收**：✅ packages/@ooc/ grep 0 命中；meta 仓全树仅 2 处退役标记 + 1 处 readable Wave4 映射。
+- **tool 原语数全树一致 4 个**：✅ executable/self.md + index.md + supervisor.self.md 同步 "4 个 (exec/close/wait/open)"。
+- **质量门**：tsc 干净；全量 133 pass / 0 fail（base main）。worktree 内 web-e2e.test.ts 因缺 packages/@ooc/web/ 目录失败，与本 issue 无关、合 main 后自然过。
+- **零 followup 占位、零新增 TODO 注释**：commit message 显式声明、grep 确认。
+
+落地 commits：`6288c3d6`（feat/retire-compress-mechanism 分支）+ `b7e1516`（meta 仓 main，已 push）。
