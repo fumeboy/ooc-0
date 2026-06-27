@@ -62,7 +62,7 @@ activates_on:
 8. **持久化可自定义**：object 经 persistable 控制序列化目录与方式，未定义则走系统默认。
 9. **children = 命名空间从属、不继承**：children id 以 parent id 为前缀（`parent_id/child_id`），仅命名空间从属。
 10. **agent = object + LLM**：在四件套之上额外具 thinkable / collaborable / reflectable，持 `talk` method（执行即开一条跑 thinkloop 的 thread）；**`self.md` 是 agent 实例独有的身份**，只活在 self 门面窗、不进 thinkloop instructions。
-11. **生命周期**：`construct` 诞生 → `active` / `unactive` 按引用计数停启（**context window 即引用，close 即移除一个引用**，归零触发 `unactive`）→ **无独立 destruct**（删除是 `unactive` 返回 `{ delete? }` 的引用归零自决）。
+11. **生命周期**：`construct` 诞生 → `active` / `unactive` 按引用计数停启（**context window 即引用，close 即移除一个引用**，归零触发 `unactive`）→ **无独立 destruct**（删除是 `unactive` 返回 `{ delete? }` 的引用归零自决）。**class 级 long-lived service** 经单例 + active/unactive 钩自然表达——OOC 协议层无 class-level init/teardown 钩；单例被根级 context 静态引用时永生、active 即 process-level once。这与 runtime infrastructure（scheduler/worker/job lane）严格区分（详 object self.md 核心 11 末段）。具体 service 实现按需起 followup（如 knowledge_base fs.watch）。
 
 > 单一权威见 [object self.md](../children/object/self.md)；builtin class/object 清单见 `./builtins.md`。
 

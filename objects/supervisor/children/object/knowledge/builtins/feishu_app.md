@@ -1,6 +1,6 @@
 ---
 title: feishu_app — 飞书接入点单例 agent object（self × 各维度：兼具 agent + access-point 双身份）
-description: feishu_app 单一权威，以 self×维度 切入——self=单例 object（ooc.class=_builtin/agent，故是 agent，持磁盘 self.md）+ 非敏感运行态 data（opened chat/doc ids）。唯一兼具两种身份的 builtin：self×executable 既有 own access-point 面 open_chat/open_doc，又因 ooc.class=agent 而具 agent 的 agency；self×readable=投影成接入面板窗；self×thinkable/collaborable/reflectable 来自 agent；外加 World 启动级 init 面（Class.init(world) 拉 lark relay）。children feishu_chat/feishu_doc 是两类窗 class
+description: feishu_app 单一权威，以 self×维度 切入——self=单例 object（ooc.class=_builtin/agent，故是 agent，持磁盘 self.md）+ 非敏感运行态 data（opened chat/doc ids）。唯一兼具两种身份的 builtin：self×executable 既有 own access-point 面 open_chat/open_doc，又因 ooc.class=agent 而具 agent 的 agency；self×readable=投影成接入面板窗；self×thinkable/collaborable/reflectable 来自 agent；外加 active 钩起 lark event relay（class 级 long-lived service，issue P 后取代旧 Class.init 设计）。children feishu_chat/feishu_doc 是两类窗 class
 activates_on:
   "object::root": "show_description"
 ---
@@ -20,11 +20,11 @@ activates_on:
   - `openedChatObjectIds?: string[]` —— 经本接入点 open 过的 feishu_chat 子对象 id（供 readable 投影列出）。
   - `openedDocObjectIds?: string[]` —— 经本接入点 open 过的 feishu_doc 子对象 id。
   - lark relay 的连接状态（WS、routing 表）是 **event-relay 进程内运行态，不入 object data**。
-- **一句话职责**：飞书集成的统一接入面——开 feishu_chat / feishu_doc 子对象，并在 World 启动期把飞书消息双向桥接到 OOC session（lark event relay）。
+- **一句话职责**：飞书集成的统一接入面——开 feishu_chat / feishu_doc 子对象，并经 active 钩把飞书消息双向桥接到 OOC session（lark event relay）。
 
 ## 二、self × 各维度（核心设计）
 
-feishu_app 的 self 比普通 access-point tool-object 多一整套来自 agent 的智能面，又比普通 agent 多一张 own access-point executable 面，再外加一张 World 启动级 init 面。以下逐维度看这张 self 如何呈现。
+feishu_app 的 self 比普通 access-point tool-object 多一整套来自 agent 的智能面，又比普通 agent 多一张 own access-point executable 面，再外加一张 active 钩起 lark event relay 的 long-lived service 面（issue P 后取代旧 Class.init 设计）。以下逐维度看这张 self 如何呈现。
 
 ### self × executable —— own access-point 面（open_chat / open_doc）+ 来自 agent 的 agency
 
@@ -55,9 +55,11 @@ feishu_app 因 `ooc.class=_builtin/agent` 而是 agent，这三张智能面随�
 
 feishu_app 本体无自定义 persistable，走系统默认。其作为 agent 持有的身份字段 `self`↔实例目录 `self.md` 的写读，由 agent class 的 persistable 负责（见 builtins `agent.md`、persistable `self.md`）。
 
-### init —— World 启动级初始化（Class.init(world)，区别于以上 per-self 维度面）
+### self × active —— 单例 active 钩起 lark event relay（issue P 后取代 init）
 
-不是某张 per-self 维度面，而是 feishu_app class 注册的一张**类级、World 启动级**面。`Class.init(world) => err`：World 启动时调一次，据 `.world.json` 的 `LarkAppId/LarkAppSecret` 决定是否真启 lark event relay（缺凭证 no-op、不阻断启动）；返回错误信息（空=成功）。relay 是飞书反向通道的承载，由此契约拉起；World 句柄须含 baseDir（+ port + thread-activation 订阅入口）。
+class 级 long-lived service（lark event relay 长连接、双向消息桥接）经**单例 active 钩**表达——feishu_app 单例被 root 持引用永生（refcount 永 ≥1）、active 即 process-level once。`active(ctx, self) => void`：refcount 0→1 触发，自 `ctx.worldDir` 加载 `.world.json` 取 `LarkAppId/LarkAppSecret`，决定是否真启 lark event relay（缺凭证 no-op、不阻断激活）。relay 是飞书反向通道的承载，由此契约拉起；`unactive` 钩拆 lark client（永生场景下不触发；reflectable 主动 delete 时触发）。
+
+**与原 `Class.init(world)` 设计的同构**：解析路径同构（同样从 `.world.json` 取 lark 凭证），契约从 class 级 `World` 句柄改为 object 级 `ObjectLifecycleHook` 的 ctx（含 worldDir / sessionId / args / reportDataEdit 等）。issue P 删 `OocClass.init?` 字段（zero-user stub）、收口到 active 钩——符合 OOC 哲学「不发明新机制」。**热更新语义**：agent 自迭代改 active 钩内的 relay 协议、PR merge 后旧 relay 继续跑、需经显式 reset 操作才换新版（reset 操作命名 + 归属维度留 followup）。
 
 ## 三、children（命名空间从属，不继承 feishu_app）
 
@@ -75,7 +77,7 @@ feishu_app 本体无自定义 persistable，走系统默认。其作为 agent �
 
 ## 四、程序骨架（示意）
 
-> 按 `object/knowledge/example.md` 的 ooc class 文件布局给出 design-level 骨架（大概示意、不必可编译）。feishu_app 是**单例 object**（无 construct）+ **agent**（`ooc.class=_builtin/agent`，agency 靠 import agent export 复用、非 class 继承 class）+ 一张 World 启动级 `init`。children feishu_chat/feishu_doc 是**非单例窗 class**（有 construct）。
+> 按 `object/knowledge/example.md` 的 ooc class 文件布局给出 design-level 骨架（大概示意、不必可编译）。feishu_app 是**单例 object**（无 construct）+ **agent**（`ooc.class=_builtin/agent`，agency 靠 import agent export 复用、非 class 继承 class）+ 一张 `active` 钩起 lark event relay（class 级 long-lived service，issue P 取代旧 init 设计）。children feishu_chat/feishu_doc 是**非单例窗 class**（有 construct）。
 
 ### feishu_app/package.json —— kind=object / class=继承的 agent
 
@@ -101,23 +103,32 @@ export interface Data {
 }
 ```
 
-### feishu_app/index.ts —— Class={executable, readable, init}（单例 object 无 construct）
+### feishu_app/index.ts —— Class={executable, readable, active, unactive}（单例 object 无 construct）
 
 ```ts
 import executable from './executable/index.ts'
 import readable from './readable/index.ts'
-import { startLarkEventRelay } from './event-relay/index.ts'
+import { startLarkEventRelay, stopLarkEventRelay } from './event-relay/index.ts'
 
 // 单例 object：无 construct（实例数据 bootstrap 据空 Data 产出）。
 // agent 的 agency 来自 ooc.class=_builtin/agent，非在此处再继承一个 class。
+// class 级 long-lived service（lark event relay）经 active 钩起（issue P）。
 export const Class = {
   executable,
   readable,
-  // 类级、World 启动级面：据 .world.json 的 LarkAppId/Secret 决定是否真启 relay；
-  // 缺凭证 no-op、不阻断启动；返回错误信息（空=成功）。
-  init: async (world) => {
-    try { await startLarkEventRelay({ baseDir: world.baseDir }); return '' }
-    catch (e) { return e instanceof Error ? e.message : String(e) }
+  // 单例 + 被 root 持引用永生场景：active 即 process-level once。
+  // 据 ctx.worldDir 读 .world.json 取 LarkAppId/Secret；缺凭证 no-op。
+  active: {
+    description: 'Start lark event relay on first reference (process-level once)',
+    exec: async (ctx /*, self */) => {
+      try { await startLarkEventRelay({ baseDir: ctx.worldDir }) }
+      catch (e) { console.error('[feishu_app.active] lark relay start failed:', e) }
+    },
+  },
+  // refcount 1→0 拆 relay（永生场景下不触发；reflectable 主动 delete 时触发）。
+  unactive: {
+    description: 'Stop lark event relay on last dereference',
+    exec: async (/* ctx, self */) => { await stopLarkEventRelay() },
   },
 }
 ```

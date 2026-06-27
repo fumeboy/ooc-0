@@ -79,6 +79,8 @@
 11. **对象有生命周期：`construct` 诞生 → `active` / `unactive` 按引用计数停启 → 无独立 destruct（删除是 `unactive` 的自决）**。**context window 即引用**：一个 object 在某 thread 的 context 里呈现为 context window（核心 5），这同时就是对该 object 的**一次引用**。三个生命周期钩子皆**可选**、与 `construct` 对称，皆在 `index.ts` 的 `Class` 注册：`construct` 在身份诞生时产出初始 data（一次，核心 3）；**`active`** 在 object 的引用数由 0 变 1（被某 context 首次引用）时触发；**`unactive`** 在最后一个引用被移除、引用数归 0 时触发。**删除是 `unactive` 的可选自决、无独立 destruct**：`unactive` 返回 `{ delete?: boolean }`——缺省 / `false` = 只**停用**（释放运行时资源、磁盘身份留存，之后被重新引用即再 `active`）；`delete: true` = 把该 object **彻底从 session 移除（含持久化文件）**。删除只发生在引用归零这一刻（故绝不留悬空引用），且由 object 自己决定——**没有独立的 destruct 钩子、没有强制销毁**；OOC object 默认是持久身份。**`close` 即移除一个引用**：close 原语把一个 context window 从某 thread 的 context 移除（引用减一），归零即触发该 object 的 `unactive`。**construct 可标结构窗不可关**：thread construct 构造初始 context 时，可把某些 context window 标记为不可关闭；对其执行 close 将被拒绝（结构窗例：thread 与 creator 的恒在通道）。
     **`active` / `unactive` 父子串调不内建**——子 override 这两个钩子时由子代码控制顺序（典型 `await parentClass.active?.exec(ctx, self); /* own logic */`，`parentClass` 是 import 来的引用、不是 spread 后字段）；漏调父钩子由代码评审拦截，OOC 协议层不感知。
 
+    **class 级 long-lived service 表达**（issue P）：OOC 协议层无 class-level init/teardown 钩——class 级 long-lived service（如 fs.watch 守 knowledge md 变更、lark event relay 长连接等）经**单例 + active 钩**自然表达：单例对象被根级 context 静态引用时永生（refcount 永 ≥1、unactive 不触发），active 即 process-level once。service 资源在 active 内启动，unactive 内拆（reflectable 主动 delete 时触发）。**永生由「单例 + 根级引用」组合赋予，非单例属性自动得到**——若 service 类未被根 context 引用，active 不触发、service 不启动。**热更新语义**：class 源码 invalidate 不自动触发 active 重跑——已 active 副作用对热更新**无感**；agent 自迭代「method 类逻辑下次 hydrate 即新；service 类逻辑（active 内启动的资源）需显式 reset 才换新版」。**注意区分 runtime infrastructure**（thread scheduler / worker / job lane）：由 OOC runtime 必须为所有 thread 提供、由 worker.ts 启动管理、不属 class lifecycle、与本说明无关。
+
 > 核心 1-11 已逐条与用户敲定（仿 context.md 听写/grill 流程）。**系统自带 builtin class/object 的清单索引见 supervisor `knowledge/builtins.md`**（高内聚低耦合：本文只讲对象模型、不列具体 builtin）。派生设计 / 细节补充 / 模拟推演待补。
 
 ---
@@ -118,3 +120,5 @@
 ---
 
 ## 迁移映射（非设计 / 旧）
+
+- **`OocClass.init?` 字段**（曾埋作 World 启动级 class 初始化，机制零实现，design doc 用例：feishu_app 起 lark event relay）→ **已删除（issue P, 2026-06-27）**——class 级 long-lived service 经单例 + active 钩表达，详核心 11 段末。`OocClass.World` interface（仅供 init 用、zero user）同退役。避免后人重新提案 init。

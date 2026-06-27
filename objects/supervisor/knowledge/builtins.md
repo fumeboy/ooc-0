@@ -32,7 +32,7 @@ activates_on:
   - children：**`interpreter_process`**（class，sandbox 进程 + history）。
 - **`_builtin/terminal`**（object）—— bash 终端；方法 run。
   - children：**`terminal_process`**（class，bash 进程）。
-- **`_builtin/feishu_app`**（object，单例 + 继承 agent）—— 飞书应用接入点；方法 open_chat/open_doc + `init` 起 lark event relay。
+- **`_builtin/feishu_app`**（object，单例 + 继承 agent）—— 飞书应用接入点；方法 open_chat/open_doc + `active` 钩起 lark event relay（class 级 long-lived service，issue P 取代旧 init）。
   - children：**`feishu_chat`**（class，飞书会话窗）、**`feishu_doc`**（class，飞书文档窗）。
 - **`_builtin/knowledge_base`**（object，单例）—— 知识库接入；方法 open_knowledge。
   - children：**`knowledge`**（class，知识条目窗；按 trigger 激活进 context，激活机制见 thinkable `knowledge/` 维度）。
