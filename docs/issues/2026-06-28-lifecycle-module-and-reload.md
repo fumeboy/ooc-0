@@ -1,6 +1,6 @@
 ---
 title: 引入 lifecycle 维度（active / unactive / on_reload 三钩；object base 4→5 维）
-status: decided
+status: landed
 date: 2026-06-28
 ---
 

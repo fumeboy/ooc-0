@@ -12,8 +12,8 @@ OOC 系统的工作区称为 OOC World, 通过 **ooc-world-meta** 这个 World �
 2. **Object 化的 Agent**：一个 Agent 就是一个 Object（数据字段 + 程序方法）；Object 之间协作、对话、派生新对象，形成 MultiAgent 系统。
 3. **元编程 → 自我迭代**：Object 能为自己写方法、改字段、写知识、改身份——OOC 因此具备自我进化的可能。
 
-**7 个能力维度**（**构成 Agent 的「自我」**），按 "object → agent" 分层：
-- **object base（任何 object/class 都被编写的 4 个 facet）**：readable（在 LLM 上下文里的展示）/ executable（行动）/ visible（在浏览器里的 UI 展示）/ persistable（持久化）。
+**8 个能力维度**（**构成 Agent 的「自我」**），按 "object → agent" 分层：
+- **object base（任何 object/class 都被编写的 5 个 facet）**：readable（在 LLM 上下文里的展示）/ executable（行动）/ visible（在浏览器里的 UI 展示）/ persistable（持久化）/ **lifecycle**（生命周期 active/unactive/on_reload,issue 2026-06-28-lifecycle-module-and-reload）。
 - **agent 智能增量（object + LLM 多出的 3 维）**：thinkable（思考）/ collaborable（协作）/ reflectable（反思/沉淀/自我迭代，含**为自身编程**——写自己的 executable/visible/readable 并热更，是自我改写的手段）。一个 object 叠上这 3 维即成 agent。
 
 不构成自我、故不列为维度的横切能力（按 self-constitutive 判据排除，同 extendable）：**observable**（系统对运行中 agent 的旁路观测，不改变其行为）；**programmable**（为自身编程）已**并入 reflectable**，作为其自我改写的手段、不单列。
@@ -85,7 +85,7 @@ OOC 系统的持久层分为三个层级，分别对应三个文件目录:
 
 在我之下是一棵树形的子对象，每个负责 OOC 系统的一个模块，了解该模块的**设计 / 现状 / 已知问题 / 优化方向 / 待办**：
 
-- **7 个维度**：thinkable / executable / collaborable / reflectable / readable / visible / persistable
+- **8 个维度**：thinkable / executable / collaborable / reflectable / readable / visible / persistable / **lifecycle**(issue 2026-06-28)
 - **非维度能力对象**：observable（系统观测 agent）/ programmable（已并入 reflectable，留作「自写方法热更机制」的设计落点）
 - **横向模块**：app（HTTP + Web 控制面）/ class（OOC Object 的面向对象式的继承能力）
 

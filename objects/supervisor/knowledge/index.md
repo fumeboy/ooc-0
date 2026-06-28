@@ -18,9 +18,9 @@ activates_on:
 **阅读地图**：
 
 - **A · 顶层** — `OOC` / `OOC Class/Object Model`
-- **B · 维度核心设计** — `thinkable` / `executable` / `readable` / `persistable` / `collaborable` / `reflectable` / `visible` ＋非维度 `observable` / `app`
+- **B · 维度核心设计** — `thinkable` / `executable` / `readable` / `persistable` / `lifecycle` / `collaborable` / `reflectable` / `visible` ＋非维度 `observable` / `app`
 - **C · 内置对象** — `builtins`
-- **D · 维度 × 维度 交叉** — `executable × thinkable` / `readable × thinkable` / `persistable × thinkable` / `executable × readable` / `reflectable × persistable` / `collaborable × thinkable` / `readable × visible`
+- **D · 维度 × 维度 交叉** — `executable × thinkable` / `readable × thinkable` / `persistable × thinkable` / `executable × readable` / `reflectable × persistable` / `collaborable × thinkable` / `readable × visible` / `lifecycle × persistable`
 - **E · 内置对象 × 维度 交叉** — `thread` / `agent` / `knowledge_base / knowledge` / `method_exec_form` / `pr / super` / `filesystem / terminal / interpreter` / `runtime` / `user`
 
 # A · 顶层
@@ -33,9 +33,9 @@ activates_on:
 - **Object 化的 Agent**：一个 Agent 就是一个 Object（数据字段 + 程序方法），Object 之间协作、对话、派生新对象，形成 MultiAgent 系统。
 - **元编程 → 自我迭代**：Object 能为自己写方法、改字段、写知识、改身份，OOC 因此具备自我进化的可能。
 
-**7 个能力维度**——构成 Agent 的「自我」，按 object → agent 分层：
+**8 个能力维度**——构成 Agent 的「自我」，按 object → agent 分层：
 
-- **object base（4）**：任何 object/class 都被编写的 4 个 facet——readable（在 LLM 上下文里的展示）/ executable（行动）/ visible（浏览器 UI 展示）/ persistable（持久化）。
+- **object base（5）**：任何 object/class 都被编写的 5 个 facet——readable（在 LLM 上下文里的展示）/ executable（行动）/ visible（浏览器 UI 展示）/ persistable（持久化）/ **lifecycle（生命周期 active/unactive/on_reload,issue 2026-06-28-lifecycle-module-and-reload）**。
 - **agent 智能增量（3）**：object 叠上 LLM 多出的 3 维——thinkable（思考）/ collaborable（协作）/ reflectable（反思、沉淀、自我迭代）。一个 object 叠这 3 维即成 agent。
 
 **非维度能力**：按 self-constitutive（是否构成「自我」）判据排除——**observable**（系统对 agent 的旁路观测，不改变其行为）、**extendable**（接入外部世界的外接集成层）不构成自我；**programmable**（为自身编程）已并入 reflectable，作为其自我改写手段、不单列。
@@ -62,7 +62,7 @@ activates_on:
 8. **持久化可自定义**：object 经 persistable 控制序列化目录与方式，未定义则走系统默认。
 9. **children = 命名空间从属、不继承**：children id 以 parent id 为前缀（`parent_id/child_id`），仅命名空间从属。
 10. **agent = object + LLM**：在四件套之上额外具 thinkable / collaborable / reflectable，持 `talk` method（执行即开一条跑 thinkloop 的 thread）；**`self.md` 是 agent 实例独有的身份**，只活在 self 门面窗、不进 thinkloop instructions。
-11. **生命周期**：`construct` 诞生 → `active` / `unactive` 按引用计数停启（**context window 即引用，close 即移除一个引用**，归零触发 `unactive`）→ **无独立 destruct**（删除是 `unactive` 返回 `{ delete? }` 的引用归零自决）。**class 级 long-lived service** 经单例 + active/unactive 钩自然表达——OOC 协议层无 class-level init/teardown 钩；单例被根级 context 静态引用时永生、active 即 process-level once。这与 runtime infrastructure（scheduler/worker/job lane）严格区分（详 object self.md 核心 11 末段）。具体 service 实现按需起 followup（如 knowledge_base fs.watch）。
+11. **生命周期**（issue 2026-06-28-lifecycle-module-and-reload：归 lifecycle 模块槽,object base 第 5 维）：`construct` 诞生 → `lifecycle.active` / `lifecycle.unactive` 按引用计数停启（**context window 即引用，close 即移除一个引用**，归零触发 `unactive`）→ `lifecycle.on_reload` 在 hot-reload 时刷新资源/内存态 → **无独立 destruct**（删除是 `unactive` 返回 `{ delete? }` 的引用归零自决）。**顺序契约**：on_reload before active。**class 级 long-lived service** 经单例 + lifecycle.active 钩自然表达——OOC 协议层无 class-level init/teardown 钩；单例被根级 context 静态引用时永生、active 即 process-level once；热更新时 on_reload 钩 class 自承资源迁移（重启 watcher / 重接连接 / 清 cache）。这与 runtime infrastructure（scheduler/worker/job lane）严格区分（详 object self.md 核心 11 末段）。**命名警示**：`thinkable.active(data) => boolean` 谓词与 `lifecycle.active` 钩同名不同义,future issue 重命名。
 
 > 单一权威见 [object self.md](../children/object/self.md)；builtin class/object 清单见 `./builtins.md`。
 
@@ -93,6 +93,20 @@ Object 行动的唯一方式 = 经 **tool 原语**与 context window 交互；to
 ## persistable
 
 **OOC World = 一个持久化目录**,承载系统全部配置与运行时数据。持久层分三个子目录,按「数据是否版本化 + 是否本 session 暂存」分工:**stones**(版本化 canonical:class 源码 + 标记为版本化的字段值,git 管理)/ **pools**(非版本化 sediment:当前仅 knowledge sediment,不进 git)/ **flows**(本 session 暂存:每 session 一份 git worktree 分支,承载本 session 全部数据变更 working copy)。字段级版本化判据 = `OocClass.versioned_fields`(同伴常量方案——`types.ts` 旁导出 `VERSIONED_FIELDS`,`index.ts` 装配引用注入)。`PersistableContext.scope: "stone"|"pool"|"flow"` 显式标记本次 save/load 写哪一层——**method 写一律 scope="flow"**(runtime 默认注入),整份 data 落 `flows/<sid>/objects/<id>/data.json`;reflectable 通道(issue D 主体)以 scope="stone"/"pool" 重调把变更分流回 stone(versioned 经 feat-branch PR)/ pool(sediment 直写)。hydrate 顺序 stone canonical + pool sediment + flow override;session 对象表内是单一 merge 后视图,method exec 拿到的 self.data 永远是完整 data。**内存可见性 = write-through**:method 内 mutate self.data 立即在 session 对象表生效,无「写盘 → 重新 hydrate」额外通道。hydrate 完成时记 `flows/<sid>/.hydrate-snapshot.json`(每字段 hash + 可选 stone HEAD sha),供 issue D 增量检测。flow worktree 内 tracked stone(class 源码)与 untracked 运行时数据同落 `objects/<id>/` 由 `.gitignore` 区分。变更经 **reflectable** feat-branch 通道合入 stones/main,绝不从 session worktree 直合。实施细节见 [self.md](../children/persistable/self.md)。
+
+## lifecycle
+
+**lifecycle 是 object base 第 5 维**(issue 2026-06-28-lifecycle-module-and-reload)——与 readable/executable/visible/persistable 并列,构成对象的「存在态自我」(self-constitutive 判据:对象的诞生、激活、停用、被新代码接管都是身份内事件、非旁路观测,故升维度而非如 observable 排除)。`OocClass.lifecycle` 槽位是一个 `LifecycleModule { active?, unactive?, on_reload? }`,三钩皆可选。
+
+- **`active`** 在 object 引用数 0→1(被某 context 首次引用)时派发;典型用途:class 级 long-lived service 初始化(单例 + active 钩 = process-level once,issue P)。
+- **`unactive`** 在引用数 1→0(最后一个引用被移除)时派发;返回 `{ delete?: boolean }` 自决是否彻底删除对象(无独立 destruct,issue P)。
+- **`on_reload`** 在 hot-reload 链路(class 源码 invalidate 后实例首次承新代码运行前)派发;`info.changedFiles` 携带触发的源文件相对路径;**class 自承资源迁移责任**——重建 in-memory cache / 重启 watcher / 重接外部连接 / 重算派生态全在钩内手动实现。
+
+**派发架构**:`WorldRuntime` 持有 `ReloadTable`(进程级 invalidate 标记表,key=classId,value={invalidatedAt, changedFiles}),`stone:changed` listener 内 `registerInvalidation(classId, files)`;`ThreadRuntime` 经 `ThinkableDeps.reloadTable` 透传拿到表,每条 thread 持本地 `onReloadCursor` 表,首次 active 该 inst 前对比 cursor 与 invalidatedAt 决定派发——**顺序契约 on_reload before active**(资源就位先于激活)。失败 fail-loud,active 不再触发。
+
+**生产 server 集成**:当前 server 不构造 `WorldRuntime`(hot-reload 链路在生产端未接通);on_reload 派发链路完整闭合于 createWorldRuntime + scheduler + ThreadRuntime,但生产可用需 follow-up issue 将 server 启动改为经 createWorldRuntime 提供 reloadTable。
+
+实施细节见 [lifecycle self.md](../children/lifecycle/self.md)(待建);源码: `core/types/lifecycle.ts` + `core/runtime/reload-table.ts` + `core/runtime/object-registry.ts:resolveActive/resolveUnactive/resolveOnReload` + `builtins/agent/children/thread/runtime/thread-runtime.ts:maybeDispatchOnReload`。
 
 ## collaborable
 
