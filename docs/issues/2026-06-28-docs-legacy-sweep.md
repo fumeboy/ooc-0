@@ -1,6 +1,6 @@
 ---
 title: 仓库根 docs/ 历史目录退潮 sweep（6-21 之前的设计推理痕迹一次性归档/删除）
-status: draft
+status: decided
 date: 2026-06-28
 ---
 
@@ -149,11 +149,70 @@ CLAUDE.md:28 现状描述：「`meta/` 与 `docs/ooc-6/` 的旧设计文档正�
 
 ## review 记录
 
-（待 fan-out）按 design-workflow 流程，review fan-out 派一个完整性批评官即可（无具体设计元素受影响）。完整性批评官扫 `docs/` 找「对象树未吸收的设计」、`docs/ooc-6/` 全树是否真只有 storybook 子目录值得留、CLAUDE.md / README / 任何外链文档是否还有引用本目录的语句。
+### 2026-06-28 完整性批评官 sanity check（supervisor 亲自执行）
+
+按 review fan-out 派一个完整性批评官即可（无具体设计元素受影响）。Supervisor 亲自抽样扫 `docs/` 找「对象树未吸收的设计 / 工程惯例 / 方法论」，结果：
+
+**A · 已被对象树充分吸收（安全删）**：
+- 维度设计类（thinkable/executable/readable/persistable/collaborable/reflectable/visible/observable/app）→ 全部由 `objects/supervisor/children/<dim>/self.md` + `knowledge/` 承接，对象树是当前唯一权威
+- 5-08 ~ 6-21 全部 spec/plan/design `.md` → 后续 issue（特别是 06-25 issue A~P 大规模收口）已完整覆盖；行号锚的源码审计报告（如 `2026-06-10-cognitive-audit-report.md`）已对当前代码失对照价值
+- 5 月 brainstorms drafting 需求 → 已落地为对象树
+- `round-5-experience/` / `round-14-experience/` 体验报告 → 价值已被 `objects/supervisor/knowledge/example-cases.md` + `tests/e2e/web-e2e.test.ts` 吸收
+- meta_refactor 2 份 → meta 包已 06-28 删除（commit `b9cbb972`），refactor 工作流痕迹
+
+**B · 真实风险点（需补承接后再删）—— 仅 2 处**：
+
+1. **`docs/solutions/conventions/` 5 份**（工程惯例集）：
+   - `llm-tool-handlers-fail-loud-2026-05-15.md` —— "LLM 工具 handler 必须 fail loud"
+   - `reuse-before-introducing-new-concepts-2026-05-17.md` —— "复用先于新引入"
+   - `llm-perception-as-api-contract-2026-05-17.md` —— "LLM 感知面即 API 契约"
+   - `verify-as-you-go-2026-05-15.md` —— "verify each link as you create it"
+   - `meta-concept-graph-2026-05-15.md` —— "meta concept graph"
+   - **实际状态**：这些惯例**已经在对象树多处实践**（fail-loud 在 executable/self.md / knowledge/builtins/filesystem.md / 多处 issue；克制熵增在 issue 推理段反复体现；"复用先于" 是 06-25 inheritance-via-source-import-spread 的决策依据），**但没有集中归集成「工程惯例知识」**
+   - 风险：删后这些惯例失去文字载体，仅靠散落实践不便新成员/sub agent 引用
+   - **建议补位**：本 issue landed 前先派 sub agent 写一份 `objects/supervisor/knowledge/engineering-conventions.md`（或归入现有 `engineering-harness.md`），把这 5 条惯例归集，**再删 conventions/**
+
+2. **`docs/methodology-cluster-rooting.md`**（工程方法论）：
+   - 内容："把分散 Issue 收敛到根因层" 的方法论：当 backlog ≥ ~30 且多处 facet 同根时启动 cluster rooting，3 条契约 + 10 根因模型
+   - **实际状态**：对象树无承接；当前 design-workflow.md 是「issue → review → 裁决 → 验收」单 issue 流程，**没有专门讲「多 issue 收敛到根因层」**
+   - 风险：删后这套方法论失活；但 06-25 以来 issue 流程已稳定运行，cluster rooting 用得少（每个 issue 都单独 fan-out）
+   - **建议补位**：本 issue landed 前先派 sub agent 把方法论吸收进 `objects/supervisor/knowledge/design-workflow.md` 末尾「关联方法」段（简短引用即可），**再删 methodology-cluster-rooting.md**
+
+**C · 完整确认**：除 B 段 2 处外，无其他「对象树未吸收的设计」漏网。
+
+### sanity check 结论
+
+整体提案 **OK**，但落地路径需调整：从「一次性删除 + 改 CLAUDE.md」改为「**先补 2 处承接点 → 再做删除**」三步走。
 
 ## 裁决
 
-（待 supervisor 汇总 review 后裁决）
+### 落地路径（三步）
+
+**Step 1 · 补承接点**（约 30-60 分钟）：
+- 写 `objects/supervisor/knowledge/engineering-conventions.md`：归集 5 条工程惯例（fail-loud / reuse before introducing / LLM perception as API contract / verify-as-you-go / concept graph 双向锁定）；锚回对象树和源码现行实践
+- 在 `objects/supervisor/knowledge/design-workflow.md` 末尾加「关联方法 · cluster rooting」段：简述「多 issue 收敛到根因层」触发条件 + 3 契约 + 10 根因模型
+- 在 `knowledge/index.md` 索引段加上 `engineering-conventions` + `design-workflow.cluster-rooting` 引用
+
+**Step 2 · 三个删除 commit**：
+- (a) 删 `docs/` 根目录 75 份 `.md`
+- (b) 删大子目录：`round-5-experience/` + `round-14-experience/` + `superpowers/` + `plans/` + `refactor_0604/` + `ooc-6/` 顶层 4 份（保 `ooc-6/storybook/`）
+- (c) 删剩余小目录：`brainstorms/` + `solutions/` + `meta_refactor/` + `recordings/` + `ooc-8/`（空）
+
+**Step 3 · 同步 CLAUDE.md**：CLAUDE.md:28 改为「`meta/` 与 `docs/` 旧设计文档已吸收进对象树并清退（commit `<sha>`），仅保留 `docs/ooc-6/storybook/` 作为 storybook 框架设计权威。」
+
+合计：
+- 保留：`docs/ooc-6/storybook/` 4 份
+- 新写：`engineering-conventions.md` 1 份 + 修 2 份现有（`design-workflow.md` + `index.md`）
+- 删除：约 300 份 / 约 17M
+- 净效果：**对象树 +1 份承接，仓库根 -300 份历史推理痕迹**
+
+### 不引入归档分支
+
+历史仍由 git 持有，`git log --all --diff-filter=D -- <path>` 可追溯任何被删文件。
+
+### 涉及源代码变更？
+
+否——仅文档（对象树 + 仓库根）+ CLAUDE.md 修改。**无需 `.worktree/<slug>` 分支**。
 
 ## 落地验收
 
