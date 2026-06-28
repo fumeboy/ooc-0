@@ -1,9 +1,10 @@
 ---
 title: session-level invalidate 设计（含 hot-reload + PR merge 双触发统一 + getSessionRegistry miss 语义）
-status: in-review
+status: superseded
 date: 2026-06-25
 splits_from: 2026-06-25-merge-feat-branch-unification.md
 follows: 2026-06-25-inheritance-via-source-import-spread.md
+superseded_by: 实际未需要——issue D / F 落地未触发回归
 ---
 
 # session-level invalidate 设计
@@ -292,7 +293,17 @@ E 区
 
 ## 裁决
 
-（待裁决后填）
+**superseded——实际未触发回归需求，issue D / F 落地未需要 session-level invalidate**。
+
+本 issue 揭出的核心设计观察仍有效：
+1. `sessionRegistries` 是 module-level 进程级 `const` 单例（`object-registry.ts:232`）、不在 WorldRuntime 实例上——「per-WorldRuntime invalidate sessions」API 是错位的。
+2. `getSessionRegistry(sid)` miss 时 new 空表 + copyFrom(builtinClassRegistry)、**没有自动 hydrate**——清空 sessionRegistry 后 caller 拿到空表、不会自动重 hydrate。
+
+但**没有出现真实需要 invalidate 的场景**：
+- issue D feat-branch PR merge 落地后由 `stone-versioning.ts:mergeFeatBranch` 调 `defaultServerLoader.invalidateStone`（class 级 cache 失效）即可。
+- session 级数据 invalidate（hydrate-snapshot reset 等）由 hydrateSession 自然处理。
+
+保留作设计探索历史参考；真出现需要时另起 issue。
 
 ## 落地验收
 

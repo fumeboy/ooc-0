@@ -1,6 +1,6 @@
 ---
 title: window class → window view 全局重命名 + OocObjectRef.window_view 字段
-status: landed
+status: verified
 date: 2026-06-26
 follows: 2026-06-26-thread-readable-three-views-fix.md
 ---

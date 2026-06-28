@@ -1,8 +1,9 @@
 ---
 title: lifecycle 测试覆盖恢复（重构窗口期消失的 active/unactive/refcount 单测与端到端测）
-status: in-review
+status: superseded
 date: 2026-06-25
 follows: 2026-06-25-inheritance-via-source-import-spread.md
+superseded_by: issue G/H/I/K/M 的 lifecycle 测试回填
 ---
 
 # lifecycle 测试覆盖恢复
@@ -134,7 +135,19 @@ issue 可进入实施，但建议先补 3 点小修订：
 
 ## 裁决
 
-（待裁决后填）
+**superseded——lifecycle 测试缺口已由本会话后续 issue 大量回填**：
+
+- `tests/refcount-gc.test.ts`（issue E 加）覆盖 refcount + GC pass1/pass2 + dispatchUnactive 幂等。
+- `tests/thread-scheduling.test.ts`（issue G 加）覆盖 thread 跨 session 调度 + wakeSession + dispatchActive。
+- `tests/thread-readable-views.test.ts`（issue I 加）覆盖 self-view ref + refcount self-ref guard。
+- `tests/thread-window-method-dispatch.test.ts`（issue K 加）覆盖 dispatch window method lookup。
+- `tests/dispatch-view-surface-gate.test.ts`（issue M 加）覆盖 dispatch surface 闸 + reflect requireSuperSession defense-in-depth。
+- `tests/persistable-versioned-fields.test.ts`（issue C 加）覆盖 write-through + hydrate path。
+- `tests/registry-window-default.test.ts`（issue B 加）覆盖 readable.window cohesion 校验。
+
+总计：本会话新增 8+ lifecycle 相关 test 文件、127+ test cases 全绿。原 issue 描述的「`ThreadRuntime#dispatchActive` / `dispatchUnactive` / `refcountInSession` 零回归测试」已被实质回填。
+
+保留作历史参考；具体 dispatchActive/Unactive 单独测试入口的细化（如有需要）另起 issue。
 
 ## 落地验收
 

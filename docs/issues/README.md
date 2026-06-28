@@ -10,6 +10,8 @@
 
 frontmatter `status` 字段流转：`draft`（起草中）→ `in-review`（fan-out 设计 review 中）→ `decided`（已裁决待落地）→ `landed`（已落地并回流一致性，待验收）→ `verified`（落地验收 review 确认文档/代码如约改造，闭环完成）。
 
+旁支终态 `superseded`：本 issue 在 `decided` 前被后起 issue 完整覆盖、不再独立推进。frontmatter 须配 `superseded_by:` 字段指明继承者（issue 路径或一句话说明）；用于保留历史推理痕迹、不再走落地与验收。
+
 ## 模板
 
 ```markdown

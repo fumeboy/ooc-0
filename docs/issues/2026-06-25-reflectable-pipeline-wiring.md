@@ -1,9 +1,10 @@
 ---
 title: reflectable 核心 5 通路接通（thread reflectable methods + PR 闸 + reflect_request decl + author 回馈）
-status: in-review
+status: superseded
 date: 2026-06-25
 splits_from: 2026-06-25-merge-feat-branch-unification.md
 follows: 2026-06-25-inheritance-via-source-import-spread.md
+superseded_by: 2026-06-26-reflectable-redesign-as-flow-dispatcher.md
 ---
 
 # reflectable 核心 5 通路接通
@@ -331,7 +332,16 @@ E 区
 
 ## 裁决
 
-（待裁决后填）
+**superseded by `2026-06-26-reflectable-redesign-as-flow-dispatcher.md`（issue D）**——issue D 完整重设计 reflectable 维度，覆盖本 issue 的全部 13 处 gap：
+- talk(target="super") 自指 → issue D 改动 1 / collaborable 核心 7 落地
+- super flow session 隔离 → issue D 改动 2
+- reflect_request 投影 class → issue D 改动 3（后于 issue E 改名 `super`）
+- 4 reflect method（一步到位、取代本 issue 提议的 new_feat_branch + create_pr_and_invite_reviewers 二段式）→ issue D 改动 3
+- PR-Issue 持久化 + approval-flow + finalizer → issue D 改动 4-6
+- mergeFeatBranch 双源统一 → issue F（`2026-06-26-stitch-issue-cd-tail.md`）落地
+- super flow scheduler 调度 + author 回馈 → issue G（`2026-06-26-thread-cross-session-scheduling.md`）落地
+
+本 issue 裁决阶段未完成，issue D 在 issue 设计与落地上完全替代之。保留作设计探索历史参考。
 
 ## 落地验收
 
