@@ -82,3 +82,38 @@ issue 的落地若**涉及源代码变更**（`packages/@ooc/` 等实现代码�
 ## 一致性的根
 
 index.md **面向设计**（核心契约 + 交叉）、各 self.md **面向实施**（本维度核心 + 源码锚点），侧重不同、不是双份副本。保证二者不漂移的，正是这条工作流的步骤 3.4——**任何设计调整都成对回流**；步骤 4 的落地验收再独立兜底，专抓「回流漏了一边」「退役没清干净」「代码与设计对不上」这些落地遗漏。脱离工作流的零散改动是漂移之源。
+
+## 关联方法 · cluster rooting (多 issue 收敛到根因层)
+
+> 收编自 `docs/methodology-cluster-rooting.md` (2026-05-24 体验官 6 轮 49 Issue → 10 commit 实证)。
+> 2026-06-29 由 issue 2026-06-28-docs-legacy-sweep Step 1 吸收。
+
+design-workflow 默认是**单 issue 流程**(draft → review → 裁决 → landed → verified)。但当 backlog
+出现以下信号时,启动 **cluster rooting**:多 issue 收敛到根因层,**一次性收紧契约或删特殊路径**,
+而非逐个 issue 补丁。
+
+**触发条件** (满足任一):
+1. **同根 facet 反复出现**:≥ 3 个 issue 描述不同但根因相同
+2. **backlog 数过大单点修不可行**:≥ 30 issue,逐个 commit 修需 > N 周
+3. **架构级反馈出现**:体验官 / completeness 批评官给出顶层张力反馈,说明有根因 (不是细节 bug)
+
+**不要**在以下场景启动:
+- backlog < 10 且都是孤立 bug
+- 用户明确要求"只修这 3 个 issue 就好,不要重构"
+- 系统正在 active development,每天都有新 commit (cluster rooting 需要短期 freeze)
+
+**步骤**:
+1. **通读全部 issue** + 反向反馈,记每条:严重度 / 维度 / 一句话症状
+2. **同根分组** (K = √N 的经验值):把 N 个 issue 收敛到 K 个根因簇,每簇内 issue 共享同一收紧契约
+3. **一次性大 issue**:每个根因起一个**大 issue** (走完整 design-workflow),issue 内列出本簇所有 N_k 个原 issue
+4. **逐簇 commit**:每个根因簇一次性 commit,自验证 + 跑 verify gate,把簇内所有 N_k 个 issue 一次性标 superseded
+
+**反模式**:每 issue 一个特殊处理 → N 个补丁 → 系统熵增 → 旧补丁难维护,递归恶化。
+**正模式**:N 个 issue 收敛到 K 个根因 (K << N),每根因一次性收紧契约,**代码量净减少**。
+
+**核心信念**:散落的 N 个 issue 背后通常只有 K=√N 个根因。如果实际 K 接近 N,系统已设计良好、
+只是孤立 bug;不必走 cluster rooting,直接修即可。
+
+**OOC 内实证**:
+- 2026-05-24 体验官 6 轮:49 Issue → 3 契约 + 10 根因 → 10 commit 落定,0 Regression、代码量净减少。
+- 2026-06-29 S 系列:web ooc-6 恢复后 44 个 TODO 桩点 → 10 个根因 (S1-S10) → 全 landed。

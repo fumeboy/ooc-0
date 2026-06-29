@@ -11,7 +11,8 @@ activates_on:
 
 - **index（本文）面向设计**：核心设计 + 跨元素契约，求"一处看全 OOC 是怎么设计的"。
 - **各维度 self.md 面向实施**：本维度核心设计 + 锚定源代码的实施细节。
-- 二者侧重不同、由 design-workflow 保证一致（见 `./design-workflow.md`）；与代码冲突时一律信代码。
+- 二者侧重不同、由 design-workflow 保证一致（见 `./design-workflow.md`,含 cluster rooting 关联方法 — 多 issue 收敛到根因层）；与代码冲突时一律信代码。
+- 跨维度通用工程惯例（fail-loud / reuse before / perception-as-contract / verify-as-you-go）见 `./engineering-conventions.md`。
 
 **本文 A–E 区每个 `##` 元素 = OOC 设计元素注册表**。任何系统设计调整经 issue → review → 裁决 → 验收 流程时，设计 review fan-out 据此清单判定"受影响元素"、为每个受影响元素各派一个 reviewer（外加一个完整性批评官扫全树补漏）；落地后再过一轮落地验收 review，对照 issue 核文档/代码是否如约改造（`landed` → `verified`）。
 

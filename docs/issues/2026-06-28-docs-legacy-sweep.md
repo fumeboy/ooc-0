@@ -1,6 +1,6 @@
 ---
 title: 仓库根 docs/ 历史目录退潮 sweep（6-21 之前的设计推理痕迹一次性归档/删除）
-status: decided
+status: landed
 date: 2026-06-28
 ---
 
