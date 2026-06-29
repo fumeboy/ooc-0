@@ -1,11 +1,12 @@
 ---
 title: P1 · builtin visible 真 UI 实装(Phase 1:静态注册表去 Placeholder)
-status: landed
+status: verified
 date: 2026-06-29
 follows: 2026-06-29-s2-visible-server-call-method.md
 priority: P1
 landed_at: 2026-06-29
 landed_commit: 3288a04d
+verified_at: 2026-06-29
 ---
 
 # P1 · builtin visible 真 UI — 从 Placeholder 到真组件
@@ -157,3 +158,18 @@ visible/self.md 的最终设计是 **builtin 自己在 `<ObjectDir>/visible/inde
 
 未决:`.gitignore:23` 的 `web/` 通配规则误伤 `packages/@ooc/web/.../visible/`,新增 .tsx 需 `git add -f`。
 可独立小 issue 修(`web/` → `/web/` 顶层锚定),非本 issue 阻塞项。
+
+## 验收 review(2026-06-29 verified)
+
+acceptance reviewer 独立核对 A/B/C/D 4 维度:
+- **A. 文档验收**:✅ 8 个组件全建、注册表切换正确、设计元素覆盖到位且边界正确(visible × app 本期不动符合预期)、self.md 现状更新准确、issue 状态正确
+- **B. 代码验收**:✅ 8 个组件签名对齐 read-only 契约、typecheck 0 error、19 tests pass、web build 2047 modules / dist/main 937KB / 8.31s
+- **C. 退潮验收**:✅ `do` 退役彻底、Placeholder named export 切换完整;⚠️ `cw-*` className 14 个未在 styles.css 落地(本 issue 接受,非阻塞)
+- **D. 漂移验收**:✅ 11 file 改动严格在 `web/.../visible/` 内,未越界动 visible/server / app / core;PlaceholderWindowDetail 保留;todo/visible 草稿在 untracked 状态保留(Phase 2 入口)
+
+**判定:无阻塞缺口 → status verified**
+
+顺手发现(各自起独立 issue,不在本轮夹带):
+1. `cw-*` className 视觉规则落地 + 命名空间边界(P1 后续小 issue)
+2. builtin-visible-render.test 覆盖粒度(boundary case 补充,UI 回归发现时再做)
+3. `.gitignore:23` 通配规则收窄(独立工程债 issue)
