@@ -1,11 +1,13 @@
 ---
 title: P2 · builtin visible Phase 2 — 自带 visible/index.tsx + endpoint + 切 dynamic 路径
-status: in-progress
+status: landed
 date: 2026-06-29
 follows: 2026-06-29-p1-builtin-visible-from-placeholder.md
 priority: P2
 phase_2a_landed: 2026-06-29 (commit 25b29c03)
 phase_2b_landed: 2026-06-29 (commit 98dce7a5)
+phase_2c_landed: 2026-06-29 (commit 61a5ac6e)
+phase_2d_landed: 2026-06-29 (commit 7e33faad)
 ---
 
 # P2 · builtin visible Phase 2 — 让 builtin 真正"持有并演化自己的 UI"
@@ -200,14 +202,48 @@ styles.css 补 `cw-btn` 按钮族 + `cw-todo-*` 布局规则 (todo 引入的新 
   按 "与代码冲突时一律信代码" 原则,plan visible/index.tsx 跟随 types.ts 真字段,**web union 视为过时镜像**,Phase 2d 清理。
 - builtin import `@ooc/web` 类型不可行 — visible/index.tsx 用 inline 本地 props interface (字段照 ContextWindow union 或 types.ts 抄)。
 
-### Phase 2c — todo
-- `resolveWindowVisible.tsx` 切 dynamic 为首选路径,静态表降级 fallback
-- root window 显式特例分支 (`if (window.class === "root") return <RootWindowDetail />;`)
-- todo/plan UI 接 callMethod 真交互 (visible/server method 已就位,UI 暂未连)
+### Phase 2c — landed 2026-06-29 (commit 61a5ac6e in main repo)
 
-### Phase 2d — todo
-- e2e 验收 (启 app+web,确认 8 builtin window UI 来自 builtin 自带 tsx)
-- 删 web/.../visible/{File,Knowledge,Todo,Search,SkillIndex,Plan,Program}WindowDetail.tsx 7 个镜像 (保留 RootWindowDetail.tsx)
-- 删 BUILTIN_VISIBLE 静态注册表对应槽位
-- 修 web ContextWindow union 的 plan / 其它 shape 漂移
-- visible/self.md / index.md §B 更新现状 (Phase 2 verified)
+- `resolveWindowVisible.tsx`: dynamic 升首选;新增 `kind="root"` 特例分支 (用户裁决: root 不作 ooc class);
+  WindowVisible 入口注入 `callMethod` prop (sessionId 存在时,经 `POST /api/flows/<sid>/<window.id>/call_method`)
+- `ObjectClientRenderer.tsx`: 删 `TODO_async` 桩,接通 P2a `client-source-url` endpoint;删 dead import
+- **重大顺手修**: `packages/@ooc/core/persistable/builtin-dir.ts` 的 `resolveBuiltinDir` 经
+  `nestedObjectPath()` 翻译 OocClass 逻辑 id (`_builtin/agent/todo`) → npm 物理 path
+  (`@ooc/builtins/agent/children/todo`)。旧实现裸 slice 前缀,**嵌套 builtin 全部解析失败 / 默默返 undefined**;
+  endpoint 命中嵌套 builtin 时 404。本修复一处熵减,顺带可能修了既有 caller 的潜在 bug
+  (215 个回归仍全 pass,意味本修复纯增益)。
+- `builtins/agent/children/plan/visible/index.tsx`: 接 callMethod 真交互 (step toggle / 删除 / add step);
+  styles.css 补 `.cw-plan-step-icon-btn` / `.cw-plan-step-remove` / `.cw-plan-add*` 规则
+- `resolveWindowVisible.test.ts` 重写覆盖新行为 (root 特例 / 默认 dynamic / fallback 链)
+- 新 `p2c-builtin-self-hosted-e2e.test.ts`: 验证 4 个 builtin (todo/plan/file/interpreter_process)
+  经 endpoint 解析到框架包 visible/index.tsx 物理路径 (5 case)
+
+验收: 215 backend tests + 20 web tests pass, web build 2047 modules / 937KB / 8.52s。
+
+### Phase 2d — landed 2026-06-29 (commit 7e33faad in main repo)
+
+- 删 7 个 web 镜像 tsx (`{File,Knowledge,Todo,Search,SkillIndex,Plan,Program}WindowDetail.tsx`),
+  builtin 已自带 self-hosted visible/index.tsx,P2c 切 dynamic 后镜像变死重
+- 删失效测试 `builtin-visible-render.test.ts` (引用已删组件)
+- `BUILTIN_VISIBLE` 静态表从 12 槽 → 4 槽 (剩 method_exec / feishu_chat / feishu_doc / talk,
+  P3 候选迁移;root 走特例不需要表项)
+- `builtin-visible-registry.test.ts` 重写覆盖退潮结果 (assert 7 个 P2b 槽 undefined + root undefined)
+- **bundle size 缩小信号**: dist/main 937KB → 924.86 KB,确认死重清退
+
+验收: 215 backend tests + 11 web tests pass, web build dist/main 924.86 KB / 8.98s。
+
+# 不在本 issue 范围 (P3 候选)
+
+- `method_exec / feishu_chat / feishu_doc / talk` 4 个剩余 builtin 自带 self-hosted visible/index.tsx
+  (BUILTIN_VISIBLE 静态表整体退役的最后一步)
+- `ObjectClientRenderer` (用于 stone 单页) 与 `resolveWindowVisible` (用于 thread context viewer) 
+  两份 dynamic 加载实现的统一 (当前都走真 endpoint, 行为一致, 但代码重复)
+- web `ContextWindow` union 的 plan / 其它 shape 漂移 (text→content, status enum) 清理
+- visible/server agent-native parity 缺口 (self.md "最大债")
+- visible HMR (浏览器端不刷新即看 UI 变更)
+
+# 验收 review pending
+
+P2 issue 标 landed,**未做** acceptance review (P1 模式要求独立 reviewer 验收)。
+本 issue 体量大 (4 阶段 / 8 commit / ~1300+ 行净增-净减),建议后续派 acceptance reviewer
+独立核对 A/B/C/D 4 维度后转 verified。当前先 land。
