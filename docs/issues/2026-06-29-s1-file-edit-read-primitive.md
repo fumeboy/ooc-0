@@ -1,6 +1,6 @@
 ---
 title: S1 · 通用 file-edit / file-read 原语(A1 通路 + read 对称)
-status: decided
+status: landed
 date: 2026-06-29
 follows: 2026-06-29-web-server-reimpl-index.md
 priority: P0
