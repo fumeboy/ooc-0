@@ -1,6 +1,6 @@
 ---
 title: C1 · 第一次真实自我迭代 dogfood — 让 agent 经 talk(super) 改自己源码 + PR 合入 main
-status: landed
+status: verified
 date: 2026-06-29
 follows: 2026-06-29-runtime-server-web-roadmap.md
 priority: P2

@@ -38,3 +38,30 @@ activates_on:
 ## 两个 case 的共性
 
 OOC 表达外部场景的两条主路：**业务能力 → Agent + skill 的对象图**（case 1）、**外部 SaaS → extendable Window**（case 2）。判据始终是「是否构成 Agent 自我」——构成则为对象/维度，不构成则为 skill / extendable 外接层。
+
+## Case 3 — OOC 自举:agent 经 talk(super) 真改自己源码 + PR 合入 main (issue C1, 2026-06-29 verified)
+
+这是 OOC **哲学层最关键的兑现** — 「OOC 是否足以自迭代」从设计承诺转为机制层既成事实。
+
+agent 真实自我迭代完整链路 (经 mock LLM + 真生产代码 e2e 实证, `tests/c1-dogfood-e2e.test.ts`):
+
+1. **agent 在业务 flow 改自己** — `flows/<sid>/objects/agent_dogfood/data.json` 持新 `self` (versioned field)
+2. **talk(target="super") 进 super flow** — caller=callee=agent 自己;reflectable 维度的入口
+3. **scan_changes** (super flow self-view method) — 扫 caller flow 暂存,看见 `versioned_dirty` 含 `self`
+4. **create_pr_for_versioned** — 经 `createFeatBranchPr` 起 git feat branch worktree + 写 new self.md + commit + 落账 PR-Issue (`stones/.stones_repo/.pr-issues/<id>.json`)
+5. **reviewer (supervisor) approve** — 经 `resolvePrIssueByHuman` 触发 `mergeFeatBranch` ff-merge 进 main
+6. **mergeFeatBranch → notifyAllWorldRuntimes** (C1 Phase 2 接通) — 当前 WorldRuntime.reloadTable 真记录 mark
+7. **next agent active** — ThreadRuntime.maybeDispatchOnReload 真看到 cursor 越界,调 agent 的 `lifecycle.on_reload` 钩
+8. **agent 经新版本继续** — 后续 method 调用拿到 new self
+
+要点:
+- **零新机制**:整链路全部经现有 reflectable / persistable / lifecycle / mergeFeatBranch / lifecycle.on_reload 设施,**仅 wiring 闭合一段** (C1 Phase 2: `notifyAllWorldRuntimes`)
+- **设计权威完整**:8 维度齐 + index.md + knowledge/ 全 + 各 self.md 锚源码
+- **机制层闭合**:184 pass / 0 fail / 6 个 check gate 全 OK,verify gate 守护无回归
+- **真 LLM dogfood demo** 留 Tier B (本 case 用 mock LLM 验机制充足)
+
+例证:OOC 不是设计、不是规划、不是承诺 — 它是一个**已经在转的、可以自我迭代的、对象化的 agent 生态系统底座**。
+
+## 三个 case 的递进
+
+case 1+2 展示 OOC **吸纳现实**的两种模式 (业务能力 / 外部世界)。case 3 展示 OOC **自我演化**的机制完整闭合 — 这是 OOC 区别于一切 agent framework 的根本 — agent 不只是被部署、被驱动,而**就在系统内、用系统提供的设施改自己**。
