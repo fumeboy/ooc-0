@@ -104,7 +104,7 @@ Object 行动的唯一方式 = 经 **tool 原语**与 context window 交互；to
 
 **派发架构**:`WorldRuntime` 持有 `ReloadTable`(进程级 invalidate 标记表,key=classId,value={invalidatedAt, changedFiles}),`stone:changed` listener 内 `registerInvalidation(classId, files)`;`ThreadRuntime` 经 `ThinkableDeps.reloadTable` 透传拿到表,每条 thread 持本地 `onReloadCursor` 表,首次 active 该 inst 前对比 cursor 与 invalidatedAt 决定派发——**顺序契约 on_reload before active**(资源就位先于激活)。失败 fail-loud,active 不再触发。
 
-**生产 server 集成**:当前 server 不构造 `WorldRuntime`(hot-reload 链路在生产端未接通);on_reload 派发链路完整闭合于 createWorldRuntime + scheduler + ThreadRuntime,但生产可用需 follow-up issue 将 server 启动改为经 createWorldRuntime 提供 reloadTable。
+**生产 server 集成**(issue F1, 2026-06-29 落地):`buildServer` 经 `createWorldRuntime({ worldPath, dev: true })` 启动,把 `WorldRuntime` 暴露在 `app.worldRuntime` 字段,reloadTable 经 RuntimeModuleConfig → enqueueScheduler → worker → runScheduler → thinkable.think → ThreadRuntime → maybeDispatchOnReload 完整链路透传。ServerConfig 加 `dev: boolean` 默认 true(`--no-dev` 关 hot-reload watcher)。
 
 实施细节见 [lifecycle self.md](../children/lifecycle/self.md)(待建);源码: `core/types/lifecycle.ts` + `core/runtime/reload-table.ts` + `core/runtime/object-registry.ts:resolveActive/resolveUnactive/resolveOnReload` + `builtins/agent/children/thread/runtime/thread-runtime.ts:maybeDispatchOnReload`。
 

@@ -1,6 +1,6 @@
 ---
 title: F1 · 生产 server 集成 WorldRuntime（lifecycle on_reload 闭环落地）
-status: decided
+status: landed
 date: 2026-06-29
 follows: 2026-06-29-runtime-server-web-roadmap.md
 follows_issue: 2026-06-28-lifecycle-module-and-reload.md
