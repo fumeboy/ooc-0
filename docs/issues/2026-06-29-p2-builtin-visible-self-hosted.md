@@ -1,9 +1,11 @@
 ---
 title: P2 · builtin visible Phase 2 — 自带 visible/index.tsx + endpoint + 切 dynamic 路径
-status: in-review
+status: in-progress
 date: 2026-06-29
 follows: 2026-06-29-p1-builtin-visible-from-placeholder.md
 priority: P2
+phase_2a_landed: 2026-06-29 (commit 25b29c03)
+phase_2b_landed: 2026-06-29 (commit 98dce7a5)
 ---
 
 # P2 · builtin visible Phase 2 — 让 builtin 真正"持有并演化自己的 UI"
@@ -159,3 +161,53 @@ Phase 2 把这条路径打通,兑现 self.md 的完整设计承诺。
 - agent-native parity 缺口闭合(self.md ## 已知问题 "最大债",P3+);
 - loop_timeline server-method 化(同上,后续 phase);
 - visible HMR(浏览器端不刷新即看 UI 变更,independent feature)。
+
+## 落地进度
+
+### Phase 2a — landed 2026-06-29 (commit 25b29c03 in main repo)
+
+`packages/@ooc/core/app/server/modules/ui/index.ts` 新 module 实装 `GET /api/objects/:scope/:objectId/client-source-url`。
+路径解析全部走通:builtin (`_builtin/...`) / canonical stone / session worktree / legacy fallback / flow 多页 / `?file=diff`。
+4 个层面安全 (objectId / sessionId / page / file)。
+
+测试 `p2a-client-source-url.test.ts` 覆盖 stone / flow / legacy / diff / builtin / 安全 6 大类 15 case,15 pass。
+S1+S2+S3-4-8 server module 25 个回归 pass,无回归。web build 2047 modules / dist/main 937KB / 8.80s。
+
+裁决补:`persistable/index.ts` re-export `SESSION_BRANCH_PREFIX` 让 ui module 经 barrel 引入,降低耦合。
+
+### Phase 2b — landed 2026-06-29 (commit 98dce7a5 in main repo)
+
+7 个 builtin (root 不搬,已裁决) 自带 `<ObjectDir>/visible/index.tsx` + `<ObjectDir>/visible/server/index.ts`,
+`<ObjectDir>/index.ts` 装配 `visible: visibleServer`:
+
+可编辑 2 个 (实装真 method):
+- `_builtin/agent/todo`: markInProgress / markDone / reopen / updateContent (采纳 worktree 草稿)
+- `_builtin/agent/plan`: add_step / update_step_status / update_step_text / remove_step (按 types.ts 真字段实装)
+
+read-only 5 个 (空 module 留位):
+- `_builtin/filesystem/file` / `search`
+- `_builtin/knowledge_base/knowledge` (MarkdownContent 跨包不可用 → 降级 <pre>)
+- `_builtin/agent/skill_index`
+- `_builtin/interpreter/interpreter_process` (window class "program")
+
+测试 `p2b-builtin-visible-server-wiring.test.ts` 11 case (5 read-only + 2 可编辑 + 1 既有 thread 回归 + 3 非装配确认) all pass。
+46 个累计回归 (P2a + P2b + S1 + S2 + registry) 0 fail。
+
+styles.css 补 `cw-btn` 按钮族 + `cw-todo-*` 布局规则 (todo 引入的新 className)。
+
+裁决补 (Sub agent 实装时发现):
+- web 端 ContextWindow union 的 plan shape 漂移 (`text|in-progress|blocked` vs types.ts `content|in_progress|done`):
+  按 "与代码冲突时一律信代码" 原则,plan visible/index.tsx 跟随 types.ts 真字段,**web union 视为过时镜像**,Phase 2d 清理。
+- builtin import `@ooc/web` 类型不可行 — visible/index.tsx 用 inline 本地 props interface (字段照 ContextWindow union 或 types.ts 抄)。
+
+### Phase 2c — todo
+- `resolveWindowVisible.tsx` 切 dynamic 为首选路径,静态表降级 fallback
+- root window 显式特例分支 (`if (window.class === "root") return <RootWindowDetail />;`)
+- todo/plan UI 接 callMethod 真交互 (visible/server method 已就位,UI 暂未连)
+
+### Phase 2d — todo
+- e2e 验收 (启 app+web,确认 8 builtin window UI 来自 builtin 自带 tsx)
+- 删 web/.../visible/{File,Knowledge,Todo,Search,SkillIndex,Plan,Program}WindowDetail.tsx 7 个镜像 (保留 RootWindowDetail.tsx)
+- 删 BUILTIN_VISIBLE 静态注册表对应槽位
+- 修 web ContextWindow union 的 plan / 其它 shape 漂移
+- visible/self.md / index.md §B 更新现状 (Phase 2 verified)
