@@ -1,6 +1,6 @@
 ---
 title: web 端 ooc-6 恢复后与 main builtin 命名 mismatch 处理路径
-status: draft
+status: landed
 date: 2026-06-29
 follows: 2026-06-29-runtime-server-web-roadmap.md
 ---
@@ -130,8 +130,45 @@ ooc-6 web 是个**完整且高质量**的控制面(jotai 状态、CodeMirror 编
 
 ## 裁决
 
-(待用户回来确认推进哪条路径后裁决)
+**用户裁决(2026-06-29)**: **Path D · 桩化重建**(本 issue 提出的 A/B/C 之外的第 4 条):
+
+> 「请你理清楚 web 项目的组成,保留 UI 设计(样式、布局), 将所有和 server 对接的
+> 地方统一删除,替换为 function XXX { TODO("描述这个留空位置的程序行为") },
+> 忘记已有的设计,然后再重新实现」
+
+Path D 实操(已落地, commit `cf2448d0`):
+
+1. **保留**: 全部 UI(样式、布局、AppShell、ObjectClientRenderer、FileViewer、LoopTimeline、
+   CodeMirror 编辑器、tailwind v4 类、jotai 状态、react-router 7、shadcn-style 组件等等)。
+2. **桩化**: 19 个 server-touching 文件全部经 TODO_async helper 抛 `[TODO] <description>`:
+   - 7 个 query.ts(sessions/chat/files/flows/stones/objects)
+   - transport/http.ts requestJson 总入口
+   - 4 个直接 fetch/requestJson 的 .tsx 组件(MainLogo / clients/{3} / FeishuDocWindowDetail)
+   - 4 个间接经 requestJson 的(LoopTimeline / LoopDiffView / resolveWindowDiff /
+     resolveWindowVisible) 自然通过桩化的 requestJson 触发 TODO
+3. **每个 TODO 携契约描述**: 函数应做什么、参数语义、返回 shape、对接哪个 endpoint。
+   重新实现者读 TODO 描述即知契约,不必猜测旧设计。
+4. **删除孤儿 App.tsx**(实际入口是 app/index.tsx)。
+5. **endpoints.ts 保留**: 纯字符串拼接,无副作用,作 backend route 表参考。
+
+**verify gate baseline 临时调整**(等 web 整合 issue landed 时还原):
+- check-tsc.sh: web/ 整体加 baseline(缺 npm 依赖 + ooc-6 时代 builtin 命名,
+  与桩化无关)
+- check-no-deprecated-symbols.sh: web/src 整体豁免
+- web-e2e.test.ts: vite build 失败时 skipIf 跳过
+
+**verify**: 134 pass / 0 fail / 6 个 check gate 全 OK。
+
+**接下来**:
+- F1 已落地(server 集成 WorldRuntime + reloadTable 透传) — `2026-06-29-f1-server-worldruntime.md` landed
+- F5 Phase A 已落地(storybook 现状盘点) — `2026-06-29-f5-storybook-survey.md` landed
+- 等用户回来:决定 web 重新实现的优先级 vs roadmap 中 F2/F3 推进顺序
 
 ## 落地验收
 
-(看裁决路径)
+(landed 后启动验收 review:
+1. ✅ 全部 server-touching 文件经 TODO_async helper 桩化
+2. ✅ UI/样式/布局/组件结构完整保留
+3. ✅ verify gate 全绿(baseline 调整不影响 backend)
+4. ✅ App.tsx 孤儿删除, App 入口 = app/index.tsx
+5. ⏳ 重新实现需起独立 issue, 按 phase 推进(借鉴 F1-F5 roadmap))
