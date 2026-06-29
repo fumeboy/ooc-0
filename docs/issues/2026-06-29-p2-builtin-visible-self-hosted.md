@@ -65,7 +65,7 @@ Phase 2 把这条路径打通,兑现 self.md 的完整设计承诺。
   - `_builtin/agent/children/skill_index` ← SkillIndexWindowDetail.tsx
   - `_builtin/agent/children/plan` ← PlanWindowDetail.tsx
   - `_builtin/interpreter/interpreter_process` ← ProgramWindowDetail.tsx(注:class id 是 interpreter_process,window class 是 program,需校对)
-  - `_builtin` 根 / root window 归属 ← RootWindowDetail.tsx(root 是 anchor window,无对应 builtin object;需决定是否仍留静态表)
+  - **root window 不搬**(已裁决 2026-06-29:root 不作为 ooc class 存在);RootWindowDetail.tsx 保留在 `web/.../visible/`,作 web 内部组件
 - 注意 import 路径:
   - tsx 在 `<ObjectDir>/` 下,要 import `ContextWindow` type 需要从 worker 路径(或经 props 收 plain object,不强类型)
   - import `react` 是必然的;打包/解析由 web 端 Vite `/@fs` + dynamic import 负责
@@ -77,13 +77,16 @@ Phase 2 把这条路径打通,兑现 self.md 的完整设计承诺。
   export default visibleServer;
   ```
   然后在 `<ObjectDir>/index.ts` 装配 `visible: visibleServer`。这是为 P2c / 后续 visible/server 留位。
+- Phase 2b 实际是 **7 个 builtin** 实装(root 不搬),所以并发 sub agent 分组可以是 4 组(2/2/2/1)或 3 组(2/2/3 — knowledge/root 二人组合并;但 root 已不动,所以是 knowledge 单飞 / interpreter 单飞 / 各家两两并对)。
 
 ### Phase 2c:切换路径 + 清退静态表
 
 - `resolveWindowVisible.tsx:48`:不再优先静态表,**直接走 dynamic 加载**(`kind: "dynamic", objectId: window.class, scope: "stone"`)
+- **root window 显式特例分支**(已裁决 2026-06-29:root 不作为 ooc class 存在):
+  `resolveWindowVisible` 在路由前先判 `if (window.class === "root") return <RootWindowDetail />;`,
+  不走 dynamic(否则 endpoint 必 404)。
 - dynamic 加载失败时(notFound)仍能 fallback 到 builtin static — 保留过渡期兼容(否则 endpoint 一挂、UI 就全死);具体做法:静态注册表降级为 "dynamic fallback" 而非 "primary path"
-- 当 8 个 builtin 都自带 visible/index.tsx + endpoint 稳定后,**正式删除 `BUILTIN_VISIBLE` 静态注册表 + 8 个 `web/.../visible/{Xxx}WindowDetail.tsx`**(退潮闸门)
-- root window 是特殊 case:它不对应任何 ooc class、不属于任何 builtin object — 应保留 root 的 web 内部组件,但要让 resolveWindowVisible 显式识别 root 这一例外(`if (window.class === "root") return <RootInternal />;`)
+- 当 7 个 builtin(除 root 外)都自带 visible/index.tsx + endpoint 稳定后,**正式删除 `BUILTIN_VISIBLE` 静态注册表 + 7 个 `web/.../visible/{Xxx}WindowDetail.tsx`**(保留 `RootWindowDetail.tsx`,因 root 永远是 web 内部组件)
 
 ### Phase 2d:测试与文档回流
 
@@ -122,7 +125,11 @@ Phase 2 把这条路径打通,兑现 self.md 的完整设计承诺。
 
 ## 待裁决点
 
-- root window 是保留 web 内部组件,还是为 root 单独建一个 `_builtin/root` ooc class?(倾向保留 web 内部,因 root 是 anchor 不该作为 ooc object 存在 — 但需 supervisor 拍板)
+- ~~root window 是保留 web 内部组件,还是为 root 单独建一个 `_builtin/root` ooc class?~~
+  **已裁决(2026-06-29):root window 不作为 ooc class 存在。**root 是 thread context 的 anchor、非
+  ooc object,Phase 2 保留 `RootWindowDetail.tsx` 在 `web/.../visible/` 作 web 内部组件;
+  `resolveWindowVisible.tsx` 显式特例分支识别 `window.class === "root"` 走内部组件、不走 dynamic
+  endpoint(否则 endpoint 必返 404)。Phase 2d 退潮时**保留 RootWindowDetail.tsx**,删其余 7 个。
 - worktree `builtins-visible-impl` 的 todo/visible/* 草稿是否直接采纳(已有 UI + visible/server 4 method)?
 - Phase 2 整体在新 worktree 落地,还是续用 `builtins-visible-impl`?(倾向新 worktree,builtins-visible-impl 已合入 P1,可清除)
 - Phase 2a 的 endpoint 是新建 `modules/ui/` 还是挂在 `modules/stones/` / `modules/objects/`?(倾向新建 `modules/objects/` 或 `modules/ui/`,因 endpoint 路径 `/api/objects/:scope/:objectId/...` 是 objects 域)
