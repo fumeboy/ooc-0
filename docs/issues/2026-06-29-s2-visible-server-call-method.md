@@ -1,6 +1,6 @@
 ---
 title: S2 · visible/server callMethod(A2 通路 + 仅 flow scope)
-status: draft
+status: landed
 date: 2026-06-29
 follows: 2026-06-29-web-server-reimpl-index.md
 priority: P0
