@@ -28,7 +28,14 @@
 
 ## 现状
 
-前后端工程**基本完善**，OOC 7 维度的人类面最小闭环已落地：建 session、cross-object talk、浏览 world/thread、看 LLM 调试输入、渲染 Object 自带 UI、切 pause/debug 都通。
+前后端工程**基本完善**,OOC 8 维度的人类面最小闭环已落地:建 session、cross-object talk、浏览 world/thread、看 LLM 调试输入、渲染 Object 自带 UI、切 pause/debug 都通。
+
+**2026-06-29 S 系列 + A 系列后端 module 完整落地** (10 + 4 issue):
+- `health` (F1) + `runtime` (F1+S7+S8+S9) + `stones` (S1+S3) + `flows` (S2+S4+S5+S6) + `sessions` (S5) + `world-config` (S8) — **7 module 全部到位**
+- 端点全集: 25+ endpoint, 涵盖 file-edit/read 原语, callMethod 仅 flow scope, sessions seed + talk-windows + continue, threads list/detail, jobs 状态机, pause/resume per-session + global, debug toggle, loop debug 落盘+读取, world-config
+- 进程内 runtime 单例:`pause-store` (S4+S8) + `debug-store` (S8) + `job-manager` (S7) + `reload-table` (F1/lifecycle) + worker map
+- web 端可真 build (A 系列, 2026-06-29):vite build 通过, dist/ 完整产物, web-e2e test 真跑 build + endpoint 双 case
+- `bun run packages/@ooc/core/app/server/index.ts --world ./.ooc-world --port N --dev` 生产 server 起来全 endpoint 工作 (177 pass / 0 fail)
 
 ## 已知问题 / 边界与未决
 

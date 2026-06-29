@@ -55,6 +55,8 @@
 - canonical 单入口契约稳定：只解析 `visible/index.tsx`（+legacy `client/index.tsx`），不扫 stone 根具名 tsx（`Card.tsx → 404` 已钉死契约）。
 - 仓库**不提供生产级渲染 host**：OOC 只写 tsx + 给读写接口与 fsUrl；真正打包/渲染由消费方（当前 web 控制面 vite `dynamic import`）实现。
 - **window diff 渲染已闭环**：曾经的"per-window-type diff 渲染器"增量项已落地——`resolveWindowDiff` 四档回退（builtin 静态 / user-defined `visible/diff.tsx` 动态加载 / before-after / JSON 兜底），无 per-type switch、无 web 包硬编码派发（commits `c35a3bcb` / `b748b5a8`，详见 `knowledge/window-diff-resolver.md`）。
+- **callMethod 仅 flow scope 闭环已通**(issue S2, 2026-06-29):`POST /api/flows/:sid/:oid/call_method` dispatch 到 `Class.visible.methods[*]` 全链路接通;首批 builtin 实装 visible/server = `_builtin/agent/children/thread`(markRead/mute/unmute 3 method 范例),stone scope 显式拒调("read-only" 契约由 ObjectClientRenderer.callMethodFor 守门)。前端 `domains/clients/ObjectClientRenderer.tsx:callMethodFor` 据 target.scope 分流。tests/s2-visible-server-call-method.test.ts 5 case 覆盖。
+- **visible web 端可 build**(A 系列, 2026-06-29):web 端 `packages/@ooc/web/` 经 vite build 成功(2041 modules, 10s, dist/main 925KB);所有 `@ooc/builtins/*` 旧 import 桩化为本地 Placeholder 组件,删 9 个 workspace deps,装 13 个 npm 依赖。web 真正能起来 — 但具体 builtin 的 visible/index.tsx 仍待逐个实装(目前只有 thread 有 visible/server,其他 builtin window 走 Placeholder JSON 显示)。
 
 ## 已知问题 / 边界与未决
 
