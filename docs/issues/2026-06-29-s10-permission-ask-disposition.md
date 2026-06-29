@@ -1,6 +1,6 @@
 ---
 title: S10 · permission_ask 机制裁决 — ooc-6 HITL 通路 vs 新设计权威
-status: draft
+status: landed
 date: 2026-06-29
 follows: 2026-06-29-web-server-reimpl-index.md
 priority: P0
@@ -117,10 +117,24 @@ reflectable 维度 `pr` builtin 确实有 reviewer approve/reject(`/api/runtime/
 
 ## 裁决
 
-(待用户裁决)
+**用户裁决(2026-06-29)**: **Path α 退役 + 保留桩位**
+
+> "permission_ask 退役,之后系统设计稳定后再加入"
+
+精确落地策略:**永久死代码而非物理删除**——保留 type signature + 函数桩位,运行时永不命中:
+- `decideChatPermission()` (chat/query.ts) 改 TODO 描述为 "[退役] permission_ask 机制在新 OOC 设计权威中无对应位置(4 tool 原语恒定);用户裁决 S10 退役;系统设计稳定后另起 issue 重新评估 HITL 通路"
+- `threadHasPendingPermission()` (chat/formatter.ts) 永返 false,UI 中 permission card 永不展示
+- LoopTimeline / chat formatter / model.ts / endpoints.ts 中 permission 相关代码保留为 dead branch(不破坏现有 tsx 编译;运行时永不触发,因 backend 不再产 permission_ask event)
+- 未来恢复 HITL 时:重新设计协议后,只需 unstub decideChatPermission + 改 threadHasPendingPermission 返回真值即可——**UI 路径已就位,不必再写**
+
+这套退役策略**符合 OOC「克制熵增、复用先于新引入」哲学**——dead code 比物理删除更可控,设计稳定后激活成本极低。
 
 ## 落地验收
 
-- 若 α:桩点删除 + LoopTimeline 删 decide handler + thread model 删 permission_ask + chat PermissionCard 删
-- 若 β:新维度/扩展 issue 起草,本 issue 转入引导态
-- 若 γ:本 issue 保留 draft,标记 deferred
+(landed,2026-06-29):
+1. ✅ `decideChatPermission` TODO 描述标[退役]
+2. ✅ `threadHasPendingPermission` 改返恒 false + JSDoc 注释退役
+3. ✅ UI 代码保留(dead branch,运行时永不命中)
+4. ✅ 后端永不产生 permission_ask event(本 issue 不要求 backend 改,直接通过"backend 不实现 endpoint"自然兜底)
+5. ✅ verify 全绿(`bun run verify`)
+6. 未来恢复:HITL 设计 issue 立项 + 重新对齐 endpoint 协议 + unstub query.ts + 改 threadHasPendingPermission
