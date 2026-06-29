@@ -1,6 +1,6 @@
 ---
 title: P2 · builtin visible Phase 2 — 自带 visible/index.tsx + endpoint + 切 dynamic 路径
-status: landed
+status: verified
 date: 2026-06-29
 follows: 2026-06-29-p1-builtin-visible-from-placeholder.md
 priority: P2
@@ -8,6 +8,7 @@ phase_2a_landed: 2026-06-29 (commit 25b29c03)
 phase_2b_landed: 2026-06-29 (commit 98dce7a5)
 phase_2c_landed: 2026-06-29 (commit 61a5ac6e)
 phase_2d_landed: 2026-06-29 (commit 7e33faad)
+verified_at: 2026-06-29
 ---
 
 # P2 · builtin visible Phase 2 — 让 builtin 真正"持有并演化自己的 UI"
@@ -242,8 +243,18 @@ styles.css 补 `cw-btn` 按钮族 + `cw-todo-*` 布局规则 (todo 引入的新 
 - visible/server agent-native parity 缺口 (self.md "最大债")
 - visible HMR (浏览器端不刷新即看 UI 变更)
 
-# 验收 review pending
+# 验收 review (2026-06-29 verified)
 
-P2 issue 标 landed,**未做** acceptance review (P1 模式要求独立 reviewer 验收)。
-本 issue 体量大 (4 阶段 / 8 commit / ~1300+ 行净增-净减),建议后续派 acceptance reviewer
-独立核对 A/B/C/D 4 维度后转 verified。当前先 land。
+P2 + P3 双 issue 整体派独立 acceptance reviewer 走 A/B/C/D 4 维度核对:
+
+- **A. 文档验收**: ✅ 4 phase 落地目标全部落地, P3 死键修正/3 死类型组件清退完成, 受影响设计元素逐一动到, self.md 现状段如实记录, 4 个待裁决点全部裁决并落地
+- **B. 代码验收**: ✅ modules/ui/index.ts 6 路径 + 4 层安全实装并注册 / 7 个 builtin 各 3 件事 (visible/index.tsx + visible/server + index.ts 装配) / resolveWindowVisible dynamic + root 特例 + callMethod 注入 / ObjectClientRenderer 接通真 endpoint / resolveBuiltinDir 经 nestedObjectPath 修正 / plan UI 接 callMethod / BUILTIN_VISIBLE 12 → 4 → 1 槽 / 7 + 3 = 10 个死 tsx 文件清退 / 215 后端 tests + 12 web visible tests pass / web build dist/main 918.98 KB
+- **C. 退潮验收**: ✅ 10 个 dead tsx 真不在仓内 / BUILTIN_VISIBLE 仅 1 项 / 4 个死短名键全仓 0 命中 / TODO_async 桩从 ObjectClientRenderer 清除
+- **D. 漂移验收**: ✅ root 未建 _builtin/root 类 / 7 builtin 内无 @ooc/web import / context-snapshot.ts 3 个 dead union 分支保留 (P4 候选不夹带) / plan UI 真接 callMethod 交互
+
+**判定**: 无阻塞缺口 → status verified
+
+顺手发现 (各自起独立 issue,不在本轮夹带):
+1. TODO_async 在 domains/stones/query.ts / files/query.ts / chat/query.ts 等多处仍用 (P2c 只承诺清 ObjectClientRenderer 内,其它是潜在退潮线索)
+2. context-snapshot.ts 3 个 dead union 分支 + 43 处引用 (P3 已指出, P4 候选独立 issue)
+3. visible/server 5 个空 module 文件,若长期不扩可考虑抽 EmptyVisibleServer 共享 const (熵控制讨论,非本验收)

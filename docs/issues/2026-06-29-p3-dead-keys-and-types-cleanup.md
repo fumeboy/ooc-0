@@ -1,11 +1,12 @@
 ---
 title: P3 · BUILTIN_VISIBLE 死键修正 + 死类型组件清退
-status: landed
+status: verified
 date: 2026-06-29
 follows: 2026-06-29-p2-builtin-visible-self-hosted.md
 priority: P3
 landed_at: 2026-06-29
 landed_commit: e97aa88c
+verified_at: 2026-06-29
 ---
 
 # P3 · 死键 / 死类型清退
@@ -90,3 +91,18 @@ builtin-visible-registry.test.ts:
   3 死组件 + 1 死键的物理 footprint 真减小)
 - 5 files changed / -294 行 / +35 行
 - 累计 build size 缩减 (vs P1 落地): 937 KB → 918.98 KB,**约 -2%** 退潮信号
+
+## 验收 review (2026-06-29 verified)
+
+P3 与 P2 双 issue 一起派独立 acceptance reviewer 走 A/B/C/D 4 维度核对,
+A 文档 / B 代码 / C 退潮 / D 漂移 全部 ✅,无阻塞缺口。
+
+P3 特定验收点 (B.5 / C.2 / C.3 / C.4 / D.3 在 reviewer 报告):
+- BUILTIN_VISIBLE 仅 1 项 `_builtin/agent/method_exec_form` (全名 key)
+- 3 个死类型组件 (FeishuChat / FeishuDoc / Talk WindowDetail.tsx) 全部删除,find 结果 0 个
+- 4 个旧短名死键全仓 0 命中 (test 用 for 循环命中 undefined 不命中 grep)
+- context-snapshot.ts 3 个 dead union 分支保留 (本 issue 明确说留 P4,reviewer 确认未夹带)
+
+**判定**: status verified
+
+详细 reviewer 报告: P2 issue ## 验收 review 段 (P2 + P3 双验收同源)。
