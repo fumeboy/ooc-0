@@ -1,6 +1,6 @@
 ---
 title: S6 · thread 详情 + thread list(per session)
-status: draft
+status: landed
 date: 2026-06-29
 follows: 2026-06-29-web-server-reimpl-index.md
 priority: P1

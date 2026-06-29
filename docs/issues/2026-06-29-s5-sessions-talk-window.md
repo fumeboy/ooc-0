@@ -1,6 +1,6 @@
 ---
 title: S5 · sessions + user.root.thread 模型(user 持 root thread,不参与调度)
-status: decided
+status: landed
 date: 2026-06-29
 follows: 2026-06-29-web-server-reimpl-index.md
 priority: P2

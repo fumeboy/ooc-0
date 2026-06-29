@@ -1,6 +1,6 @@
 ---
 title: S4 · flows 基础(list + pause/resume)
-status: draft
+status: landed
 date: 2026-06-29
 follows: 2026-06-29-web-server-reimpl-index.md
 priority: P1

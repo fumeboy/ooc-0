@@ -1,6 +1,6 @@
 ---
 title: S8 · world-config + runtime global-pause/debug
-status: draft
+status: landed
 date: 2026-06-29
 follows: 2026-06-29-web-server-reimpl-index.md
 priority: P2
